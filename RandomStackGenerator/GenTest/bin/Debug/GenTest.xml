@@ -1,0 +1,33 @@
+﻿<?xml version="1.0"?>
+<doc>
+<assembly>
+<name>
+GenTest
+</name>
+</assembly>
+<members>
+<member name="P:GenTest.RandStackTest.TestContext">
+	<summary>
+Gets or sets the test context which provides
+information about and functionality for the current test run.
+</summary>
+</member><member name="M:GenTest.RandStackTest.RndPosTest">
+	<summary>
+A test for RndPos
+</summary>
+</member><member name="M:GenTest.RandStackTest.RandTest">
+	<summary>
+A test for Rand
+</summary>
+</member><member name="M:GenTest.RandStackTest.GenTest">
+	<summary>
+A test for Gen
+</summary>
+</member><member name="T:GenTest.RandStackTest">
+	<summary>
+This is a test class for RandStackTest and is intended
+to contain all RandStackTest Unit Tests
+</summary>
+</member>
+</members>
+</doc>

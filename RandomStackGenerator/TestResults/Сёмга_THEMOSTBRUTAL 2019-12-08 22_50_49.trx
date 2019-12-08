@@ -1,0 +1,67 @@
+﻿<?xml version="1.0" encoding="UTF-8"?>
+<TestRun id="e58957ef-ec58-4023-bdf3-60f1f5c1ead4" name="Сёмга@THEMOSTBRUTAL 2019-12-08 22:50:49" runUser="THEMOSTBRUTAL\Сёмга" xmlns="http://microsoft.com/schemas/VisualStudio/TeamTest/2010">
+  <TestSettings name="Local" id="1acbab15-3883-481c-9f11-92d11888b18f">
+    <Description>These are default test settings for a local test run.</Description>
+    <Deployment enabled="false" runDeploymentRoot="Сёмга_THEMOSTBRUTAL 2019-12-08 22_50_49">
+      <DeploymentItem filename="E:\Visual Studio Tools\RandomStackGenerator\RandomStackGenerator\RandomStackGenerator\bin\Debug\RandomStackGenerator.dll" />
+    </Deployment>
+    <Execution>
+      <TestTypeSpecific />
+      <AgentRule name="Execution Agents">
+      </AgentRule>
+    </Execution>
+  </TestSettings>
+  <Times creation="2019-12-08T22:50:49.3758543+10:00" queuing="2019-12-08T22:50:55.2301891+10:00" start="2019-12-08T22:50:55.3741974+10:00" finish="2019-12-08T22:51:52.6284721+10:00" />
+  <ResultSummary outcome="Inconclusive">
+    <Counters total="3" executed="3" passed="2" error="0" failed="0" timeout="0" aborted="0" inconclusive="1" passedButRunAborted="0" notRunnable="0" notExecuted="0" disconnected="0" warning="0" completed="0" inProgress="0" pending="0" />
+    <RunInfos>
+      <RunInfo computerName="THEMOSTBRUTAL" outcome="Warning" timestamp="2019-12-08T22:50:54.3371381+10:00">
+        <Text>Deployment is currently disabled. The deployment item 'RandomStackGenerator.dll' on test 'GenTest.RandStackTest.RandTest' was not deployed.</Text>
+      </RunInfo>
+    </RunInfos>
+  </ResultSummary>
+  <TestDefinitions>
+    <UnitTest name="RandTest" storage="e:\visual studio tools\randomstackgenerator\randomstackgenerator\gentest\bin\debug\gentest.dll" id="1537202a-94e5-5abd-d7bd-4d6a4b952cdf">
+      <DeploymentItems>
+        <DeploymentItem filename="RandomStackGenerator.dll" />
+      </DeploymentItems>
+      <Execution id="5c1b7bc1-c960-4d94-ba18-e2ce6ddacc37" />
+      <TestMethod codeBase="E:/Visual Studio Tools/RandomStackGenerator/RandomStackGenerator/GenTest/bin/Debug/GenTest.DLL" adapterTypeName="Microsoft.VisualStudio.TestTools.TestTypes.Unit.UnitTestAdapter, Microsoft.VisualStudio.QualityTools.Tips.UnitTest.Adapter, Version=10.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a" className="GenTest.RandStackTest, GenTest, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null" name="RandTest" />
+    </UnitTest>
+    <UnitTest name="GenTest" storage="e:\visual studio tools\randomstackgenerator\randomstackgenerator\gentest\bin\debug\gentest.dll" id="be5c5aed-692f-cefa-eb3f-2f5b7f45c000">
+      <Execution id="aeb19524-a3eb-49dc-93eb-1b2a0293092a" />
+      <TestMethod codeBase="E:/Visual Studio Tools/RandomStackGenerator/RandomStackGenerator/GenTest/bin/Debug/GenTest.DLL" adapterTypeName="Microsoft.VisualStudio.TestTools.TestTypes.Unit.UnitTestAdapter, Microsoft.VisualStudio.QualityTools.Tips.UnitTest.Adapter, Version=10.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a" className="GenTest.RandStackTest, GenTest, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null" name="GenTest" />
+    </UnitTest>
+    <UnitTest name="RndPosTest" storage="e:\visual studio tools\randomstackgenerator\randomstackgenerator\gentest\bin\debug\gentest.dll" id="443d99dd-e090-eb0d-a3bf-7dddcf2dd2ad">
+      <DeploymentItems>
+        <DeploymentItem filename="RandomStackGenerator.dll" />
+      </DeploymentItems>
+      <Execution id="29094d82-f379-474f-9c96-3bdfa6679255" />
+      <TestMethod codeBase="E:/Visual Studio Tools/RandomStackGenerator/RandomStackGenerator/GenTest/bin/Debug/GenTest.DLL" adapterTypeName="Microsoft.VisualStudio.TestTools.TestTypes.Unit.UnitTestAdapter, Microsoft.VisualStudio.QualityTools.Tips.UnitTest.Adapter, Version=10.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a" className="GenTest.RandStackTest, GenTest, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null" name="RndPosTest" />
+    </UnitTest>
+  </TestDefinitions>
+  <TestLists>
+    <TestList name="Results Not in a List" id="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestList name="All Loaded Results" id="19431567-8539-422a-85d7-44ee4e166bda" />
+  </TestLists>
+  <TestEntries>
+    <TestEntry testId="1537202a-94e5-5abd-d7bd-4d6a4b952cdf" executionId="5c1b7bc1-c960-4d94-ba18-e2ce6ddacc37" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="443d99dd-e090-eb0d-a3bf-7dddcf2dd2ad" executionId="29094d82-f379-474f-9c96-3bdfa6679255" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestEntry testId="be5c5aed-692f-cefa-eb3f-2f5b7f45c000" executionId="aeb19524-a3eb-49dc-93eb-1b2a0293092a" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+  </TestEntries>
+  <Results>
+    <UnitTestResult executionId="5c1b7bc1-c960-4d94-ba18-e2ce6ddacc37" testId="1537202a-94e5-5abd-d7bd-4d6a4b952cdf" testName="RandTest" computerName="THEMOSTBRUTAL" duration="00:00:56.4696697" startTime="2019-12-08T22:50:55.4682027+10:00" endTime="2019-12-08T22:51:52.3934587+10:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="5c1b7bc1-c960-4d94-ba18-e2ce6ddacc37">
+    </UnitTestResult>
+    <UnitTestResult executionId="29094d82-f379-474f-9c96-3bdfa6679255" testId="443d99dd-e090-eb0d-a3bf-7dddcf2dd2ad" testName="RndPosTest" computerName="THEMOSTBRUTAL" duration="00:00:00.0504454" startTime="2019-12-08T22:51:52.3954588+10:00" endTime="2019-12-08T22:51:52.4514620+10:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="29094d82-f379-474f-9c96-3bdfa6679255">
+    </UnitTestResult>
+    <UnitTestResult executionId="aeb19524-a3eb-49dc-93eb-1b2a0293092a" testId="be5c5aed-692f-cefa-eb3f-2f5b7f45c000" testName="GenTest" computerName="THEMOSTBRUTAL" duration="00:00:00.0837716" startTime="2019-12-08T22:51:52.4524621+10:00" endTime="2019-12-08T22:51:52.5424672+10:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Inconclusive" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="aeb19524-a3eb-49dc-93eb-1b2a0293092a">
+      <Output>
+        <ErrorInfo>
+          <Message>Assert.Inconclusive failed. Verify the correctness of this test method.</Message>
+          <StackTrace>   в GenTest.RandStackTest.GenTest() в E:\Visual Studio Tools\RandomStackGenerator\RandomStackGenerator\GenTest\RandStackTest.vb:строка 193
+</StackTrace>
+        </ErrorInfo>
+      </Output>
+    </UnitTestResult>
+  </Results>
+</TestRun>

@@ -1,0 +1,43 @@
+﻿<?xml version="1.0" encoding="UTF-8"?>
+<TestRun id="feabea2c-6a38-4f37-9886-a6b6aaf68125" name="Semga@SEMGA-ПК 2019-12-08 02:19:54" runUser="Semga-ПК\Semga" xmlns="http://microsoft.com/schemas/VisualStudio/TeamTest/2010">
+  <TestSettings name="Local" id="1acbab15-3883-481c-9f11-92d11888b18f">
+    <Description>These are default test settings for a local test run.</Description>
+    <Deployment enabled="false" runDeploymentRoot="Semga_SEMGA-ПК 2019-12-08 02_19_54">
+      <DeploymentItem filename="F:\Downloads\D2StackRandomizer-master\RandomStackGenerator\bin\Debug\RandomStackGenerator.dll" />
+    </Deployment>
+    <Execution>
+      <TestTypeSpecific />
+      <AgentRule name="Execution Agents">
+      </AgentRule>
+    </Execution>
+  </TestSettings>
+  <Times creation="2019-12-08T02:19:54.4992684+10:00" queuing="2019-12-08T02:19:54.5352704+10:00" start="2019-12-08T02:19:54.5402707+10:00" finish="2019-12-08T02:19:54.7702839+10:00" />
+  <ResultSummary outcome="Warning">
+    <Counters total="1" executed="1" passed="1" error="0" failed="0" timeout="0" aborted="0" inconclusive="0" passedButRunAborted="0" notRunnable="0" notExecuted="0" disconnected="0" warning="0" completed="0" inProgress="0" pending="0" />
+    <RunInfos>
+      <RunInfo computerName="SEMGA-ПК" outcome="Warning" timestamp="2019-12-08T02:19:54.5342704+10:00">
+        <Text>Deployment is currently disabled. The deployment item 'RandomStackGenerator.dll' on test 'GenTest.RandStackTest.RndPosTest' was not deployed.</Text>
+      </RunInfo>
+    </RunInfos>
+  </ResultSummary>
+  <TestDefinitions>
+    <UnitTest name="RndPosTest" storage="f:\downloads\d2stackrandomizer-master\gentest\bin\debug\gentest.dll" id="443d99dd-e090-eb0d-a3bf-7dddcf2dd2ad">
+      <DeploymentItems>
+        <DeploymentItem filename="RandomStackGenerator.dll" />
+      </DeploymentItems>
+      <Execution id="6bed1197-f831-4e3d-aa11-17b3d69031dc" />
+      <TestMethod codeBase="F:/Downloads/D2StackRandomizer-master/GenTest/bin/Debug/GenTest.DLL" adapterTypeName="Microsoft.VisualStudio.TestTools.TestTypes.Unit.UnitTestAdapter, Microsoft.VisualStudio.QualityTools.Tips.UnitTest.Adapter, Version=10.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a" className="GenTest.RandStackTest, GenTest, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null" name="RndPosTest" />
+    </UnitTest>
+  </TestDefinitions>
+  <TestLists>
+    <TestList name="Results Not in a List" id="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+    <TestList name="All Loaded Results" id="19431567-8539-422a-85d7-44ee4e166bda" />
+  </TestLists>
+  <TestEntries>
+    <TestEntry testId="443d99dd-e090-eb0d-a3bf-7dddcf2dd2ad" executionId="6bed1197-f831-4e3d-aa11-17b3d69031dc" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" />
+  </TestEntries>
+  <Results>
+    <UnitTestResult executionId="6bed1197-f831-4e3d-aa11-17b3d69031dc" testId="443d99dd-e090-eb0d-a3bf-7dddcf2dd2ad" testName="RndPosTest" computerName="SEMGA-ПК" duration="00:00:00.0359857" startTime="2019-12-08T02:19:54.5412708+10:00" endTime="2019-12-08T02:19:54.7582832+10:00" testType="13cdc9d9-ddb5-4fa4-a97d-d965ccfc6d4b" outcome="Passed" testListId="8c84fa94-04c1-424b-9868-57a2d4851a1d" relativeResultsDirectory="6bed1197-f831-4e3d-aa11-17b3d69031dc">
+    </UnitTestResult>
+  </Results>
+</TestRun>
