@@ -56,23 +56,20 @@ Public Class RandStackTest
 
     Dim UnitsList() As RandStack.Unit = Nothing
     Private Sub ReadTestUnits()
-        Dim s() As String = RandomStackGenerator.My.Resources.TestUnitsTable.Split(vbNewLine)
+        Dim comm As New Common
+        Dim s() As String = comm.TxtSplit(RandomStackGenerator.My.Resources.TestUnitsTable)
         Dim r() As String
         ReDim UnitsList(UBound(s) - 1)
         For i As Integer = 1 To UBound(s) Step 1
-            r = s(i).Split(vbTab)
+            r = s(i).Split(" ")
             If r.Length = 12 Then
                 Do While Not r(0).Substring(0, 1).ToLower = "g" And r(0).Length > 1
                     r(0) = r(0).Substring(1)
                 Loop
                 UnitsList(i - 1).unitID = r(0)
-                If r(1) = 8 Then
-                    UnitsList(i - 1).unitBranch = r(1)
-                Else
-                    UnitsList(i - 1).unitBranch = r(4)
-                End If
                 UnitsList(i - 1).level = r(2)
                 UnitsList(i - 1).race = r(3)
+                UnitsList(i - 1).unitBranch = r(4)
                 UnitsList(i - 1).small = r(5)
                 UnitsList(i - 1).EXPkilled = r(7)
                 UnitsList(i - 1).EXPnext = r(8)
