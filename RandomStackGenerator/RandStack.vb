@@ -2,6 +2,8 @@
 
 Public Class RandStack
 
+
+
     Private busytransfer() As Integer = New Integer() {1, -1, 3, -1, 5, -1}
     Private firstrow() As Integer = New Integer() {0, 2, 4}
     Private secondrow() As Integer = New Integer() {1, 3, 5}
@@ -32,21 +34,128 @@ Public Class RandStack
         Dim small As Boolean
         ''' <summary>True, если может находиться только на воде</summary>
         Dim waterOnly As Boolean
-        ''' <summary>True, если может быть лидером отряда</summary>
-        Dim isLeader As Boolean
+        ''' <summary>0 - мили, 1 - лучники, 2 - маги, 3 - поддержка, 4 - особые (оборотень, сатир и т.д.), 
+        ''' 5 - обычный лидер, 6 - вор, 7 - саммон</summary>
+        Dim unitBranch As Integer
+
+        Public Shared Function Copy(ByVal v As Unit) As Unit
+            Return New Unit With {.level = v.level, _
+                                  .race = v.race, _
+                                  .EXPkilled = v.EXPkilled, _
+                                  .EXPnext = v.EXPnext, _
+                                  .leadership = v.leadership, _
+                                  .reach = v.reach, _
+                                  .unitID = v.unitID.ToUpper, _
+                                  .small = v.small, _
+                                  .waterOnly = v.waterOnly, _
+                                  .unitBranch = v.unitBranch}
+        End Function
     End Structure
 
-    Dim AllLeaders(), AllFighters() As Unit
+    Public Structure DesiredStats
+        ''' <summary>Примерная планка опыта для маленьких воинов</summary>
+        Dim ExpBarAverage As Integer
+        ''' <summary>Раса отряда</summary>
+        Dim Race As Integer
+        ''' <summary>Примерный опыт за убийство стэка</summary>
+        Dim ExpStackKilled As Integer
+        ''' <summary>Количество свободных ячеек под отряд. Есть 10% шанс на +1 слот и 10% неа -1 слот</summary>
+        Dim StackSize As Integer
+        ''' <summary>Максимальное количество маленьких воинов в отряде</summary>
+        Dim MaxGiants As Integer
+        ''' <summary>Сколько ячеек в первом ряду должно быть заполнено</summary>
+        Dim MeleeCount As Integer
+
+        Public Shared Function Copy(ByVal v As DesiredStats) As DesiredStats
+            Return New DesiredStats With {.ExpBarAverage = v.ExpBarAverage, _
+                                          .ExpStackKilled = v.ExpStackKilled, _
+                                          .MaxGiants = v.MaxGiants, _
+                                          .MeleeCount = v.MeleeCount, _
+                                          .Race = v.Race, _
+                                          .StackSize = v.StackSize}
+        End Function
+        Public Shared Function Print(ByVal v As DesiredStats) As String
+            Return "ExpBarAverage" & vbNewLine & v.ExpBarAverage & vbNewLine & _
+                   "ExpStackKilled" & vbNewLine & v.ExpStackKilled & vbNewLine & _
+                   "MaxGiants" & vbNewLine & v.MaxGiants & vbNewLine & _
+                   "MeleeCount" & vbNewLine & v.MeleeCount & vbNewLine & _
+                   "Race" & vbNewLine & v.Race & vbNewLine & _
+                   "StackSize" & vbNewLine & v.StackSize & vbNewLine
+        End Function
+    End Structure
+
+    Private AllLeaders(), AllFighters() As Unit
     Public serialExecution As Boolean
     Public rndgen As New RndValueGen
+    Public comm As New Common
 
-    ''' <param name="leadersList">Все лидеры за исключением саммонов и лидеров отрядов играбельных рас</param>
-    ''' <param name="fightersList">Dсе юнитs нелидерs</param>
+    ''' <param name="AllUnitsList">Dсе юниты в игре</param>
     ''' <param name="serial">True, если код, использующий генератор выполняется в одном потоке</param>
-    Friend Sub New(ByRef leadersList() As Unit, ByRef fightersList() As Unit, ByRef serial As Boolean)
-        If IsNothing(AllFighters) Or IsNothing(AllLeaders) Then Throw New Exception("Не нужно передавать неинициализированные массивы")
+    Friend Sub New(ByRef AllUnitsList() As Unit, ByRef serial As Boolean)
         serialExecution = serial
+        If IsNothing(AllUnitsList) Then Exit Sub
+
+        Dim exclude As New List(Of String)
+        exclude.AddRange(comm.TxtSplit(My.Resources.ExcludeIDs))
+
+        Dim nleaders, nfighters, cat(UBound(AllUnitsList)) As Integer
+        nleaders = -1 : nfighters = -1
+        For i As Integer = 0 To UBound(AllUnitsList) Step 1
+            If Not exclude.Contains(AllUnitsList(i).unitID.ToUpper) Then
+                If AllUnitsList(i).unitBranch < 5 Then
+                    nfighters += 1
+                    cat(i) = 1
+                ElseIf AllUnitsList(i).unitBranch = 5 Then
+                    nleaders += 1
+                    cat(i) = 2
+                End If
+            End If
+        Next i
+
+        Dim splitedUnitRace() As String = comm.TxtSplit(My.Resources.UnitRace)
+        Dim srow() As String
+        Dim customRace As New Dictionary(Of String, String)
+        For i As Integer = 0 To UBound(splitedUnitRace) Step 1
+            srow = splitedUnitRace(i).Split(CChar(" "))
+            customRace.Add(srow(0).ToUpper, srow(2).ToUpper)
+        Next i
+
+        ReDim AllLeaders(nleaders), AllFighters(nfighters)
+        nleaders = -1 : nfighters = -1
+        For i As Integer = 0 To UBound(AllUnitsList) Step 1
+            If cat(i) = 1 Then
+                nfighters += 1
+                AllFighters(nfighters) = Unit.Copy(AllUnitsList(i))
+                If customRace.ContainsKey(AllFighters(nfighters).unitID) Then
+                    AllFighters(nfighters).race = comm.RaceIdentifierToSubrace(customRace.Item(AllFighters(nfighters).unitID))
+                Else
+                    AllFighters(nfighters).race = comm.RaceIdentifierToSubrace(AllFighters(nfighters).race)
+                End If
+            ElseIf cat(i) = 2 Then
+                nleaders += 1
+                AllLeaders(nleaders) = Unit.Copy(AllUnitsList(i))
+                If customRace.ContainsKey(AllLeaders(nleaders).unitID) Then
+                    AllLeaders(nleaders).race = comm.RaceIdentifierToSubrace(customRace.Item(AllLeaders(nleaders).unitID))
+                Else
+                    AllLeaders(nleaders).race = comm.RaceIdentifierToSubrace(AllLeaders(nleaders).race)
+                End If
+            End If
+        Next i
+
     End Sub
+
+    ''' <summary>Найдет статы юнита по ID (нечувствительно к регистру)</summary>
+    ''' <param name="ID">GxxxUUxxxx</param>
+    Public Function FindUnitStats(ByRef ID As String) As Unit
+        Dim f As String = ID.ToUpper
+        Dim a()() As Unit = New Unit()() {AllFighters, AllLeaders}
+        For u As Integer = 0 To UBound(a) Step 1
+            For i As Integer = 0 To UBound(a(u)) Step 1
+                If f = a(u)(i).unitID Then Return Unit.Copy(a(u)(i))
+            Next i
+        Next u
+        Return Nothing
+    End Function
 
     ''' <summary>Затычка: вернет отряд из двух сквайров и трех лучников. Лидер - паладин</summary>
     Friend Function GenGag() As Stack
@@ -66,17 +175,11 @@ Public Class RandStack
         Return result
     End Function
 
-    ''' <param name="DesiredExp">Желательная планка опыта юнитов в отряде</param>
-    ''' <param name="DesiredRace">Раса юнитов</param>
-    ''' <param name="DesiredExpStack">Желательный опыт, получаемый за отряд</param>
-    ''' <param name="DesiredStackSize">Количество слотов в отряде</param>
-    ''' <param name="DesiredMaxGiants">Максимальное количество больших юнитов в отряде</param>
-    ''' <param name="DesiredMelee">Количество юнитов ближнего боя в отряде</param>
+    ''' <param name="StackStats">Желаемые параметры стэка</param>
     ''' <param name="GroundTile">True, если на клетку нельзя ставить водных лидеров</param>
-    Friend Function Gen(ByRef DesiredExp As Integer, ByRef DesiredRace As Integer, ByRef DesiredExpStack As Integer, _
-                        ByRef DesiredStackSize As Integer, ByRef DesiredMaxGiants As Integer, ByRef DesiredMelee As Integer, _
-                        ByRef GroundTile As Boolean) As Stack
+    Friend Function Gen(ByRef StackStats As DesiredStats, ByRef GroundTile As Boolean) As Stack
 
+        Dim DynStackStats As DesiredStats = DesiredStats.Copy(StackStats)
         Dim PossibleLeaders, SelectedFighters As New List(Of Integer)
 
         'создаем список лидеров, которых вообще можем использовать
@@ -85,130 +188,292 @@ Public Class RandStack
         Do While PossibleLeaders.Count = 0
             Tolerance += 0.1
             For i As Integer = 0 To UBound(AllLeaders) Step 1
-                If AllLeaders(i).race = DesiredRace And Math.Abs(AllLeaders(i).EXPnext - DesiredExp) < Tolerance * DesiredExp Then
-                    If AllLeaders(i).small Or (Not AllLeaders(i).small And DesiredMaxGiants > 0) Then
-                        If Not AllLeaders(i).waterOnly Or (AllLeaders(i).waterOnly And Not GroundTile) Then
-                            PossibleLeaders.Add(i)
-                        End If
-                    End If
-                End If
+                If SelectPossibleLeader(i, Tolerance, DynStackStats, GroundTile) Then PossibleLeaders.Add(i)
             Next i
+
+            If Tolerance * DynStackStats.ExpBarAverage > 10000 And Tolerance * DynStackStats.ExpStackKilled > 10000 Then
+                If DynStackStats.MaxGiants < 1 Then
+                    DynStackStats.MaxGiants = 1
+                    Tolerance = 0
+                Else
+                    Throw New Exception("Что-то не так в выборе возможных лидеров отряда" & vbNewLine & _
+                                        "StackStats:" & vbNewLine & DesiredStats.Print(StackStats) & vbNewLine & _
+                                        "DynStackStats:" & vbNewLine & DesiredStats.Print(DynStackStats))
+                End If
+            End If
         Loop
 
-        Dim SelectedLeader As Integer = RandomSelection(AllLeaders, PossibleLeaders, 0, DesiredExp, 0)
+        Dim SelectedLeader As Integer = RandomSelection(AllLeaders, PossibleLeaders, 0, DynStackStats)
+        If SelectedLeader = -1 Then
+            Throw New Exception("Возможно, бесконечный цикл в случайном выборе из массива возможных лидеров" & vbNewLine & _
+                                "StackStats:" & vbNewLine & DesiredStats.Print(StackStats) & vbNewLine & _
+                                "DynStackStats:" & vbNewLine & DesiredStats.Print(DynStackStats))
+        End If
+        Dim FreeMeleeSlots As Integer = 3
 
         'теперь нужно добрать воинов в отряд
-        Dim MaxSlots As Integer = DesiredStackSize
-        Dim R As Double = rndgen.Rand(0, 1, serialExecution)
+        Dim R As Double = Rand(0, 1, serialExecution)
         If R < 0.1 Then
-            MaxSlots -= 1
+            DynStackStats.StackSize -= 1
         ElseIf R > 0.9 Then
-            MaxSlots -= 1
+            DynStackStats.StackSize += 1
         End If
-        MaxSlots = Math.Min(MaxSlots, AllLeaders(SelectedLeader).leadership)
+        DynStackStats.StackSize = Math.Min(Math.Min(DynStackStats.StackSize, AllLeaders(SelectedLeader).leadership), 6)
 
-        Dim ExpStack As Integer = DesiredExpStack
-        Dim MaxGiants As Integer = DesiredMaxGiants
-        Dim MinMelee As Integer = DesiredMelee
+        If AllLeaders(SelectedLeader).small Then
+            DynStackStats.StackSize = Math.Max(DynStackStats.StackSize, 1)
+        Else
+            DynStackStats.StackSize = Math.Max(DynStackStats.StackSize, 2)
+        End If
+        DynStackStats.MeleeCount = Math.Min(DynStackStats.MeleeCount, 3)
+        DynStackStats.MaxGiants = Math.Min(DynStackStats.MaxGiants, 3)
 
-        Call ChangeLimit(AllLeaders, SelectedLeader, ExpStack, MaxGiants, MinMelee, MaxSlots)
+        Call ChangeLimit(AllLeaders, SelectedLeader, DynStackStats, FreeMeleeSlots)
 
         Dim fighter As Integer
-        For i As Integer = 2 To MaxSlots Step 1
+        Do While DynStackStats.StackSize > 0
             'создаем список воинов, которых можно использовать
-            fighter = func_SelectFighters(False, False, i, ExpStack, MaxGiants, MinMelee, MaxSlots, DesiredRace, DesiredExp)
+            fighter = SelectFighters(False, False, DynStackStats, FreeMeleeSlots)
             If fighter = -1 Then
-                fighter = func_SelectFighters(True, False, i, ExpStack, MaxGiants, MinMelee, MaxSlots, DesiredRace, DesiredExp)
-                If fighter = -1 Then fighter = func_SelectFighters(True, True, i, ExpStack, MaxGiants, MinMelee, MaxSlots, DesiredRace, DesiredExp)
-            End If
+                fighter = SelectFighters(True, False, DynStackStats, FreeMeleeSlots)
+                If fighter = -1 Then fighter = SelectFighters(True, True, DynStackStats, FreeMeleeSlots)
+              End If
             If fighter = -1 Then
-                Exit For
+                If DynStackStats.MeleeCount > 0 Then
+                    DynStackStats.MeleeCount = 0
+                Else
+                    Exit Do
+                End If
+            ElseIf fighter = -2 Then
+                Throw New Exception("Возможно, бесконечный цикл в случайном выборе из массива возможных djbyjd" & vbNewLine & _
+                                    "StackStats:" & vbNewLine & DesiredStats.Print(StackStats) & vbNewLine & _
+                                    "DynStackStats:" & vbNewLine & DesiredStats.Print(DynStackStats))
             Else
                 SelectedFighters.Add(fighter)
             End If
-        Next i
+        Loop
         'в итоге должны получить лидера и остальной отряд
         'дальше расставляем в зависимости от размера и дальности атаки и пишем в файл карты
-
-        Dim unitID(SelectedFighters.Count) As String
-        Dim melee(UBound(unitID)), giant(UBound(unitID)) As Boolean
-        Dim result As Stack
+        Dim SelectedUnits(SelectedFighters.Count) As Unit
+        Dim result As New Stack With {.leaderPos = -1}
         ReDim result.pos(UBound(busytransfer))
-        Dim busy(UBound(result.pos)) As Boolean
+        Dim unitIsUsed(UBound(SelectedUnits)) As Boolean
+        Dim firstRowSlots As Integer = 3
+        Dim secondRowSlots As Integer = 3
 
-        unitID(0) = AllLeaders(SelectedLeader).unitID
-        melee(0) = (AllLeaders(SelectedLeader).reach = 3)
-        giant(0) = Not AllLeaders(SelectedLeader).small
+        SelectedUnits(0) = Unit.Copy(AllLeaders(SelectedLeader))
         Dim n As Integer = 0
-        Dim m As Integer
-        Dim FRowSlots As Integer = 3
-        Dim SRowSlots As Integer = 3
-
         For Each i As Integer In SelectedFighters
             n += 1
-            unitID(n) = AllFighters(i).unitID
-            melee(n) = (AllFighters(i).reach = 3)
-            giant(n) = Not AllFighters(i).small
+            SelectedUnits(n) = Unit.Copy(AllFighters(i))
         Next i
-        For i As Integer = 0 To UBound(unitID) Step 1
-            If giant(i) Then
+        For i As Integer = 0 To UBound(SelectedUnits) Step 1
+            If Not unitIsUsed(i) And Not SelectedUnits(i).small Then
+                unitIsUsed(i) = SetUnitPosition(i, SelectedUnits, firstRowSlots, secondRowSlots, False, result)
             End If
+        Next i
+        For i As Integer = 0 To UBound(SelectedUnits) Step 1
+            If Not unitIsUsed(i) And SelectedUnits(i).reach = 3 Then
+                unitIsUsed(i) = SetUnitPosition(i, SelectedUnits, firstRowSlots, secondRowSlots, False, result)
+            End If
+        Next i
+        For i As Integer = 0 To UBound(SelectedUnits) Step 1
+            If Not unitIsUsed(i) And Not SelectedUnits(i).reach = 3 Then
+                unitIsUsed(i) = SetUnitPosition(i, SelectedUnits, firstRowSlots, secondRowSlots, False, result)
+            End If
+        Next i
+        For i As Integer = 0 To UBound(SelectedUnits) Step 1
+            If Not unitIsUsed(i) Then
+                unitIsUsed(i) = SetUnitPosition(i, SelectedUnits, firstRowSlots, secondRowSlots, True, result)
+            End If
+        Next i
+        For i As Integer = 0 To UBound(unitIsUsed) Step 1
+            If Not unitIsUsed(i) Then Throw New Exception("Что-то не так в размещателе юнитов" & vbNewLine & _
+                                                          "StackStats:" & vbNewLine & DesiredStats.Print(StackStats) & vbNewLine & _
+                                                          "DynStackStats:" & vbNewLine & DesiredStats.Print(DynStackStats))
+        Next i
+        For i As Integer = 0 To UBound(result.pos) Step 1
+            If result.pos(i) = "" Then result.pos(i) = "G000000000"
         Next i
         Return result
     End Function
-    Private Sub SetUnitPosition(ByRef i As Integer, _
-                                ByRef unitID() As String, ByRef giant() As Boolean, ByRef melee() As Boolean, _
-                                ByRef FRowSlots As Integer, ByRef SRowSlots As Integer, ByRef busy() As Boolean, _
-                                ByRef result As Stack)
-        Dim n As Integer = rndgen.RndPos(FRowSlots, serialExecution)
+    Private Function SelectPossibleLeader(ByRef leaderID As Integer, ByRef Tolerance As Double, _
+                                          ByRef StackStats As DesiredStats, ByRef GroundTile As Boolean) As Boolean
+        If Not AllLeaders(leaderID).race = StackStats.Race Then Return False
+        If Not AllLeaders(leaderID).small And StackStats.MaxGiants = 0 Then Return False
+        If AllLeaders(leaderID).waterOnly And GroundTile Then Return False
+        Dim mult As Double
+        If AllLeaders(leaderID).small Then
+            mult = 1
+        Else
+            mult = 2
+        End If
+        If Math.Abs(AllLeaders(leaderID).EXPnext - mult * StackStats.ExpBarAverage) _
+            > mult * Tolerance * StackStats.ExpBarAverage Then Return False
+        If AllLeaders(leaderID).EXPkilled > (1 + Tolerance) * StackStats.ExpStackKilled Then Return False
+        Return True
+    End Function
+
+    Private Function SelectFighters(ByRef skipfilter1 As Boolean, ByRef skipfilter2 As Boolean, _
+                                    ByRef DynStackStats As DesiredStats, ByRef FreeMeleeSlots As Integer) As Integer
+
+        Dim PossibleFighters As New List(Of Integer)
+        Dim TExpStack As Double = DynStackStats.ExpStackKilled / DynStackStats.StackSize
+        Dim SelectedFighter As Integer
+        Dim nloops As Integer = 0
+        Do While PossibleFighters.Count = 0 And TExpStack < 1.1 * DynStackStats.ExpStackKilled
+            For j As Integer = 0 To UBound(AllFighters) Step 1
+                If SelectPossibleFighter(skipfilter1, skipfilter2, j, DynStackStats, FreeMeleeSlots) Then PossibleFighters.Add(j)
+            Next j
+            TExpStack += 0.1 * DynStackStats.ExpStackKilled / DynStackStats.StackSize
+            nloops += 1
+            If nloops > 10 Then Exit Do
+        Loop
+        If PossibleFighters.Count > 0 Then
+            SelectedFighter = RandomSelection(AllFighters, PossibleFighters, 1, DynStackStats)
+            If SelectedFighter = -1 Then Return -2
+            Call ChangeLimit(AllFighters, SelectedFighter, DynStackStats, FreeMeleeSlots)
+        Else
+            SelectedFighter = -1
+        End If
+        Return SelectedFighter
+    End Function
+    Private Function SelectPossibleFighter(ByRef skipMaxGiantsFilter As Boolean, _
+                                           ByRef skipRangeFilter As Boolean, _
+                                           ByRef fighterID As Integer, _
+                                           ByRef DynStackStats As DesiredStats, _
+                                           ByRef FreeMeleeSlots As Integer) As Boolean
+        If Not AllFighters(fighterID).race = DynStackStats.Race Then Return False
+        Dim mult As Double
+        If AllFighters(fighterID).small Then
+            mult = 1
+        Else
+            mult = 2
+        End If
+        If AllFighters(fighterID).EXPkilled > mult * DynStackStats.ExpStackKilled / DynStackStats.StackSize Then Return False
+        If Not AllFighters(fighterID).small Then
+            If DynStackStats.MaxGiants = 0 And Not skipMaxGiantsFilter Then Return False
+            If DynStackStats.StackSize < 2 Then Return False
+            If FreeMeleeSlots = 0 Then Return False
+        End If
+
+        If AllFighters(fighterID).reach = 3 Then
+            If DynStackStats.MeleeCount = 0 Then Return False
+            If FreeMeleeSlots = 0 Then Return False
+        Else
+            If Not skipRangeFilter And DynStackStats.MeleeCount > 0 Then Return False
+        End If
+        Return True
+    End Function
+
+    Private Function SetUnitPosition(ByRef i As Integer, ByRef units() As Unit, _
+                                     ByRef FRowSlots As Integer, ByRef SRowSlots As Integer, _
+                                     ByRef AnySlot As Boolean, ByRef result As Stack) As Boolean
+        Dim placed As Boolean = False
+        Dim n1 As Integer = RndPos(FRowSlots, serialExecution)
+        Dim n2 As Integer = RndPos(SRowSlots, serialExecution)
+
+        Dim t As Integer
         Dim m As Integer = 0
         For k As Integer = 0 To UBound(firstrow) Step 1
-            If Not busy(firstrow(k)) Then
-                m += 1
-                If m = n Then
-                    busy(firstrow(k)) = True
-                    result.pos(firstrow(k)) = unitID(i)
-                    If giant(i) Then result.pos(busytransfer(firstrow(k))) = "G000000000"
-                    If i = 0 Then result.leaderPos = firstrow(k)
-
-                    Exit For
+            If Not units(i).small Or units(i).reach = 3 Then
+                If result.pos(firstrow(k)) = "" Then
+                    m += 1
+                    If m = n1 Then
+                        result.pos(firstrow(k)) = units(i).unitID
+                        FRowSlots -= 1
+                        If Not units(i).small Then
+                            result.pos(busytransfer(firstrow(k))) = "G000000000"
+                            SRowSlots -= 1
+                        End If
+                        If i = 0 Then result.leaderPos = firstrow(k)
+                        placed = True
+                        Exit For
+                    End If
+                End If
+            ElseIf AnySlot Then
+                For p As Integer = 0 To 1 Step 1
+                    t = 2 * k + p
+                    If result.pos(t) = "" Then
+                        m += 1
+                        If m = n1 + n2 Then
+                            result.pos(t) = units(i).unitID
+                            For r As Integer = 0 To UBound(firstrow) Step 1
+                                If t = firstrow(r) Then
+                                    FRowSlots -= 1
+                                    If i = 0 Then result.leaderPos = firstrow(r)
+                                    p = 1
+                                    placed = True
+                                    Exit For
+                                ElseIf t = secondrow(r) Then
+                                    SRowSlots -= 1
+                                    If i = 0 Then result.leaderPos = secondrow(r)
+                                    p = 1
+                                    placed = True
+                                    Exit For
+                                End If
+                            Next r
+                        End If
+                    End If
+                Next p
+            Else
+                If result.pos(secondrow(k)) = "" Then
+                    m += 1
+                    If m = n2 Then
+                        result.pos(secondrow(k)) = units(i).unitID
+                        SRowSlots -= 1
+                        If i = 0 Then result.leaderPos = secondrow(k)
+                        placed = True
+                        Exit For
+                    End If
                 End If
             End If
         Next k
+        Return placed
+    End Function
 
-    End Sub
     Private Sub ChangeLimit(ByRef List() As Unit, ByRef id As Integer, _
-                            ByRef ExpStack As Integer, ByRef MaxGiants As Integer, _
-                            ByRef MinMelee As Integer, ByRef MaxSlots As Integer)
-        ExpStack -= List(id).EXPkilled
+                            ByRef DynStackStats As DesiredStats,
+                            ByRef FreeMeleeSlots As Integer)
+        DynStackStats.ExpStackKilled -= List(id).EXPkilled
         If Not List(id).small Then
-            MaxGiants -= 1
-            MaxSlots -= 1
-            MinMelee = Math.Max(0, MinMelee - 1)
+            DynStackStats.MaxGiants -= 1
+            DynStackStats.StackSize -= 2
+            FreeMeleeSlots -= 1
         ElseIf List(id).reach = 3 Then
-            MinMelee = Math.Max(0, MinMelee - 1)
+            DynStackStats.StackSize -= 1
+            DynStackStats.MeleeCount = Math.Max(0, DynStackStats.MeleeCount - 1)
+            FreeMeleeSlots -= 1
+        Else
+            DynStackStats.StackSize -= 1
         End If
+        DynStackStats.MeleeCount = Math.Min(DynStackStats.MeleeCount, FreeMeleeSlots)
     End Sub
 
     'выбираем случайным образом запись из списка
     Private Function RandomSelection(ByRef List() As Unit, ByRef IDs As List(Of Integer), ByRef mode As Integer, _
-                                     ByRef DesiredExp As Integer, ByRef DesiredExpKill As Integer) As Integer
+                                     ByRef DynStackStats As DesiredStats) As Integer
         Dim WeightsSum As Double = 0
         Dim Weight(UBound(List)) As Double
         Dim smearing As Double = 0
+        Dim mult As Double
 
         Do While WeightsSum = 0
-            WeightsSum = 0
             smearing += 0.1
             For Each i As Integer In IDs
-                Weight(i) = func_Gauss(CDbl(List(i).EXPnext), CDbl(DesiredExp), smearing)
-                If mode = 1 Then Weight(i) *= func_Gauss(CDbl(List(i).EXPkilled), CDbl(DesiredExpKill), smearing)
+                If List(i).small Then
+                    mult = 1
+                Else
+                    mult = 2
+                End If
+                Weight(i) = Gauss(CDbl(List(i).EXPnext), mult * CDbl(DynStackStats.ExpBarAverage), smearing)
+                If mode = 1 Then Weight(i) *= Gauss(CDbl(List(i).EXPkilled), mult * CDbl(DynStackStats.ExpStackKilled) / CDbl(DynStackStats.StackSize), smearing)
                 WeightsSum += Weight(i)
             Next i
-            If smearing = 10 Then Throw New Exception("Возможно, бесконечный цикл в случайном выборе из массива")
+            If smearing = 10 Then Return -1
         Loop
 
-        Dim R As Double = rndgen.Rand(0, WeightsSum, serialExecution)
+        Dim R As Double = Rand(0, WeightsSum, serialExecution)
         Dim W As Double = 0
         Dim SelectedItem As Integer = -1
         For Each i In IDs
@@ -221,44 +486,34 @@ Public Class RandStack
         If SelectedItem = -1 Then SelectedItem = IDs.Item(IDs.Count - 1)
         Return SelectedItem
     End Function
-
-    Private Function func_Gauss(ByRef X As Double, ByRef avX As Double, ByRef sigma As Double) As Double
+    Private Function Gauss(ByRef X As Double, ByRef avX As Double, ByRef sigma As Double) As Double
         Return Math.Exp(-0.5 * ((X - avX) / (sigma * avX)) ^ 2)
     End Function
 
-
-    Private Function func_SelectFighters(ByRef skipfilter1 As Boolean, ByRef skipfilter2 As Boolean, ByRef i As Integer, _
-                                         ByRef ExpStack As Integer, ByRef MaxGiants As Integer, ByRef MinMelee As Integer, _
-                                         ByRef MaxSlots As Integer, ByRef DesiredRace As Integer, ByRef DesiredExp As Integer) As Integer
-        '(остальные переменные те же, что и в main; ExpStack, MaxSlots, MaxGiants и MinMelee обязательно передавать by reference)
-        Dim AverageExpStack As Double = ExpStack / (MaxSlots - i + 1)
-        Dim PossibleFighters As New List(Of Integer)
-        Dim TExpStack As Double = AverageExpStack
-        Dim SelectedFighter As Integer
-        Dim nloops As Integer = 0
-        Do While PossibleFighters.Count = 0 And TExpStack < 1.1 * ExpStack
-            For j As Integer = 0 To UBound(AllFighters) Step 1
-                If AllFighters(j).race = DesiredRace And AllFighters(j).EXPkilled < TExpStack Then
-                    If (AllFighters(j).small Or (Not AllFighters(j).small And MaxGiants > 0 And MaxSlots - i > 0)) Or skipfilter1 Then
-                        If ((AllFighters(j).reach = 3 And MinMelee > 0) Or (Not AllFighters(j).reach = 3 And MinMelee = 0)) Or skipfilter2 Then
-                            PossibleFighters.Add(j)
-                        End If
-                    End If
-                End If
-            Next j
-            TExpStack += 0.1 * AverageExpStack
-            nloops += 1
-            If nloops > 10 Then Exit Do
-        Loop
-        If PossibleFighters.Count > 0 Then
-            SelectedFighter = RandomSelection(AllFighters, PossibleFighters, 1, DesiredExp, CInt(AverageExpStack))
-            Call ChangeLimit(AllLeaders, SelectedFighter, ExpStack, MaxGiants, MinMelee, MaxSlots)
+    '''<summary>Returns random value with uniform distribution.</summary>
+    '''<param name="lower">Minimum value.</param>
+    '''<param name="upper">Maximum value.</param>
+    ''' <param name="serial">True, if use in serial code</param>
+    Private Function Rand(ByRef lower As Double, ByRef upper As Double, ByRef serial As Boolean) As Double
+        If serial Then
+            Return rndgen.PRand(lower, upper)
         Else
-            SelectedFighter = -1
+            Return rndgen.Rand(lower, upper)
         End If
-        Return SelectedFighter
     End Function
-
+    Private Function RndPos(ByRef n As Integer, ByRef serial As Boolean) As Integer
+        Dim R As Double
+        If serial Then
+            R = rndgen.PRand(0, 1)
+        Else
+            R = rndgen.Rand(0, 1)
+        End If
+        Dim dr As Double = 1 / n
+        For i As Integer = 1 To n Step 1
+            If CDbl(i) * dr >= R Then Return i
+        Next i
+        Return n
+    End Function
 
 End Class
 
@@ -271,31 +526,6 @@ Public Class RndValueGen
             Call RndDbl()
         Next i
     End Sub
-
-    '''<summary>Returns random value with uniform distribution.</summary>
-    '''<param name="lower">Minimum value.</param>
-    '''<param name="upper">Maximum value.</param>
-    ''' <param name="serial">True, if use in serial code</param>
-    Public Function Rand(ByRef lower As Double, ByRef upper As Double, ByRef serial As Boolean) As Double
-        If serial Then
-            Return PRand(lower, upper)
-        Else
-            Return Rand(lower, upper)
-        End If
-    End Function
-    Public Function RndPos(ByRef n As Integer, ByRef serial As Boolean) As Integer
-        Dim R As Double
-        If serial Then
-            R = PRand(0, 1)
-        Else
-            R = Rand(0, 1)
-        End If
-        Dim dr As Double = 1 / n
-        For i As Integer = 1 To n Step 1
-            If CDbl(i) * dr >= R Then Return i
-        Next i
-        Return n
-    End Function
 
     Private Function RndDbl() As Double
         If betTick = 0 Or System.Double.IsInfinity(betTick) Then
@@ -364,6 +594,76 @@ Public Class RndValueGen
              value(i) = Rand(l, u)
          End Sub)
         Return value(n)
+    End Function
+
+End Class
+
+Public Class Common
+
+    Private Races As New Dictionary(Of String, Integer)
+
+    Friend Sub New()
+        Dim splitedRace() As String = TxtSplit(My.Resources.Races)
+        Dim srow() As String
+        For Each item As String In splitedRace
+            srow = item.Split(CChar(" "))
+            For i As Integer = 0 To UBound(srow) Step 1
+                Races.Add(srow(i).ToUpper, CInt(srow(UBound(srow))))
+            Next i
+        Next item
+    End Sub
+
+    ''' <summary>Возвращает ID, соответствующее файлам игры</summary>
+    ''' <param name="ID">Идентификатор расы (файл races.txt)</param>
+    Public Function RaceIdentifierToSubrace(ByRef ID As String) As Integer
+        Dim uID As String = ID.ToUpper
+        If Races.ContainsKey(uID) Then
+            Return Races.Item(uID)
+        Else
+            Throw New Exception("Неизвестный идентификатор расы:" & ID)
+            Return -1
+        End If
+    End Function
+    ''' <summary>Возвращает ID, соответствующее файлам игры</summary>
+    ''' <param name="ID">Идентификатор расы (файл races.txt)</param>
+    Public Function RaceIdentifierToSubrace(ByRef ID As Integer) As Integer
+        Return RaceIdentifierToSubrace(ID.ToString)
+    End Function
+
+    ''' <summary>Разбивает на строки текст по разделителям Chr(10) и Chr(13). Заменяет все табы на пробелы, удаляет повторяющиеся подряд пробелы, удаляет пробелы в начале и конце строки. Не добавляет в выходной массив стироки, начинающиеся с #</summary>
+    ''' <param name="TXT">Какой-нибудь текст</param>
+    Public Function TxtSplit(ByRef TXT As String) As String()
+        Dim splited() As String = TXT.Replace(Chr(10), Chr(13)).Replace(vbTab, " ").Split(Chr(13))
+        Dim parseString(UBound(splited)) As Boolean
+        Dim nStrings As Integer = -1
+        For i As Integer = 0 To UBound(splited) Step 1
+            If splited(i).Length > 1 AndAlso Not splited(i).Substring(0, 1) = "#" Then
+                parseString(i) = True
+                nStrings += 1
+            End If
+        Next i
+        If nStrings = -1 Then Return Nothing
+        Dim result(nStrings) As String
+        nStrings = -1
+        Dim L0 As Integer
+        For i As Integer = 0 To UBound(splited) Step 1
+            If parseString(i) Then
+                L0 = 0
+                Do While Not L0 = splited(i).Length
+                    L0 = splited(i).Length
+                    splited(i) = splited(i).Replace("  ", " ")
+                Loop
+                If Not splited(i) = " " Then
+                    If splited(i).Substring(0, 1) = " " Then splited(i) = splited(i).Substring(1)
+                    If splited(i).Substring(splited(i).Length - 1) = " " Then splited(i) = splited(i).Substring(0, splited(i).Length - 1)
+                    nStrings += 1
+                    result(nStrings) = splited(i)
+                End If
+            End If
+        Next i
+        If nStrings = -1 Then Return Nothing
+        If Not nStrings = UBound(result) Then ReDim Preserve result(nStrings)
+        Return result
     End Function
 
 End Class
