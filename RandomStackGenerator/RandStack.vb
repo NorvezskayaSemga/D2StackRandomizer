@@ -2,8 +2,6 @@
 
 Public Class RandStack
 
-
-
     Private busytransfer() As Integer = New Integer() {1, -1, 3, -1, 5, -1}
     Private firstrow() As Integer = New Integer() {0, 2, 4}
     Private secondrow() As Integer = New Integer() {1, 3, 5}
@@ -91,7 +89,7 @@ Public Class RandStack
 
     ''' <param name="AllUnitsList">Dсе юниты в игре</param>
     ''' <param name="serial">True, если код, использующий генератор выполняется в одном потоке</param>
-    Friend Sub New(ByRef AllUnitsList() As Unit, ByRef serial As Boolean)
+    Public Sub New(ByRef AllUnitsList() As Unit, ByRef serial As Boolean)
         serialExecution = serial
         If IsNothing(AllUnitsList) Then Exit Sub
 
@@ -158,7 +156,7 @@ Public Class RandStack
     End Function
 
     ''' <summary>Затычка: вернет отряд из двух сквайров и трех лучников. Лидер - паладин</summary>
-    Friend Function GenGag() As Stack
+    Public Function GenGag() As Stack
         Dim result As New Stack
         ReDim result.pos(UBound(busytransfer))
         Dim fighter1 As String = "G000UU0001"
@@ -177,7 +175,7 @@ Public Class RandStack
 
     ''' <param name="StackStats">Желаемые параметры стэка</param>
     ''' <param name="GroundTile">True, если на клетку нельзя ставить водных лидеров</param>
-    Friend Function Gen(ByRef StackStats As DesiredStats, ByRef GroundTile As Boolean) As Stack
+    Public Function Gen(ByRef StackStats As DesiredStats, ByRef GroundTile As Boolean) As Stack
 
         Dim DynStackStats As DesiredStats = DesiredStats.Copy(StackStats)
         Dim PossibleLeaders, SelectedFighters As New List(Of Integer)
@@ -237,7 +235,7 @@ Public Class RandStack
             If fighter = -1 Then
                 fighter = SelectFighters(True, False, DynStackStats, FreeMeleeSlots)
                 If fighter = -1 Then fighter = SelectFighters(True, True, DynStackStats, FreeMeleeSlots)
-              End If
+            End If
             If fighter = -1 Then
                 If DynStackStats.MeleeCount > 0 Then
                     DynStackStats.MeleeCount = 0
@@ -486,7 +484,7 @@ Public Class RandStack
         If SelectedItem = -1 Then SelectedItem = IDs.Item(IDs.Count - 1)
         Return SelectedItem
     End Function
-    Private Function Gauss(ByRef X As Double, ByRef avX As Double, ByRef sigma As Double) As Double
+  Private Function Gauss(ByRef X As Double, ByRef avX As Double, ByRef sigma As Double) As Double
         Return Math.Exp(-0.5 * ((X - avX) / (sigma * avX)) ^ 2)
     End Function
 
@@ -521,7 +519,7 @@ Public Class RndValueGen
     Private betTick, lastRAM As Double
     Private tempPat, delimiterBias As Integer
 
-    Friend Sub New()
+    Public Sub New()
         For i As Integer = 0 To 10 Step 1
             Call RndDbl()
         Next i
@@ -602,7 +600,7 @@ Public Class Common
 
     Private Races As New Dictionary(Of String, Integer)
 
-    Friend Sub New()
+    Public Sub New()
         Dim splitedRace() As String = TxtSplit(My.Resources.Races)
         Dim srow() As String
         For Each item As String In splitedRace
