@@ -22,21 +22,21 @@ Namespace My.Resources
     '''<summary>
     '''  A strongly-typed resource class, for looking up localized strings, etc.
     '''</summary>
-    <Global.System.CodeDom.Compiler.GeneratedCodeAttribute("System.Resources.Tools.StronglyTypedResourceBuilder", "4.0.0.0"), _
-     Global.System.Diagnostics.DebuggerNonUserCodeAttribute(), _
-     Global.System.Runtime.CompilerServices.CompilerGeneratedAttribute(), _
-     Global.Microsoft.VisualBasic.HideModuleNameAttribute()> _
-    Public Module Resources
-
+    <Global.System.CodeDom.Compiler.GeneratedCodeAttribute("System.Resources.Tools.StronglyTypedResourceBuilder", "4.0.0.0"),  _
+     Global.System.Diagnostics.DebuggerNonUserCodeAttribute(),  _
+     Global.System.Runtime.CompilerServices.CompilerGeneratedAttribute(),  _
+     Global.Microsoft.VisualBasic.HideModuleNameAttribute()>  _
+    Friend Module Resources
+        
         Private resourceMan As Global.System.Resources.ResourceManager
-
+        
         Private resourceCulture As Global.System.Globalization.CultureInfo
-
+        
         '''<summary>
         '''  Returns the cached ResourceManager instance used by this class.
         '''</summary>
-        <Global.System.ComponentModel.EditorBrowsableAttribute(Global.System.ComponentModel.EditorBrowsableState.Advanced)> _
-        Public ReadOnly Property ResourceManager() As Global.System.Resources.ResourceManager
+        <Global.System.ComponentModel.EditorBrowsableAttribute(Global.System.ComponentModel.EditorBrowsableState.Advanced)>  _
+        Friend ReadOnly Property ResourceManager() As Global.System.Resources.ResourceManager
             Get
                 If Object.ReferenceEquals(resourceMan, Nothing) Then
                     Dim temp As Global.System.Resources.ResourceManager = New Global.System.Resources.ResourceManager("RandomStackGenerator.Resources", GetType(Resources).Assembly)
@@ -45,21 +45,21 @@ Namespace My.Resources
                 Return resourceMan
             End Get
         End Property
-
+        
         '''<summary>
         '''  Overrides the current thread's CurrentUICulture property for all
         '''  resource lookups using this strongly typed resource class.
         '''</summary>
-        <Global.System.ComponentModel.EditorBrowsableAttribute(Global.System.ComponentModel.EditorBrowsableState.Advanced)> _
-        Public Property Culture() As Global.System.Globalization.CultureInfo
+        <Global.System.ComponentModel.EditorBrowsableAttribute(Global.System.ComponentModel.EditorBrowsableState.Advanced)>  _
+        Friend Property Culture() As Global.System.Globalization.CultureInfo
             Get
                 Return resourceCulture
             End Get
-            Set(value As Global.System.Globalization.CultureInfo)
+            Set
                 resourceCulture = value
             End Set
         End Property
-
+        
         '''<summary>
         '''  Looks up a localized string similar to #строка, начинающаяся с решетки, игнорируется
         '''#ID юнитов
@@ -101,12 +101,38 @@ Namespace My.Resources
         '''g000uu3003
         '''g000 [rest of string was truncated]&quot;;.
         '''</summary>
-        Public ReadOnly Property ExcludeIDs() As String
+        Friend ReadOnly Property ExcludeIDs() As String
             Get
                 Return ResourceManager.GetString("ExcludeIDs", resourceCulture)
             End Get
         End Property
-
+        
+        '''<summary>
+        '''  Looks up a localized string similar to #строка, начинающаяся с решетки, игнорируется
+        '''#Идентификаторы типов предметов.
+        '''0	nonattack_artefact
+        '''1	relic
+        '''2	attack_artefact
+        '''3	banner
+        '''4	elixir
+        '''5	healing_elixir
+        '''6	ressurection_elixir
+        '''7	permanent_elixir
+        '''8	scroll
+        '''9	stuff
+        '''10	jewel
+        '''11	sphere
+        '''12	talisman
+        '''13	boots
+        '''14	special
+        '''.
+        '''</summary>
+        Friend ReadOnly Property Items() As String
+            Get
+                Return ResourceManager.GetString("Items", resourceCulture)
+            End Get
+        End Property
+        
         '''<summary>
         '''  Looks up a localized string similar to #строка, начинающаяся с решетки, игнорируется
         '''#Идентификаторы рас.
@@ -125,12 +151,33 @@ Namespace My.Resources
         '''Animals		A	13
         '''.
         '''</summary>
-        Public ReadOnly Property Races() As String
+        Friend ReadOnly Property Races() As String
             Get
                 Return ResourceManager.GetString("Races", resourceCulture)
             End Get
         End Property
-
+        
+        '''<summary>
+        '''  Looks up a localized string similar to ITEM_CAT	ITEM_ID	VALUE
+        '''6	G000IG0001	g0400:r0000:y0000:e0000:w0000
+        '''4	G000IG0002	g0200:r0000:y0000:e0000:w0000
+        '''4	G000IG0003	g0450:r0000:y0000:e0000:w0000
+        '''7	G000IG0004	g1500:r0000:y0000:e0000:w0000
+        '''5	G000IG0005	g0150:r0000:y0000:e0000:w0000
+        '''5	G000IG0006	g0300:r0000:y0000:e0000:w0000
+        '''7	G000IG0007	g1500:r0000:y0000:e0000:w0000
+        '''4	G000IG0008	g0200:r0000:y0000:e0000:w0000
+        '''4	G000IG0009	g0450:r0000:y0000:e0000:w0000
+        '''7	G000IG0010	g1500:r0000:y0000:e0000:w0000
+        '''4	G000IG0011	g0200:r0000:y0000:e0000:w0000
+        '''4	G0 [rest of string was truncated]&quot;;.
+        '''</summary>
+        Friend ReadOnly Property TestItemsTable() As String
+            Get
+                Return ResourceManager.GetString("TestItemsTable", resourceCulture)
+            End Get
+        End Property
+        
         '''<summary>
         '''  Looks up a localized string similar to UNIT_ID	UNIT_CAT	LEVEL	SUBRACE	BRANCH	SIZE_SMALL	ATTACK_ID	XP_KILLED	XP_NEXT	LEADERSHIP	WATER_ONLY	REACH
         '''g000uu0001	0	1	1	0	True	g000aa0001	20	80	0	False	3
@@ -142,34 +189,34 @@ Namespace My.Resources
         '''g000uu0007	0	2	1	1	True	g000aa0007	60	500	0	False	2
         '''g000uu0008	0	1	1	2	True	g000aa0008	 [rest of string was truncated]&quot;;.
         '''</summary>
-        Public ReadOnly Property TestUnitsTable() As String
+        Friend ReadOnly Property TestUnitsTable() As String
             Get
                 Return ResourceManager.GetString("TestUnitsTable", resourceCulture)
             End Get
         End Property
-
+        
         '''<summary>
         '''  Looks up a localized string similar to #строка, начинающаяся с решетки, игнорируется
         '''#файл, определяющий расу некоторых юнитов независимо от файлов игры
-        '''#ID юнита, имя юнита, раса
+        '''#ID юнита, имя юнита без пробелов и табов, раса
         '''g000uu6010	Гидра	A
         '''g000uu6110	Гидра	A
         '''g000uu6016	Мантикора	A
         '''g000uu6116	Мантикора	A
-        '''g000uu8270	Серный змей	A
-        '''g001uu8270	Серный змей	A
+        '''g000uu8270	Серный_змей	A
+        '''g001uu8270	Серный_змей	A
         '''g000uu8218	Волхв	C
         '''g000uu8222	Волхв	C
-        '''g000uu8221	Ледяной кузнец	C
-        '''g000uu8226	Сын Земли	C
-        '''g000uu8243	Жрец Имира	C
+        '''g000uu8221	Ледяной_кузнец	C
+        '''g000uu8226	Сын_Земли	C
+        '''g000uu8243	Жрец_Имира	C
         '''g001uu8259	Колосс	C
         '''g000uu8259	Колосс	C
         '''g000uu8266	Дроттар	C
         '''g000uu7500	Гримтурс	C
-        '''g000uu7534	Хранитель ру [rest of string was truncated]&quot;;.
+        '''g0 [rest of string was truncated]&quot;;.
         '''</summary>
-        Public ReadOnly Property UnitRace() As String
+        Friend ReadOnly Property UnitRace() As String
             Get
                 Return ResourceManager.GetString("UnitRace", resourceCulture)
             End Get

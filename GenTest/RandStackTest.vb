@@ -54,7 +54,9 @@ Public Class RandStackTest
     '
 #End Region
 
+    Dim excludeList() As String = New String() {"%default%", "%default%"}
     Dim UnitsList() As RandStack.Unit = Nothing
+    Dim ItemsList() As RandStack.Item = Nothing
     Private Sub ReadTestUnits()
         Dim comm As New Common
         Dim s() As String = comm.TxtSplit(RandomStackGenerator.My.Resources.TestUnitsTable)
@@ -79,6 +81,20 @@ Public Class RandStackTest
             End If
         Next i
     End Sub
+    Private Sub ReadTestItems()
+        Dim comm As New Common
+        Dim s() As String = comm.TxtSplit(RandomStackGenerator.My.Resources.TestItemsTable)
+        Dim r() As String
+        ReDim ItemsList(UBound(s) - 1)
+        For i As Integer = 1 To UBound(s) Step 1
+            r = s(i).Split(" ")
+            If r.Length = 3 Then
+                ItemsList(i - 1).Type = r(0)
+                ItemsList(i - 1).itemID = r(1)
+                ItemsList(i - 1).itemCost = RandStack.Cost.Read(r(2))
+            End If
+        Next i
+    End Sub
 
     '''<summary>
     '''A test for RndPos
@@ -87,7 +103,8 @@ Public Class RandStackTest
      DeploymentItem("RandomStackGenerator.dll")> _
     Public Sub RndPosTest()
         If IsNothing(UnitsList) Then Call ReadTestUnits()
-        Dim target As RandStack_Accessor = New RandStack_Accessor(UnitsList, False)
+        If IsNothing(ItemsList) Then Call ReadTestItems()
+        Dim target As RandStack_Accessor = New RandStack_Accessor(UnitsList, ItemsList, excludeList, False)
 
         Dim serial_ok, parallel_ok As Boolean
         serial_ok = True
@@ -142,7 +159,8 @@ Public Class RandStackTest
      DeploymentItem("RandomStackGenerator.dll")> _
     Public Sub RandTest()
         If IsNothing(UnitsList) Then Call ReadTestUnits()
-        Dim target As RandStack_Accessor = New RandStack_Accessor(UnitsList, False)
+        If IsNothing(ItemsList) Then Call ReadTestItems()
+        Dim target As Common_Accessor = New Common_Accessor()
         Dim maxval As Integer = 10000
         Dim ok, g(maxval / 10), tmpok As Boolean
         ok = True
@@ -186,15 +204,14 @@ Public Class RandStackTest
         If Not ok Then Assert.Inconclusive("Verify the correctness of this test method.")
     End Sub
 
-
-
     '''<summary>
     '''A test for Gen
     '''</summary>
     <TestMethod()> _
     Public Sub GenTest()
         If IsNothing(UnitsList) Then Call ReadTestUnits()
-        Dim target As RandStack_Accessor = New RandStack_Accessor(UnitsList, False)
+        If IsNothing(ItemsList) Then Call ReadTestItems()
+        Dim target As RandStack_Accessor = New RandStack_Accessor(UnitsList, ItemsList, excludeList, False)
 
         Dim busytransfer() As Integer = New Integer() {1, -1, 3, -1, 5, -1}
         Dim firstrow() As Integer = New Integer() {0, 2, 4}
@@ -204,6 +221,7 @@ Public Class RandStackTest
         Dim stats As New RandStack.DesiredStats
         Dim unit As RandStack.Unit
         Dim races() As String = New String() {"H", "U", "L", "C", "E", "N", "G", "D", "S", "W", "B", "A"}
+        Dim rList As New List(Of Integer)
         Dim GroundTile As Boolean
 
         For eb As Integer = 0 To 10 Step 1
@@ -217,7 +235,9 @@ Public Class RandStackTest
                         For s As Integer = 1 To 6 Step 1
                             stats.StackSize = s
                             For r As Integer = 0 To UBound(races) Step 1
-                                stats.Race = target.comm.RaceIdentifierToSubrace(races(r))
+                                rList.Clear()
+                                rList.Add(target.comm.RaceIdentifierToSubrace(races(r)))
+                                stats.Race = rList
 
                                 For g As Integer = 0 To 1 Step 1
                                     If g = 0 Then
@@ -267,6 +287,74 @@ Public Class RandStackTest
             Next ek
         Next eb
 exittest:
+        If Not ok Then Assert.Inconclusive("Verify the correctness of this test method.")
+    End Sub
+
+    '''<summary>
+    '''A test for StackStats
+    '''</summary>
+    <TestMethod()> _
+    Public Sub StackStatsTest()
+        If IsNothing(UnitsList) Then Call ReadTestUnits()
+        If IsNothing(ItemsList) Then Call ReadTestItems()
+        Dim target As RandStack_Accessor = New RandStack_Accessor(UnitsList, ItemsList, excludeList, False)
+        Dim s As New RandStack.Stack With {.pos = New String() {"G000UU5356", "G000UU0174", "G005UU6111", _
+                                                                "G000000000", "G000UU0162", "G000UU0162"}, _
+                                           .items = New List(Of String)}
+        s.items.AddRange(New String() {"G000IG0011", "G000IG0012", "G000IG0013", "G000IG0014", _
+                                       "G000IG0015", "G000IG0016", "G000IG1001", "G000IG1002"})
+        Dim expected As New RandStack.DesiredStats With {.Race = New List(Of Integer), _
+                                                         .LootCost = 200 + 450 + 1500 + 200 + 450 + 1500 + 1000 + 3000, _
+                                                         .StackSize = 6, _
+                                                         .MeleeCount = 2, _
+                                                         .MaxGiants = 1, _
+                                                         .ExpStackKilled = 320 + 100 + 535 + 175 * 2, _
+                                                         .ExpBarAverage = 2100 + 725 + 2800 + 1100 * 2}
+        expected.ExpBarAverage /= expected.StackSize
+        expected.Race.AddRange(New Integer() {1, 2, 3, 4})
+        Dim ok As Boolean = True
+        Dim calculated As RandStack.DesiredStats = target.StackStats(s)
+        If Not expected.ExpBarAverage = calculated.ExpBarAverage Then ok = False
+        If Not expected.ExpStackKilled = calculated.ExpStackKilled Then ok = False
+        If Not expected.LootCost = calculated.LootCost Then ok = False
+        If Not expected.MaxGiants = calculated.MaxGiants Then ok = False
+        If Not expected.MeleeCount = calculated.MeleeCount Then ok = False
+        If Not expected.StackSize = calculated.StackSize Then ok = False
+        For Each i As Integer In expected.Race
+            If Not calculated.Race.Contains(i) Then ok = False
+        Next i
+        For Each i As Integer In calculated.Race
+            If Not expected.Race.Contains(i) Then ok = False
+        Next i
+        If Not ok Then Assert.Inconclusive("Verify the correctness of this test method.")
+    End Sub
+
+    '''<summary>
+    '''A test for ItemsGen
+    '''</summary>
+    <TestMethod()> _
+    Public Sub ItemsGenTest()
+        If IsNothing(UnitsList) Then Call ReadTestUnits()
+        If IsNothing(ItemsList) Then Call ReadTestItems()
+        Dim target As RandStack_Accessor = New RandStack_Accessor(UnitsList, ItemsList, excludeList, False)
+        Dim ok As Boolean = True
+        Dim cost, sum As Integer
+        Dim genitems As List(Of String)
+        For i As Integer = 0 To 100 Step 1
+            cost = target.minItemGoldCost + i * 125
+            genitems = target.ItemsGen(cost)
+            sum = 0
+            For Each id As String In genitems
+                If target.itemType.Item(target.FindItemStats(id).Type) = "JEWEL" Then
+                    sum += target.FindItemStats(id).itemCost.Gold / 2
+                Else
+                    sum += target.FindItemStats(id).itemCost.Gold
+                End If
+            Next id
+            If sum > cost Then ok = False
+            If Math.Abs(cost - sum) >= target.minItemGoldCost Then ok = False
+            If Not ok Then Exit For
+        Next i
         If Not ok Then Assert.Inconclusive("Verify the correctness of this test method.")
     End Sub
 End Class
