@@ -111,7 +111,9 @@
     </Resource>
   </ItemGroup>
   <ItemGroup>
-    <None Include="Resources\TestUnitsTable.txt" />
+    <None Include="Resources\TestUnitsTable.txt">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
   </ItemGroup>
   <ItemGroup>
     <Resource Include="Resources\Races.txt">
@@ -119,13 +121,29 @@
     </Resource>
   </ItemGroup>
   <ItemGroup>
-    <None Include="Resources\UnitRace.txt" />
+    <None Include="Resources\UnitRace.txt">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
   </ItemGroup>
   <ItemGroup>
-    <None Include="Resources\Items.txt" />
+    <None Include="Resources\Items.txt">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
   </ItemGroup>
   <ItemGroup>
-    <None Include="Resources\TestItemsTable.txt" />
+    <None Include="Resources\TestItemsTable.txt">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="Resources\StackStatsFields.txt">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="Resources\TestStackStats.txt">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.VisualBasic.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 

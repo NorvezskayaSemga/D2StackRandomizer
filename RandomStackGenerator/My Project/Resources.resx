@@ -121,11 +121,26 @@
   <data name="ExcludeIDs" type="System.Resources.ResXFileRef, System.Windows.Forms">
     <value>..\Resources\ExcludeIDs.txt;System.String, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089;windows-1251</value>
   </data>
+  <data name="giantUnitsExpMultiplicator" xml:space="preserve">
+    <value>2</value>
+  </data>
   <data name="Items" type="System.Resources.ResXFileRef, System.Windows.Forms">
     <value>..\Resources\Items.txt;System.String, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089;windows-1251</value>
   </data>
+  <data name="JewelItemsCostMultiplicator" xml:space="preserve">
+    <value>2</value>
+  </data>
+  <data name="nonJewelItemsCostMultiplicator" xml:space="preserve">
+    <value>1</value>
+  </data>
   <data name="Races" type="System.Resources.ResXFileRef, System.Windows.Forms">
     <value>..\Resources\Races.txt;System.String, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089;windows-1251</value>
+  </data>
+  <data name="smallUnitsExpMultiplicator" xml:space="preserve">
+    <value>1</value>
+  </data>
+  <data name="StackStatsFields" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\Resources\StackStatsFields.txt;System.String, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089;windows-1251</value>
   </data>
   <data name="TestItemsTable" type="System.Resources.ResXFileRef, System.Windows.Forms">
     <value>..\Resources\TestItemsTable.txt;System.String, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089;windows-1251</value>
@@ -135,5 +150,8 @@
   </data>
   <data name="UnitRace" type="System.Resources.ResXFileRef, System.Windows.Forms">
     <value>..\Resources\UnitRace.txt;System.String, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089;windows-1251</value>
+  </data>
+  <data name="TestStackStats" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\Resources\TestStackStats.txt;System.String, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089;windows-1251</value>
   </data>
 </root>

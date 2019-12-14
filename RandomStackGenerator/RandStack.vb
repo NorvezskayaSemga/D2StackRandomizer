@@ -8,11 +8,6 @@ Public Class RandStack
     Private firstrow() As Integer = New Integer() {0, 2, 4}
     Private secondrow() As Integer = New Integer() {1, 3, 5}
 
-    Public smallUnitsExpMultiplicator As Double = 1
-    Public giantUnitsExpMultiplicator As Double = 2
-    Public nonJewelItemsCostMultiplicator As Double = 1
-    Public JewelItemsCostMultiplicator As Double = 2
-
     Public Structure Stack
         ''' <summary>ID юнита для каждой позиции</summary>
         Dim pos() As String
@@ -80,31 +75,41 @@ Public Class RandStack
         Dim MeleeCount As Integer
         ''' <summary>Стоимость лута (предметы со стоимостью в золоте, равной нулю, не добавляются). При расчете стоимость драгоценностей уменьшается в два раза</summary>
         Dim LootCost As Integer
+        ''' <summary> Идентификатор локации, для которой сгенерирован отряд</summary>
+        Dim LocationName As String
 
         Public Shared Function Copy(ByVal v As DesiredStats) As DesiredStats
-            Dim R As New List(Of Integer)
+            Dim RacesList As New List(Of Integer)
             For Each Item As Integer In v.Race
-                R.Add(Item)
+                RacesList.Add(Item)
             Next Item
             Return New DesiredStats With {.ExpBarAverage = v.ExpBarAverage, _
                                           .ExpStackKilled = v.ExpStackKilled, _
                                           .MaxGiants = v.MaxGiants, _
                                           .MeleeCount = v.MeleeCount, _
-                                          .Race = R, _
+                                          .Race = RacesList, _
                                           .StackSize = v.StackSize, _
-                                          .LootCost = v.LootCost}
+                                          .LootCost = v.LootCost, _
+                                          .LocationName = v.LocationName}
         End Function
-        Public Shared Function Print(ByVal v As DesiredStats) As String
+        ''' <param name="RaceNumberToRaceChar">Преобразует номер расы в ее текстовый идентификатор. Если передать Nothing, то будут печататься номера рас</param>
+        Public Shared Function Print(ByVal v As DesiredStats, ByRef RaceNumberToRaceChar As Dictionary(Of Integer, String)) As String
             Dim races As String = ""
             For Each Item As Integer In v.Race
-                races &= vbTab & Item
+                If Not races = "" Then races &= "+"
+                If Not IsNothing(RaceNumberToRaceChar) Then
+                    races &= RaceNumberToRaceChar.Item(Item)
+                Else
+                    races &= Item
+                End If
             Next Item
-            Return "ExpBarAverage" & vbTab & v.ExpBarAverage & vbNewLine & _
+            Return "ID" & vbTab & v.LocationName & vbNewLine & _
+                   "AverageExpBar" & vbTab & v.ExpBarAverage & vbNewLine & _
                    "ExpStackKilled" & vbTab & v.ExpStackKilled & vbNewLine & _
+                   "Race" & vbTab & races & vbNewLine & _
+                   "StackSize" & vbTab & v.StackSize & vbNewLine & _
                    "MaxGiants" & vbTab & v.MaxGiants & vbNewLine & _
                    "MeleeCount" & vbTab & v.MeleeCount & vbNewLine & _
-                   "Race" & races & vbNewLine & _
-                   "StackSize" & vbTab & v.StackSize & vbNewLine & _
                    "LootCost" & vbTab & v.LootCost & vbNewLine
         End Function
     End Structure
@@ -288,9 +293,9 @@ Public Class RandStack
                 If Not IsNothing(expKuilled) Then expKuilled(n) = units(n).EXPkilled
                 If Not IsNothing(mult) Then
                     If units(n).small Then
-                        mult(n) = smallUnitsExpMultiplicator
+                        mult(n) = CDbl(My.Resources.smallUnitsExpMultiplicator)
                     Else
-                        mult(n) = giantUnitsExpMultiplicator
+                        mult(n) = CDbl(My.Resources.giantUnitsExpMultiplicator)
                     End If
                 End If
             End If
@@ -322,9 +327,9 @@ Public Class RandStack
                 items(n) = Item.Copy(allitems(i))
                 GoldCost(n) = items(n).itemCost.Gold
                 If itemType.Item(items(n).Type) = "JEWEL" Then
-                    mult(n) = JewelItemsCostMultiplicator
+                    mult(n) = CDbl(My.Resources.JewelItemsCostMultiplicator)
                 Else
-                    mult(n) = nonJewelItemsCostMultiplicator
+                    mult(n) = CDbl(My.Resources.nonJewelItemsCostMultiplicator)
                 End If
                 If minItemGoldCost * mult(n) > items(n).itemCost.Gold Then
                     minItemGoldCost = CInt(items(n).itemCost.Gold / mult(n))
@@ -392,9 +397,9 @@ Public Class RandStack
             m = FindItemStats(Item)
             If m.itemID = "" Then Throw New Exception("Неизвестный id предмета: " & Item)
             If itemType.Item(m.Type) = "JEWEL" Then
-                result.LootCost = CInt(result.LootCost + m.itemCost.Gold / JewelItemsCostMultiplicator)
+                result.LootCost = CInt(result.LootCost + m.itemCost.Gold / CDbl(My.Resources.JewelItemsCostMultiplicator))
             Else
-                result.LootCost += m.itemCost.Gold
+                result.LootCost = CInt(result.LootCost + m.itemCost.Gold / CDbl(My.Resources.nonJewelItemsCostMultiplicator))
             End If
         Next Item
         Return result
@@ -408,7 +413,7 @@ Public Class RandStack
         Dim IDs As New List(Of Integer)
         Dim result As New List(Of String)
         Do While DynCost >= minItemGoldCost
-            costBar = CInt(comm.Rand(CDbl(minItemGoldCost), CDbl(DynCost), serialExecution))
+            costBar = CInt(rndgen.Rand(CDbl(minItemGoldCost), CDbl(DynCost), serialExecution))
             maxCost = Math.Min(2 * costBar, DynCost)
             IDs.Clear()
             For i As Integer = 0 To UBound(MagicItem) Step 1
@@ -463,8 +468,9 @@ Public Class RandStack
                     Tolerance = 0
                 Else
                     Throw New Exception("Что-то не так в выборе возможных лидеров отряда" & vbNewLine & _
-                                        "StackStats:" & vbNewLine & DesiredStats.Print(StackStats) & vbNewLine & _
-                                        "DynStackStats:" & vbNewLine & DesiredStats.Print(DynStackStats))
+                                        "Имя локации: " & StackStats.LocationName & vbNewLine & _
+                                        "StackStats:" & vbNewLine & DesiredStats.Print(StackStats, comm.RaceNumberToRaceChar) & vbNewLine & _
+                                        "DynStackStats:" & vbNewLine & DesiredStats.Print(DynStackStats, comm.RaceNumberToRaceChar))
                 End If
             End If
         Loop
@@ -473,20 +479,21 @@ Public Class RandStack
 
         If SelectedLeader = -1 Then
             Throw New Exception("Возможно, бесконечный цикл в случайном выборе из массива возможных лидеров" & vbNewLine & _
-                                "StackStats:" & vbNewLine & DesiredStats.Print(StackStats) & vbNewLine & _
-                                "DynStackStats:" & vbNewLine & DesiredStats.Print(DynStackStats))
+                                "Имя локации: " & StackStats.LocationName & vbNewLine & _
+                                "StackStats:" & vbNewLine & DesiredStats.Print(StackStats, comm.RaceNumberToRaceChar) & vbNewLine & _
+                                "DynStackStats:" & vbNewLine & DesiredStats.Print(DynStackStats, comm.RaceNumberToRaceChar))
         End If
         Dim FreeMeleeSlots As Integer = 3
 
         'теперь нужно добрать воинов в отряд
-        Dim R As Double = comm.Rand(0, 1, serialExecution)
+        Dim R As Double = rndgen.Rand(0, 1, serialExecution)
         If R < 0.1 Then
             DynStackStats.StackSize -= 1
         ElseIf R > 0.9 Then
             DynStackStats.StackSize += 1
+            If DynStackStats.StackSize - DynStackStats.MeleeCount < secondrow.Length Then DynStackStats.MeleeCount += 1
         End If
         DynStackStats.StackSize = Math.Min(Math.Min(DynStackStats.StackSize, AllLeaders(SelectedLeader).leadership), 6)
-
         If AllLeaders(SelectedLeader).small Then
             DynStackStats.StackSize = Math.Max(DynStackStats.StackSize, 1)
         Else
@@ -512,9 +519,10 @@ Public Class RandStack
                     Exit Do
                 End If
             ElseIf fighter = -2 Then
-                Throw New Exception("Возможно, бесконечный цикл в случайном выборе из массива возможных djbyjd" & vbNewLine & _
-                                    "StackStats:" & vbNewLine & DesiredStats.Print(StackStats) & vbNewLine & _
-                                    "DynStackStats:" & vbNewLine & DesiredStats.Print(DynStackStats))
+                Throw New Exception("Возможно, бесконечный цикл в случайном выборе из массива возможных воинов" & vbNewLine & _
+                                    "Имя локации: " & StackStats.LocationName & vbNewLine & _
+                                    "StackStats:" & vbNewLine & DesiredStats.Print(StackStats, comm.RaceNumberToRaceChar) & vbNewLine & _
+                                    "DynStackStats:" & vbNewLine & DesiredStats.Print(DynStackStats, comm.RaceNumberToRaceChar))
             Else
                 SelectedFighters.Add(fighter)
             End If
@@ -556,8 +564,9 @@ Public Class RandStack
         Next i
         For i As Integer = 0 To UBound(unitIsUsed) Step 1
             If Not unitIsUsed(i) Then Throw New Exception("Что-то не так в размещателе юнитов" & vbNewLine & _
-                                                          "StackStats:" & vbNewLine & DesiredStats.Print(StackStats) & vbNewLine & _
-                                                          "DynStackStats:" & vbNewLine & DesiredStats.Print(DynStackStats))
+                                                          "Имя локации: " & StackStats.LocationName & vbNewLine & _
+                                                          "StackStats:" & vbNewLine & DesiredStats.Print(StackStats, comm.RaceNumberToRaceChar) & vbNewLine & _
+                                                          "DynStackStats:" & vbNewLine & DesiredStats.Print(DynStackStats, comm.RaceNumberToRaceChar))
         Next i
         For i As Integer = 0 To UBound(result.pos) Step 1
             If result.pos(i) = "" Then result.pos(i) = emptyitem
@@ -640,8 +649,8 @@ Public Class RandStack
                                      ByRef FRowSlots As Integer, ByRef SRowSlots As Integer, _
                                      ByRef AnySlot As Boolean, ByRef result As Stack) As Boolean
         Dim placed As Boolean = False
-        Dim n1 As Integer = RndPos(FRowSlots, serialExecution)
-        Dim n2 As Integer = RndPos(SRowSlots, serialExecution)
+        Dim n1 As Integer = rndgen.RndPos(FRowSlots, serialExecution)
+        Dim n2 As Integer = rndgen.RndPos(SRowSlots, serialExecution)
 
         Dim t As Integer
         Dim m As Integer = 0
@@ -713,27 +722,12 @@ Public Class RandStack
         ElseIf List(id).reach = 3 Then
             DynStackStats.StackSize -= 1
             DynStackStats.MeleeCount = Math.Max(0, DynStackStats.MeleeCount - 1)
-            FreeMeleeSlots -= 1
+            FreeMeleeSlots = Math.Max(0, FreeMeleeSlots - 1)
         Else
             DynStackStats.StackSize -= 1
         End If
         DynStackStats.MeleeCount = Math.Min(DynStackStats.MeleeCount, FreeMeleeSlots)
     End Sub
-
-
-    Private Function RndPos(ByRef n As Integer, ByRef serial As Boolean) As Integer
-        Dim R As Double
-        If serial Then
-            R = rndgen.PRand(0, 1)
-        Else
-            R = rndgen.Rand(0, 1)
-        End If
-        Dim dr As Double = 1 / n
-        For i As Integer = 1 To n Step 1
-            If CDbl(i) * dr >= R Then Return i
-        Next i
-        Return n
-    End Function
 
 End Class
 
@@ -816,14 +810,43 @@ Public Class RndValueGen
         Return value(n)
     End Function
 
+    '''<summary>Returns random value with uniform distribution.</summary>
+    '''<param name="lower">Minimum value.</param>
+    '''<param name="upper">Maximum value.</param>
+    ''' <param name="serial">True, if use in serial code</param>
+    Friend Function Rand(ByRef lower As Double, ByRef upper As Double, ByRef serial As Boolean) As Double
+        If serial Then
+            Return PRand(lower, upper)
+        Else
+            Return Rand(lower, upper)
+        End If
+    End Function
+
+    Friend Function RndPos(ByRef n As Integer, ByRef serial As Boolean) As Integer
+        Dim R As Double = Rand(0, 1, serial)
+        Dim dr As Double = 1 / n
+        For i As Integer = 1 To n Step 1
+            If CDbl(i) * dr >= R Then Return i
+        Next i
+        Return n
+    End Function
+
 End Class
 
 Public Class Common
 
     Public rndgen As New RndValueGen
     Private Races As New Dictionary(Of String, Integer)
+    Friend RaceNumberToRaceChar As New Dictionary(Of Integer, String)
     ''' <summary>Список исключаемых объектов</summary>
     Public excludedObjects As New List(Of String)
+    ''' <summary>Список параметров отрядов с описанием</summary>
+    Public StatFields() As StackStatsField
+
+    Public Structure StackStatsField
+        Dim name As String
+        Dim description As String
+    End Structure
 
     Public Sub New()
         Dim splitedRace() As String = TxtSplit(My.Resources.Races)
@@ -833,7 +856,108 @@ Public Class Common
             For i As Integer = 0 To UBound(srow) Step 1
                 Races.Add(srow(i).ToUpper, CInt(srow(UBound(srow))))
             Next i
+            RaceNumberToRaceChar.Add(CInt(srow(UBound(srow))), srow(1).ToUpper)
         Next item
+        Dim splitedFields() As String = TxtSplit(My.Resources.StackStatsFields)
+        ReDim StatFields(CInt(splitedFields.Length / 2 - 1))
+
+        Dim racesList As String = ""
+        splitedRace = My.Resources.Races.Replace(Chr(10), Chr(13)).Split(Chr(13))
+        For i As Integer = 0 To UBound(splitedRace) Step 1
+            If splitedRace(i).Length > 1 AndAlso Not splitedRace(i).Substring(0, 1) = "#" Then
+                racesList &= splitedRace(i) & vbNewLine
+            End If
+        Next i
+        Dim k As Integer
+        For i As Integer = 0 To UBound(splitedFields) Step 2
+            k = CInt(i / 2)
+            StatFields(k).description = splitedFields(i)
+            StatFields(k).name = splitedFields(i + 1)
+            StatFields(k).description = StatFields(k).description.Replace("$jm$", My.Resources.JewelItemsCostMultiplicator)
+            StatFields(k).description = StatFields(k).description.Replace("$gm$", My.Resources.giantUnitsExpMultiplicator)
+            StatFields(k).description = StatFields(k).description.Replace("$ri$", racesList)
+            StatFields(k).description = StatFields(k).description.Replace("$newline$", vbNewLine)
+        Next i
+    End Sub
+
+    ''' <summary>Читает и парсит файл с параметрами генерируемых отрядов.
+    ''' Не важен порядок полей и регистр.
+    ''' Не проверяет корректность данных по типу</summary>
+    ''' <param name="path">Путь к файлу. Не проверяет, существует ли файл.
+    ''' Если path=%testfile%, то распарсит теастовый файл.
+    ''' Если path=%default%, то вернет значения, устанавливаемые для пропущенных полей.</param>
+    Public Function ParseDesiredStackStatsFile(ByRef path As String) As RandStack.DesiredStats()
+        Dim txt(), s(), r(), fu As String
+        Dim defaultStats As New RandStack.DesiredStats With {.ExpBarAverage = 200, .ExpStackKilled = 75, _
+                                                             .MeleeCount = 2, .Race = New List(Of Integer), .StackSize = 2}
+        defaultStats.Race.Add(1)
+        If Not path = "%testfile%" Then
+            txt = TxtSplit(IO.File.ReadAllText(path).Replace("=", vbTab))
+        ElseIf path = "%default%" Then
+            Return New RandStack.DesiredStats() {defaultStats}
+        Else
+            txt = TxtSplit(My.Resources.TestStackStats.Replace("=", vbTab))
+        End If
+        Dim addedLabels As New List(Of String)
+        Dim result(UBound(txt)) As RandStack.DesiredStats
+        For i As Integer = 0 To UBound(txt) Step 1
+            s = txt(i).Split(CChar(" "))
+            result(i) = RandStack.DesiredStats.Copy(defaultStats)
+            For f As Integer = 0 To UBound(s) Step 2
+                fu = s(f).ToUpper
+                For k As Integer = 0 To UBound(StatFields) Step 1
+                    If fu = StatFields(k).name.ToUpper Then
+                        If k = 0 Then
+                            result(i).LocationName = s(f + 1) 'ID
+                            If Not addedLabels.Contains(result(i).LocationName) Then
+                                addedLabels.Add(result(i).LocationName)
+                            Else
+                                Throw New Exception("В файле с параметрами отрядов есть повторяющееся имя локации: " & result(i).LocationName)
+                            End If
+                        ElseIf k = 1 Then
+                            result(i).ExpBarAverage = Math.Max(CInt(s(f + 1)), 1) 'AverageExpBar
+                        ElseIf k = 2 Then
+                            result(i).ExpStackKilled = Math.Max(CInt(s(f + 1)), 1) 'ExpStackKilled
+                        ElseIf k = 3 Then
+                            Dim rid As Integer
+                            r = s(f + 1).Split(CChar("+")) 'Race
+                            result(i).Race.Clear()
+                            For n As Integer = 0 To UBound(r) Step 1
+                                rid = RaceIdentifierToSubrace(r(n))
+                                If Not result(i).Race.Contains(rid) Then result(i).Race.Add(rid)
+                            Next n
+                        ElseIf k = 4 Then
+                            result(i).StackSize = Math.Max(CInt(s(f + 1)), 1) 'StackSize
+                        ElseIf k = 5 Then
+                            result(i).MaxGiants = Math.Max(CInt(s(f + 1)), 0) 'MaxGiants
+                        ElseIf k = 6 Then
+                            result(i).MeleeCount = Math.Max(CInt(s(f + 1)), 0) 'MeleeSlots
+                        ElseIf k = 7 Then
+                            result(i).LootCost = Math.Max(CInt(s(f + 1)), 0) 'LootCost
+                        End If
+                    End If
+                Next k
+            Next f
+        Next i
+        Return result
+    End Function
+
+    ''' <summary>Сохраняет в файл параметры генерируемых отрядов</summary>
+    ''' <param name="path">Путь к файлу</param>
+    ''' <param name="content">Параметры</param>
+    Public Sub WriteDesiredStackStats(ByRef path As String, ByRef content() As RandStack.DesiredStats)
+        Dim s(UBound(content)) As String
+        For i As Integer = 0 To UBound(s) Step 1
+            s(i) = TxtSplit(RandStack.DesiredStats.Print(content(i), RaceNumberToRaceChar).Replace(vbNewLine, vbTab))(0)
+        Next i
+        If Not path = "%testfile%" Then
+            IO.File.WriteAllLines(path, s)
+        Else
+            path = ""
+            For i As Integer = 0 To UBound(s) Step 1
+                path &= s(i) & vbNewLine
+            Next i
+        End If
     End Sub
 
     ''' <summary>Возвращает ID, соответствующее файлам игры</summary>
@@ -906,21 +1030,21 @@ Public Class Common
         If IsNothing(Stats) And IsNothing(DesiredStats) Then
             noValue = True
         ElseIf Not IsNothing(Stats) = IsNothing(DesiredStats) Then
-            Throw New Exception("Только один из массивов инициализирован")
+            Throw New Exception("RandomSelection: Только один из массивов инициализирован")
             Return -1
         Else
             For i As Integer = 1 To UBound(Stats) Step 1
                 If Not Stats(0).Length = Stats(i).Length Then
-                    Throw New Exception("Массивы статов должны иметь одинаковую длину")
+                    Throw New Exception("RandomSelection: Массивы статов должны иметь одинаковую длину")
                     Return -1
                 End If
             Next i
             If Not Stats.Length = DesiredStats.Length Then
-                Throw New Exception("Количество массивов статов должно соответствовать количеству ""желаемых"" статов")
+                Throw New Exception("RandomSelection: Количество массивов статов должно соответствовать количеству ""желаемых"" статов")
                 Return -1
             End If
             If Not IsNothing(mult) AndAlso Not Stats(0).Length = mult.Length Then
-                Throw New Exception("Если массив множителей инициализирован, то он должен иметь одинаковую длину с массивами статов")
+                Throw New Exception("RandomSelection: Если массив множителей инициализирован, то он должен иметь одинаковую длину с массивами статов")
                 Return -1
             End If
         End If
@@ -949,7 +1073,7 @@ Public Class Common
             If smearing > 10 Then Return -1
         Loop
 
-        Dim R As Double = Rand(0, WeightsSum, serial)
+        Dim R As Double = rndgen.Rand(0, WeightsSum, serial)
         Dim W As Double = 0
         Dim SelectedItem As Integer = -1
         For Each i In IDs
@@ -984,18 +1108,6 @@ Public Class Common
     End Function
     Private Function Gauss(ByRef X As Double, ByRef avX As Double, ByRef sigma As Double) As Double
         Return Math.Exp(-0.5 * ((X - avX) / (sigma * avX)) ^ 2)
-    End Function
-
-    '''<summary>Returns random value with uniform distribution.</summary>
-    '''<param name="lower">Minimum value.</param>
-    '''<param name="upper">Maximum value.</param>
-    ''' <param name="serial">True, if use in serial code</param>
-    Friend Function Rand(ByRef lower As Double, ByRef upper As Double, ByRef serial As Boolean) As Double
-        If serial Then
-            Return rndgen.PRand(lower, upper)
-        Else
-            Return rndgen.Rand(lower, upper)
-        End If
     End Function
 
     ''' <param name="ExcludeLists">Файлы со списками исключенных объектов. Записи в них могут повторяться. 

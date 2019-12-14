@@ -108,6 +108,15 @@ Namespace My.Resources
         End Property
         
         '''<summary>
+        '''  Looks up a localized string similar to 2.
+        '''</summary>
+        Friend ReadOnly Property giantUnitsExpMultiplicator() As String
+            Get
+                Return ResourceManager.GetString("giantUnitsExpMultiplicator", resourceCulture)
+            End Get
+        End Property
+        
+        '''<summary>
         '''  Looks up a localized string similar to #строка, начинающаяся с решетки, игнорируется
         '''#Идентификаторы типов предметов.
         '''0	nonattack_artefact
@@ -130,6 +139,24 @@ Namespace My.Resources
         Friend ReadOnly Property Items() As String
             Get
                 Return ResourceManager.GetString("Items", resourceCulture)
+            End Get
+        End Property
+        
+        '''<summary>
+        '''  Looks up a localized string similar to 2.
+        '''</summary>
+        Friend ReadOnly Property JewelItemsCostMultiplicator() As String
+            Get
+                Return ResourceManager.GetString("JewelItemsCostMultiplicator", resourceCulture)
+            End Get
+        End Property
+        
+        '''<summary>
+        '''  Looks up a localized string similar to 1.
+        '''</summary>
+        Friend ReadOnly Property nonJewelItemsCostMultiplicator() As String
+            Get
+                Return ResourceManager.GetString("nonJewelItemsCostMultiplicator", resourceCulture)
             End Get
         End Property
         
@@ -158,6 +185,27 @@ Namespace My.Resources
         End Property
         
         '''<summary>
+        '''  Looks up a localized string similar to 1.
+        '''</summary>
+        Friend ReadOnly Property smallUnitsExpMultiplicator() As String
+            Get
+                Return ResourceManager.GetString("smallUnitsExpMultiplicator", resourceCulture)
+            End Get
+        End Property
+        
+        '''<summary>
+        '''  Looks up a localized string similar to #строка, начинающаяся с решетки, игнорируется
+        '''Строка без пробелов, табов и знаков равенства. Идентификатор локации (ID). На карте названия локаций для размещения отрядов должны состоять из ID, знака подчеркивания и любого символа(ов). Примеры:$newline$В файле: MyLocId ; На карте (одна локация): MyLocId_A$newline$В файле: Тир2_1 ; На карте (две локации): Тир2_1_A Тир2_1_B$newline$В файле: Kraken ; На карте (три локации): Kraken_LegionLoc Kraken_ClanLoc Kraken_CommonLoc
+        '''ID
+        '''Целое число. Юниты с этой планкой [rest of string was truncated]&quot;;.
+        '''</summary>
+        Friend ReadOnly Property StackStatsFields() As String
+            Get
+                Return ResourceManager.GetString("StackStatsFields", resourceCulture)
+            End Get
+        End Property
+        
+        '''<summary>
         '''  Looks up a localized string similar to ITEM_CAT	ITEM_ID	VALUE
         '''6	G000IG0001	g0400:r0000:y0000:e0000:w0000
         '''4	G000IG0002	g0200:r0000:y0000:e0000:w0000
@@ -175,6 +223,18 @@ Namespace My.Resources
         Friend ReadOnly Property TestItemsTable() As String
             Get
                 Return ResourceManager.GetString("TestItemsTable", resourceCulture)
+            End Get
+        End Property
+        
+        '''<summary>
+        '''  Looks up a localized string similar to ID location1 AverageExpBar = 1000	ExpStackKilled 200  Race=U StackSize 1 MaxGiants 0		MeleeSlots 2 LootCost 0
+        '''AverageExpBar = 100 ID testloc2 StackSize 3 MaxGiants 1		MeleeSlots -1 LootCost 3400 	ExpStackKilled 200  Race=U+D
+        '''ID=loc3 AverageExpBar = 1000 Race=Human StackSize 1 MeleeSlots 2 LootCost 0	ExpStackKilled 200   MaxGiants 0
+        '''.
+        '''</summary>
+        Friend ReadOnly Property TestStackStats() As String
+            Get
+                Return ResourceManager.GetString("TestStackStats", resourceCulture)
             End Get
         End Property
         

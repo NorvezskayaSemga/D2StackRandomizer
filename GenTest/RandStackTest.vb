@@ -115,7 +115,7 @@ Public Class RandStackTest
             For j As Integer = 1 To n Step 1
                 ok = False
                 For attempt = 0 To 100 * n Step 1
-                    r = target.RndPos(n, True)
+                    r = target.rndgen.RndPos(n, True)
                     If r = j Then
                         ok = True
                         Exit For
@@ -137,7 +137,7 @@ Public Class RandStackTest
              For j As Integer = 1 To n Step 1
                  ok = False
                  For attempt = 0 To 100 * n Step 1
-                     r = target.RndPos(n, False)
+                     r = target.rndgen.RndPos(n, False)
                      If r = j Then
                          ok = True
                          Exit For
@@ -166,7 +166,7 @@ Public Class RandStackTest
         ok = True
         For j As Integer = 0 To 10 Step 1
             For i As Integer = 0 To maxval * 10 Step 1
-                g(target.Rand(0, CDbl(maxval), True) / 10) = True
+                g(target.rndgen.Rand(0, CDbl(maxval), True) / 10) = True
             Next i
             tmpok = True
             For i As Integer = 0 To maxval / 10 Step 1
@@ -185,7 +185,7 @@ Public Class RandStackTest
         For j As Integer = 0 To 10 Step 1
             Parallel.For(0, maxval * 10 + 1, _
              Sub(i As Integer)
-                 g(target.Rand(0, CDbl(maxval), False) / 10) = True
+                 g(target.rndgen.Rand(0, CDbl(maxval), False) / 10) = True
              End Sub)
             tmpok = True
             For i As Integer = 0 To maxval / 10 Step 1
