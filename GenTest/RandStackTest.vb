@@ -208,18 +208,14 @@ Public Class RandStackTest
     '''A test for Gen
     '''</summary>
     <TestMethod()> _
-    Public Sub GenTest()
+    Public Sub GenTest1()
         If IsNothing(UnitsList) Then Call ReadTestUnits()
         If IsNothing(ItemsList) Then Call ReadTestItems()
         Dim target As RandStack_Accessor = New RandStack_Accessor(UnitsList, ItemsList, excludeList, False)
 
-        Dim busytransfer() As Integer = New Integer() {1, -1, 3, -1, 5, -1}
-        Dim firstrow() As Integer = New Integer() {0, 2, 4}
-        Dim secondrow() As Integer = New Integer() {1, 3, 5}
         Dim ok As Boolean = True
 
         Dim stats As New RandStack.DesiredStats
-        Dim unit As RandStack.Unit
         Dim races() As String = New String() {"H", "U", "L", "C", "E", "N", "G", "D", "S", "W", "B", "A"}
         Dim rList As New List(Of Integer)
         Dim GroundTile As Boolean
@@ -248,37 +244,9 @@ Public Class RandStackTest
                                     End If
 
                                     Dim stack As RandStack.Stack = target.Gen(stats, GroundTile)
+                                    ok = TestStack(stack, target)
+                                    If Not ok Then GoTo exittest
 
-                                    If stack.leaderPos < 0 Or IsNothing(stack.pos) Then
-                                        ok = False
-                                        GoTo exittest
-                                    End If
-                                    For i As Integer = 0 To UBound(stack.pos) Step 1
-                                        If stack.pos(i) = "" Then
-                                            ok = False
-                                            GoTo exittest
-                                        ElseIf Not stack.pos(i) = "G000000000" Then
-                                            unit = target.FindUnitStats(stack.pos(i))
-                                            If (unit.unitBranch = 5 And Not i = stack.leaderPos) Or (Not unit.unitBranch = 5 And i = stack.leaderPos) Then
-                                                ok = False
-                                                GoTo exittest
-                                            End If
-                                            If Not unit.small Then
-                                                If busytransfer(i) = -1 Or Not stack.pos(busytransfer(i)) = "G000000000" Then
-                                                    ok = False
-                                                    GoTo exittest
-                                                End If
-                                            End If
-                                            If unit.reach = 3 Then
-                                                For j As Integer = 0 To UBound(secondrow) Step 1
-                                                    If i = secondrow(j) Then
-                                                        ok = False
-                                                        GoTo exittest
-                                                    End If
-                                                Next j
-                                            End If
-                                        End If
-                                    Next i
                                 Next g
                             Next r
                         Next s
@@ -289,6 +257,44 @@ Public Class RandStackTest
 exittest:
         If Not ok Then Assert.Inconclusive("Verify the correctness of this test method.")
     End Sub
+    Private Function TestStack(ByRef stack As RandStack.Stack, ByRef target As RandStack_Accessor, _
+                               Optional ByRef races() As Integer = Nothing, _
+                               Optional ByRef raceokL() As Boolean = Nothing, _
+                               Optional ByRef raceokF() As Boolean = Nothing) As Boolean
+        Dim busytransfer() As Integer = New Integer() {1, -1, 3, -1, 5, -1}
+        Dim firstrow() As Integer = New Integer() {0, 2, 4}
+        Dim secondrow() As Integer = New Integer() {1, 3, 5}
+        Dim unit As RandStack.Unit
+        If stack.leaderPos < 0 Or IsNothing(stack.pos) Then
+            Return False
+        End If
+        For i As Integer = 0 To UBound(stack.pos) Step 1
+            If stack.pos(i) = "" Then
+                Return False
+            ElseIf Not stack.pos(i) = target.emptyItem Then
+                unit = target.FindUnitStats(stack.pos(i))
+                If (unit.unitBranch = 5 And Not i = stack.leaderPos) Or (Not unit.unitBranch = 5 And i = stack.leaderPos) Then Return False
+                If Not unit.small AndAlso (busytransfer(i) = -1 Or Not stack.pos(busytransfer(i)) = target.emptyItem) Then Return False
+                If unit.reach = 3 Then
+                    For j As Integer = 0 To UBound(secondrow) Step 1
+                        If i = secondrow(j) Then Return False
+                    Next j
+                End If
+                If Not IsNothing(races) Then
+                    For r As Integer = 0 To UBound(races) Step 1
+                        If unit.race = races(r) Then
+                            If unit.unitBranch = 5 Then
+                                raceokL(r) = True
+                            Else
+                                raceokF(r) = True
+                            End If
+                        End If
+                    Next r
+                End If
+            End If
+        Next i
+        Return True
+    End Function
 
     '''<summary>
     '''A test for StackStats
@@ -355,6 +361,67 @@ exittest:
             If Math.Abs(cost - sum) >= target.minItemGoldCost Then ok = False
             If Not ok Then Exit For
         Next i
+        If Not ok Then Assert.Inconclusive("Verify the correctness of this test method.")
+    End Sub
+
+    '''<summary>
+    '''A test for Gen
+    '''</summary>
+    <TestMethod()> _
+    Public Sub GenTest2()
+        If IsNothing(UnitsList) Then Call ReadTestUnits()
+        If IsNothing(ItemsList) Then Call ReadTestItems()
+        Dim target As RandStack_Accessor = New RandStack_Accessor(UnitsList, ItemsList, excludeList, False)
+
+        Dim ok As Boolean = True
+
+        Dim stats As New RandStack.DesiredStats With {.ExpBarAverage = 1450, .ExpStackKilled = 1000, .Race = New List(Of Integer), _
+                                                      .StackSize = 3, .MaxGiants = 1, .MeleeCount = 3, .LootCost = 1200}
+        Dim races() As Integer = New Integer() {1, 2}
+        Dim raceokL(UBound(races)), raceokF(UBound(races)) As Boolean
+        stats.Race.AddRange(races)
+
+        For i As Integer = 0 To 10000 Step 1
+            Dim stack As RandStack.Stack = target.Gen(stats, True)
+            ok = TestStack(stack, target, races, raceokL, raceokF)
+            If Not ok Then Exit For
+        Next i
+        For r As Integer = 0 To UBound(races) Step 1
+            If Not raceokL(r) Or Not raceokF(r) Then ok = False
+        Next r
+
+        If Not ok Then Assert.Inconclusive("Verify the correctness of this test method.")
+    End Sub
+
+    '''<summary>
+    '''A test for GenGag
+    '''</summary>
+    <TestMethod()> _
+    Public Sub GenGagTest()
+        If IsNothing(UnitsList) Then Call ReadTestUnits()
+        If IsNothing(ItemsList) Then Call ReadTestItems()
+        Dim target As RandStack_Accessor = New RandStack_Accessor(UnitsList, ItemsList, excludeList, False)
+
+        Dim ok As Boolean = True
+        Dim UnapropriateStacks() As RandStack.Stack = New RandStack.Stack() { _
+            New RandStack.Stack With {.leaderPos = -1, .pos = Nothing}, _
+            New RandStack.Stack With {.leaderPos = -1, .pos = New String() {"G000UU0001"}}, _
+            New RandStack.Stack With {.leaderPos = 0, .pos = New String() {"G000UU0001"}}, _
+            New RandStack.Stack With {.leaderPos = 1, .pos = New String() {"G000UU5201"}}, _
+            New RandStack.Stack With {.leaderPos = 0, .pos = New String() {"G000UU5201", "G000UU5201"}}, _
+            New RandStack.Stack With {.leaderPos = 1, .pos = New String() {"G000UU5201", "G000UU0006", "G000UU5201"}}, _
+            New RandStack.Stack With {.leaderPos = 0, .pos = New String() {"G000UU5230", "G000UU0006"}}, _
+            New RandStack.Stack With {.leaderPos = 0, .pos = New String() {"G000UU0001", "G000UU0006"}}, _
+            New RandStack.Stack With {.leaderPos = 1, .pos = New String() {"G000UU0000", "G000UU5230"}}, _
+            New RandStack.Stack With {.leaderPos = 1, .pos = New String() {"G000UU0000", "G000UU5201"}}}
+
+        For Each item As RandStack.Stack In UnapropriateStacks
+            If TestStack(item, target) Then
+                ok = False
+                Exit For
+            End If
+        Next item
+
         If Not ok Then Assert.Inconclusive("Verify the correctness of this test method.")
     End Sub
 End Class
