@@ -405,15 +405,15 @@ exittest:
         Dim ok As Boolean = True
         Dim UnapropriateStacks() As RandStack.Stack = New RandStack.Stack() { _
             New RandStack.Stack With {.leaderPos = -1, .pos = Nothing}, _
-            New RandStack.Stack With {.leaderPos = -1, .pos = New String() {"G000UU0001"}}, _
-            New RandStack.Stack With {.leaderPos = 0, .pos = New String() {"G000UU0001"}}, _
-            New RandStack.Stack With {.leaderPos = 1, .pos = New String() {"G000UU5201"}}, _
-            New RandStack.Stack With {.leaderPos = 0, .pos = New String() {"G000UU5201", "G000UU5201"}}, _
-            New RandStack.Stack With {.leaderPos = 1, .pos = New String() {"G000UU5201", "G000UU0006", "G000UU5201"}}, _
-            New RandStack.Stack With {.leaderPos = 0, .pos = New String() {"G000UU5230", "G000UU0006"}}, _
-            New RandStack.Stack With {.leaderPos = 0, .pos = New String() {"G000UU0001", "G000UU0006"}}, _
-            New RandStack.Stack With {.leaderPos = 1, .pos = New String() {"G000UU0000", "G000UU5230"}}, _
-            New RandStack.Stack With {.leaderPos = 1, .pos = New String() {"G000UU0000", "G000UU5201"}}}
+            New RandStack.Stack With {.leaderPos = -1, .pos = New String() {"G000UU0001", "G000UU0000", "G000UU0000", "G000UU0000", "G000UU0000", "G000UU0000"}}, _
+            New RandStack.Stack With {.leaderPos = 0, .pos = New String() {"G000UU0001", "G000UU0000", "G000UU0000", "G000UU0000", "G000UU0000", "G000UU0000"}}, _
+            New RandStack.Stack With {.leaderPos = 1, .pos = New String() {"G000UU5201", "G000UU0000", "G000UU0000", "G000UU0000", "G000UU0000", "G000UU0000"}}, _
+            New RandStack.Stack With {.leaderPos = 0, .pos = New String() {"G000UU5201", "G000UU5201", "G000UU0000", "G000UU0000", "G000UU0000", "G000UU0000"}}, _
+            New RandStack.Stack With {.leaderPos = 1, .pos = New String() {"G000UU5201", "G000UU0006", "G000UU5201", "G000UU0000", "G000UU0000", "G000UU0000"}}, _
+            New RandStack.Stack With {.leaderPos = 0, .pos = New String() {"G000UU5230", "G000UU0006", "G000UU0000", "G000UU0000", "G000UU0000", "G000UU0000"}}, _
+            New RandStack.Stack With {.leaderPos = 0, .pos = New String() {"G000UU0001", "G000UU0006", "G000UU0000", "G000UU0000", "G000UU0000", "G000UU0000"}}, _
+            New RandStack.Stack With {.leaderPos = 1, .pos = New String() {"G000UU0000", "G000UU5230", "G000UU0000", "G000UU0000", "G000UU0000", "G000UU0000"}}, _
+            New RandStack.Stack With {.leaderPos = 1, .pos = New String() {"G000UU0000", "G000UU5201", "G000UU0000", "G000UU0000", "G000UU0000", "G000UU0000"}}}
 
         For Each item As RandStack.Stack In UnapropriateStacks
             If TestStack(item, target) Then
