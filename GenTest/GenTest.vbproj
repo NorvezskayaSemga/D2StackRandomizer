@@ -75,8 +75,10 @@
     </CodeAnalysisDependentAssemblyPaths>
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="CommonTest.vb" />
     <Compile Include="My Project\AssemblyInfo.vb" />
     <Compile Include="RandStackTest.vb" />
+    <Compile Include="RandStack_CostTest.vb" />
   </ItemGroup>
   <ItemGroup>
     <Shadow Include="Test References\RandomStackGenerator.accessor" />
