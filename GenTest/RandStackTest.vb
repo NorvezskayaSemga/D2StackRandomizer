@@ -265,9 +265,8 @@ exittest:
         Dim firstrow() As Integer = New Integer() {0, 2, 4}
         Dim secondrow() As Integer = New Integer() {1, 3, 5}
         Dim unit As RandStack.Unit
-        If stack.leaderPos < 0 Or IsNothing(stack.pos) Then
-            Return False
-        End If
+        If stack.leaderPos < 0 Or IsNothing(stack.pos) Then Return False
+        If stack.pos(stack.leaderPos) = target.emptyItem Then Return False
         For i As Integer = 0 To UBound(stack.pos) Step 1
             If stack.pos(i) = "" Then
                 Return False
