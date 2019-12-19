@@ -827,6 +827,9 @@ Public Class RndValueGen
         End If
     End Function
 
+    '''<summary>Returns random value with uniform distribution from 1 to n.</summary>
+    ''' <param name="n">Value greater than zero</param>
+    ''' <param name="serial">True, if use in serial code</param>
     Friend Function RndPos(ByRef n As Integer, ByRef serial As Boolean) As Integer
         Dim R As Double = Rand(0, 1, serial)
         Dim dr As Double = 1 / n
