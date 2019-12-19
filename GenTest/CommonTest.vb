@@ -1,4 +1,6 @@
-﻿Imports Microsoft.VisualStudio.TestTools.UnitTesting
+﻿Imports System.Collections.Generic
+
+Imports Microsoft.VisualStudio.TestTools.UnitTesting
 
 Imports RandomStackGenerator
 
@@ -116,6 +118,112 @@ Public Class CommonTest
 
         If Not path = expected Then ok = False
 
+        If Not ok Then Assert.Inconclusive("Verify the correctness of this test method.")
+    End Sub
+
+    Dim idArray() As Integer = New Integer() {1, 6, 7, 3, 14, 9, 19}
+    Dim someStats() As Double = New Double() {1.9, 2, 1.8, 1.77, 1.87, 1.85, 1.95}
+    Dim av As Double = 1.9
+    '''<summary>
+    '''A test for RandomSelection
+    '''</summary>
+    <TestMethod()> _
+    Public Sub RandomSelectionTest1()
+        Dim target As Common = New Common()
+        Dim IDs As New List(Of Integer)
+        IDs.AddRange(idArray)
+        Dim expected(IDs.Max), actual(IDs.Max) As Boolean
+        For Each i As Integer In IDs
+            expected(i) = True
+        Next i
+        Dim fullStatsArray(UBound(actual)) As Double
+        For i As Integer = 0 To UBound(idArray) Step 1
+            fullStatsArray(idArray(i)) = someStats(i)
+        Next i
+        Dim ok As Boolean = True
+        Dim serial As Boolean = False
+        For p As Integer = 0 To 1 Step 1
+            serial = Not serial
+            For i As Integer = 0 To UBound(expected) Step 1
+                actual(i) = False
+            Next i
+            For i As Integer = 0 To 10 * expected.Length Step 1
+                actual(target.RandomSelection(IDs, serial)) = True
+            Next i
+            For i As Integer = 0 To UBound(expected) Step 1
+                If Not actual(i) = expected(i) Then ok = False
+            Next i
+            If Not ok Then Exit For
+        Next p
+        If Not ok Then Assert.Inconclusive("Verify the correctness of this test method.")
+    End Sub
+
+    '''<summary>
+    '''A test for RandomSelection
+    '''</summary>
+    <TestMethod()> _
+    Public Sub RandomSelectionTest2()
+        Dim target As Common = New Common()
+        Dim IDs As New List(Of Integer)
+        IDs.AddRange(idArray)
+        Dim expected(IDs.Max), actual(IDs.Max) As Boolean
+        For Each i As Integer In IDs
+            expected(i) = True
+        Next i
+        Dim fullStatsArray(UBound(actual)) As Double
+        For i As Integer = 0 To UBound(idArray) Step 1
+            fullStatsArray(idArray(i)) = someStats(i)
+        Next i
+        Dim ok As Boolean = True
+        Dim serial As Boolean = False
+        For p As Integer = 0 To 3 Step 1
+            If p > 1 Then fullStatsArray = Nothing
+            serial = Not serial
+            For i As Integer = 0 To UBound(expected) Step 1
+                actual(i) = False
+            Next i
+            For i As Integer = 0 To 10 * expected.Length Step 1
+                actual(target.RandomSelection(IDs, fullStatsArray, serial)) = True
+            Next i
+            For i As Integer = 0 To UBound(expected) Step 1
+                If Not actual(i) = expected(i) Then ok = False
+            Next i
+            If Not ok Then Exit For
+        Next p
+        If Not ok Then Assert.Inconclusive("Verify the correctness of this test method.")
+    End Sub
+
+    '''<summary>
+    '''A test for RandomSelection
+    '''</summary>
+    <TestMethod()> _
+    Public Sub RandomSelectionTest3()
+        Dim target As Common = New Common()
+        Dim IDs As New List(Of Integer)
+        IDs.AddRange(idArray)
+        Dim expected(IDs.Max), actual(IDs.Max) As Boolean
+        For Each i As Integer In IDs
+            expected(i) = True
+        Next i
+        Dim fullStatsArray(UBound(actual)) As Double
+        For i As Integer = 0 To UBound(idArray) Step 1
+            fullStatsArray(idArray(i)) = someStats(i)
+        Next i
+        Dim ok As Boolean = True
+        Dim serial As Boolean = False
+        For p As Integer = 0 To 1 Step 1
+            serial = Not serial
+            For i As Integer = 0 To UBound(expected) Step 1
+                actual(i) = False
+            Next i
+            For i As Integer = 0 To 10 * expected.Length Step 1
+                actual(target.RandomSelection(IDs, {fullStatsArray}, {av}, serial)) = True
+            Next i
+            For i As Integer = 0 To UBound(expected) Step 1
+                If Not actual(i) = expected(i) Then ok = False
+            Next i
+            If Not ok Then Exit For
+        Next p
         If Not ok Then Assert.Inconclusive("Verify the correctness of this test method.")
     End Sub
 End Class

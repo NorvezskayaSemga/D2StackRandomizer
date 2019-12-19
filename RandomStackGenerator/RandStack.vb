@@ -1053,11 +1053,17 @@ Public Class Common
                 Return -1
             End If
         End If
-
+        
         Dim WeightsSum As Double = 0
-        Dim Weight(UBound(Stats(0))) As Double
+        Dim Weight() As Double
         Dim smearing As Double = 0
         Dim m As Double
+
+        If noValue Then
+            ReDim Weight(IDs.Max)
+        Else
+            ReDim Weight(UBound(Stats(0)))
+        End If
 
         Do While WeightsSum = 0
             smearing += 0.1
@@ -1077,19 +1083,7 @@ Public Class Common
             Next i
             If smearing > 10 Then Return -1
         Loop
-
-        Dim R As Double = rndgen.Rand(0, WeightsSum, serial)
-        Dim W As Double = 0
-        Dim SelectedItem As Integer = -1
-        For Each i In IDs
-            W += Weight(i)
-            If W > R Then
-                SelectedItem = i
-                Exit For
-            End If
-        Next i
-        If SelectedItem = -1 Then SelectedItem = IDs.Item(IDs.Count - 1)
-        Return SelectedItem
+        Return RandomSelection(IDs, Weight, serial)
     End Function
     ''' <summary>Dыбирает случайным образом запись из списка</summary>
     ''' <param name="IDs">Список намеров записей, из которых делается выбор.
@@ -1110,6 +1104,39 @@ Public Class Common
     Public Function RandomSelection(ByRef IDs As List(Of Integer), _
                                     ByRef serial As Boolean) As Integer
         Return RandomSelection(IDs, Nothing, Nothing, serial)
+    End Function
+    ''' <summary>Dыбирает случайным образом запись из списка</summary>
+    ''' <param name="IDs">Список намеров записей, из которых делается выбор.
+    ''' Если массив Weight не инициализирован, то у всех записей будет одинаковый стат. вес</param>
+    ''' <param name="Weight">Вероятность выбрать запись прямо пропорциональна величине стат. веса</param>
+    ''' <param name="serial">True, if use in serial code</param>
+    Public Function RandomSelection(ByRef IDs As List(Of Integer), ByRef Weight() As Double, _
+                                    ByRef serial As Boolean) As Integer
+        Dim tWeight() As Double
+        If IsNothing(Weight) Then
+            ReDim tWeight(IDs.Max)
+            For Each i In IDs
+                tWeight(i) = 1
+            Next i
+        Else
+            tWeight = Weight
+        End If
+        Dim WeightsSum As Double
+        For Each i As Integer In IDs
+            WeightsSum += tWeight(i)
+        Next i
+        Dim R As Double = rndgen.Rand(0, WeightsSum, serial)
+        Dim W As Double = 0
+        Dim SelectedItem As Integer = -1
+        For Each i In IDs
+            W += tWeight(i)
+            If W > R Then
+                SelectedItem = i
+                Exit For
+            End If
+        Next i
+        If SelectedItem = -1 Then SelectedItem = IDs.Item(IDs.Count - 1)
+        Return SelectedItem
     End Function
     Private Function Gauss(ByRef X As Double, ByRef avX As Double, ByRef sigma As Double) As Double
         Return Math.Exp(-0.5 * ((X - avX) / (sigma * avX)) ^ 2)
