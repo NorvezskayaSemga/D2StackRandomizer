@@ -1142,7 +1142,8 @@ Public Class Common
         Return SelectedItem
     End Function
     Private Function Gauss(ByRef X As Double, ByRef avX As Double, ByRef sigma As Double) As Double
-        Return Math.Exp(-0.5 * ((X - avX) / (sigma * avX)) ^ 2)
+        Dim s As Double = 1 / (sigma * avX)
+        Return Math.Exp(-0.5 * ((X - avX) * s) ^ 2) * s
     End Function
 
     ''' <param name="ExcludeLists">Файлы со списками исключенных объектов. Записи в них могут повторяться. 

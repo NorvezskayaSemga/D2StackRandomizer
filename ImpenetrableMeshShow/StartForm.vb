@@ -9,7 +9,7 @@ Public Class StartForm
     Private Sub GenButton_Click() Handles GenButton.Click
 
 
-        Dim grid(,) As Integer
+        Dim grid As InpenetrableMeshGen.Map
         '                 grid = New Integer(,) { _
         '                                        {1, 1, 2, 2, 2, 2, 2, 2, 3, 3, 3, 3}, _
         '                                        {1, 1, 1, 1, 2, 2, 2, 2, 3, 3, 3, 3}, _
@@ -33,10 +33,22 @@ Public Class StartForm
             races = 4
         End If
 
-        grid = genmesh.Gen(48, 48, races)
+        grid = genmesh.Gen(96 - 1, 96 - 1, races, 20, 15, 0.3, 0.4)
 
-        Dim mult As Integer = zoom.CalcMultiplicator(UBound(grid) + 1)
-        Dim mgrid(,) As Integer = zoom.Zoom(grid, mult)
+        Dim mult As Integer = zoom.CalcMultiplicator(Math.Max(grid.xSize, grid.ySize) + 1)
+
+        Dim t(grid.xSize, grid.ySize) As Integer
+        For x As Integer = 0 To grid.xSize Step 1
+            For y As Integer = 0 To grid.ySize Step 1
+                If grid.board(x, y).locID.Count = 0 Then
+                    t(x, y) = 0
+                Else
+                    t(x, y) = grid.board(x, y).locID.Item(0)
+                End If
+            Next y
+        Next x
+
+        Dim mgrid(,) As Integer = zoom.Zoom(t, mult)
         Dim c(,) As Color = draw.MakeIslandsColorMap(mgrid)
         Dim xsize As Integer = UBound(c, 1)
         Dim ysize As Integer = UBound(c, 2)
