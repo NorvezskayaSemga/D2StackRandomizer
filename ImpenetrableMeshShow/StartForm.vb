@@ -40,7 +40,7 @@ Public Class StartForm
         Dim t(grid.xSize, grid.ySize) As Integer
         For x As Integer = 0 To grid.xSize Step 1
             For y As Integer = 0 To grid.ySize Step 1
-                If grid.board(x, y).locID.Count = 0 Then
+                If grid.board(x, y).locID.Count = 0 Or Not grid.board(x, y).isBorder Then
                     t(x, y) = 0
                 Else
                     t(x, y) = grid.board(x, y).locID.Item(0)

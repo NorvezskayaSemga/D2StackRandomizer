@@ -1132,6 +1132,7 @@ Public Class Common
         Dim W As Double = 0
         Dim SelectedItem As Integer = -1
         For Each i In IDs
+            If Weight(i) < 0 Then Throw New Exception("Отрицательный стат вес")
             W += tWeight(i)
             If W > R Then
                 SelectedItem = i
@@ -1142,8 +1143,7 @@ Public Class Common
         Return SelectedItem
     End Function
     Private Function Gauss(ByRef X As Double, ByRef avX As Double, ByRef sigma As Double) As Double
-        Dim s As Double = 1 / (sigma * avX)
-        Return Math.Exp(-0.5 * ((X - avX) * s) ^ 2) * s
+        Return Math.Exp(-0.5 * ((X - avX) / (sigma * avX)) ^ 2)
     End Function
 
     ''' <param name="ExcludeLists">Файлы со списками исключенных объектов. Записи в них могут повторяться. 

@@ -25,17 +25,27 @@ Public Class InpenetrableMeshGen
         Dim equalDist(,) As List(Of Integer)
     End Structure
 
-    Dim rndgen As New RndValueGen
-    Dim comm As New Common
+    Private rndgen As New RndValueGen
+    Private comm As New Common
+    ''' <summary>Минимальное расстояние между проходами</summary>
+    Public PassDist As Integer = 7
+    Public PassWidth As Double = 1.2
 
     Public Function Gen(ByRef xSize As Integer, ByRef ySize As Integer, nRaces As Integer, _
                         ByRef RaceLocRadius As Integer, ByRef CommonLocRadius As Integer, _
                         ByRef maxEccentricityDispersion As Double, _
                         ByRef maxRadiusDispersion As Double) As Map
 
+        Dim t0 As Integer = Environment.TickCount
         Dim m As Map = UnsymmPlaceRaceLocations(xSize, ySize, nRaces, RaceLocRadius)
+        Dim t1 As Integer = Environment.TickCount
         Call UnsymmPlaceCommonLocs(m, maxEccentricityDispersion, maxRadiusDispersion, CommonLocRadius)
+        Dim t2 As Integer = Environment.TickCount
         Call UnsymmSetLocIdToCells(m)
+        Dim t3 As Integer = Environment.TickCount
+        Call UnsymmSetBorders(m, nRaces)
+        Dim t4 As Integer = Environment.TickCount
+        Console.WriteLine("RLocs: " & t1 - t0 & vbTab & "CLocs: " & t2 - t1 & vbTab & "IDset: " & t3 - t2 & vbTab & "BordSet: " & t4 - t3)
         Return m
     End Function
 
@@ -325,49 +335,270 @@ Public Class InpenetrableMeshGen
     End Sub
 
     Private Sub UnsymmSetLocIdToCells(ByRef m As Map)
-        Call ResetBoard(m)
-        For Each Loc As Location In m.Loc
-            m.board(Loc.pos.X, Loc.pos.Y).locID.Add(Loc.ID)
+        Dim tmpm As Map = m
+        Call ResetBoard(tmpm)
+        For Each Loc As Location In tmpm.Loc
+            tmpm.board(Loc.pos.X, Loc.pos.Y).locID.Add(Loc.ID)
         Next Loc
-        Dim allPoints((m.xSize + 1) * (m.ySize - 1)) As Point
-        Dim pID(UBound(allPoints)) As Integer
-        Dim Weight(UBound(allPoints)) As Double
-        Dim IDs As New List(Of Integer)
-        Dim b As Location.Borders
-        Dim n As Integer = 0
+        Dim allPoints(tmpm.ySize)() As Point
+        Dim pID(UBound(allPoints))() As Integer
+        Dim Weight(UBound(allPoints))() As Double
         Dim minweight As Double = 10 ^ -9
 
-        Do While n > -1
-            IDs.Clear()
-            n = -1
-            For x As Integer = 0 To m.xSize Step 1
-                For y As Integer = 0 To m.ySize Step 1
-                    If m.board(x, y).locID.Count = 0 Then
-                        b = NearestXY(x, y, m.xSize, m.ySize, 1)
-                        For i As Integer = b.minX To b.maxX Step 1
-                            For j As Integer = b.minY To b.maxY Step 1
-                                If m.board(i, j).locID.Count > 0 Then
-                                    n += 1
-                                    If n > UBound(allPoints) Then
-                                        ReDim Preserve allPoints(2 * allPoints.Length - 1)
-                                        ReDim Preserve pID(UBound(allPoints)), Weight(UBound(allPoints))
-                                    End If
-                                    allPoints(n) = New Point(x, y)
-                                    pID(n) = m.board(i, j).locID.Item(0)
-                                    Weight(n) = m.Loc(pID(n) - 1).pWeight(allPoints(n))
-                                    Weight(n) = Math.Max(Weight(n), minweight)
-                                    IDs.Add(n)
-                                End If
-                            Next j
-                        Next i
-                    End If
-                Next y
+        Dim selectedIDs(UBound(allPoints)) As Integer
+        Dim selectedWeight(UBound(allPoints)) As Double
+        Dim idlist As New List(Of Integer)
+
+        For i As Integer = 0 To UBound(allPoints) Step 1
+            ReDim Preserve allPoints(i)(tmpm.xSize), pID(i)(tmpm.xSize), Weight(i)(tmpm.xSize)
+        Next i
+
+        Dim calculatedWeights(tmpm.xSize, tmpm.ySize, UBound(tmpm.Loc)) As Double
+        For y As Integer = 0 To tmpm.ySize Step 1
+            For x As Integer = 0 To tmpm.xSize Step 1
+                For i As Integer = 0 To UBound(tmpm.Loc) Step 1
+                    calculatedWeights(x, y, i) = -1
+                Next i
             Next x
-            If n > -1 Then
-                Dim s As Integer = comm.RandomSelection(IDs, Weight, True)
-                m.board(allPoints(s).X, allPoints(s).Y).locID.Add(pID(s))
+        Next y
+
+        idlist.Add(-1)
+        Do While idlist.Count > 0
+
+            Parallel.For(0, tmpm.ySize + 1, _
+             Sub(y As Integer)
+                 'For y As Integer = 0 To m.ySize Step 1
+
+                 Dim n As Integer = -1
+                 Dim u As Integer = UBound(allPoints(y))
+                 Dim b As Location.Borders
+
+                 For x As Integer = 0 To tmpm.xSize Step 1
+                     If tmpm.board(x, y).locID.Count = 0 Then
+                         b = NearestXY(x, y, tmpm.xSize, tmpm.ySize, 1)
+                         For i As Integer = b.minX To b.maxX Step 1
+                             For j As Integer = b.minY To b.maxY Step 1
+                                 If tmpm.board(i, j).locID.Count > 0 Then
+                                     n += 1
+                                     If n > u Then
+                                         u = 2 * u + 1
+                                         ReDim Preserve allPoints(y)(u), pID(y)(u), Weight(y)(u)
+                                     End If
+                                     allPoints(y)(n) = New Point(x, y)
+                                     pID(y)(n) = tmpm.board(i, j).locID.Item(0)
+                                     If calculatedWeights(x, y, pID(y)(n) - 1) > -1 Then
+                                         Weight(y)(n) = calculatedWeights(x, y, pID(y)(n) - 1)
+                                     Else
+                                         Weight(y)(n) = Math.Max(tmpm.Loc(pID(y)(n) - 1).pWeight(allPoints(y)(n)), minweight)
+                                         calculatedWeights(x, y, pID(y)(n) - 1) = Weight(y)(n)
+                                     End If
+                                 End If
+                             Next j
+                         Next i
+                     End If
+                 Next x
+                 If n > -1 Then
+                     selectedIDs(y) = rndgen.RndPos(n + 1, False) - 1
+                     selectedWeight(y) = Weight(y)(selectedIDs(y))
+                 Else
+                     selectedIDs(y) = -1
+                     selectedWeight(y) = 0
+                 End If
+                 'Next y
+             End Sub)
+            idlist.Clear()
+            For y As Integer = 0 To tmpm.ySize Step 1
+                If selectedIDs(y) > -1 Then
+                    idlist.Add(y)
+                End If
+            Next y
+
+            If idlist.Count > 0 Then
+                Dim s As Integer = comm.RandomSelection(idlist, selectedWeight, True)
+                tmpm.board(allPoints(s)(selectedIDs(s)).X, _
+                        allPoints(s)(selectedIDs(s)).Y).locID.Add(pID(s)(selectedIDs(s)))
             End If
         Loop
+        m = tmpm
+    End Sub
+
+    Private Sub UnsymmSetBorders(ByRef m As Map, ByVal nRaces As Integer)
+        Dim tmpm As Map = m
+        Dim del(tmpm.xSize, tmpm.ySize), freeze(tmpm.xSize, tmpm.ySize) As Boolean
+        Dim LocBorders(UBound(tmpm.Loc), UBound(tmpm.Loc)) As Dictionary(Of String, Point)
+        For y As Integer = 0 To tmpm.ySize Step 1
+            Dim b As Location.Borders
+            Dim id As Integer
+            Dim isBorder As Boolean
+            For x As Integer = 0 To tmpm.xSize Step 1
+                b = NearestXY(x, y, tmpm.xSize, tmpm.ySize, 1)
+                id = tmpm.board(x, y).locID.Item(0)
+                isBorder = False
+                For i As Integer = b.minX To b.maxX Step 1
+                    For j As Integer = b.minY To b.maxY Step 1
+                        If Not id = tmpm.board(i, j).locID.Item(0) Then
+                            isBorder = True
+                            i = b.maxX
+                            Exit For
+                        End If
+                    Next j
+                Next i
+                If isBorder Then
+                    freeze(x, y) = True
+                    b = NearestXY(x, y, tmpm.xSize, tmpm.ySize, rndgen.RndPos(2, True) - 1)
+                    For i As Integer = b.minX To b.maxX Step 1
+                        For j As Integer = b.minY To b.maxY Step 1
+                            tmpm.board(i, j).isBorder = True
+                            If Not tmpm.board(i, j).locID.Contains(id) Then tmpm.board(i, j).locID.Add(id)
+                        Next j
+                    Next i
+                End If
+            Next x
+        Next y
+        For p As Integer = 0 To 2 Step 1
+            Parallel.For(0, tmpm.ySize + 1, _
+             Sub(y As Integer)
+                 Dim n As Integer
+                 Dim b As Location.Borders
+                 For x As Integer = 0 To tmpm.xSize Step 1
+                     If Not freeze(x, y) Then
+                         n = 0
+                         b = NearestXY(x, y, tmpm.xSize, tmpm.ySize, 1)
+                         For i As Integer = b.minX To b.maxX Step 1
+                             For j As Integer = b.minY To b.maxY Step 1
+                                 If Not tmpm.board(i, j).isBorder Then
+                                     n += 1
+                                 End If
+                             Next j
+                         Next i
+                         If n > 1 Then
+                             Dim r As Integer = rndgen.RndPos(5, False)
+                             If Math.Abs(n - 5) > r Then del(x, y) = True
+                         End If
+                     End If
+                 Next x
+             End Sub)
+            Parallel.For(0, tmpm.ySize + 1, _
+             Sub(y As Integer)
+                 For x As Integer = 0 To tmpm.xSize Step 1
+                     If del(x, y) Then
+                         Call BorderStatusRemove(tmpm, x, y)
+                         del(x, y) = False
+                     End If
+                 Next x
+             End Sub)
+        Next p
+        freeze = Nothing
+
+        For i As Integer = 0 To UBound(tmpm.Loc) - 1 Step 1
+            For j As Integer = i + 1 To UBound(tmpm.Loc) Step 1
+                LocBorders(i, j) = New Dictionary(Of String, Point)
+            Next j
+        Next i
+        For y As Integer = 0 To tmpm.ySize Step 1
+            For x As Integer = 0 To tmpm.xSize Step 1
+                If tmpm.board(x, y).isBorder Then
+                    Dim id As Integer = tmpm.board(x, y).locID.Item(0)
+                    Dim b As Location.Borders = NearestXY(x, y, tmpm.xSize, tmpm.ySize, 1)
+                    For i As Integer = b.minX To b.maxX Step 1
+                        For j As Integer = b.minY To b.maxY Step 1
+                            Dim n As Integer = tmpm.board(i, j).locID.Item(0)
+                            If Not id = n Then
+                                Dim s As String = i & "_" & j
+                                Dim LID1 As Integer = Math.Min(id, n) - 1
+                                Dim LID2 As Integer = Math.Max(id, n) - 1
+                                If Not LocBorders(LID1, LID2).ContainsKey(s) Then LocBorders(LID1, LID2).Add(s, New Point(i, j))
+                            End If
+                        Next j
+                    Next i
+                End If
+            Next x
+        Next y
+        Parallel.For(0, UBound(tmpm.Loc), _
+         Sub(i As Integer)
+             Dim ids As New List(Of Integer)
+             Dim selected, delete As New List(Of Integer)
+             Dim startI As Integer = i + 1
+             If i < nRaces Then
+                 For j As Integer = nRaces To UBound(tmpm.Loc) Step 1
+                     If LocBorders(i, j).Count > 0 Then
+                         startI = nRaces
+                         Exit For
+                     End If
+                 Next j
+             End If
+             For j As Integer = startI To UBound(tmpm.Loc) Step 1
+                 If LocBorders(i, j).Count > 0 Then
+                     Dim maxD, D As Integer
+                     Dim pointsslist(LocBorders(i, j).Count - 1) As Point
+                     LocBorders(i, j).Values.CopyTo(pointsslist, 0)
+                     maxD = 0
+                     ids.Clear()
+                     selected.Clear()
+                     delete.Clear()
+                     For p1 As Integer = 0 To UBound(pointsslist) - 1 Step 1
+                         ids.Add(p1)
+                         For p2 As Integer = p1 + 1 To UBound(pointsslist) Step 1
+                             D = SqDist(pointsslist(p1), pointsslist(p2))
+                             If maxD < D Then maxD = D
+                         Next p2
+                     Next p1
+                     ids.Add(UBound(pointsslist))
+                     Dim maxPaths As Integer = CInt(Math.Max(Math.Sqrt(maxD) / PassDist, 1))
+                     For k As Integer = 1 To maxPaths Step 1
+                         Dim s As Integer = comm.RandomSelection(ids, False)
+                         selected.Add(s)
+                         ids.Remove(s)
+                         For Each p As Integer In ids
+                             D = SqDist(pointsslist(s), pointsslist(p))
+                             If D < PassDist * PassDist Then delete.Add(p)
+                         Next p
+                         For Each p As Integer In delete
+                             ids.Remove(p)
+                         Next p
+                         If ids.Count = 0 Then Exit For
+                     Next k
+                     Dim Centers() As Point = New Point() {tmpm.Loc(i).pos, tmpm.Loc(j).pos}
+                     For Each c As Point In Centers
+                         For Each p As Integer In selected
+                             Call MakePass(tmpm, pointsslist, pointsslist(p), c)
+                         Next p
+                     Next c
+                 End If
+             Next j
+         End Sub)
+
+        m = tmpm
+    End Sub
+    Private Sub BorderStatusRemove(ByRef m As Map, ByRef x As Integer, ByRef y As Integer)
+        m.board(x, y).isBorder = False
+        Dim n As Integer = m.board(x, y).locID.Item(0)
+        m.board(x, y).locID.Clear()
+        m.board(x, y).locID.Add(n)
+    End Sub
+    Private Sub BorderStatusRemove(ByRef m As Map, ByRef p As Point)
+        Call BorderStatusRemove(m, p.X, p.Y)
+    End Sub
+    Private Sub MakePass(ByRef m As Map, ByRef border() As Point, ByRef init As Point, ByRef dest As Point)
+        Dim vx As Double = dest.X - init.X
+        Dim vy As Double = dest.Y - init.Y
+        Dim n As Integer = CInt(10 * Math.Max((vx * vx + vy * vy), 1))
+        vx /= n
+        vy /= n
+        n += 10
+        Dim tx, ty As Double
+        For r As Integer = 0 To n Step 1
+            tx = init.X + CDbl(r) * vx
+            ty = init.Y + CDbl(r) * vy
+            For Each bpoint As Point In border
+                If m.board(bpoint.X, bpoint.Y).isBorder Then
+                    Dim dist As Double = Math.Sqrt(CDbl(bpoint.X - tx) ^ 2 + CDbl(bpoint.Y - ty) ^ 2)
+                    If dist < PassWidth OrElse (dist <= 2 * PassWidth AndAlso rndgen.Rand(0, 1) > 0.5) Then
+                        Call BorderStatusRemove(m, bpoint)
+                    End If
+                End If
+            Next bpoint
+        Next r
     End Sub
 
     Private Sub ResetBoard(ByRef m As Map)
@@ -397,6 +628,7 @@ Public Class Location
     Public pos As Point
     Private invSqA, invSqB, cos, sin As Double
     Private Asize, Bsize As Double
+    Private invSigmaA, invSigmaB As Double
 
     Friend Structure Borders
         Dim maxX, minX, maxY, minY As Integer
@@ -411,6 +643,8 @@ Public Class Location
         pos = New Point(p.X, p.Y)
         cos = Math.Cos(angle)
         sin = Math.Sin(angle)
+        invSigmaA = Math.Sqrt(0.5) * 0.5 / a
+        invSigmaB = Math.Sqrt(0.5) * 0.5 / b
         invSqA = 1 / (a * a)
         invSqB = 1 / (b * b)
         Asize = a
@@ -454,20 +688,16 @@ Public Class Location
         Dim dy As Integer = Y - pos.Y
         Dim d1 As Double = dx * cos + dy * sin
         Dim d2 As Double = -dx * sin + dy * cos
-        Dim w1 As Double = Gauss(d1, 0.5 * Asize)
-        Dim w2 As Double = Gauss(d2, 0.5 * Bsize)
-        Return w1 * w2
+        Return Math.Exp(-((dx * invSigmaA) ^ 2) - ((dy * invSigmaB) ^ 2))
     End Function
     Friend Function pWeight(ByRef P As Point) As Double
         Return pWeight(P.X, P.Y)
     End Function
-    Private Function Gauss(ByRef X As Double, ByRef sigma As Double) As Double
-        Dim s As Double = 1 / sigma
-        Return Math.Exp(-0.5 * (X * sigma) ^ 2) * sigma
+    Private Function Gauss(ByRef dX As Double, ByRef sigma As Double) As Double
+        Return Math.Exp(-0.5 * (dX / sigma) ^ 2)
     End Function
 
 End Class
-
 
 Public Class ArrayZoom
 
