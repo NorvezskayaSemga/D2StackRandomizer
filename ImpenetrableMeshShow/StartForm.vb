@@ -5,25 +5,12 @@ Public Class StartForm
     Dim genmesh As New InpenetrableMeshGen
     Dim zoom As New ArrayZoom
     Dim draw As New ColorSelector
+    Dim symm As New SymmetryOperations
 
     Private Sub GenButton_Click() Handles GenButton.Click
 
 
         Dim grid As InpenetrableMeshGen.Map
-        '                 grid = New Integer(,) { _
-        '                                        {1, 1, 2, 2, 2, 2, 2, 2, 3, 3, 3, 3}, _
-        '                                        {1, 1, 1, 1, 2, 2, 2, 2, 3, 3, 3, 3}, _
-        '                                        {4, 1, 1, 1, 2, 2, 2, 3, 3, 3, 6, 3}, _
-        '                                        {4, 1, 1, 1, 2, 2, 2, 2, 3, 3, 6, 6}, _
-        '                                        {4, 1, 1, 4, 5, 5, 5, 5, 6, 6, 6, 6}, _
-        '                                        {4, 4, 4, 4, 5, 5, 5, 5, 6, 6, 6, 6}, _
-        '                                        {4, 4, 4, 4, 5, 5, 5, 6, 6, 6, 6, 6}, _
-        '                                        {7, 4, 4, 5, 5, 5, 5, 5, 6, 9, 6, 6}, _
-        '                                        {7, 7, 5, 5, 5, 5, 8, 8, 9, 9, 9, 6}, _
-        '                                        {7, 7, 7, 5, 5, 8, 8, 8, 9, 9, 9, 9}, _
-        '                                        {7, 7, 7, 7, 8, 8, 8, 8, 8, 9, 9, 9}, _
-        '                                        {7, 7, 7, 7, 8, 8, 8, 8, 8, 9, 9, 9}}
-
         Dim races As Integer
         If sel1.Checked Then
             races = 2
@@ -33,21 +20,45 @@ Public Class StartForm
             races = 4
         End If
 
-        grid = genmesh.Gen(96 - 1, 96 - 1, races, 20, 15, 0.3, 0.4)
+        Dim sM As InpenetrableMeshGen.SettingsMap
+        sM.xSize = 96
+        sM.ySize = 96
+        sM.RaceLocsDistTolerance = 0.2
+        sM.nRaces = races
+        sM.minPassDist = 7
+        sM.minPassWidth = 1.1
+        Dim sR As InpenetrableMeshGen.SettingsLoc
+        sR.AverageRadius = 20
+        sR.maxEccentricityDispersion = 0.15
+        sR.maxRadiusDispersion = 0
+        Dim sC As InpenetrableMeshGen.SettingsLoc
+        sC.AverageRadius = 15
+        sC.maxEccentricityDispersion = 0.4
+        sC.maxRadiusDispersion = 0.3
 
-        Dim mult As Integer = zoom.CalcMultiplicator(Math.Max(grid.xSize, grid.ySize) + 1)
+        If Not SymmCheckBox.Checked Then
+            grid = genmesh.UnsymmGen(sM, sR, sC)
+        Else
+            grid = genmesh.SymmGen(sM, sR, sC)
+        End If
 
         Dim t(grid.xSize, grid.ySize) As Integer
         For x As Integer = 0 To grid.xSize Step 1
             For y As Integer = 0 To grid.ySize Step 1
-                If grid.board(x, y).locID.Count = 0 Or Not grid.board(x, y).isBorder Then
+                If grid.board(x, y).locID.Count = 0 Or (Not grid.board(x, y).isBorder And Not grid.board(x, y).isPass) Then
                     t(x, y) = 0
+                ElseIf grid.board(x, y).isPass Then
+                    t(x, y) = 100
                 Else
                     t(x, y) = grid.board(x, y).locID.Item(0)
                 End If
             Next y
         Next x
+        Call ShowResult(t)
 
+    End Sub
+    Private Sub ShowResult(ByRef t(,) As Integer)
+        Dim mult As Integer = zoom.CalcMultiplicator(Math.Max(UBound(t, 1), UBound(t, 2)) + 1)
         Dim mgrid(,) As Integer = zoom.Zoom(t, mult)
         Dim c(,) As Color = draw.MakeIslandsColorMap(mgrid)
         Dim xsize As Integer = UBound(c, 1)
@@ -65,4 +76,5 @@ Public Class StartForm
         Next i
         PictureBox1.Image = img
     End Sub
+
 End Class
