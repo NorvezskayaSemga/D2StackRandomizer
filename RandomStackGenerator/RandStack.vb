@@ -1142,7 +1142,7 @@ Public Class Common
         If SelectedItem = -1 Then SelectedItem = IDs.Item(IDs.Count - 1)
         Return SelectedItem
     End Function
-    Private Function Gauss(ByRef X As Double, ByRef avX As Double, ByRef sigma As Double) As Double
+    Public Function Gauss(ByRef X As Double, ByRef avX As Double, ByRef sigma As Double) As Double
         Return Math.Exp(-0.5 * ((X - avX) / (sigma * avX)) ^ 2)
     End Function
 

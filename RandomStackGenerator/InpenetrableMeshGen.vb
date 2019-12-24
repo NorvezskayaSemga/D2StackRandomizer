@@ -11,6 +11,10 @@ Public Class InpenetrableMeshGen
         Dim isBorder As Boolean
         ''' <summary>True, если клетка является частью прохода между локациями</summary>
         Dim isPass As Boolean
+        ''' <summary>True, если клетка находится под посещаемым объектом</summary>
+        Dim isAttended As Boolean
+        ''' <summary>Если клетка является верхним левым углом посещаемого объекта, то здесь хранится ID объекта</summary>
+        Dim objectID As Integer
     End Structure
 
     Public Structure Map
@@ -42,6 +46,11 @@ Public Class InpenetrableMeshGen
         ''' <summary>При достаточном количестве места будут создаваться локации размером от (1-D)*R до (1+D)*R.
         ''' Когда свободного места станет недостаточно R начнет постепенно уменьшаться до половины от начального значения</summary>
         Dim maxRadiusDispersion As Double
+
+        '''<summary>Максимальное количество золотых шахт на локацию</summary>
+        Dim maxGoldMines As Integer
+        '''<summary>Максимальное количество источников маны на локацию</summary>
+        Dim maxManaSources As Integer
     End Structure
     Public Structure SettingsMap
         ''' <summary>Правая граница карты (например, если генерируем карту 24x48, то сюда пишем 23)</summary>
@@ -59,9 +68,27 @@ Public Class InpenetrableMeshGen
         Dim RaceLocsDistTolerance As Double
     End Structure
 
+    Public Structure AttendedObject
+        Dim TypeID As Integer
+        Dim Size As Integer
+        Dim Name As String
+        Dim Subtype As Integer
+        Dim needExpand As Boolean
+    End Structure
+
     Private rndgen As New RndValueGen
     Private comm As New Common
     Private symm As New SymmetryOperations
+    Public ActiveObjects() As AttendedObject = New AttendedObject() {Nothing, _
+                        New AttendedObject With {.Name = "Capital", .needExpand = True, .Size = 5, .TypeID = 1}, _
+                        New AttendedObject With {.Name = "City", .needExpand = True, .Size = 4, .TypeID = 2}, _
+                        New AttendedObject With {.Name = "Vendor", .needExpand = True, .Size = 3, .TypeID = 3}, _
+                        New AttendedObject With {.Name = "Mercenary", .needExpand = True, .Size = 3, .TypeID = 4}, _
+                        New AttendedObject With {.Name = "Mage", .needExpand = True, .Size = 3, .TypeID = 5}, _
+                        New AttendedObject With {.Name = "Trainer", .needExpand = True, .Size = 3, .TypeID = 6}, _
+                        New AttendedObject With {.Name = "Ruins", .needExpand = True, .Size = 3, .TypeID = 7}, _
+                        New AttendedObject With {.Name = "Mine", .needExpand = False, .Size = 3, .TypeID = 8}}
+
 
     ''' <summary>Генерирует заготовку ландшафта без использования симметрии</summary>
     ''' <param name="settMap">Общие настройки для карты</param>
@@ -78,7 +105,9 @@ Public Class InpenetrableMeshGen
         Dim t3 As Integer = Environment.TickCount
         Call SetBorders(m, settMap)
         Dim t4 As Integer = Environment.TickCount
-        Console.WriteLine("RLocs: " & t1 - t0 & vbTab & "CLocs: " & t2 - t1 & vbTab & "IDset: " & t3 - t2 & vbTab & "BordSet: " & t4 - t3)
+        Call PlaceActiveObjects(m, settMap, settRaceLoc, settCommLoc, -1)
+        Dim t5 As Integer = Environment.TickCount
+        Console.WriteLine("RLocs: " & t1 - t0 & vbTab & "CLocs: " & t2 - t1 & vbTab & "IDset: " & t3 - t2 & vbTab & "BordSet: " & t4 - t3 & vbTab & "PlaceActive: " & t5 - t4)
         Return m
     End Function
     ''' <summary>Генерирует заготовку ландшафта с использованием симметрии</summary>
@@ -112,7 +141,9 @@ Public Class InpenetrableMeshGen
         Dim t3 As Integer = Environment.TickCount
         Call SetBorders(m, settMap, s)
         Dim t4 As Integer = Environment.TickCount
-        Console.WriteLine("RLocs: " & t1 - t0 & vbTab & "CLocs: " & t2 - t1 & vbTab & "IDset: " & t3 - t2 & vbTab & "BordSet: " & t4 - t3)
+        Call PlaceActiveObjects(m, settMap, settRaceLoc, settCommLoc, s)
+        Dim t5 As Integer = Environment.TickCount
+        Console.WriteLine("RLocs: " & t1 - t0 & vbTab & "CLocs: " & t2 - t1 & vbTab & "IDset: " & t3 - t2 & vbTab & "BordSet: " & t4 - t3 & vbTab & "PlaceActive: " & t5 - t4)
         Return m
     End Function
 
@@ -218,7 +249,6 @@ Public Class InpenetrableMeshGen
             id = comm.RandomSelection(prepResult.ppIDs, True)
             L.pos = New Point(prepResult.possiblePoints(id).X, prepResult.possiblePoints(id).Y)
             posList = symm.ApplySymm(L, settMap.nRaces, res, symmID, prepResult.IminimumDist)
-
             If posList.Length = settMap.nRaces Then
                 ok = TestRaceLocations(posList, settMap.nRaces, prepResult, settMap.RaceLocsDistTolerance)
             Else
@@ -245,24 +275,29 @@ Public Class InpenetrableMeshGen
         Dim r, m As Double
         Dim n As Integer
         If settMap.nRaces = 4 Then
-            r = 0.45 * (Math.Sqrt(((settMap.xSize - 2 * settRaceLoc.AverageRadius) ^ 2) _
-                                + ((settMap.ySize - 2 * settRaceLoc.AverageRadius) ^ 2) - 2))
-            r = r * (1 - 0.5 * settMap.RaceLocsDistTolerance)
-            m = CInt(0.5 * Math.Min(r, Math.Min(settMap.xSize, settMap.ySize) - 2 * settRaceLoc.AverageRadius))
+            r = 0.45 * Math.Sqrt(((settMap.xSize - 2 * settRaceLoc.AverageRadius) ^ 2) _
+                               + ((settMap.ySize - 2 * settRaceLoc.AverageRadius) ^ 2) - 2)
+            r = Math.Min(r, Math.Min(settMap.xSize, settMap.ySize) - 2)
         ElseIf settMap.nRaces = 3 Then
             r = 0.5 * Math.Sqrt(3) * (Math.Min(settMap.xSize, settMap.ySize) - 2 * settRaceLoc.AverageRadius)
-            r = r * (1 - 0.5 * settMap.RaceLocsDistTolerance)
-            m = CInt(0.25 * Math.Sqrt(3) * r)
         ElseIf settMap.nRaces = 2 Then
             r = 0.5 * (settMap.xSize + settMap.ySize - 4 * settRaceLoc.AverageRadius)
-            r = r * (1 - 0.5 * settMap.RaceLocsDistTolerance)
-            m = CInt(r / Math.Sqrt(2))
         Else
             Throw New Exception("Неожиданное аколичество рас: " & settMap.nRaces)
             r = 2 * settRaceLoc.AverageRadius + 2
-            r = r * (1 - 0.5 * settMap.RaceLocsDistTolerance)
+        End If
+        r = Math.Min(r, Math.Min(settMap.xSize, settMap.ySize) - 2)
+        r = r * (1 - 0.5 * settMap.RaceLocsDistTolerance)
+        If settMap.nRaces = 4 Then
+            m = CInt(0.5 * Math.Min(r, Math.Min(settMap.xSize, settMap.ySize) - 2 * settRaceLoc.AverageRadius))
+        ElseIf settMap.nRaces = 3 Then
+            m = CInt(0.25 * Math.Sqrt(3) * r)
+        ElseIf settMap.nRaces = 2 Then
+            m = CInt(r / Math.Sqrt(2))
+        Else
             m = 0
         End If
+
         result.DminimumDist = r
         result.IminimumDist = CInt((r - 2) ^ 2)
 
@@ -751,7 +786,7 @@ again:
              Sub(y As Integer)
                  For x As Integer = 0 To tmpm.xSize Step 1
                      If del(x, y) Then
-                         Call BorderStatusRemove(tmpm, x, y)
+                         tmpm.board(x, y).isBorder = False
                          del(x, y) = False
                      End If
                  Next x
@@ -864,30 +899,66 @@ again:
                      Dim Centers() As Point = New Point() {tmpm.Loc(i).pos, tmpm.Loc(j).pos}
                      For Each c As Point In Centers
                          For Each p As Integer In selected
-                             Call MakePass(tmpm, pointsslist, pointsslist(p), c, i, j, settMap, symmID)
+                             Call MakePass(tmpm, pointsslist(p), c, settMap, symmID)
                          Next p
                      Next c
                  End If
              Next j
          End Sub)
+
+        Dim conn2(0, 0) As Boolean
+        Do While Not IsNothing(conn2)
+            conn2 = Nothing
+            Dim conn1(,) As Boolean = FindConnected(tmpm, m.Loc(0).pos)
+            For y As Integer = 0 To tmpm.ySize Step 1
+                For x As Integer = 0 To tmpm.xSize Step 1
+                    If Not m.board(x, y).isBorder And Not conn1(x, y) Then
+                        conn2 = FindConnected(tmpm, New Point(x, y))
+                        Dim minD As Integer = Integer.MaxValue
+                        Dim D As Integer
+                        Dim p1, p2 As Point
+                        For y1 As Integer = 0 To tmpm.ySize Step 1
+                            For x1 As Integer = 0 To tmpm.xSize Step 1
+                                If conn1(x1, y1) Then
+                                    For y2 As Integer = 0 To tmpm.ySize Step 1
+                                        For x2 As Integer = 0 To tmpm.xSize Step 1
+                                            If conn2(x2, y2) Then
+                                                D = SqDist(x1, y1, x, y2)
+                                                If minD > D Then
+                                                    minD = D
+                                                    p1 = New Point(x1, y1)
+                                                    p2 = New Point(x2, y2)
+                                                End If
+                                            End If
+                                        Next x2
+                                    Next y2
+                                End If
+                            Next x1
+                        Next y1
+                        Call MakePass(tmpm, p1, p2, settMap, symmID)
+                        Exit For
+                    End If
+                Next x
+                If Not IsNothing(conn2) Then Exit For
+            Next y
+        Loop
+        Parallel.For(0, tmpm.ySize + 1, _
+         Sub(y As Integer)
+             For x As Integer = 0 To tmpm.xSize Step 1
+                 If Not tmpm.board(x, y).isBorder And tmpm.board(x, y).locID.Count > 1 Then
+                     Dim n As Integer = tmpm.board(x, y).locID.Item(0)
+                     tmpm.board(x, y).locID.Clear()
+                     tmpm.board(x, y).locID.Add(n)
+                 End If
+             Next x
+         End Sub)
         m = tmpm
     End Sub
-    Private Sub BorderStatusRemove(ByRef m As Map, ByRef x As Integer, ByRef y As Integer)
-        m.board(x, y).isBorder = False
-        Dim n As Integer = m.board(x, y).locID.Item(0)
-        m.board(x, y).locID.Clear()
-        m.board(x, y).locID.Add(n)
-    End Sub
-    Private Sub BorderStatusRemove(ByRef m As Map, ByRef p As Point)
-        Call BorderStatusRemove(m, p.X, p.Y)
-    End Sub
-    Private Sub MakePass(ByRef m As Map, ByRef border() As Point, ByRef init As Point, ByRef dest As Point, _
-                         ByRef Loc1 As Integer, ByRef Loc2 As Integer, ByRef settMap As SettingsMap, ByRef symmID As Integer)
+    Private Sub MakePass(ByRef m As Map, ByRef init As Point, ByRef dest As Point, _
+                         ByRef settMap As SettingsMap, ByRef symmID As Integer)
         Dim vx As Double = dest.X - init.X
         Dim vy As Double = dest.Y - init.Y
         Dim n As Integer = CInt(10 * Math.Max((vx * vx + vy * vy), 1))
-        Dim L1 As Integer = Math.Min(Loc1, Loc2)
-        Dim L2 As Integer = Math.Max(Loc1, Loc2)
         vx /= n
         vy /= n
         n += 10
@@ -911,7 +982,7 @@ again:
                                 p = New Point() {New Point(c1, c2)}
                             End If
                             For Each item As Point In p
-                                Call BorderStatusRemove(m, item.X, item.Y)
+                                m.board(item.X, item.Y).isBorder = False
                                 m.board(item.X, item.Y).isPass = True
                             Next item
                         End If
@@ -920,6 +991,33 @@ again:
             Next x
         Next r
     End Sub
+    Private Function FindConnected(ByRef m As Map, ByRef init As Point) As Boolean(,)
+        Dim connected(m.xSize, m.ySize), check(m.xSize, m.ySize) As Boolean
+        check(init.X, init.Y) = True
+        connected(init.X, init.Y) = True
+        Dim r As Integer = 1
+        Do While r > 0
+            For j As Integer = 0 To m.ySize Step 1
+                For i As Integer = 0 To m.ySize Step 1
+                    If check(i, j) Then
+                        Dim b As Location.Borders = NearestXY(i, j, m.xSize, m.ySize, 1)
+                        For x As Integer = b.minX To b.maxX Step 1
+                            For y As Integer = b.minY To b.maxY Step 1
+                                If Not m.board(x, y).isBorder And Not connected(x, y) Then
+                                    connected(x, y) = True
+                                    check(x, y) = True
+                                    r += 1
+                                End If
+                            Next y
+                        Next x
+                        check(i, j) = False
+                        r -= 1
+                    End If
+                Next i
+            Next j
+        Loop
+        Return connected
+    End Function
 
     Private Sub ResetBoard(ByRef m As Map)
         ReDim m.board(m.xSize, m.ySize)
@@ -937,10 +1035,308 @@ again:
         Return New Location(New Point(0, 0), r * e, r / e, a, id)
     End Function
     Private Function SqDist(ByRef p1 As Point, ByRef p2 As Point) As Integer
-        Dim dx As Integer = p1.X - p2.X
-        Dim dy As Integer = p1.Y - p2.Y
+        Return SqDist(p1.X, p1.Y, p2.X, p2.Y)
+    End Function
+    Private Function SqDist(ByRef x1 As Integer, ByRef y1 As Integer, ByRef x2 As Integer, ByRef y2 As Integer) As Integer
+        Dim dx As Integer = x1 - x2
+        Dim dy As Integer = y1 - y2
         Return dx * dx + dy * dy
     End Function
+
+    Private Sub PlaceActiveObjects(ByRef tm As Map, ByVal settMap As SettingsMap, _
+                                   ByRef settRaceLoc As SettingsLoc, ByRef settCommLoc As SettingsLoc, _
+                                   ByVal symmID As Integer)
+        Dim m As Map = tm
+        Dim LocsPlacing(UBound(m.Loc)) As Location.Borders
+        Dim LocArea(UBound(m.Loc)) As Integer
+        Parallel.For(0, m.Loc.Length, _
+         Sub(i As Integer)
+             Dim id As Integer = m.Loc(i).ID
+             LocsPlacing(i) = New Location.Borders With {.minX = Integer.MaxValue, .minY = Integer.MaxValue, _
+                                                         .maxX = Integer.MinValue, .maxY = Integer.MinValue}
+             For y As Integer = 0 To m.ySize Step 1
+                 For x As Integer = 0 To m.xSize Step 1
+                     If m.board(x, y).locID.Item(0) = id Then
+                         LocsPlacing(i).minX = Math.Min(LocsPlacing(i).minX, x)
+                         LocsPlacing(i).minY = Math.Min(LocsPlacing(i).minY, y)
+                         LocsPlacing(i).maxX = Math.Max(LocsPlacing(i).maxX, x)
+                         LocsPlacing(i).maxY = Math.Max(LocsPlacing(i).maxY, y)
+                         If MayPlaceObject(m, 8, x, y) Then LocArea(id - 1) += 1
+                     End If
+                 Next x
+             Next y
+         End Sub)
+
+        Dim LocAng() As Double = Nothing
+        If symmID < 0 Then
+            ReDim LocAng(settMap.nRaces - 1)
+            Parallel.For(0, settMap.nRaces, _
+             Sub(i As Integer)
+                 Dim a As Double = 0
+                 Dim da As Double = 0.005
+                 Dim minR As Double = Double.MaxValue
+                 Dim r As Double
+                 Do While a < 2 * Math.PI
+                     r = ((CDbl(m.Loc(i).pos.X) - Math.Cos(a) - 0.5 * CDbl(m.xSize)) ^ 2) _
+                       + ((CDbl(m.Loc(i).pos.Y) - Math.Sin(a) - 0.5 * CDbl(m.ySize)) ^ 2)
+                     If minR > r Then
+                         minR = r
+                         LocAng(i) = a
+                     End If
+                     a += da
+                 Loop
+             End Sub)
+        End If
+
+        Dim places(settRaceLoc.maxGoldMines + settRaceLoc.maxManaSources) As Integer
+        Dim nearWith(UBound(places)) As Integer
+        places(0) = 1
+        For i As Integer = 1 To settRaceLoc.maxGoldMines + settRaceLoc.maxManaSources Step 1
+            places(i) = 8
+            If i < 4 Then
+                nearWith(i) = 0
+            Else
+                nearWith(i) = -1
+            End If
+        Next i
+        Dim ok As Boolean = False
+        Do While Not ok
+            Dim v()() As Point = Nothing
+            If symmID > -1 Then
+                ReDim v(0)
+                Call ObjectsPlacingVariants(places, 1, m, LocsPlacing, nearWith, v(0))
+            Else
+                ReDim v(settMap.nRaces - 1)
+                Parallel.For(0, settMap.nRaces, _
+                 Sub(i As Integer)
+                     Call ObjectsPlacingVariants(places, i + 1, m, LocsPlacing, nearWith, v(i))
+                 End Sub)
+            End If
+            nearWith = Nothing
+            Dim minN As Integer = Integer.MaxValue
+            For i As Integer = 0 To UBound(v) Step 1
+                If IsNothing(v(i)) Then Throw New Exception("Как минимум одна из стартовых локаций настолько маленькая, что я не могу разместить даже столицу")
+                If minN > UBound(v(i)) Then minN = UBound(v(i))
+            Next i
+            For i As Integer = 0 To UBound(v) Step 1
+                If minN < UBound(v(i)) Then ReDim Preserve v(i)(minN)
+            Next i
+            ok = True
+            Dim minRsum, maxRsum, Rsum As Integer
+            minRsum = Integer.MaxValue
+            maxRsum = Integer.MinValue
+            For i As Integer = 0 To UBound(v) Step 1
+                Rsum = 0
+                For n As Integer = 1 To minN Step 1
+                    Rsum += SqDist(v(i)(n), v(i)(0))
+                Next n
+                minRsum = Math.Min(minRsum, Rsum)
+                maxRsum = Math.Max(maxRsum, Rsum)
+            Next i
+            Dim tolerance As Double = 0.333 * (Math.Pow(1 + settRaceLoc.maxRadiusDispersion, 2) + _
+                         Math.Pow(1 + settRaceLoc.maxEccentricityDispersion, 2) + 1.2 ^ 2)
+            If minRsum * tolerance < maxRsum Then ok = False
+            If ok Then
+                Parallel.For(0, v.Length, _
+                 Sub(i As Integer)
+                     For n As Integer = 0 To minN Step 1
+                         Call PlaceObject(m, places(n), v(i)(n).X, v(i)(n).Y, settMap, symmID)
+                     Next n
+                 End Sub)
+            End If
+        Loop
+
+        Exit Sub
+        Do While True
+            Dim baseAngle As Double = rndgen.PRand(0, 2 * Math.PI)
+            Dim tLoc() As Location
+            If symmID > -1 Then
+                tLoc = New Location() {New Location(m.Loc(0).pos, 1, 1, baseAngle, -1)}
+            Else
+                ReDim tLoc(settMap.nRaces - 1)
+                For i As Integer = 0 To settMap.nRaces - 1 Step 1
+                    tLoc(i) = New Location(m.Loc(i).pos, 1, 1, baseAngle + LocAng(i), i - settMap.nRaces)
+                Next i
+            End If
+
+
+
+
+            Exit Do
+        Loop
+
+    End Sub
+    Private Sub ObjectsPlacingVariants(ByRef objIDs() As Integer, ByRef locID As Integer, _
+                                       ByRef m As Map, ByRef LocsPlacing() As Location.Borders, _
+                                       ByRef NearWith() As Integer, ByRef output() As Point)
+        If IsNothing(NearWith) Then
+            ReDim NearWith(UBound(objIDs))
+            For i As Integer = 0 To UBound(NearWith) Step 1
+                NearWith(i) = -1
+            Next i
+        End If
+        Dim dx As Integer = LocsPlacing(locID - 1).minX
+        Dim dy As Integer = LocsPlacing(locID - 1).minY
+        Dim freeCells(LocsPlacing(locID - 1).maxX - dx, _
+                      LocsPlacing(locID - 1).maxY - dy) As Boolean
+        For y As Integer = 0 To UBound(freeCells, 2) Step 1
+            For x As Integer = 0 To UBound(freeCells, 1) Step 1
+                If Not m.board(x + dx, y + dy).isBorder And Not m.board(x + dx, y + dy).isAttended _
+                   AndAlso locID = m.board(x + dx, y + dy).locID.Item(0) Then
+                    freeCells(x, y) = True
+                End If
+            Next x
+        Next y
+        Dim tmpIDs() As Integer = CType(objIDs.Clone, Integer())
+        ReDim output(0)
+        Do While output(0).IsEmpty
+            ReDim output(UBound(tmpIDs))
+            Call PlaceObjRow(tmpIDs, 0, NearWith, freeCells, output)
+            If output(0).IsEmpty Then
+                If UBound(tmpIDs) > 0 Then
+                    ReDim Preserve tmpIDs(UBound(tmpIDs) - 1)
+                Else
+                    output = Nothing
+                    Exit Sub
+                End If
+            End If
+        Loop
+        For i As Integer = 0 To UBound(output) Step 1
+            output(i) = New Point(output(i).X + dx, output(i).Y + dy)
+        Next i
+    End Sub
+    Private Sub PlaceObjRow(ByRef objIDs() As Integer, ByRef n As Integer, _
+                            ByRef NearWith() As Integer, _
+                            ByRef freeCells(,) As Boolean, ByRef output() As Point)
+        Dim fc_bak(,) As Boolean = CType(freeCells.Clone, Boolean(,))
+        Dim fc(,) As Boolean
+        Dim selected As Integer
+        For i As Integer = 0 To n - 1 Step 1
+            Call PlaceObject(fc_bak, objIDs(i), output(i).X, output(i).Y)
+        Next i
+        Dim pointsList(freeCells.Length - 1) As Point
+        Dim pID As New List(Of Integer)
+        Dim np As Integer = -1
+        Dim Weight() As Double = Nothing
+        Dim desR, R As Double
+        If NearWith(n) > -1 Then
+            desR = (ActiveObjects(n).Size + ActiveObjects(NearWith(n)).Size + 5) * 0.25 * (1 + Math.Sqrt(2))
+            ReDim Weight(UBound(pointsList))
+        End If
+        For y As Integer = 0 To UBound(freeCells, 2) Step 1
+            For x As Integer = 0 To UBound(freeCells, 1) Step 1
+                If MayPlaceObject(fc_bak, objIDs(n), x, y) Then
+                    np += 1
+                    pointsList(np) = New Point(x, y)
+                    pID.Add(np)
+                    If Not IsNothing(Weight) Then
+                        R = Math.Sqrt(SqDist(output(NearWith(n)), pointsList(np)))
+                        Weight(np) = Math.Max(comm.Gauss(R, desR, 0.1), 0.0000001)
+                    End If
+                End If
+            Next x
+        Next y
+        If np = -1 Then
+            output(n) = Nothing
+            Exit Sub
+        End If
+        ReDim Preserve pointsList(np), Weight(np)
+        If n < UBound(objIDs) Then
+            Do While pID.Count > 0
+                fc = CType(fc_bak.Clone, Boolean(,))
+                selected = comm.RandomSelection(pID, False)
+                pID.Remove(selected)
+                output(n) = New Point(pointsList(selected).X, pointsList(selected).Y)
+                Call PlaceObject(fc, objIDs(n), output(n).X, output(n).Y)
+                Call PlaceObjRow(objIDs, n + 1, NearWith, fc, output)
+                If Not output(n + 1).IsEmpty Then pID.Clear()
+            Loop
+            If output(n + 1).IsEmpty Then output(n) = Nothing
+        Else
+            selected = comm.RandomSelection(pID, False)
+            pID.Clear()
+            output(n) = New Point(pointsList(selected).X, pointsList(selected).Y)
+        End If
+    End Sub
+
+    Private Function ObjectBorders(ByRef id As Integer, ByRef x As Integer, ByRef y As Integer) As Location.Borders
+        Dim res As Location.Borders
+        res.minX = x
+        res.minY = y
+        res.maxX = x + ActiveObjects(id).Size - 1
+        res.maxY = y + ActiveObjects(id).Size - 1
+        If ActiveObjects(id).needExpand Then
+            res.minX -= 1
+            res.minY -= 1
+            res.maxX += 1
+            res.maxY += 1
+        End If
+        Return res
+    End Function
+    Private Function MayPlaceObject(ByRef m As Map, ByRef id As Integer, ByRef x As Integer, ByRef y As Integer) As Boolean
+        If m.board(x, y).isBorder Or m.board(x, y).isAttended Then Return False
+        Dim b As Location.Borders = ObjectBorders(id, x, y)
+        If b.minX < 0 Or b.minY < 0 Or b.maxX > m.xSize Or b.maxY > m.ySize Then Return False
+        For j As Integer = b.minY To b.maxY Step 1
+            For i As Integer = b.minX To b.maxX Step 1
+                If m.board(i, j).isBorder Or m.board(i, j).isAttended Then Return False
+            Next i
+        Next j
+        Return True
+    End Function
+    Private Function MayPlaceObject(ByRef freeCell(,) As Boolean, ByRef id As Integer, ByRef x As Integer, ByRef y As Integer) As Boolean
+        If Not freeCell(x, y) Then Return False
+        Dim b As Location.Borders = ObjectBorders(id, x, y)
+        If b.minX < 0 Or b.minY < 0 Or b.maxX > UBound(freeCell, 1) Or b.maxY > UBound(freeCell, 2) Then Return False
+        For j As Integer = b.minY To b.maxY Step 1
+            For i As Integer = b.minX To b.maxX Step 1
+                If Not freeCell(i, j) Then Return False
+            Next i
+        Next j
+        Return True
+    End Function
+    Private Sub PlaceObject(ByRef m As Map, ByRef id As Integer, ByRef x As Integer, ByRef y As Integer)
+        Dim b As Location.Borders = ObjectBorders(id, x, y)
+        For j As Integer = b.minY To b.maxY Step 1
+            For i As Integer = b.minX To b.maxX Step 1
+                m.board(i, j).isAttended = True
+            Next i
+        Next j
+        m.board(x, y).objectID = id
+    End Sub
+    Private Sub PlaceObject(ByRef m As Map, ByRef id As Integer, ByRef x As Integer, ByRef y As Integer, _
+                            ByRef settMap As SettingsMap, ByRef symmId As Integer)
+        If symmId < 0 Then
+            Call PlaceObject(m, id, x, y)
+        Else
+            Dim b As Location.Borders = ObjectBorders(id, x, y)
+            Dim p(3), plist() As Point
+            For k As Integer = 0 To UBound(p) Step 1
+                p(k) = New Point(Integer.MaxValue, Integer.MaxValue)
+            Next k
+            For j As Integer = b.minY To b.maxY Step 1
+                For i As Integer = b.minX To b.maxX Step 1
+                    plist = symm.ApplySymm(New Point(i, j), settMap.nRaces, m, symmId, 1)
+                    For k As Integer = 0 To UBound(plist) Step 1
+                        m.board(plist(k).X, plist(k).Y).isAttended = True
+                        If p(k).X >= plist(k).X And p(k).Y >= plist(k).Y Then p(k) = New Point(plist(k).X, plist(k).Y)
+                    Next k
+                Next i
+            Next j
+            For k As Integer = 0 To UBound(p) Step 1
+                If p(k).X < Integer.MaxValue And p(k).Y < Integer.MaxValue Then m.board(p(k).X, p(k).Y).objectID = id
+            Next k
+        End If
+    End Sub
+    Private Sub PlaceObject(ByRef freeCell(,) As Boolean, ByRef id As Integer, ByRef x As Integer, ByRef y As Integer)
+        Dim b As Location.Borders = ObjectBorders(id, x, y)
+        For j As Integer = b.minY To b.maxY Step 1
+            For i As Integer = b.minX To b.maxX Step 1
+                freeCell(i, j) = False
+            Next i
+        Next j
+    End Sub
+
 End Class
 
 Public Class SymmetryOperations
@@ -1424,7 +1820,7 @@ Public Class ArrayZoom
          Sub(i As Integer)
              Dim x, y, xm, ym As Integer
              xm = i * multiplicator
-             For J As Integer = 0 To imgXSize Step 1
+             For J As Integer = 0 To imgYSize Step 1
                  ym = J * multiplicator
                  For i1 As Integer = 0 To multiplicator - 1 Step 1
                      x = xm + i1

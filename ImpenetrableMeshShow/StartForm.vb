@@ -21,8 +21,8 @@ Public Class StartForm
         End If
 
         Dim sM As InpenetrableMeshGen.SettingsMap
-        sM.xSize = 96
-        sM.ySize = 96
+        sM.xSize = 95
+        sM.ySize = 95
         sM.RaceLocsDistTolerance = 0.2
         sM.nRaces = races
         sM.minPassDist = 7
@@ -31,6 +31,8 @@ Public Class StartForm
         sR.AverageRadius = 20
         sR.maxEccentricityDispersion = 0.15
         sR.maxRadiusDispersion = 0
+        sR.maxGoldMines = 2
+        sR.maxManaSources = 3
         Dim sC As InpenetrableMeshGen.SettingsLoc
         sC.AverageRadius = 15
         sC.maxEccentricityDispersion = 0.4
@@ -45,12 +47,15 @@ Public Class StartForm
         Dim t(grid.xSize, grid.ySize) As Integer
         For x As Integer = 0 To grid.xSize Step 1
             For y As Integer = 0 To grid.ySize Step 1
-                If grid.board(x, y).locID.Count = 0 Or (Not grid.board(x, y).isBorder And Not grid.board(x, y).isPass) Then
+                If grid.board(x, y).locID.Count = 0 Or Not grid.board(x, y).isBorder Then
                     t(x, y) = 0
-                ElseIf grid.board(x, y).isPass Then
-                    t(x, y) = 100
-                Else
+                End If
+                If grid.board(x, y).isAttended Then
+                    t(x, y) = 100 + grid.board(x, y).objectID
+                ElseIf grid.board(x, y).isBorder Then
                     t(x, y) = grid.board(x, y).locID.Item(0)
+                ElseIf grid.board(x, y).isPass Then
+                    t(x, y) = 0
                 End If
             Next y
         Next x
