@@ -416,7 +416,7 @@ Public Class RandStack
     End Function
 
     ''' <summary>Генерирует набор предметов. В принципе может вернуть пустой список</summary>
-    ''' <param name="GoldCost">Примерная стоимость набора в золоте. Драгоценности считаются дешевле в два раза</param>
+    ''' <param name="GoldCost">Максимальная стоимость набора в золоте. Драгоценности считаются дешевле в два раза</param>
     ''' <param name="excludeConsumableItems">Не генерировать зелья, сферы, талисманы и свитки</param>
     ''' <param name="excludeNonconsumableItems">Не генерировать надеваемые предметы и посохи</param>
     Public Function ItemsGen(ByRef GoldCost As Integer, _
@@ -446,22 +446,21 @@ Public Class RandStack
         Return result
     End Function
     ''' <summary>Генерирует один предмет. Если не получится выбрать подходящий предмет, вернет пустую строку</summary>
-    ''' <param name="GoldCost">Примерная стоимость предмета в золоте. Драгоценности считаются дешевле в два раза</param>
+    ''' <param name="GoldCost">Максимальная стоимость предмета в золоте. Драгоценности считаются дешевле в два раза</param>
     ''' <param name="excludeConsumableItems">Не генерировать зелья, сферы, талисманы и свитки</param>
     ''' <param name="excludeNonconsumableItems">Не генерировать надеваемые предметы и посохи</param>
     Public Function ThingGen(ByRef GoldCost As Integer, _
                              ByRef excludeConsumableItems As Boolean, _
                              ByRef excludeNonconsumableItems As Boolean) As String
-        Dim maxCost, selected As Integer
+        Dim selected As Integer
         Dim IDs As New List(Of Integer)
         Dim result As String = ""
         Dim add As Boolean
 
-        maxCost = CInt(1.2 * GoldCost)
         IDs.Clear()
         For i As Integer = 0 To UBound(MagicItem) Step 1
             add = False
-            If MagicItem(i).itemCost.Gold <= maxCost * multItems(i) Then add = True
+            If MagicItem(i).itemCost.Gold <= GoldCost * multItems(i) Then add = True
             If excludeConsumableItems And comm.ConsumableItemsTypes.Contains(MagicItem(i).Type) Then add = False
             If excludeNonconsumableItems And comm.NonconsumableItemsTypes.Contains(MagicItem(i).Type) Then add = False
             If add Then IDs.Add(i)
