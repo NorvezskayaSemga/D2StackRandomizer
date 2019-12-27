@@ -184,7 +184,7 @@ Public Class InpenetrableMeshGen
                 Dim t2 As Integer = Environment.TickCount
                 Call UnsymmSetLocIdToCells(m)
                 Dim t3 As Integer = Environment.TickCount
-                Call SetBorders(m, settMap)
+                Call SetBorders(m, settMap, term)
                 Dim t4 As Integer = Environment.TickCount
                 Call PlaceActiveObjects(m, settMap, settRaceLoc, settCommLoc, AObj, -1, term)
                 Dim t5 As Integer = Environment.TickCount
@@ -249,7 +249,7 @@ Public Class InpenetrableMeshGen
                 Dim t2 As Integer = Environment.TickCount
                 Call SymmSetLocIdToCells(m, settMap, s)
                 Dim t3 As Integer = Environment.TickCount
-                Call SetBorders(m, settMap, s)
+                Call SetBorders(m, settMap, term, s)
                 Dim t4 As Integer = Environment.TickCount
                 Call PlaceActiveObjects(m, settMap, settRaceLoc, settCommLoc, AObj, s, term)
                 Dim t5 As Integer = Environment.TickCount
@@ -819,7 +819,8 @@ Public Class InpenetrableMeshGen
         Return -1
     End Function
 
-    Private Sub SetBorders(ByRef m As Map, ByVal settMap As SettingsMap, Optional ByVal symmID As Integer = -1)
+    Private Sub SetBorders(ByRef m As Map, ByVal settMap As SettingsMap, ByRef Term As TerminationCondition, _
+                           Optional ByVal symmID As Integer = -1)
 
         Dim tmpm As Map = m
         Dim del(tmpm.xSize, tmpm.ySize), freeze(tmpm.xSize, tmpm.ySize) As Boolean
@@ -1111,7 +1112,9 @@ Public Class InpenetrableMeshGen
              Next j
          End Sub)
 
-        Call ConnectDisconnectedAreas(tmpm, settMap, symmID)
+        Term = New TerminationCondition(Term.maxTime)
+        Call ConnectDisconnectedAreas(tmpm, settMap, symmID, Term)
+        If Term.ExitFromLoops Then Exit Sub
         Parallel.For(0, tmpm.ySize + 1, _
          Sub(y As Integer)
              For x As Integer = 0 To tmpm.xSize Step 1
@@ -1124,9 +1127,12 @@ Public Class InpenetrableMeshGen
          End Sub)
         m = tmpm
     End Sub
-    Private Sub ConnectDisconnectedAreas(ByRef m As Map, ByRef settMap As SettingsMap, ByRef symmId As Integer)
+    Private Sub ConnectDisconnectedAreas(ByRef m As Map, ByRef settMap As SettingsMap, ByRef symmId As Integer, _
+                                         ByRef Term As TerminationCondition)
         Dim conn2(0, 0) As Boolean
         Do While Not IsNothing(conn2)
+            Term.CheckTime()
+            If Term.ExitFromLoops Then Exit Sub
             conn2 = Nothing
             Dim init As Point = Nothing
             For x As Integer = 0 To m.xSize Step 1
@@ -1905,14 +1911,25 @@ Public Class InpenetrableMeshGen
     Private Sub MakeLabyrinth(ByRef m As Map, ByVal settMap As SettingsMap, ByVal symmID As Integer, ByRef Term As TerminationCondition)
         If Term.ExitFromLoops Then Exit Sub
         Dim tmpm As Map = m
-        Parallel.For(0, m.Loc.Length, _
+        Dim TT(UBound(tmpm.Loc)) As TerminationCondition
+        Dim maxTime As Long = Term.maxTime
+        Parallel.For(0, tmpm.Loc.Length, _
          Sub(i As Integer)
-             If Not tmpm.Loc(i).IsObtainedBySymmery Then Call MakeLabyrinth(tmpm, settMap, tmpm.Loc(i).ID, symmID)
+             If Not tmpm.Loc(i).IsObtainedBySymmery Then
+                 TT(i) = New TerminationCondition(maxTime)
+                 Call MakeLabyrinth(tmpm, settMap, tmpm.Loc(i).ID, symmID, TT(i))
+             End If
          End Sub)
-        Call ConnectDisconnectedAreas(tmpm, settMap, symmID)
+        For i As Integer = 0 To UBound(tmpm.Loc) Step 1
+            If Not IsNothing(TT(i)) Then Term.ExitFromLoops = Term.ExitFromLoops Or TT(i).ExitFromLoops
+        Next
+        If Term.ExitFromLoops Then Exit Sub
+        Term = New TerminationCondition(Term.maxTime)
+        Call ConnectDisconnectedAreas(tmpm, settMap, symmID, Term)
         m = tmpm
     End Sub
-    Private Sub MakeLabyrinth(ByRef m As Map, ByRef settMap As SettingsMap, ByRef LocId As Integer, ByRef symmID As Integer)
+    Private Sub MakeLabyrinth(ByRef m As Map, ByRef settMap As SettingsMap, ByRef LocId As Integer, ByRef symmID As Integer, _
+                              ByRef Term As TerminationCondition)
 
         Dim b As New Location.Borders With {.minX = Integer.MaxValue, .minY = Integer.MaxValue, _
                                             .maxX = Integer.MinValue, .maxY = Integer.MinValue}
@@ -1997,13 +2014,13 @@ Public Class InpenetrableMeshGen
         End If
 
         For i As Integer = 0 To UBound(conn) Step 1
-            Call LifeAlgo(m, settMap, symmID, conn(i), init(i), New Point(b.minX, b.minY))
+            Call LifeAlgo(m, settMap, symmID, conn(i), init(i), New Point(b.minX, b.minY), Term)
         Next i
 
     End Sub
-
     Private Sub LifeAlgo(ByRef m As Map, ByRef settMap As SettingsMap, ByRef symmId As Integer, _
-                         ByRef connected(,) As Boolean, ByRef init As Point, ByRef LPos As Point)
+                         ByRef connected(,) As Boolean, ByRef init As Point, ByRef LPos As Point, _
+                         ByRef Term As TerminationCondition)
 
         Dim xSize As Integer = UBound(connected, 1)
         Dim ySize As Integer = UBound(connected, 2)
@@ -2051,36 +2068,38 @@ Public Class InpenetrableMeshGen
         Dim nloops As Integer = 0
         Dim nextloop As Boolean = True
         Do While nextloop
-                For y As Integer = 0 To ySize Step 1
-                    For x As Integer = 0 To xSize Step 1
-                        If isLifeField(x, y) Then
-                            Dim b As Location.Borders = NearestXY(x, y, xSize, ySize, 1)
-                            Dim ndead As Integer = 9 - (b.maxX - b.minX + 1) * (b.maxY - b.minY + 1)
-                            If Not free(x, y) Then ndead -= 1
-                            For j As Integer = b.minY To b.maxY Step 1
-                                For i As Integer = b.minX To b.maxX Step 1
-                                    If Not connected(i, j) Or Not free(i, j) Then
-                                        ndead += 1
-                                    End If
-                                Next i
-                            Next j
-                            If free(x, y) Then
-                                W(x, y) = bW(ndead)
-                            Else
-                                W(x, y) = dW(ndead)
-                            End If
+            Term.CheckTime()
+            If Term.ExitFromLoops Then Exit Sub
+            For y As Integer = 0 To ySize Step 1
+                For x As Integer = 0 To xSize Step 1
+                    If isLifeField(x, y) Then
+                        Dim b As Location.Borders = NearestXY(x, y, xSize, ySize, 1)
+                        Dim ndead As Integer = 9 - (b.maxX - b.minX + 1) * (b.maxY - b.minY + 1)
+                        If Not free(x, y) Then ndead -= 1
+                        For j As Integer = b.minY To b.maxY Step 1
+                            For i As Integer = b.minX To b.maxX Step 1
+                                If Not connected(i, j) Or Not free(i, j) Then
+                                    ndead += 1
+                                End If
+                            Next i
+                        Next j
+                        If free(x, y) Then
+                            W(x, y) = bW(ndead)
+                        Else
+                            W(x, y) = dW(ndead)
                         End If
-                    Next x
-                Next y
-                For y As Integer = 0 To ySize Step 1
-                    For x As Integer = 0 To xSize Step 1
-                        If isLifeField(x, y) Then
-                            If W(x, y) > rndgen.Rand(0, maxW) Then
-                                free(x, y) = Not free(x, y)
-                            End If
+                    End If
+                Next x
+            Next y
+            For y As Integer = 0 To ySize Step 1
+                For x As Integer = 0 To xSize Step 1
+                    If isLifeField(x, y) Then
+                        If W(x, y) > rndgen.Rand(0, maxW) Then
+                            free(x, y) = Not free(x, y)
                         End If
-                    Next x
-                Next y
+                    End If
+                Next x
+            Next y
             nloops += 1
             If nloops > 2 Then
                 nextloop = False
