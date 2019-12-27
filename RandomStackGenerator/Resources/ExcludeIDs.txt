@@ -86,12 +86,4 @@ g000uu7521
 #ID предметов
 
 #типы предметов
-nonattack_artefact
-relic
-attack_artefact
-banner
-permanent_elixir
-scroll
-stuff
-boots
 special

@@ -173,23 +173,35 @@ Public Class InpenetrableMeshGen
         Dim AObj()(,) As Cell = ActiveObjectsSet(settMap, -1)
         Dim term As New TerminationCondition(maxGenTime)
         Dim AttemptsN = 0
+        Dim m As Map = Nothing
+        Dim nTry As Integer = 0
         Do While AttemptsN < 5
-            Dim t0 As Integer = Environment.TickCount
-            Dim m As Map = UnsymmPlaceRaceLocations(settMap, settRaceLoc)
-            Dim t1 As Integer = Environment.TickCount
-            Call UnsymmPlaceCommonLocs(m, settMap, settCommLoc)
-            Dim t2 As Integer = Environment.TickCount
-            Call UnsymmSetLocIdToCells(m)
-            Dim t3 As Integer = Environment.TickCount
-            Call SetBorders(m, settMap)
-            Dim t4 As Integer = Environment.TickCount
-            Call PlaceActiveObjects(m, settMap, settRaceLoc, settCommLoc, AObj, -1, term)
-            Dim t5 As Integer = Environment.TickCount
-            Call MakeLabyrinth(m, -1, term)
-            Dim t6 As Integer = Environment.TickCount
-            Console.WriteLine("RLocs: " & t1 - t0 & vbTab & "CLocs: " & t2 - t1 & vbTab & "IDset: " & t3 - t2 & vbTab & "BordSet: " & t4 - t3 & vbTab & "PlaceActive: " & t5 - t4 & vbTab & "MakeMaze: " & t6 - t5)
-            AttemptsN += 1
-            If Not term.ExitFromLoops Then Return m
+            Try
+                Dim t0 As Integer = Environment.TickCount
+                m = UnsymmPlaceRaceLocations(settMap, settRaceLoc)
+                Dim t1 As Integer = Environment.TickCount
+                Call UnsymmPlaceCommonLocs(m, settMap, settCommLoc)
+                Dim t2 As Integer = Environment.TickCount
+                Call UnsymmSetLocIdToCells(m)
+                Dim t3 As Integer = Environment.TickCount
+                Call SetBorders(m, settMap)
+                Dim t4 As Integer = Environment.TickCount
+                Call PlaceActiveObjects(m, settMap, settRaceLoc, settCommLoc, AObj, -1, term)
+                Dim t5 As Integer = Environment.TickCount
+                Call MakeLabyrinth(m, settMap, -1, term)
+                Dim t6 As Integer = Environment.TickCount
+                Console.WriteLine("RLocs: " & t1 - t0 & vbTab & "CLocs: " & t2 - t1 & vbTab & "IDset: " & t3 - t2 & vbTab & "BordSet: " & t4 - t3 & vbTab & "PlaceActive: " & t5 - t4 & vbTab & "MakeMaze: " & t6 - t5)
+                AttemptsN += 1
+                If Not term.ExitFromLoops Then Return m
+                nTry = 0
+            Catch ex As Exception
+                If nTry > 1 Then
+                    Throw ex
+                Else
+                    Console.WriteLine("Some error occured: " & vbNewLine & ex.Message)
+                    nTry += 1
+                End If
+            End Try
         Loop
         Return Nothing
     End Function
@@ -226,23 +238,35 @@ Public Class InpenetrableMeshGen
         Dim AObj()(,) As Cell = ActiveObjectsSet(settMap, s)
         Dim term As New TerminationCondition(maxGenTime)
         Dim AttemptsN = 0
+        Dim m As Map = Nothing
+        Dim nTry As Integer = 0
         Do While AttemptsN < 5
-            Dim t0 As Integer = Environment.TickCount
-            Dim m As Map = SymmPlaceRaceLocations(settMap, settRaceLoc, s)
-            Dim t1 As Integer = Environment.TickCount
-            Call SymmPlaceCommonLocs(m, settMap, settCommLoc, s)
-            Dim t2 As Integer = Environment.TickCount
-            Call SymmSetLocIdToCells(m, settMap, s)
-            Dim t3 As Integer = Environment.TickCount
-            Call SetBorders(m, settMap, s)
-            Dim t4 As Integer = Environment.TickCount
-            Call PlaceActiveObjects(m, settMap, settRaceLoc, settCommLoc, AObj, s, term)
-            Dim t5 As Integer = Environment.TickCount
-            Call MakeLabyrinth(m, s, term)
-            Dim t6 As Integer = Environment.TickCount
-            Console.WriteLine("RLocs: " & t1 - t0 & vbTab & "CLocs: " & t2 - t1 & vbTab & "IDset: " & t3 - t2 & vbTab & "BordSet: " & t4 - t3 & vbTab & "PlaceActive: " & t5 - t4 & vbTab & "MakeMaze: " & t6 - t5)
-            AttemptsN += 1
-            If Not term.ExitFromLoops Then Return m
+            Try
+                Dim t0 As Integer = Environment.TickCount
+                m = SymmPlaceRaceLocations(settMap, settRaceLoc, s)
+                Dim t1 As Integer = Environment.TickCount
+                Call SymmPlaceCommonLocs(m, settMap, settCommLoc, s)
+                Dim t2 As Integer = Environment.TickCount
+                Call SymmSetLocIdToCells(m, settMap, s)
+                Dim t3 As Integer = Environment.TickCount
+                Call SetBorders(m, settMap, s)
+                Dim t4 As Integer = Environment.TickCount
+                Call PlaceActiveObjects(m, settMap, settRaceLoc, settCommLoc, AObj, s, term)
+                Dim t5 As Integer = Environment.TickCount
+                Call MakeLabyrinth(m, settMap, s, term)
+                Dim t6 As Integer = Environment.TickCount
+                Console.WriteLine("RLocs: " & t1 - t0 & vbTab & "CLocs: " & t2 - t1 & vbTab & "IDset: " & t3 - t2 & vbTab & "BordSet: " & t4 - t3 & vbTab & "PlaceActive: " & t5 - t4 & vbTab & "MakeMaze: " & t6 - t5)
+                AttemptsN += 1
+                If Not term.ExitFromLoops Then Return m
+                nTry = 0
+            Catch ex As Exception
+                If nTry > 1 Then
+                    Throw ex
+                Else
+                    Console.WriteLine("Some error occured: " & vbNewLine & ex.Message)
+                    nTry += 1
+                End If
+            End Try
         Loop
         Return Nothing
     End Function
@@ -1087,21 +1111,45 @@ Public Class InpenetrableMeshGen
              Next j
          End Sub)
 
+        Call ConnectDisconnectedAreas(tmpm, settMap, symmID)
+        Parallel.For(0, tmpm.ySize + 1, _
+         Sub(y As Integer)
+             For x As Integer = 0 To tmpm.xSize Step 1
+                 If Not tmpm.board(x, y).isBorder And tmpm.board(x, y).locID.Count > 1 Then
+                     Dim n As Integer = tmpm.board(x, y).locID.Item(0)
+                     tmpm.board(x, y).locID.Clear()
+                     tmpm.board(x, y).locID.Add(n)
+                 End If
+             Next x
+         End Sub)
+        m = tmpm
+    End Sub
+    Private Sub ConnectDisconnectedAreas(ByRef m As Map, ByRef settMap As SettingsMap, ByRef symmId As Integer)
         Dim conn2(0, 0) As Boolean
         Do While Not IsNothing(conn2)
             conn2 = Nothing
-            Dim conn1(,) As Boolean = FindConnected(tmpm, m.Loc(0).pos)
-            Dim dp As Point = FindDisconnected(tmpm, conn1)
+            Dim init As Point = Nothing
+            For x As Integer = 0 To m.xSize Step 1
+                For y As Integer = 0 To m.ySize Step 1
+                    If Not m.board(x, y).isBorder Then
+                        init = New Point(x, y)
+                        Exit For
+                    End If
+                Next y
+                If Not init.IsEmpty Then Exit For
+            Next x
+            Dim conn1(,) As Boolean = FindConnected(m, init)
+            Dim dp As Point = FindDisconnected(m, conn1)
             If Not dp.IsEmpty Then
-                conn2 = FindConnected(tmpm, dp)
+                conn2 = FindConnected(m, dp)
                 Dim minD As Integer = Integer.MaxValue
                 Dim D As Integer
                 Dim p1, p2 As Point
-                For y1 As Integer = 0 To tmpm.ySize Step 1
-                    For x1 As Integer = 0 To tmpm.xSize Step 1
+                For y1 As Integer = 0 To m.ySize Step 1
+                    For x1 As Integer = 0 To m.xSize Step 1
                         If conn1(x1, y1) Then
-                            For y2 As Integer = 0 To tmpm.ySize Step 1
-                                For x2 As Integer = 0 To tmpm.xSize Step 1
+                            For y2 As Integer = 0 To m.ySize Step 1
+                                For x2 As Integer = 0 To m.xSize Step 1
                                     If conn2(x2, y2) Then
                                         D = SqDist(x1, y1, x2, y2)
                                         If minD > D Then
@@ -1115,20 +1163,9 @@ Public Class InpenetrableMeshGen
                         End If
                     Next x1
                 Next y1
-                Call MakePass(tmpm, p1, p2, settMap, symmID)
+                Call MakePass(m, p1, p2, settMap, symmId)
             End If
         Loop
-        Parallel.For(0, tmpm.ySize + 1, _
-         Sub(y As Integer)
-             For x As Integer = 0 To tmpm.xSize Step 1
-                 If Not tmpm.board(x, y).isBorder And tmpm.board(x, y).locID.Count > 1 Then
-                     Dim n As Integer = tmpm.board(x, y).locID.Item(0)
-                     tmpm.board(x, y).locID.Clear()
-                     tmpm.board(x, y).locID.Add(n)
-                 End If
-             Next x
-         End Sub)
-        m = tmpm
     End Sub
     Private Sub MakePass(ByRef m As Map, ByRef init As Point, ByRef dest As Point, _
                          ByRef settMap As SettingsMap, ByRef symmID As Integer)
@@ -1158,8 +1195,20 @@ Public Class InpenetrableMeshGen
                                 p = New Point() {New Point(c1, c2)}
                             End If
                             For Each item As Point In p
-                                m.board(item.X, item.Y).isBorder = False
-                                m.board(item.X, item.Y).isPass = True
+                                If m.board(item.X, item.Y).isBorder Then
+                                    m.board(item.X, item.Y).isBorder = False
+                                    m.board(item.X, item.Y).isPass = True
+                                ElseIf m.board(item.X, item.Y).isAttended Then
+                                    Dim tb As Location.Borders = NearestXY(item, m, 1)
+                                    For xx As Integer = tb.minX To tb.maxX Step 1
+                                        For yy As Integer = tb.minY To tb.maxY Step 1
+                                            If m.board(xx, yy).isBorder Then
+                                                m.board(xx, yy).isBorder = False
+                                                m.board(xx, yy).isPass = True
+                                            End If
+                                        Next yy
+                                    Next xx
+                                End If
                             Next item
                         End If
                     End If
@@ -1168,13 +1217,14 @@ Public Class InpenetrableMeshGen
         Next r
     End Sub
     Private Function FindConnected(ByRef m As Map, ByRef init As Point) As Boolean(,)
+        If m.board(init.X, init.Y).isBorder Then Throw New Exception("Find connected function: начальная точка непроходима")
         Dim connected(m.xSize, m.ySize), check(m.xSize, m.ySize) As Boolean
         check(init.X, init.Y) = True
         connected(init.X, init.Y) = True
         Dim r As Integer = 1
         Do While r > 0
             For j As Integer = 0 To m.ySize Step 1
-                For i As Integer = 0 To m.ySize Step 1
+                For i As Integer = 0 To m.xSize Step 1
                     If check(i, j) Then
                         Dim b As Location.Borders = NearestXY(i, j, m.xSize, m.ySize, 1)
                         For x As Integer = b.minX To b.maxX Step 1
@@ -1198,7 +1248,7 @@ Public Class InpenetrableMeshGen
         Dim m As New Map With {.xSize = UBound(free, 1), .ySize = UBound(free, 2)}
         ReDim m.board(m.xSize, m.ySize)
         For j As Integer = 0 To m.ySize Step 1
-            For i As Integer = 0 To m.ySize Step 1
+            For i As Integer = 0 To m.xSize Step 1
                 m.board(i, j).isBorder = Not free(i, j)
             Next i
         Next j
@@ -1219,6 +1269,17 @@ Public Class InpenetrableMeshGen
     Private Function FindDisconnected(ByRef free(,) As Boolean, ByRef connected(,) As Boolean) As Point
         Dim m As Map = FreeToMap(free)
         Return FindDisconnected(m, connected)
+    End Function
+    Private Function FindDisconnected(ByRef free(,) As Boolean, ByRef connected()(,) As Boolean) As Point
+        Dim c(UBound(connected(0), 1), UBound(connected(0), 2)) As Boolean
+        For i As Integer = 0 To UBound(connected) Step 1
+            For y As Integer = 0 To UBound(c, 2) Step 1
+                For x As Integer = 0 To UBound(c, 1) Step 1
+                    c(x, y) = c(x, y) Or connected(i)(x, y)
+                Next x
+            Next y
+        Next i
+        Return FindDisconnected(free, c)
     End Function
 
     Private Sub ResetBoard(ByRef m As Map)
@@ -1366,9 +1427,9 @@ Public Class InpenetrableMeshGen
              If symmID > -1 Then
                  Dim n As Integer = 0
                  Dim pp() As Point = New Point() {New Point(LocsPlacing(Li).minX, LocsPlacing(Li).minY), _
-                                             New Point(LocsPlacing(Li).minX, LocsPlacing(Li).maxY), _
-                                             New Point(LocsPlacing(Li).maxX, LocsPlacing(Li).minY), _
-                                             New Point(LocsPlacing(Li).maxX, LocsPlacing(Li).maxY)}
+                                                  New Point(LocsPlacing(Li).minX, LocsPlacing(Li).maxY), _
+                                                  New Point(LocsPlacing(Li).maxX, LocsPlacing(Li).minY), _
+                                                  New Point(LocsPlacing(Li).maxX, LocsPlacing(Li).maxY)}
                  Dim p() As Point = symm.ApplySymm(pp(0), settMap.nRaces, tmpm, symmID, 1)
                  For q As Integer = 0 To UBound(p) Step 1
                      For w As Integer = 0 To UBound(pp) Step 1
@@ -1385,22 +1446,24 @@ Public Class InpenetrableMeshGen
          End Sub)
 
         Dim GroupID As Integer = 1
-        Dim TT As New TerminationCondition(Term.maxTime)
+        Term = New TerminationCondition(Term.maxTime)
         Call FillLocation(GroupID, 1, tmpm, LocsPlacing, LocArea, settMap, settRaceLoc, _
-                          symmID, True, LocSymmMult, LocFreeCells, TT)
-        Term = TT
+                          symmID, True, LocSymmMult, LocFreeCells, Term)
         If Term.ExitFromLoops Then Exit Sub
-        TT = New TerminationCondition(Term.maxTime)
+        Dim TT(UBound(tmpm.Loc)) As TerminationCondition
+        Dim maxTime As Long = Term.maxTime
+
         Parallel.For(settMap.nRaces, tmpm.Loc.Length, _
          Sub(i As Integer)
-             'For i As Integer = settMap.nRaces To UBound(m.Loc) Step 1
              If Not tmpm.Loc(i).IsObtainedBySymmery Then
+                 TT(i) = New TerminationCondition(maxTime)
                  Call FillLocation(GroupID, tmpm.Loc(i).ID, tmpm, LocsPlacing, LocArea, settMap, settCommLoc, _
-                            symmID, False, LocSymmMult, LocFreeCells, TT)
+                                    symmID, False, LocSymmMult, LocFreeCells, TT(i))
              End If
-             'Next i
          End Sub)
-        Term = TT
+        For i As Integer = 0 To UBound(tmpm.Loc) Step 1
+            If Not IsNothing(TT(i)) Then Term.ExitFromLoops = Term.ExitFromLoops Or TT(i).ExitFromLoops
+        Next
         If Term.ExitFromLoops Then Exit Sub
 
         For y As Integer = tmpm.ySize To 0 Step -1
@@ -1454,7 +1517,7 @@ Public Class InpenetrableMeshGen
         Call PlaceObjRow(tmpIDs, 0, NearWith, _
                          New Point(m.Loc(locID - 1).pos.X - dx, m.Loc(locID - 1).pos.Y - dy), _
                          FreeCells, output, Term, maxN, bestOutput)
-        If maxN = 0 Then
+        If maxN = 0 And output(0).IsEmpty Then
             output = Nothing
             Exit Sub
         ElseIf output(0).IsEmpty Then
@@ -1839,30 +1902,219 @@ Public Class InpenetrableMeshGen
         Next j
     End Sub
 
-    Private Sub MakeLabyrinth(ByRef m As Map, ByVal symmID As Integer, ByRef Term As TerminationCondition)
+    Private Sub MakeLabyrinth(ByRef m As Map, ByVal settMap As SettingsMap, ByVal symmID As Integer, ByRef Term As TerminationCondition)
         If Term.ExitFromLoops Then Exit Sub
         Dim tmpm As Map = m
         Parallel.For(0, m.Loc.Length, _
          Sub(i As Integer)
-             If Not tmpm.Loc(i).IsObtainedBySymmery Then Call MakeLabyrinth(tmpm, i, symmID)
+             If Not tmpm.Loc(i).IsObtainedBySymmery Then Call MakeLabyrinth(tmpm, settMap, tmpm.Loc(i).ID, symmID)
          End Sub)
+        Call ConnectDisconnectedAreas(tmpm, settMap, symmID)
         m = tmpm
     End Sub
-    Private Sub MakeLabyrinth(ByRef m As Map, ByRef LocId As Integer, ByRef symmID As Integer)
+    Private Sub MakeLabyrinth(ByRef m As Map, ByRef settMap As SettingsMap, ByRef LocId As Integer, ByRef symmID As Integer)
 
-        Dim LocPlacing As New Location.Borders With {.minX = Integer.MaxValue, .minY = Integer.MaxValue, _
-                                                     .maxX = Integer.MinValue, .maxY = Integer.MinValue}
+        Dim b As New Location.Borders With {.minX = Integer.MaxValue, .minY = Integer.MaxValue, _
+                                            .maxX = Integer.MinValue, .maxY = Integer.MinValue}
         For y As Integer = 0 To m.ySize Step 1
             For x As Integer = 0 To m.xSize Step 1
                 If m.board(x, y).locID.Item(0) = LocId Then
-                    LocPlacing.minX = Math.Min(LocPlacing.minX, x)
-                    LocPlacing.minY = Math.Min(LocPlacing.minY, y)
-                    LocPlacing.maxX = Math.Max(LocPlacing.maxX, x)
-                    LocPlacing.maxY = Math.Max(LocPlacing.maxY, y)
+                    b.minX = Math.Min(b.minX, x)
+                    b.minY = Math.Min(b.minY, y)
+                    b.maxX = Math.Max(b.maxX, x)
+                    b.maxY = Math.Max(b.maxY, y)
+                    m.board(x, y).isPass = False
+                    If Not m.board(x, y).isBorder And Not m.board(x, y).isAttended Then
+                        Dim n As Location.Borders = NearestXY(x, y, m.xSize, m.ySize, 1)
+                        For j As Integer = n.minY To n.maxY Step 1
+                            For i As Integer = n.minX To n.maxX Step 1
+                                If Not m.board(i, j).locID.Item(0) = LocId Then
+                                    m.board(x, y).Penetrable = True
+                                    m.board(x, y).isPass = True
+                                    i = n.maxX
+                                    j = n.maxY
+                                End If
+                            Next i
+                        Next j
+                    End If
                 End If
             Next x
         Next y
+        For y As Integer = b.minY To b.maxY Step 1
+            For x As Integer = b.minX To b.maxX Step 1
+                If m.board(x, y).locID.Item(0) = LocId Then
+                    m.board(x, y).isPass = m.board(x, y).isPass And m.board(x, y).Penetrable
+                    If symmID > -1 Then
+                        Dim p() As Point = symm.ApplySymm(New Point(x, y), settMap.nRaces, m, symmID, 1)
+                        For k As Integer = 0 To UBound(p) Step 1
+                            m.board(p(k).X, p(k).Y).isPass = m.board(x, y).isPass
+                        Next k
+                    End If
+                End If
+            Next x
+        Next y
+
+        Dim free(b.maxX - b.minX, b.maxY - b.minY) As Boolean
+        For y As Integer = 0 To b.maxY - b.minY Step 1
+            For x As Integer = 0 To b.maxX - b.minX Step 1
+                If m.board(x + b.minX, y + b.minY).locID.Item(0) = LocId _
+                And Not m.board(x + b.minX, y + b.minY).isAttended _
+                And Not m.board(x + b.minX, y + b.minY).isBorder Then
+                    free(x, y) = True
+                End If
+            Next x
+        Next y
+        Dim init() As Point = Nothing
+        Dim conn()(,) As Boolean = Nothing
+        Dim s As Boolean
+        For y As Integer = 0 To b.maxY - b.minY Step 1
+            For x As Integer = 0 To b.maxX - b.minX Step 1
+                If free(x, y) And m.board(x + b.minX, y + b.minY).isPass Then
+                    s = True
+                    If Not IsNothing(conn) Then
+                        For i As Integer = 0 To UBound(conn) Step 1
+                            If conn(i)(x, y) Then
+                                s = False
+                                Exit For
+                            End If
+                        Next i
+                    End If
+                    If s Then
+                        If IsNothing(init) Then
+                            ReDim init(0), conn(0)
+                        Else
+                            ReDim Preserve init(init.Length), conn(conn.Length)
+                        End If
+                        init(UBound(init)) = New Point(x, y)
+                        conn(UBound(conn)) = FindConnected(free, init(UBound(init)))
+                    End If
+                End If
+            Next x
+        Next y
+        If Not FindDisconnected(free, conn).IsEmpty Then
+            Dim p As Point = FindDisconnected(free, conn)
+            Throw New Exception("Какой-то объект перекрывает проход, чего не должно было получиться. Точка " & p.X + b.minX & vbTab & p.Y + b.minY)
+        End If
+
+        For i As Integer = 0 To UBound(conn) Step 1
+            Call LifeAlgo(m, settMap, symmID, conn(i), init(i), New Point(b.minX, b.minY))
+        Next i
+
     End Sub
+
+    Private Sub LifeAlgo(ByRef m As Map, ByRef settMap As SettingsMap, ByRef symmId As Integer, _
+                         ByRef connected(,) As Boolean, ByRef init As Point, ByRef LPos As Point)
+
+        Dim xSize As Integer = UBound(connected, 1)
+        Dim ySize As Integer = UBound(connected, 2)
+        Dim isLifeField(xSize, ySize) As Boolean
+
+        For y As Integer = 0 To ySize Step 1
+            For x As Integer = 0 To xSize Step 1
+                If connected(x, y) And Not m.board(x + LPos.X, y + LPos.Y).Penetrable Then isLifeField(x, y) = True
+            Next x
+        Next y
+        If symmId > -1 Then
+            For y As Integer = 0 To ySize Step 1
+                For x As Integer = 0 To xSize Step 1
+                    If isLifeField(x, y) Then
+                        Dim p() As Point = symm.ApplySymm(New Point(x + LPos.X, y + LPos.Y), settMap.nRaces, m, symmId, 1)
+                        For k As Integer = 0 To UBound(p) Step 1
+                            Dim tx As Integer = p(k).X - LPos.X
+                            Dim ty As Integer = p(k).Y - LPos.Y
+                            If tx >= 0 And ty >= 0 And tx <= xSize And ty <= ySize Then isLifeField(tx, ty) = False
+                        Next k
+                        isLifeField(x, y) = True
+                    End If
+                Next x
+            Next y
+        End If
+
+        Dim free(,) As Boolean = CType(connected.Clone, Boolean(,))
+        Dim W(xSize, ySize) As Double
+        Dim initChance As Double = 0.9
+        Dim deathLower As Integer = 1
+        Dim deatUpper As Integer = 3
+        Dim birth As Integer = 2
+        For y As Integer = 0 To ySize Step 1
+            For x As Integer = 0 To xSize Step 1
+                If isLifeField(x, y) AndAlso rndgen.Rand(0, 1) < initChance Then free(x, y) = False
+            Next x
+        Next y
+
+        Dim bW(8), dW(8), maxW As Double
+        For i As Integer = 0 To UBound(bW) Step 1
+            bW(i) = Math.Sqrt(1 + Math.Abs(i - birth) ^ 2)
+            dW(i) = Math.Sqrt(4 + Math.Abs(deathLower - i) ^ 2 + Math.Abs(deatUpper - i) ^ 2)
+            maxW = Math.Max(maxW, Math.Max(bW(i), dW(UBound(bW) - i)))
+        Next i
+        Dim nloops As Integer = 0
+        Dim nextloop As Boolean = True
+        Do While nextloop
+                For y As Integer = 0 To ySize Step 1
+                    For x As Integer = 0 To xSize Step 1
+                        If isLifeField(x, y) Then
+                            Dim b As Location.Borders = NearestXY(x, y, xSize, ySize, 1)
+                            Dim ndead As Integer = 9 - (b.maxX - b.minX + 1) * (b.maxY - b.minY + 1)
+                            If Not free(x, y) Then ndead -= 1
+                            For j As Integer = b.minY To b.maxY Step 1
+                                For i As Integer = b.minX To b.maxX Step 1
+                                    If Not connected(i, j) Or Not free(i, j) Then
+                                        ndead += 1
+                                    End If
+                                Next i
+                            Next j
+                            If free(x, y) Then
+                                W(x, y) = bW(ndead)
+                            Else
+                                W(x, y) = dW(ndead)
+                            End If
+                        End If
+                    Next x
+                Next y
+                For y As Integer = 0 To ySize Step 1
+                    For x As Integer = 0 To xSize Step 1
+                        If isLifeField(x, y) Then
+                            If W(x, y) > rndgen.Rand(0, maxW) Then
+                                free(x, y) = Not free(x, y)
+                            End If
+                        End If
+                    Next x
+                Next y
+            nloops += 1
+            If nloops > 2 Then
+                nextloop = False
+                Dim tconn(,) As Boolean = FindConnected(free, init)
+                For y As Integer = 0 To ySize Step 1
+                    For x As Integer = 0 To xSize Step 1
+                        If free(x, y) And connected(x, y) And Not tconn(x, y) Then
+                            nextloop = True
+                            Exit For
+                        End If
+                    Next x
+                    If nextloop Then Exit For
+                Next y
+            End If
+        Loop
+
+        For y As Integer = 0 To ySize Step 1
+            For x As Integer = 0 To xSize Step 1
+                If isLifeField(x, y) Then
+                    If symmId > -1 Then
+                        Dim p() As Point = symm.ApplySymm(New Point(x + LPos.X, y + LPos.Y), settMap.nRaces, m, symmId, 1)
+                        For k As Integer = 0 To UBound(p) Step 1
+                            m.board(p(k).X, p(k).Y).isBorder = Not free(x, y)
+                        Next k
+                    Else
+                        m.board(x + LPos.X, y + LPos.Y).isBorder = Not free(x, y)
+                    End If
+                End If
+            Next x
+        Next y
+
+
+    End Sub
+
 End Class
 
 Public Class SymmetryOperations

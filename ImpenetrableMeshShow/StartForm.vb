@@ -74,7 +74,7 @@ Public Class StartForm
                     t(x, y) = 0
                 End If
                 If grid.board(x, y).Penetrable Then
-                    t(x, y) = 100
+                    't(x, y) = 100
                 End If
                 If grid.board(x, y).GuardLoc Then
                     t(x, y) = 40
@@ -86,10 +86,12 @@ Public Class StartForm
                 If grid.board(x, y).isBorder And grid.board(x, y).isAttended Then
                     Throw New Exception
                 ElseIf grid.board(x, y).isBorder And grid.board(x, y).isPass Then
-                    Throw New Exception
+                    'Throw New Exception
                 ElseIf grid.board(x, y).isBorder And grid.board(x, y).Penetrable Then
                     Throw New Exception
                 ElseIf grid.board(x, y).isAttended And grid.board(x, y).Penetrable Then
+                    Throw New Exception
+                ElseIf grid.board(x, y).isAttended And grid.board(x, y).isPass Then
                     Throw New Exception
                 ElseIf grid.board(x, y).isBorder And grid.board(x, y).GuardLoc Then
                     Throw New Exception

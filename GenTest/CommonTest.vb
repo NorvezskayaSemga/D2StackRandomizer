@@ -69,11 +69,19 @@ Public Class CommonTest
             New RandStack.DesiredStats With {.LocationName = "testloc2", .ExpBarAverage = 100, .ExpStackKilled = 200, _
                .Race = New List(Of Integer), .StackSize = 3, .MaxGiants = 1, .MeleeCount = 0, .LootCost = 3400}, _
             New RandStack.DesiredStats With {.LocationName = "loc3", .ExpBarAverage = 1000, .ExpStackKilled = 200, _
-               .Race = New List(Of Integer), .StackSize = 1, .MaxGiants = 0, .MeleeCount = 2, .LootCost = 0}
+               .Race = New List(Of Integer), .StackSize = 1, .MaxGiants = 0, .MeleeCount = 2, .LootCost = 0}, _
+            New RandStack.DesiredStats With {.LocationName = "loc54", .ExpBarAverage = 1000, .ExpStackKilled = 200, _
+               .Race = New List(Of Integer), .StackSize = 1, .MaxGiants = 0, .MeleeCount = 2, .LootCost = 0, _
+               .excludeConsumableItems = True}, _
+            New RandStack.DesiredStats With {.LocationName = "l", .ExpBarAverage = 1000, .ExpStackKilled = 200, _
+               .Race = New List(Of Integer), .StackSize = 1, .MaxGiants = 0, .MeleeCount = 2, .LootCost = 0, _
+               .excludeConsumableItems = True, .excludeNonconsumableItems = True}
             }
         expected(0).Race.AddRange(New Integer() {2})
         expected(1).Race.AddRange(New Integer() {2, 9})
         expected(2).Race.AddRange(New Integer() {1})
+        expected(3).Race.AddRange(New Integer() {1})
+        expected(4).Race.AddRange(New Integer() {1})
 
         Dim actual() As RandStack.DesiredStats = target.ParseDesiredStackStatsFile("%testfile%")
 
@@ -86,6 +94,8 @@ Public Class CommonTest
                 If Not expected(i).MaxGiants = actual(i).MaxGiants Then ok = False
                 If Not expected(i).MeleeCount = actual(i).MeleeCount Then ok = False
                 If Not expected(i).StackSize = actual(i).StackSize Then ok = False
+                If Not expected(i).excludeConsumableItems = actual(i).excludeConsumableItems Then ok = False
+                If Not expected(i).excludeNonconsumableItems = actual(i).excludeNonconsumableItems Then ok = False
                 If expected(i).Race.Count = actual(i).Race.Count Then
                     For Each item As Integer In expected(i).Race
                         If Not actual(i).Race.Contains(item) Then ok = False
@@ -110,9 +120,11 @@ Public Class CommonTest
         Dim ok As Boolean = True
         Dim path As String = "%testfile%"
         Dim expected As String = _
-        "ID location1 AverageExpBar 1000 ExpStackKilled 200 Race U StackSize 1 MaxGiants 0 MeleeCount 2 LootCost 0" & vbNewLine & _
-        "ID testloc2 AverageExpBar 100 ExpStackKilled 200 Race U+D StackSize 3 MaxGiants 1 MeleeCount 0 LootCost 3400" & vbNewLine & _
-        "ID loc3 AverageExpBar 1000 ExpStackKilled 200 Race H StackSize 1 MaxGiants 0 MeleeCount 2 LootCost 0" & vbNewLine
+        "ID location1 AverageExpBar 1000 ExpStackKilled 200 Race U StackSize 1 MaxGiants 0 MeleeCount 2 LootCost 0 CItemsExclude False NItemsExclude False" & vbNewLine & _
+        "ID testloc2 AverageExpBar 100 ExpStackKilled 200 Race U+D StackSize 3 MaxGiants 1 MeleeCount 0 LootCost 3400 CItemsExclude False NItemsExclude False" & vbNewLine & _
+        "ID loc3 AverageExpBar 1000 ExpStackKilled 200 Race H StackSize 1 MaxGiants 0 MeleeCount 2 LootCost 0 CItemsExclude False NItemsExclude False" & vbNewLine & _
+        "ID loc54 AverageExpBar 1000 ExpStackKilled 200 Race H StackSize 1 MaxGiants 0 MeleeCount 2 LootCost 0 CItemsExclude True NItemsExclude False" & vbNewLine & _
+        "ID l AverageExpBar 1000 ExpStackKilled 200 Race H StackSize 1 MaxGiants 0 MeleeCount 2 LootCost 0 CItemsExclude True NItemsExclude True" & vbNewLine
         Dim content() As RandStack.DesiredStats = target.ParseDesiredStackStatsFile(path)
         Call target.WriteDesiredStackStats(path, content)
 

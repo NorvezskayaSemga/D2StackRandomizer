@@ -347,7 +347,7 @@ exittest:
         Dim genitems As List(Of String)
         For i As Integer = 0 To 100 Step 1
             cost = target.minItemGoldCost + i * 125
-            genitems = target.ItemsGen(cost)
+            genitems = target.ItemsGen(cost, False, False)
             sum = 0
             For Each id As String In genitems
                 If target.itemType.Item(target.FindItemStats(id).Type) = "JEWEL" Then

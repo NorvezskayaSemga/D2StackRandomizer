@@ -77,6 +77,11 @@ Public Class RandStack
         Dim LootCost As Integer
         ''' <summary> Идентификатор локации, для которой сгенерирован отряд</summary>
         Dim LocationName As String
+        ''' <summary>Не генерировать зелья, сферы, талисманы и свитки</summary>
+        Dim excludeConsumableItems As Boolean
+        ''' <summary>Не генерировать надеваемые предметы и посохи</summary>
+        Dim excludeNonconsumableItems As Boolean
+
 
         Public Shared Function Copy(ByVal v As DesiredStats) As DesiredStats
             Dim RacesList As New List(Of Integer)
@@ -90,7 +95,9 @@ Public Class RandStack
                                           .Race = RacesList, _
                                           .StackSize = v.StackSize, _
                                           .LootCost = v.LootCost, _
-                                          .LocationName = v.LocationName}
+                                          .LocationName = v.LocationName, _
+                                          .excludeConsumableItems = v.excludeConsumableItems, _
+                                          .excludeNonconsumableItems = v.excludeNonconsumableItems}
         End Function
         ''' <param name="RaceNumberToRaceChar">Преобразует номер расы в ее текстовый идентификатор. Если передать Nothing, то будут печататься номера рас</param>
         Public Shared Function Print(ByVal v As DesiredStats, ByRef RaceNumberToRaceChar As Dictionary(Of Integer, String)) As String
@@ -110,7 +117,9 @@ Public Class RandStack
                    "StackSize" & vbTab & v.StackSize & vbNewLine & _
                    "MaxGiants" & vbTab & v.MaxGiants & vbNewLine & _
                    "MeleeCount" & vbTab & v.MeleeCount & vbNewLine & _
-                   "LootCost" & vbTab & v.LootCost & vbNewLine
+                   "LootCost" & vbTab & v.LootCost & vbNewLine & _
+                   "CItemsExclude" & vbTab & v.excludeConsumableItems & vbNewLine & _
+                   "NItemsExclude" & vbTab & v.excludeNonconsumableItems & vbNewLine
         End Function
     End Structure
 
@@ -224,6 +233,7 @@ Public Class RandStack
     Private ItemGoldCost(), multItems() As Double
     Private minItemGoldCost As Integer
     Private itemType As New Dictionary(Of Integer, String)
+    Private ConsumableItemsTypes, NonconsumableItemsTypes As New List(Of Integer)
 
     ''' <param name="AllUnitsList">Dсе юниты в игре</param>
     ''' <param name="AllItemsList">Все предметы в игре</param>
@@ -405,24 +415,61 @@ Public Class RandStack
         Return result
     End Function
 
-    ''' <summary>Генерирует набор предметов</summary>
-    ''' <param name="GoldCost">Максимальная стоимость набора в золоте. Драгоценности считаются дешевле в два раза</param>
-    Public Function ItemsGen(ByRef GoldCost As Integer) As List(Of String)
+    ''' <summary>Генерирует набор предметов. В принципе может вернуть пустой список</summary>
+    ''' <param name="GoldCost">Примерная стоимость набора в золоте. Драгоценности считаются дешевле в два раза</param>
+    ''' <param name="excludeConsumableItems">Не генерировать зелья, сферы, талисманы и свитки</param>
+    ''' <param name="excludeNonconsumableItems">Не генерировать надеваемые предметы и посохи</param>
+    Public Function ItemsGen(ByRef GoldCost As Integer, _
+                             ByRef excludeConsumableItems As Boolean, _
+                             ByRef excludeNonconsumableItems As Boolean) As List(Of String)
         Dim costBar, maxCost, selected As Integer
         Dim DynCost As Integer = GoldCost
         Dim IDs As New List(Of Integer)
         Dim result As New List(Of String)
+        Dim add As Boolean
         Do While DynCost >= minItemGoldCost
             costBar = CInt(rndgen.Rand(CDbl(minItemGoldCost), CDbl(DynCost), serialExecution))
             maxCost = Math.Min(2 * costBar, DynCost)
             IDs.Clear()
             For i As Integer = 0 To UBound(MagicItem) Step 1
-                If MagicItem(i).itemCost.Gold <= maxCost * multItems(i) Then IDs.Add(i)
+                add = False
+                If MagicItem(i).itemCost.Gold <= maxCost * multItems(i) Then add = True
+                If excludeConsumableItems And comm.ConsumableItemsTypes.Contains(MagicItem(i).Type) Then add = False
+                If excludeNonconsumableItems And comm.NonconsumableItemsTypes.Contains(MagicItem(i).Type) Then add = False
+                If add Then IDs.Add(i)
             Next i
+            If IDs.Count = 0 Then Exit Do
             selected = comm.RandomSelection(IDs, New Double()() {ItemGoldCost}, New Double() {costBar}, multItems, serialExecution)
             result.Add(MagicItem(selected).itemID)
             DynCost = CInt(DynCost - MagicItem(selected).itemCost.Gold / multItems(selected))
         Loop
+        Return result
+    End Function
+    ''' <summary>Генерирует один предмет. Если не получится выбрать подходящий предмет, вернет пустую строку</summary>
+    ''' <param name="GoldCost">Примерная стоимость предмета в золоте. Драгоценности считаются дешевле в два раза</param>
+    ''' <param name="excludeConsumableItems">Не генерировать зелья, сферы, талисманы и свитки</param>
+    ''' <param name="excludeNonconsumableItems">Не генерировать надеваемые предметы и посохи</param>
+    Public Function ThingGen(ByRef GoldCost As Integer, _
+                             ByRef excludeConsumableItems As Boolean, _
+                             ByRef excludeNonconsumableItems As Boolean) As String
+        Dim maxCost, selected As Integer
+        Dim IDs As New List(Of Integer)
+        Dim result As String = ""
+        Dim add As Boolean
+
+        maxCost = CInt(1.2 * GoldCost)
+        IDs.Clear()
+        For i As Integer = 0 To UBound(MagicItem) Step 1
+            add = False
+            If MagicItem(i).itemCost.Gold <= maxCost * multItems(i) Then add = True
+            If excludeConsumableItems And comm.ConsumableItemsTypes.Contains(MagicItem(i).Type) Then add = False
+            If excludeNonconsumableItems And comm.NonconsumableItemsTypes.Contains(MagicItem(i).Type) Then add = False
+            If add Then IDs.Add(i)
+        Next i
+        If IDs.Count > 0 Then
+            selected = comm.RandomSelection(IDs, New Double()() {ItemGoldCost}, New Double() {GoldCost}, multItems, serialExecution)
+            result = MagicItem(selected).itemID
+        End If
         Return result
     End Function
 
@@ -576,7 +623,7 @@ Public Class RandStack
         For i As Integer = 0 To UBound(result.pos) Step 1
             If result.pos(i) = "" Then result.pos(i) = emptyitem
         Next i
-        result.items = ItemsGen(DynStackStats.LootCost)
+        result.items = ItemsGen(DynStackStats.LootCost, DynStackStats.excludeConsumableItems, DynStackStats.excludeNonconsumableItems)
         Return result
     End Function
     Private Function SelectPossibleLeader(ByRef leaderID As Integer, ByRef Tolerance As Double, _
@@ -851,6 +898,8 @@ Public Class Common
     ''' <summary>Список параметров отрядов с описанием</summary>
     Public StatFields() As StackStatsField
 
+    Friend ConsumableItemsTypes, NonconsumableItemsTypes As New List(Of Integer)
+
     Public Structure StackStatsField
         Dim name As String
         Dim description As String
@@ -886,6 +935,9 @@ Public Class Common
             StatFields(k).description = StatFields(k).description.Replace("$ri$", racesList)
             StatFields(k).description = StatFields(k).description.Replace("$newline$", vbNewLine)
         Next i
+
+        ConsumableItemsTypes.AddRange(New Integer() {4, 5, 6, 7, 8, 11, 12})
+        NonconsumableItemsTypes.AddRange(New Integer() {0, 1, 2, 3, 9, 13})
     End Sub
 
     ''' <summary>Читает и парсит файл с параметрами генерируемых отрядов.
@@ -942,6 +994,14 @@ Public Class Common
                             result(i).MeleeCount = Math.Max(CInt(s(f + 1)), 0) 'MeleeSlots
                         ElseIf k = 7 Then
                             result(i).LootCost = Math.Max(CInt(s(f + 1)), 0) 'LootCost
+                        ElseIf k = 8 Then
+                            Dim b As Boolean = False
+                            If s(f + 1).ToUpper = "T" Or s(f + 1).ToUpper = "True" Or s(f + 1).ToUpper = "1" Then b = True
+                            result(i).excludeConsumableItems = b 'CItemsExclude
+                        ElseIf k = 9 Then
+                            Dim b As Boolean = False
+                            If s(f + 1).ToUpper = "T" Or s(f + 1).ToUpper = "True" Or s(f + 1).ToUpper = "1" Then b = True
+                            result(i).excludeNonconsumableItems = b 'NItensExclude
                         End If
                     End If
                 Next k
@@ -1132,7 +1192,7 @@ Public Class Common
         Dim W As Double = 0
         Dim SelectedItem As Integer = -1
         For Each i In IDs
-            If Weight(i) < 0 Then Throw New Exception("Отрицательный стат вес")
+            If tWeight(i) < 0 Then Throw New Exception("Отрицательный стат вес")
             W += tWeight(i)
             If W > R Then
                 SelectedItem = i

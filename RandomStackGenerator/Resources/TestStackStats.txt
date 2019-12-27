@@ -4,3 +4,5 @@
 ID location1 AverageExpBar = 1000	ExpStackKilled 200  Race=U StackSize 1 MaxGiants 0		MeleeSlots 2 LootCost 0
 AverageExpBar = 100 ID testloc2 StackSize 3 MaxGiants 1		MeleeSlots -1 LootCost 3400 	ExpStackKilled 200  Race=U+d
 ID=loc3 AverageExpBar = 1000 Race=HuMans StackSize 1 MeleeSlots 2 LootCost 0	ExpStackKilled 200   MaxGiants 0
+ID=loc54 AverageExpBar = 1000 Race=HuMans StackSize 1 MeleeSlots 2 LootCost 0	ExpStackKilled 200   MaxGiants 0 CItemsExclude t
+ID l AverageExpBar = 1000 Race=HuMans StackSize 1 MeleeSlots 2 LootCost 0	ExpStackKilled 200   MaxGiants 0 CItemsExclude t NItemsExclude 1
