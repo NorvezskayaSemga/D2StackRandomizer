@@ -9,7 +9,6 @@ Public Class StartForm
 
     Private Sub GenButton_Click() Handles GenButton.Click
 
-
         Dim grid As InpenetrableMeshGen.Map
         Dim races As Integer
         If sel1.Checked Then
@@ -32,17 +31,36 @@ Public Class StartForm
         sR.maxEccentricityDispersion = 0.15
         sR.maxRadiusDispersion = 0
         sR.maxGoldMines = 2
-        sR.maxManaSources = 3
+        sR.maxManaSources = 2
+        sR.maxCities = 0
+        sR.maxMages = 0
+        sR.maxMercenaries = 1
+        sR.maxRuins = 2
+        sR.maxTrainers = 0
+        sR.maxVendors = 1
         Dim sC As InpenetrableMeshGen.SettingsLoc
         sC.AverageRadius = 15
         sC.maxEccentricityDispersion = 0.4
         sC.maxRadiusDispersion = 0.3
 
+        sC.maxGoldMines = 1.1
+        sC.maxManaSources = 1.1
+        sC.maxCities = 0.2
+        sC.maxMages = 0
+        sC.maxMercenaries = 0
+        sC.maxRuins = 0.9
+        sC.maxTrainers = 0
+        sC.maxVendors = 0.15
+
+        Dim gt As Integer = 3000
         If Not SymmCheckBox.Checked Then
-            grid = genmesh.UnsymmGen(sM, sR, sC)
+            grid = genmesh.UnsymmGen(sM, sR, sC, gt)
         Else
-            grid = genmesh.SymmGen(sM, sR, sC)
+            grid = genmesh.SymmGen(sM, sR, sC, gt)
         End If
+
+        'запоминаем набор точек с наибольшим n
+        'произвед 1/r - стат вес для nearwith = -1
 
         Dim t(grid.xSize, grid.ySize) As Integer
         For x As Integer = 0 To grid.xSize Step 1
@@ -51,11 +69,32 @@ Public Class StartForm
                     t(x, y) = 0
                 End If
                 If grid.board(x, y).isAttended Then
-                    t(x, y) = 100 + grid.board(x, y).objectID
-                ElseIf grid.board(x, y).isBorder Then
-                    t(x, y) = grid.board(x, y).locID.Item(0)
+                    t(x, y) = 51 + grid.board(x, y).objectID
                 ElseIf grid.board(x, y).isPass Then
                     t(x, y) = 0
+                End If
+                If grid.board(x, y).Penetrable Then
+                    t(x, y) = 100
+                End If
+                If grid.board(x, y).GuardLoc Then
+                    t(x, y) = 40
+                End If
+                If grid.board(x, y).isBorder Then
+                    t(x, y) = grid.board(x, y).locID.Item(0)
+                End If
+
+                If grid.board(x, y).isBorder And grid.board(x, y).isAttended Then
+                    Throw New Exception
+                ElseIf grid.board(x, y).isBorder And grid.board(x, y).isPass Then
+                    Throw New Exception
+                ElseIf grid.board(x, y).isBorder And grid.board(x, y).Penetrable Then
+                    Throw New Exception
+                ElseIf grid.board(x, y).isAttended And grid.board(x, y).Penetrable Then
+                    Throw New Exception
+                ElseIf grid.board(x, y).isBorder And grid.board(x, y).GuardLoc Then
+                    Throw New Exception
+                ElseIf grid.board(x, y).isAttended And grid.board(x, y).GuardLoc Then
+                    Throw New Exception
                 End If
             Next y
         Next x

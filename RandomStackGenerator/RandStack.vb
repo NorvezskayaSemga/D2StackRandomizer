@@ -1111,7 +1111,7 @@ Public Class Common
     ''' <summary>Dыбирает случайным образом запись из списка</summary>
     ''' <param name="IDs">Список намеров записей, из которых делается выбор.
     ''' Если массив Weight не инициализирован, то у всех записей будет одинаковый стат. вес</param>
-    ''' <param name="Weight">Вероятность выбрать запись прямо пропорциональна величине стат. веса</param>
+    ''' <param name="Weight">Вероятность выбрать запись прямо пропорциональна величине стат. веса. Сумма весов может быть не равна единице</param>
     ''' <param name="serial">True, if use in serial code</param>
     Public Function RandomSelection(ByRef IDs As List(Of Integer), ByRef Weight() As Double, _
                                     ByRef serial As Boolean) As Integer
@@ -1142,6 +1142,7 @@ Public Class Common
         If SelectedItem = -1 Then SelectedItem = IDs.Item(IDs.Count - 1)
         Return SelectedItem
     End Function
+    ''' <summary>e^(-0.5 * ((X - avX) / (sigma * avX)) ^ 2)</summary>
     Public Function Gauss(ByRef X As Double, ByRef avX As Double, ByRef sigma As Double) As Double
         Return Math.Exp(-0.5 * ((X - avX) / (sigma * avX)) ^ 2)
     End Function

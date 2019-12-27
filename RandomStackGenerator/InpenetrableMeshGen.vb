@@ -9,12 +9,21 @@ Public Class InpenetrableMeshGen
         Dim locID As List(Of Integer)
         ''' <summary>True, если на клетке должен стоять непроходимый непосещаемый объект</summary>
         Dim isBorder As Boolean
+        ''' <summary>True, если клетка обязательно должна быть проходимой</summary>
+        Dim Penetrable As Boolean
         ''' <summary>True, если клетка является частью прохода между локациями</summary>
         Dim isPass As Boolean
         ''' <summary>True, если клетка находится под посещаемым объектом</summary>
         Dim isAttended As Boolean
-        ''' <summary>Если клетка является верхним левым углом посещаемого объекта, то здесь хранится ID объекта</summary>
+        ''' <summary>True, если на клетке нужно разместить отряд</summary>
+        Dim GuardLoc As Boolean
+        ''' <summary>Если клетка является углом посещаемого объекта c наименьшей координатой по X и Y, то здесь хранится ID объекта</summary>
         Dim objectID As Integer
+        ''' <summary>Если клетка является углом посещаемого объекта c наименьшей координатой по X и Y, то здесь хранится подтип объекта</summary>
+        Dim Subtype As Integer
+        ''' <summary>Для объектов с одинаковым ID выставляются одинаковые параметры генерации отрядов и лута или одинаковый класс.
+        ''' При необходимости выставляются одинаковые отряды и лут.</summary>
+        Dim groupID As Integer
     End Structure
 
     Public Structure Map
@@ -47,19 +56,31 @@ Public Class InpenetrableMeshGen
         ''' Когда свободного места станет недостаточно R начнет постепенно уменьшаться до половины от начального значения</summary>
         Dim maxRadiusDispersion As Double
 
-        '''<summary>Максимальное количество золотых шахт на локацию</summary>
-        Dim maxGoldMines As Integer
-        '''<summary>Максимальное количество источников маны на локацию</summary>
-        Dim maxManaSources As Integer
+        '''<summary>Количество золотых шахт на локацию</summary>
+        Dim maxGoldMines As Double
+        '''<summary>Количество источников маны на локацию</summary>
+        Dim maxManaSources As Double
+        '''<summary>Количество нейтральных городов на локацию</summary>
+        Dim maxCities As Double
+        '''<summary>Количество торговцев на локацию</summary>
+        Dim maxVendors As Double
+        '''<summary>Количество лагерей наемников на локацию</summary>
+        Dim maxMercenaries As Double
+        '''<summary>Количество башен мага на локацию</summary>
+        Dim maxMages As Double
+        '''<summary>Количество тренеров на локацию</summary>
+        Dim maxTrainers As Double
+        '''<summary>Количество руин на локацию</summary>
+        Dim maxRuins As Double
     End Structure
     Public Structure SettingsMap
         ''' <summary>Правая граница карты (например, если генерируем карту 24x48, то сюда пишем 23)</summary>
         Dim xSize As Integer
         ''' <summary>Верхняя граница карты (например, если генерируем карту 24x48, то сюда пишем 47)</summary>
         Dim ySize As Integer
-        ''' <summary>Минимальная ширина проходов</summary>
-        Dim minPassDist As Double
         ''' <summary>Минимальное расстояние между проходами</summary>
+        Dim minPassDist As Double
+        ''' <summary>Минимальная ширина проходов</summary>
         Dim minPassWidth As Double
         ''' <summary>Количество рас</summary>
         Dim nRaces As Integer
@@ -68,56 +89,126 @@ Public Class InpenetrableMeshGen
         Dim RaceLocsDistTolerance As Double
     End Structure
 
-    Public Structure AttendedObject
-        Dim TypeID As Integer
-        Dim Size As Integer
-        Dim Name As String
-        Dim Subtype As Integer
-        Dim needExpand As Boolean
-    End Structure
-
+    
     Private rndgen As New RndValueGen
     Private comm As New Common
     Private symm As New SymmetryOperations
-    Public ActiveObjects() As AttendedObject = New AttendedObject() {Nothing, _
-                        New AttendedObject With {.Name = "Capital", .needExpand = True, .Size = 5, .TypeID = 1}, _
-                        New AttendedObject With {.Name = "City", .needExpand = True, .Size = 4, .TypeID = 2}, _
-                        New AttendedObject With {.Name = "Vendor", .needExpand = True, .Size = 3, .TypeID = 3}, _
-                        New AttendedObject With {.Name = "Mercenary", .needExpand = True, .Size = 3, .TypeID = 4}, _
-                        New AttendedObject With {.Name = "Mage", .needExpand = True, .Size = 3, .TypeID = 5}, _
-                        New AttendedObject With {.Name = "Trainer", .needExpand = True, .Size = 3, .TypeID = 6}, _
-                        New AttendedObject With {.Name = "Ruins", .needExpand = True, .Size = 3, .TypeID = 7}, _
-                        New AttendedObject With {.Name = "Mine", .needExpand = False, .Size = 3, .TypeID = 8}}
 
+    Public ActiveObjects() As AttendedObject = New AttendedObject() {Nothing, _
+                                               New AttendedObject("Capital", 5, 1), _
+                                               New AttendedObject("City", 4, 2), _
+                                               New AttendedObject("Vendor", 3, 3, True), _
+                                               New AttendedObject("Mercenary", 3, 4, True), _
+                                               New AttendedObject("Mage", 3, 5, True), _
+                                               New AttendedObject("Trainer", 3, 6, True), _
+                                               New AttendedObject("Ruins", 3, 7), _
+                                               New AttendedObject("Mine", 1, 8)}
+
+    Private Function ActiveObjectsSet(ByRef settMap As SettingsMap, ByRef symmId As Integer) As Cell()(,)
+        Dim result(UBound(ActiveObjects))(,) As Cell
+        For i As Integer = 1 To UBound(ActiveObjects) Step 1
+            Dim r As Integer = ActiveObjects(i).Size + 2 * ActiveObjects(i).dxy - 1
+            Dim d As Integer = ActiveObjects(i).dxy
+            ReDim result(i)(r, r)
+
+            For y As Integer = d To r - d Step 1
+                For x As Integer = d To r - d Step 1
+                    result(i)(x, y).isAttended = True
+                Next x
+            Next y
+
+            For y As Integer = r - d - 1 To r - d + 1 Step 1
+                For x As Integer = r - d - 1 To r - d + 1 Step 1
+                    If Not result(i)(x, y).isAttended Then
+                        result(i)(x, y).Penetrable = True
+                    End If
+                Next x
+            Next y
+            If ActiveObjects(i).hasExternalGuard Then
+                For y As Integer = r - d To r - d + 2 Step 1
+                    For x As Integer = r - d To r - d + 2 Step 1
+                        If Not result(i)(x, y).isAttended Then
+                            result(i)(x, y).Penetrable = True
+                        End If
+                    Next x
+                Next y
+                For k As Integer = -1 To 1 Step 2
+                    result(i)(r - d + k, r - d - k).Penetrable = False
+                    result(i)(r - d + k, r - d - k).isBorder = True
+                Next k
+                result(i)(r - d + 1, r - d + 1).GuardLoc = True
+            End If
+            If symmId > -1 Then
+                Dim p() As Point
+                For y As Integer = 0 To r Step 1
+                    For x As Integer = 0 To r Step 1
+                        p = symm.ApplySymm(New Point(x, y), settMap.nRaces, New Map With {.xSize = r, .ySize = r}, symmId, 1)
+                        For k As Integer = 0 To UBound(p) Step 1
+                            result(i)(p(k).X, p(k).Y).isAttended = result(i)(x, y).isAttended Or result(i)(p(k).X, p(k).Y).isAttended
+                            result(i)(p(k).X, p(k).Y).Penetrable = result(i)(x, y).Penetrable Or result(i)(p(k).X, p(k).Y).Penetrable
+                            result(i)(p(k).X, p(k).Y).isBorder = result(i)(x, y).isBorder Or result(i)(p(k).X, p(k).Y).isBorder
+                        Next k
+                    Next x
+                Next y
+            End If
+            result(i)(d, d).objectID = i
+        Next i
+        Return result
+    End Function
 
     ''' <summary>Генерирует заготовку ландшафта без использования симметрии</summary>
     ''' <param name="settMap">Общие настройки для карты</param>
-    ''' <param name="settRaceLoc">Настройки для стартовых локаций играбельных рас</param>
-    ''' <param name="settCommLoc">Настройки для остальных локаций</param>
-    Public Function UnsymmGen(ByRef settMap As SettingsMap, ByRef settRaceLoc As SettingsLoc, ByRef settCommLoc As SettingsLoc) As Map
+    ''' <param name="settRaceLoc">Настройки для стартовых локаций играбельных рас.
+    ''' Дробная часть определяет шанс округления большую сторону</param>
+    ''' <param name="settCommLoc">Настройки для остальных локаций. 
+    ''' Значение количества объектов для каждой локации будет умножаться на отношение площади локации к площади средней локации (Pi*AverageRadius^2).
+    ''' Дробная часть определяет шанс округления в большую сторону. В мслучае округления вниз дробная часть добавляется к максимальному количеству шахт</param>
+    ''' <param name="maxGenTime">Максимальное время на операцию расстановки объектов.
+    ''' Она обычно производится меньше чем за секунду, но бывает, что выполняется дольше минуты.
+    ''' В этом случае быстрее перегенерировать карту.
+    ''' Если не получится с пяти попыток, вернет Nothing</param>
+    Public Function UnsymmGen(ByRef settMap As SettingsMap, ByRef settRaceLoc As SettingsLoc, _
+                              ByRef settCommLoc As SettingsLoc, ByRef maxGenTime As Integer) As Map
 
-        Dim t0 As Integer = Environment.TickCount
-        Dim m As Map = UnsymmPlaceRaceLocations(settMap, settRaceLoc)
-        Dim t1 As Integer = Environment.TickCount
-        Call UnsymmPlaceCommonLocs(m, settMap, settCommLoc)
-        Dim t2 As Integer = Environment.TickCount
-        Call UnsymmSetLocIdToCells(m)
-        Dim t3 As Integer = Environment.TickCount
-        Call SetBorders(m, settMap)
-        Dim t4 As Integer = Environment.TickCount
-        Call PlaceActiveObjects(m, settMap, settRaceLoc, settCommLoc, -1)
-        Dim t5 As Integer = Environment.TickCount
-        Console.WriteLine("RLocs: " & t1 - t0 & vbTab & "CLocs: " & t2 - t1 & vbTab & "IDset: " & t3 - t2 & vbTab & "BordSet: " & t4 - t3 & vbTab & "PlaceActive: " & t5 - t4)
-        Return m
+        Dim AObj()(,) As Cell = ActiveObjectsSet(settMap, -1)
+        Dim term As New TerminationCondition(maxGenTime)
+        Dim AttemptsN = 0
+        Do While AttemptsN < 5
+            Dim t0 As Integer = Environment.TickCount
+            Dim m As Map = UnsymmPlaceRaceLocations(settMap, settRaceLoc)
+            Dim t1 As Integer = Environment.TickCount
+            Call UnsymmPlaceCommonLocs(m, settMap, settCommLoc)
+            Dim t2 As Integer = Environment.TickCount
+            Call UnsymmSetLocIdToCells(m)
+            Dim t3 As Integer = Environment.TickCount
+            Call SetBorders(m, settMap)
+            Dim t4 As Integer = Environment.TickCount
+            Call PlaceActiveObjects(m, settMap, settRaceLoc, settCommLoc, AObj, -1, term)
+            Dim t5 As Integer = Environment.TickCount
+            Call MakeLabyrinth(m, -1, term)
+            Dim t6 As Integer = Environment.TickCount
+            Console.WriteLine("RLocs: " & t1 - t0 & vbTab & "CLocs: " & t2 - t1 & vbTab & "IDset: " & t3 - t2 & vbTab & "BordSet: " & t4 - t3 & vbTab & "PlaceActive: " & t5 - t4 & vbTab & "MakeMaze: " & t6 - t5)
+            AttemptsN += 1
+            If Not term.ExitFromLoops Then Return m
+        Loop
+        Return Nothing
     End Function
-    ''' <summary>Генерирует заготовку ландшафта с использованием симметрии</summary>
+    ''' <summary>Генерирует заготовку ландшафта без использования симметрии</summary>
     ''' <param name="settMap">Общие настройки для карты</param>
-    ''' <param name="settRaceLoc">Настройки для стартовых локаций играбельных рас</param>
-    ''' <param name="settCommLoc">Настройки для остальных локаций</param>
+    ''' <param name="settRaceLoc">Настройки для стартовых локаций играбельных рас.
+    ''' Дробная часть определяет шанс округления большую сторону</param>
+    ''' <param name="settCommLoc">Настройки для остальных локаций. 
+    ''' Значение количества объектов для каждой локации будет умножаться на отношение площади локации к площади средней локации (Pi*AverageRadius^2).
+    ''' Дробная часть определяет шанс округления в большую сторону</param>
+    ''' <param name="maxGenTime">Максимальное время на операцию расстановки объектов.
+    ''' Она обычно производится меньше чем за секунду, но бывает, что выполняется дольше минуты.
+    ''' В этом случае быстрее перегенерировать карту.
+    ''' Если не получится с пяти попыток, вернет Nothing</param>
     ''' <param name="symmID">ID применяемой операпции симметрии (см. класс SymmetryOperations).
     ''' Если ID меньше ноля, будет выбрана случайная симметрия из тех, что подходят</param>
     Public Function SymmGen(ByRef settMap As SettingsMap, ByRef settRaceLoc As SettingsLoc, _
-                            ByRef settCommLoc As SettingsLoc, Optional ByRef symmID As Integer = -1) As Map
+                            ByRef settCommLoc As SettingsLoc, ByRef maxGenTime As Integer, _
+                            Optional ByRef symmID As Integer = -1) As Map
         Dim s As Integer
         Dim slist As List(Of Integer) = symm.PossibleOperationsList(settMap.nRaces, _
                                New Map With {.xSize = settMap.xSize, .ySize = settMap.ySize})
@@ -132,19 +223,28 @@ Public Class InpenetrableMeshGen
         End If
         slist = Nothing
 
-        Dim t0 As Integer = Environment.TickCount
-        Dim m As Map = SymmPlaceRaceLocations(settMap, settRaceLoc, s)
-        Dim t1 As Integer = Environment.TickCount
-        Call SymmPlaceCommonLocs(m, settMap, settCommLoc, s)
-        Dim t2 As Integer = Environment.TickCount
-        Call SymmSetLocIdToCells(m, settMap, s)
-        Dim t3 As Integer = Environment.TickCount
-        Call SetBorders(m, settMap, s)
-        Dim t4 As Integer = Environment.TickCount
-        Call PlaceActiveObjects(m, settMap, settRaceLoc, settCommLoc, s)
-        Dim t5 As Integer = Environment.TickCount
-        Console.WriteLine("RLocs: " & t1 - t0 & vbTab & "CLocs: " & t2 - t1 & vbTab & "IDset: " & t3 - t2 & vbTab & "BordSet: " & t4 - t3 & vbTab & "PlaceActive: " & t5 - t4)
-        Return m
+        Dim AObj()(,) As Cell = ActiveObjectsSet(settMap, s)
+        Dim term As New TerminationCondition(maxGenTime)
+        Dim AttemptsN = 0
+        Do While AttemptsN < 5
+            Dim t0 As Integer = Environment.TickCount
+            Dim m As Map = SymmPlaceRaceLocations(settMap, settRaceLoc, s)
+            Dim t1 As Integer = Environment.TickCount
+            Call SymmPlaceCommonLocs(m, settMap, settCommLoc, s)
+            Dim t2 As Integer = Environment.TickCount
+            Call SymmSetLocIdToCells(m, settMap, s)
+            Dim t3 As Integer = Environment.TickCount
+            Call SetBorders(m, settMap, s)
+            Dim t4 As Integer = Environment.TickCount
+            Call PlaceActiveObjects(m, settMap, settRaceLoc, settCommLoc, AObj, s, term)
+            Dim t5 As Integer = Environment.TickCount
+            Call MakeLabyrinth(m, s, term)
+            Dim t6 As Integer = Environment.TickCount
+            Console.WriteLine("RLocs: " & t1 - t0 & vbTab & "CLocs: " & t2 - t1 & vbTab & "IDset: " & t3 - t2 & vbTab & "BordSet: " & t4 - t3 & vbTab & "PlaceActive: " & t5 - t4 & vbTab & "MakeMaze: " & t6 - t5)
+            AttemptsN += 1
+            If Not term.ExitFromLoops Then Return m
+        Loop
+        Return Nothing
     End Function
 
     Private Sub PlaceLoc(ByRef m As Map, ByRef loc As Location)
@@ -275,7 +375,7 @@ Public Class InpenetrableMeshGen
         Dim r, m As Double
         Dim n As Integer
         If settMap.nRaces = 4 Then
-            r = 0.45 * Math.Sqrt(((settMap.xSize - 2 * settRaceLoc.AverageRadius) ^ 2) _
+            r = 0.5 * Math.Sqrt(((settMap.xSize - 2 * settRaceLoc.AverageRadius) ^ 2) _
                                + ((settMap.ySize - 2 * settRaceLoc.AverageRadius) ^ 2) - 2)
             r = Math.Min(r, Math.Min(settMap.xSize, settMap.ySize) - 2)
         ElseIf settMap.nRaces = 3 Then
@@ -397,6 +497,7 @@ Public Class InpenetrableMeshGen
     End Function
 
     Private Sub UnsymmPlaceCommonLocs(ByRef m As Map, ByRef settMap As SettingsMap, ByRef settCommLoc As SettingsLoc)
+
         Dim id As Integer = m.Loc.Length + 1
         Dim dynRadiusDispersion As Double = settCommLoc.maxRadiusDispersion
         Dim dynAverageRadius As Double = settCommLoc.AverageRadius
@@ -419,7 +520,9 @@ Public Class InpenetrableMeshGen
             End If
         Loop
     End Sub
-    Private Sub SymmPlaceCommonLocs(ByRef m As Map, ByRef settMap As SettingsMap, ByRef settCommLoc As SettingsLoc, ByRef symmID As Integer)
+    Private Sub SymmPlaceCommonLocs(ByRef m As Map, ByRef settMap As SettingsMap, ByRef settCommLoc As SettingsLoc, _
+                                    ByRef symmID As Integer)
+
         Dim id As Integer = m.Loc.Length + 1
         Dim dynRadiusDispersion As Double = settCommLoc.maxRadiusDispersion
         Dim dynAverageRadius As Double = settCommLoc.AverageRadius
@@ -500,7 +603,7 @@ Public Class InpenetrableMeshGen
     End Function
 
     Private Sub UnsymmSetLocIdToCells(ByRef m As Map)
-        Dim tmpm As Map = m
+
         Dim allPoints()() As Point = Nothing
         Dim pID()() As Integer = Nothing
         Dim selectedIDs() As Integer = Nothing
@@ -510,20 +613,19 @@ Public Class InpenetrableMeshGen
         Dim calculatedWeights(,,) As Double = Nothing
         Dim idlist As List(Of Integer) = Nothing
 
-        Call PrepareToSetLocID(tmpm, allPoints, pID, Weight, minweight, selectedIDs, _
+        Call PrepareToSetLocID(m, allPoints, pID, Weight, minweight, selectedIDs, _
                                selectedWeight, calculatedWeights, idlist)
         Do While idlist.Count > 0
-            Call makePointsList(tmpm, idlist, allPoints, pID, Weight, minweight, selectedIDs, selectedWeight, calculatedWeights)
+            Call makePointsList(m, idlist, allPoints, pID, Weight, minweight, selectedIDs, selectedWeight, calculatedWeights)
             If idlist.Count > 0 Then
                 Dim s As Integer = comm.RandomSelection(idlist, selectedWeight, True)
-                tmpm.board(allPoints(s)(selectedIDs(s)).X, _
+                m.board(allPoints(s)(selectedIDs(s)).X, _
                         allPoints(s)(selectedIDs(s)).Y).locID.Add(pID(s)(selectedIDs(s)))
             End If
         Loop
-        m = tmpm
     End Sub
     Private Sub SymmSetLocIdToCells(ByRef m As Map, ByRef settMap As SettingsMap, ByRef symmID As Integer)
-        Dim tmpm As Map = m
+
         Dim allPoints()() As Point = Nothing
         Dim pID()() As Integer = Nothing
         Dim selectedIDs() As Integer = Nothing
@@ -533,61 +635,67 @@ Public Class InpenetrableMeshGen
         Dim calculatedWeights(,,) As Double = Nothing
         Dim idlist As List(Of Integer) = Nothing
 
-        Call PrepareToSetLocID(tmpm, allPoints, pID, Weight, minweight, selectedIDs, _
+        Call PrepareToSetLocID(m, allPoints, pID, Weight, minweight, selectedIDs, _
                                selectedWeight, calculatedWeights, idlist)
         Do While idlist.Count > 0
-            Call makePointsList(tmpm, idlist, allPoints, pID, Weight, minweight, selectedIDs, selectedWeight, calculatedWeights)
+            Call makePointsList(m, idlist, allPoints, pID, Weight, minweight, selectedIDs, selectedWeight, calculatedWeights)
             If idlist.Count > 0 Then
                 Dim s As Integer = comm.RandomSelection(idlist, selectedWeight, True)
-                Dim pp() As Point = symm.ApplySymm(allPoints(s)(selectedIDs(s)), settMap.nRaces, tmpm, symmID, 1)
+                Dim pp() As Point = symm.ApplySymm(allPoints(s)(selectedIDs(s)), settMap.nRaces, m, symmID, 1)
                 If pp.Length > 1 Then
-                    Dim pl() As Point = symm.ApplySymm(tmpm.Loc(pID(s)(selectedIDs(s)) - 1).pos, settMap.nRaces, tmpm, symmID, 1)
+                    Dim pl() As Point = symm.ApplySymm(m.Loc(pID(s)(selectedIDs(s)) - 1).pos, settMap.nRaces, m, symmID, 1)
                     If pl.Length = pp.Length Then
                         For i As Integer = 0 To UBound(pl) Step 1
-                            tmpm.board(pp(i).X, pp(i).Y).locID.Add(tmpm.Loc(FindLocIDByPosition(tmpm, pl(i))).ID)
+                            m.board(pp(i).X, pp(i).Y).locID.Add(m.Loc(FindLocIDByPosition(m, pl(i))).ID)
                         Next i
                     ElseIf pl.Length = 1 Then
                         For i As Integer = 0 To UBound(pp) Step 1
-                            tmpm.board(pp(i).X, pp(i).Y).locID.Add(pID(s)(selectedIDs(s)))
+                            m.board(pp(i).X, pp(i).Y).locID.Add(pID(s)(selectedIDs(s)))
                         Next i
                     Else
                         Dim possibleLocs As New List(Of Integer)
                         Dim usedLocs As New List(Of Integer)
                         For Each p As Point In pp
-                            Dim b As Location.Borders = NearestXY(p.X, p.Y, tmpm.xSize, tmpm.ySize, 1)
                             possibleLocs.Clear()
-again:
-                            For i As Integer = b.minX To b.maxX Step 1
-                                For j As Integer = b.minY To b.maxY Step 1
-                                    If tmpm.board(i, j).locID.Count > 0 Then
-                                        Dim locID As Integer = tmpm.board(i, j).locID.Item(0) - 1
-                                        If locID > -1 AndAlso Not usedLocs.Contains(locID) Then
-                                            For L As Integer = 0 To UBound(pl) Step 1
-                                                If Math.Abs(tmpm.Loc(locID).pos.X - pl(L).X) < 2 _
-                                                 And Math.Abs(tmpm.Loc(locID).pos.Y - pl(L).Y) < 2 Then
-                                                    possibleLocs.Add(locID)
-                                                End If
-                                            Next L
+                            Dim t As Integer = 1
+                            Do While t < Math.Max(m.xSize, m.ySize)
+                                Dim b As Location.Borders = NearestXY(p.X, p.Y, m.xSize, m.ySize, t)
+                                For i As Integer = b.minX To b.maxX Step 1
+                                    For j As Integer = b.minY To b.maxY Step 1
+                                        If m.board(i, j).locID.Count > 0 Then
+                                            Dim locID As Integer = m.board(i, j).locID.Item(0) - 1
+                                            If locID > -1 AndAlso Not usedLocs.Contains(locID) Then
+                                                For L As Integer = 0 To UBound(pl) Step 1
+                                                    If Math.Abs(m.Loc(locID).pos.X - pl(L).X) < 2 _
+                                                     And Math.Abs(m.Loc(locID).pos.Y - pl(L).Y) < 2 Then
+                                                        possibleLocs.Add(locID)
+                                                    End If
+                                                Next L
+                                            End If
                                         End If
+                                    Next j
+                                Next i
+                                If possibleLocs.Count = 0 Then
+                                    If usedLocs.Count > 0 Then
+                                        usedLocs.Clear()
+                                    Else
+                                        t += 1
                                     End If
-                                Next j
-                            Next i
-                            If possibleLocs.Count = 0 And usedLocs.Count > 0 Then
-                                usedLocs.Clear()
-                                GoTo again
-                            End If
+                                Else
+                                    Exit Do
+                                End If
+                            Loop
                             If possibleLocs.Count = 0 Then Throw New Exception("Не могу найти подходящую локацию")
                             Dim sel As Integer = comm.RandomSelection(possibleLocs, True)
-                            tmpm.board(p.X, p.Y).locID.Add(tmpm.Loc(sel).ID)
+                            m.board(p.X, p.Y).locID.Add(m.Loc(sel).ID)
                             usedLocs.Add(sel)
                         Next p
                     End If
                 Else
-                    tmpm.board(pp(0).X, pp(0).Y).locID.Add(pID(s)(selectedIDs(s)))
+                    m.board(pp(0).X, pp(0).Y).locID.Add(pID(s)(selectedIDs(s)))
                 End If
             End If
         Loop
-        m = tmpm
     End Sub
     Private Sub PrepareToSetLocID(ByRef m As Map, ByRef allPoints()() As Point, ByRef pID()() As Integer, _
                                   ByRef Weight()() As Double, ByRef minweight As Double, _
@@ -688,6 +796,7 @@ again:
     End Function
 
     Private Sub SetBorders(ByRef m As Map, ByVal settMap As SettingsMap, Optional ByVal symmID As Integer = -1)
+
         Dim tmpm As Map = m
         Dim del(tmpm.xSize, tmpm.ySize), freeze(tmpm.xSize, tmpm.ySize) As Boolean
         Dim LocBorders(UBound(tmpm.Loc), UBound(tmpm.Loc)) As Dictionary(Of String, Point)
@@ -819,6 +928,78 @@ again:
                 End If
             Next x
         Next y
+        For i As Integer = 0 To UBound(tmpm.Loc) - 1 Step 1
+            For j As Integer = i + 1 To UBound(tmpm.Loc) Step 1
+                If LocBorders(i, j).Count < settMap.minPassWidth + 0.5 * settMap.minPassDist Then LocBorders(i, j).Clear()
+            Next j
+        Next i
+        Dim delList As New List(Of String)
+        Dim nearRLocs As New List(Of Integer)
+        For i As Integer = 0 To settMap.nRaces - 1 Step 1
+            For j As Integer = i + 1 To UBound(tmpm.Loc) Step 1
+                Dim dR As Double = 2 * (settMap.minPassDist + 1)
+                Do While dR >= 1
+                    delList.Clear()
+                    For Each k As String In LocBorders(i, j).Keys
+                        Dim p As Point = LocBorders(i, j).Item(k)
+                        Dim minD As Double = 2 * settMap.minPassWidth + 1 + dR
+                        Dim b As Location.Borders = NearestXY(p.X, p.Y, tmpm.xSize, tmpm.ySize, CInt(Math.Ceiling(minD)))
+                        minD *= minD
+                        nearRLocs.Clear()
+                        For x As Integer = b.minX To b.maxX Step 1
+                            For y As Integer = b.minY To b.maxY Step 1
+                                Dim id As Integer = tmpm.board(x, y).locID.Item(0) - 1
+                                If id < settMap.nRaces AndAlso Not nearRLocs.Contains(id) Then
+                                    If CDbl(SqDist(p.X, p.Y, x, y)) <= minD Then
+                                        nearRLocs.Add(id)
+                                        If nearRLocs.Count > 1 Then
+                                            x = b.maxX
+                                            y = b.maxY
+                                        End If
+                                    End If
+                                End If
+                            Next y
+                        Next x
+                        If nearRLocs.Count > 1 Then delList.Add(k)
+                    Next k
+                    If delList.Count > 0 Then
+                        If delList.Count = LocBorders(i, j).Count Then
+                            dR *= 0.9
+                        Else
+                            dR = 0
+                        End If
+                    Else
+                        dR = 0
+                    End If
+                Loop
+                If delList.Count > 0 Then
+                    If delList.Count = LocBorders(i, j).Count Then
+                        Dim xsum, ysum, minD, D As Integer
+                        Dim k As String = ""
+                        xsum = 0
+                        ysum = 0
+                        minD = Integer.MaxValue
+                        For Each p As Point In LocBorders(i, j).Values
+                            xsum += p.X
+                            ysum += p.Y
+                        Next p
+                        xsum = CInt(xsum / LocBorders(i, j).Count)
+                        ysum = CInt(ysum / LocBorders(i, j).Count)
+                        For Each p As Point In LocBorders(i, j).Values
+                            D = SqDist(p.X, p.Y, xsum, ysum)
+                            If D < minD Or (D = minD AndAlso rndgen.PRand(0, 1) > 0.5) Then
+                                minD = D
+                                k = p.X & "_" & p.Y
+                            End If
+                        Next p
+                        delList.Remove(k)
+                    End If
+                    For Each k As String In delList
+                        LocBorders(i, j).Remove(k)
+                    Next k
+                End If
+            Next j
+        Next i
 
         Dim equalLocPairsList As New List(Of String)
         If symmID > -1 Then
@@ -910,37 +1091,32 @@ again:
         Do While Not IsNothing(conn2)
             conn2 = Nothing
             Dim conn1(,) As Boolean = FindConnected(tmpm, m.Loc(0).pos)
-            For y As Integer = 0 To tmpm.ySize Step 1
-                For x As Integer = 0 To tmpm.xSize Step 1
-                    If Not m.board(x, y).isBorder And Not conn1(x, y) Then
-                        conn2 = FindConnected(tmpm, New Point(x, y))
-                        Dim minD As Integer = Integer.MaxValue
-                        Dim D As Integer
-                        Dim p1, p2 As Point
-                        For y1 As Integer = 0 To tmpm.ySize Step 1
-                            For x1 As Integer = 0 To tmpm.xSize Step 1
-                                If conn1(x1, y1) Then
-                                    For y2 As Integer = 0 To tmpm.ySize Step 1
-                                        For x2 As Integer = 0 To tmpm.xSize Step 1
-                                            If conn2(x2, y2) Then
-                                                D = SqDist(x1, y1, x, y2)
-                                                If minD > D Then
-                                                    minD = D
-                                                    p1 = New Point(x1, y1)
-                                                    p2 = New Point(x2, y2)
-                                                End If
-                                            End If
-                                        Next x2
-                                    Next y2
-                                End If
-                            Next x1
-                        Next y1
-                        Call MakePass(tmpm, p1, p2, settMap, symmID)
-                        Exit For
-                    End If
-                Next x
-                If Not IsNothing(conn2) Then Exit For
-            Next y
+            Dim dp As Point = FindDisconnected(tmpm, conn1)
+            If Not dp.IsEmpty Then
+                conn2 = FindConnected(tmpm, dp)
+                Dim minD As Integer = Integer.MaxValue
+                Dim D As Integer
+                Dim p1, p2 As Point
+                For y1 As Integer = 0 To tmpm.ySize Step 1
+                    For x1 As Integer = 0 To tmpm.xSize Step 1
+                        If conn1(x1, y1) Then
+                            For y2 As Integer = 0 To tmpm.ySize Step 1
+                                For x2 As Integer = 0 To tmpm.xSize Step 1
+                                    If conn2(x2, y2) Then
+                                        D = SqDist(x1, y1, x2, y2)
+                                        If minD > D Then
+                                            minD = D
+                                            p1 = New Point(x1, y1)
+                                            p2 = New Point(x2, y2)
+                                        End If
+                                    End If
+                                Next x2
+                            Next y2
+                        End If
+                    Next x1
+                Next y1
+                Call MakePass(tmpm, p1, p2, settMap, symmID)
+            End If
         Loop
         Parallel.For(0, tmpm.ySize + 1, _
          Sub(y As Integer)
@@ -972,7 +1148,7 @@ again:
                 For y As Integer = b.minY To b.maxY Step 1
                     If m.board(x, y).isBorder Then
                         Dim dist As Double = Math.Sqrt(CDbl(x - tx) ^ 2 + CDbl(y - ty) ^ 2)
-                        If dist < 0.5 * settMap.minPassWidth OrElse (dist <= settMap.minPassWidth AndAlso rndgen.Rand(0, 1) > 0.5) Then
+                        If dist < 0.5 * settMap.minPassWidth OrElse (dist <= settMap.minPassWidth AndAlso rndgen.PRand(0, 1) > 0.5) Then
                             Dim c1 As Integer = Math.Max(Math.Min(x, m.xSize - 1), 1)
                             Dim c2 As Integer = Math.Max(Math.Min(y, m.ySize - 1), 1)
                             Dim p() As Point
@@ -1018,12 +1194,43 @@ again:
         Loop
         Return connected
     End Function
+    Private Function FreeToMap(ByRef free(,) As Boolean) As Map
+        Dim m As New Map With {.xSize = UBound(free, 1), .ySize = UBound(free, 2)}
+        ReDim m.board(m.xSize, m.ySize)
+        For j As Integer = 0 To m.ySize Step 1
+            For i As Integer = 0 To m.ySize Step 1
+                m.board(i, j).isBorder = Not free(i, j)
+            Next i
+        Next j
+        Return m
+    End Function
+    Private Function FindConnected(ByRef free(,) As Boolean, ByRef init As Point) As Boolean(,)
+        Dim m As Map = FreeToMap(free)
+        Return FindConnected(m, init)
+    End Function
+    Private Function FindDisconnected(ByRef m As Map, ByRef connected(,) As Boolean) As Point
+        For y As Integer = 0 To m.ySize Step 1
+            For x As Integer = 0 To m.xSize Step 1
+                If Not m.board(x, y).isBorder And Not connected(x, y) Then Return New Point(x, y)
+            Next x
+        Next y
+        Return Nothing
+    End Function
+    Private Function FindDisconnected(ByRef free(,) As Boolean, ByRef connected(,) As Boolean) As Point
+        Dim m As Map = FreeToMap(free)
+        Return FindDisconnected(m, connected)
+    End Function
 
     Private Sub ResetBoard(ByRef m As Map)
         ReDim m.board(m.xSize, m.ySize)
         For x As Integer = 0 To m.xSize Step 1
             For y As Integer = 0 To m.ySize Step 1
                 m.board(x, y).locID = New List(Of Integer)
+                m.board(x, y).groupID = 0
+                m.board(x, y).isAttended = False
+                m.board(x, y).isBorder = False
+                m.board(x, y).isPass = False
+                m.board(x, y).objectID = 0
             Next y
         Next x
     End Sub
@@ -1043,79 +1250,478 @@ again:
         Return dx * dx + dy * dy
     End Function
 
-    Private Sub PlaceActiveObjects(ByRef tm As Map, ByVal settMap As SettingsMap, _
-                                   ByRef settRaceLoc As SettingsLoc, ByRef settCommLoc As SettingsLoc, _
-                                   ByVal symmID As Integer)
-        Dim m As Map = tm
-        Dim LocsPlacing(UBound(m.Loc)) As Location.Borders
-        Dim LocArea(UBound(m.Loc)) As Integer
-        Parallel.For(0, m.Loc.Length, _
-         Sub(i As Integer)
-             Dim id As Integer = m.Loc(i).ID
-             LocsPlacing(i) = New Location.Borders With {.minX = Integer.MaxValue, .minY = Integer.MaxValue, _
-                                                         .maxX = Integer.MinValue, .maxY = Integer.MinValue}
-             For y As Integer = 0 To m.ySize Step 1
-                 For x As Integer = 0 To m.xSize Step 1
-                     If m.board(x, y).locID.Item(0) = id Then
-                         LocsPlacing(i).minX = Math.Min(LocsPlacing(i).minX, x)
-                         LocsPlacing(i).minY = Math.Min(LocsPlacing(i).minY, y)
-                         LocsPlacing(i).maxX = Math.Max(LocsPlacing(i).maxX, x)
-                         LocsPlacing(i).maxY = Math.Max(LocsPlacing(i).maxY, y)
-                         If MayPlaceObject(m, 8, x, y) Then LocArea(id - 1) += 1
+    Private Sub PlaceActiveObjects(ByRef m As Map, ByVal settMap As SettingsMap, _
+                                   ByRef settRaceLoc As SettingsLoc, ByVal settCommLoc As SettingsLoc, _
+                                   ByRef ObjectBlank()(,) As Cell, _
+                                   ByVal symmID As Integer, ByRef Term As TerminationCondition)
+        Dim tmpm As Map = m
+        Dim LocsPlacing(UBound(tmpm.Loc)) As Location.Borders
+        Dim LocArea(UBound(tmpm.Loc))() As Integer
+        Dim LocSymmMult(UBound(tmpm.Loc)) As Double
+        Dim LocFreeCells(UBound(tmpm.Loc))(,) As Boolean
+
+        Parallel.For(0, tmpm.Loc.Length, _
+         Sub(Li As Integer)
+             Dim id As Integer = tmpm.Loc(Li).ID
+             LocsPlacing(Li) = New Location.Borders With {.minX = Integer.MaxValue, .minY = Integer.MaxValue, _
+                                                          .maxX = Integer.MinValue, .maxY = Integer.MinValue}
+             LocArea(id - 1) = New Integer() {0, 0}
+             For y As Integer = 0 To tmpm.ySize Step 1
+                 For x As Integer = 0 To tmpm.xSize Step 1
+                     If tmpm.board(x, y).locID.Item(0) = id Then
+                         LocsPlacing(Li).minX = Math.Min(LocsPlacing(Li).minX, x)
+                         LocsPlacing(Li).minY = Math.Min(LocsPlacing(Li).minY, y)
+                         LocsPlacing(Li).maxX = Math.Max(LocsPlacing(Li).maxX, x)
+                         LocsPlacing(Li).maxY = Math.Max(LocsPlacing(Li).maxY, y)
                      End If
                  Next x
              Next y
+             Dim dx As Integer = LocsPlacing(id - 1).minX
+             Dim dy As Integer = LocsPlacing(id - 1).minY
+             Dim freeCells(LocsPlacing(id - 1).maxX - dx, _
+                           LocsPlacing(id - 1).maxY - dy) As Boolean
+             For y As Integer = LocsPlacing(id - 1).minY To LocsPlacing(id - 1).maxY Step 1
+                 For x As Integer = LocsPlacing(id - 1).minX To LocsPlacing(id - 1).maxX Step 1
+                     If Not tmpm.board(x, y).isBorder _
+                      And Not tmpm.board(x, y).isAttended _
+                      AndAlso tmpm.board(x, y).locID.Item(0) = id Then
+                         LocArea(id - 1)(0) += 1
+                         freeCells(x - dx, y - dy) = True
+                     End If
+                 Next x
+             Next y
+
+             Dim fc(,) As Boolean = CType(freeCells.Clone, Boolean(,))
+             If symmID > -1 Then
+                 Dim p() As Point
+                 For y As Integer = 0 To UBound(freeCells, 2) Step 1
+                     For x As Integer = 0 To UBound(freeCells, 1) Step 1
+                         If freeCells(x, y) Then
+                             p = symm.ApplySymm(New Point(x + dx, y + dy), settMap.nRaces, tmpm, symmID, 1)
+                             For i As Integer = 0 To UBound(p) Step 1
+                                 Dim tx As Integer = p(i).X - dx
+                                 Dim ty As Integer = p(i).Y - dy
+                                 If Not tx = x Or Not ty = y Then
+                                     If tx > -1 And ty > -1 And tx <= UBound(freeCells, 1) And ty <= UBound(freeCells, 2) Then
+
+                                         Dim b As Location.Borders = NearestXY(tx, ty, UBound(freeCells, 1), UBound(freeCells, 2), 1)
+                                         For q As Integer = b.minY To b.maxY Step 1
+                                             For w As Integer = b.minX To b.maxX Step 1
+                                                 freeCells(w, q) = False
+                                             Next w
+                                         Next q
+                                     End If
+                                 End If
+                             Next i
+                         End If
+                     Next x
+                 Next y
+             End If
+             Dim PlaceCells(UBound(freeCells, 1), UBound(freeCells, 2)) As Boolean
+             For y As Integer = 0 To UBound(freeCells, 2) Step 1
+                 For x As Integer = 0 To UBound(freeCells, 1) Step 1
+                     If freeCells(x, y) AndAlso MayPlaceObject(freeCells, 8, x, y) Then
+                         Dim b As Location.Borders = NearestXY(x, y, UBound(freeCells, 1), UBound(freeCells, 2), 1)
+                         For q As Integer = b.minY To b.maxY Step 1
+                             For p As Integer = b.minX To b.maxX Step 1
+                                 PlaceCells(p, q) = True
+                             Next p
+                         Next q
+                     End If
+                 Next x
+             Next y
+
+             For y As Integer = 0 To UBound(freeCells, 2) Step 1
+                 For x As Integer = 0 To UBound(freeCells, 1) Step 1
+                     If PlaceCells(x, y) Then LocArea(id - 1)(1) += 1
+                 Next x
+             Next y
+             If LocArea(id - 1)(0) > 0 And LocArea(id - 1)(1) = 0 Then
+                 Dim ids As New List(Of Integer)
+                 Dim p(freeCells.Length - 1) As Point
+                 Dim n As Integer = -1
+                 For y As Integer = 1 To UBound(freeCells, 2) - 1 Step 1
+                     For x As Integer = 1 To UBound(freeCells, 1) - 1 Step 1
+                         If freeCells(x, y) Then
+                             n += 1
+                             p(n) = New Point(x, y)
+                             ids.Add(n)
+                         End If
+                     Next x
+                 Next y
+                 If ids.Count > 0 Then
+                     Dim s As Integer = comm.RandomSelection(ids, True)
+                     Dim x As Integer = p(s).X
+                     Dim y As Integer = p(s).Y
+                     For qq As Integer = y - 1 To y + 1 Step 1
+                         For pp As Integer = x - 1 To x + 1 Step 1
+                             freeCells(pp, qq) = True
+                             LocArea(id - 1)(1) += 1
+                         Next pp
+                     Next qq
+                 End If
+             End If
+             LocFreeCells(id - 1) = freeCells
+
+             If symmID > -1 Then
+                 Dim n As Integer = 0
+                 Dim pp() As Point = New Point() {New Point(LocsPlacing(Li).minX, LocsPlacing(Li).minY), _
+                                             New Point(LocsPlacing(Li).minX, LocsPlacing(Li).maxY), _
+                                             New Point(LocsPlacing(Li).maxX, LocsPlacing(Li).minY), _
+                                             New Point(LocsPlacing(Li).maxX, LocsPlacing(Li).maxY)}
+                 Dim p() As Point = symm.ApplySymm(pp(0), settMap.nRaces, tmpm, symmID, 1)
+                 For q As Integer = 0 To UBound(p) Step 1
+                     For w As Integer = 0 To UBound(pp) Step 1
+                         If p(q).X = pp(w).X And p(q).Y = pp(w).Y Then
+                             n += 1
+                             Exit For
+                         End If
+                     Next w
+                 Next q
+                 LocSymmMult(Li) = 1 / n
+             Else
+                 LocSymmMult(Li) = 1
+             End If
          End Sub)
 
-        Dim LocAng() As Double = Nothing
-        If symmID < 0 Then
-            ReDim LocAng(settMap.nRaces - 1)
-            Parallel.For(0, settMap.nRaces, _
-             Sub(i As Integer)
-                 Dim a As Double = 0
-                 Dim da As Double = 0.005
-                 Dim minR As Double = Double.MaxValue
-                 Dim r As Double
-                 Do While a < 2 * Math.PI
-                     r = ((CDbl(m.Loc(i).pos.X) - Math.Cos(a) - 0.5 * CDbl(m.xSize)) ^ 2) _
-                       + ((CDbl(m.Loc(i).pos.Y) - Math.Sin(a) - 0.5 * CDbl(m.ySize)) ^ 2)
-                     If minR > r Then
-                         minR = r
-                         LocAng(i) = a
-                     End If
-                     a += da
-                 Loop
-             End Sub)
+        Dim GroupID As Integer = 1
+        Dim TT As New TerminationCondition(Term.maxTime)
+        Call FillLocation(GroupID, 1, tmpm, LocsPlacing, LocArea, settMap, settRaceLoc, _
+                          symmID, True, LocSymmMult, LocFreeCells, TT)
+        Term = TT
+        If Term.ExitFromLoops Then Exit Sub
+        TT = New TerminationCondition(Term.maxTime)
+        Parallel.For(settMap.nRaces, tmpm.Loc.Length, _
+         Sub(i As Integer)
+             'For i As Integer = settMap.nRaces To UBound(m.Loc) Step 1
+             If Not tmpm.Loc(i).IsObtainedBySymmery Then
+                 Call FillLocation(GroupID, tmpm.Loc(i).ID, tmpm, LocsPlacing, LocArea, settMap, settCommLoc, _
+                            symmID, False, LocSymmMult, LocFreeCells, TT)
+             End If
+             'Next i
+         End Sub)
+        Term = TT
+        If Term.ExitFromLoops Then Exit Sub
+
+        For y As Integer = tmpm.ySize To 0 Step -1
+            For x As Integer = tmpm.xSize To 0 Step -1
+                If tmpm.board(x, y).objectID > 0 Then
+                    Dim id As Integer = tmpm.board(x, y).objectID
+                    Dim gid As Integer = tmpm.board(x, y).groupID
+                    Dim d As Integer = ActiveObjects(tmpm.board(x, y).objectID).dxy
+
+                    For j As Integer = 0 To UBound(ObjectBlank(id), 2) Step 1
+                        For i As Integer = 0 To UBound(ObjectBlank(id), 1) Step 1
+                            tmpm.board(x + i, y + j).groupID = ObjectBlank(id)(i, j).groupID
+                            tmpm.board(x + i, y + j).GuardLoc = ObjectBlank(id)(i, j).GuardLoc
+                            tmpm.board(x + i, y + j).isAttended = ObjectBlank(id)(i, j).isAttended
+                            tmpm.board(x + i, y + j).isBorder = ObjectBlank(id)(i, j).isBorder
+                            tmpm.board(x + i, y + j).Penetrable = ObjectBlank(id)(i, j).Penetrable
+                            tmpm.board(x + i, y + j).objectID = ObjectBlank(id)(i, j).objectID
+                            If ObjectBlank(id)(i, j).isAttended Or ObjectBlank(id)(i, j).isBorder Then
+                                tmpm.board(x + i, y + j).isPass = False
+                            End If
+                        Next i
+                    Next j
+                    tmpm.board(x + d, y + d).groupID = gid
+                End If
+            Next x
+        Next y
+    End Sub
+    Private Sub ObjectsPlacingVariants(ByRef objIDs() As Integer, ByRef locID As Integer, _
+                                       ByRef m As Map, ByRef settMap As SettingsMap, _
+                                       ByRef LocsPlacing() As Location.Borders, _
+                                       ByRef FreeCells(,) As Boolean, _
+                                       ByRef NearWith() As Integer, ByRef symmID As Integer, _
+                                       ByRef output() As Point, ByRef Term As TerminationCondition)
+        If IsNothing(NearWith) Then
+            ReDim NearWith(UBound(objIDs))
+            For i As Integer = 0 To UBound(NearWith) Step 1
+                NearWith(i) = -1
+            Next i
+        End If
+        Dim dx As Integer = LocsPlacing(locID - 1).minX
+        Dim dy As Integer = LocsPlacing(locID - 1).minY
+
+        Dim tmpIDs() As Integer = CType(objIDs.Clone, Integer())
+
+        Call Term.CheckTime()
+        If Term.ExitFromLoops Then Exit Sub
+
+        Dim bestOutput(UBound(tmpIDs)) As Point
+        Dim maxN As Integer = 0
+        ReDim output(UBound(tmpIDs))
+        Call PlaceObjRow(tmpIDs, 0, NearWith, _
+                         New Point(m.Loc(locID - 1).pos.X - dx, m.Loc(locID - 1).pos.Y - dy), _
+                         FreeCells, output, Term, maxN, bestOutput)
+        If maxN = 0 Then
+            output = Nothing
+            Exit Sub
+        ElseIf output(0).IsEmpty Then
+            ReDim Preserve bestOutput(maxN - 1)
+            output = bestOutput
+        End If
+        For i As Integer = 0 To UBound(output) Step 1
+            output(i) = New Point(output(i).X + dx, output(i).Y + dy)
+        Next i
+    End Sub
+    Private Sub PlaceObjRow(ByRef objIDs() As Integer, ByRef n As Integer, _
+                            ByRef NearWith() As Integer, ByRef LocCenter As Point, _
+                            ByRef freeCells(,) As Boolean, ByRef output() As Point, _
+                            ByRef Term As TerminationCondition,
+                            ByRef maxN As Integer, ByRef bestOutput() As Point)
+        If Term.ExitFromLoops Then Exit Sub
+
+        If n > maxN Then
+            For i As Integer = 0 To n - 1 Step 1
+                bestOutput(i) = New Point(output(i).X, output(i).Y)
+            Next i
+            maxN = n
         End If
 
-        Dim places(settRaceLoc.maxGoldMines + settRaceLoc.maxManaSources) As Integer
-        Dim nearWith(UBound(places)) As Integer
-        places(0) = 1
-        For i As Integer = 1 To settRaceLoc.maxGoldMines + settRaceLoc.maxManaSources Step 1
-            places(i) = 8
-            If i < 4 Then
-                nearWith(i) = 0
+        Dim fc_bak(,) As Boolean = CType(freeCells.Clone, Boolean(,))
+        Dim fc(,) As Boolean
+        Dim selected As Integer
+        'For i As Integer = 0 To n - 1 Step 1
+        '    Call PlaceObject(fc_bak, objIDs(i), output(i).X, output(i).Y)
+        'Next i
+        Dim pointsList(freeCells.Length - 1) As Point
+        Dim Weight(UBound(pointsList)) As Double
+        Dim pID As New List(Of Integer)
+        Dim np As Integer = -1
+        Dim desR, R, sigma As Double
+        If NearWith(n) > -1 Then
+            desR = (ActiveObjects(n).Size + ActiveObjects(objIDs(NearWith(n))).Size + 5) * 0.25 * (1 + Math.Sqrt(2))
+            sigma = 0.1
+        ElseIf objIDs(n) = 1 Then
+            desR = 2
+            sigma = 2
+        End If
+        For y As Integer = 0 To UBound(freeCells, 2) Step 1
+            For x As Integer = 0 To UBound(freeCells, 1) Step 1
+                If MayPlaceObject(fc_bak, objIDs(n), x, y) Then
+                    np += 1
+                    pointsList(np) = New Point(x, y)
+                    pID.Add(np)
+                    If NearWith(n) > -1 Then
+                        R = Math.Sqrt(SqDist(output(NearWith(n)), pointsList(np)))
+                        Weight(np) = comm.Gauss(R, desR, sigma)
+                    ElseIf objIDs(n) = 1 Then
+                        R = Math.Sqrt(SqDist(LocCenter, pointsList(np)))
+                        Weight(np) = comm.Gauss(R, desR, sigma)
+                    Else
+                        Weight(np) = 1
+                        For i As Integer = 0 To n - 1 Step 1
+                            R = Math.Sqrt(SqDist(output(i), pointsList(np)))
+                            Weight(np) *= (10 + R)
+                        Next i
+                    End If
+                    Weight(np) = Math.Max(Weight(np), 0.000001)
+                End If
+            Next x
+        Next y
+        If np = -1 Then
+            output(n) = Nothing
+            Exit Sub
+        End If
+        ReDim Preserve pointsList(np), Weight(np)
+        Dim checkN As Integer = Math.Min(10, pID.Count)
+        If n < UBound(objIDs) Then
+            Do While pID.Count > 0
+                fc = CType(fc_bak.Clone, Boolean(,))
+                selected = comm.RandomSelection(pID, False)
+                pID.Remove(selected)
+                output(n) = New Point(pointsList(selected).X, pointsList(selected).Y)
+                Call PlaceObject(fc, objIDs(n), output(n).X, output(n).Y)
+                Call PlaceObjRow(objIDs, n + 1, NearWith, LocCenter, fc, output, Term, maxN, bestOutput)
+                If Term.ExitFromLoops Then Exit Sub
+                If Not output(n + 1).IsEmpty Then
+                    pID.Clear()
+                Else
+                    checkN -= 1
+                    If checkN = 0 Then
+                        Call Term.CheckTime()
+                        If Term.ExitFromLoops Then Exit Sub
+                        checkN = 10
+                    End If
+                End If
+            Loop
+            If output(n + 1).IsEmpty Then output(n) = Nothing
+        Else
+            selected = comm.RandomSelection(pID, False)
+            pID.Clear()
+            output(n) = New Point(pointsList(selected).X, pointsList(selected).Y)
+        End If
+    End Sub
+    Private Sub MakeLocObjectsList(ByRef places() As Integer, ByRef nearWith() As Integer, _
+                                   ByRef sett As SettingsLoc, ByRef isRaceLoc As Boolean, _
+                                   ByRef LocArea() As Integer, ByRef symmID As Integer, _
+                                   ByRef LocSymmMult As Double)
+        Dim nCapital, nMinMines As Integer
+        Dim mult As Double
+        If isRaceLoc Then
+            nCapital = 1
+            mult = 1
+            nMinMines = 3
+        Else
+            nCapital = 0
+            mult = LocSymmMult * LocArea(0) / (Math.PI * (sett.AverageRadius - 2) ^ 2)
+            If mult > 0.6 Then
+                nMinMines = 2
             Else
-                nearWith(i) = -1
+                nMinMines = 1
+            End If
+        End If
+
+        Dim areaUsed As Integer
+        Dim DblnObj() As Double = New Double() {0, nCapital, _
+                                                sett.maxCities, _
+                                                sett.maxVendors, _
+                                                sett.maxMercenaries, _
+                                                sett.maxMages, _
+                                                sett.maxTrainers, _
+                                                sett.maxRuins, _
+                                                sett.maxGoldMines, _
+                                                sett.maxManaSources}
+        Dim nObj(UBound(DblnObj) - 1) As Integer
+        For i As Integer = 0 To UBound(DblnObj) Step 1
+            Dim m As Double = mult * DblnObj(i)
+            Dim n1 As Integer = CInt(Math.Floor(m))
+            Dim n2 As Integer = CInt(Math.Ceiling(m))
+            Dim r As Integer
+            If n1 = n2 Then
+                r = n1
+            Else
+                Dim d As Double = m - CDbl(n1)
+                If rndgen.PRand(0, 1) > d Then
+                    r = n1
+                    If Not i = 8 And Not i = 9 Then DblnObj(8) += d
+                Else
+                    r = n2
+                End If
+            End If
+            If i = 8 Or i = 9 Then
+                nObj(8) += r
+            Else
+                nObj(i) = r
             End If
         Next i
+        nObj(8) = Math.Max(nObj(8), 1)
+
+        Dim sum As Integer = -1
+        For i As Integer = 0 To UBound(nObj) Step 1
+            sum += nObj(i)
+        Next i
+        ReDim places(sum), nearWith(sum)
+        Dim p As Integer = 0
+        Do While nObj(1) > 0
+            nearWith(p) = -1
+            Call AddObjId(places, nObj, 1, p, areaUsed)
+            If areaUsed >= LocArea(1) Then
+                ReDim Preserve places(p - 1), nearWith(p - 1)
+                Exit Sub
+            End If
+        Loop
+        Dim k As Integer = 0
+        Dim placedMines As Integer = 0
+        Do While nObj(8) > 0 And placedMines < nMinMines
+            If isRaceLoc Then
+                nearWith(p) = k
+                k += 1
+                If k = nCapital Then k = 0
+            Else
+                nearWith(p) = -1
+            End If
+            Call AddObjId(places, nObj, 8, p, areaUsed)
+            If areaUsed >= LocArea(1) Then
+                ReDim Preserve places(p - 1), nearWith(p - 1)
+                Exit Sub
+            End If
+            placedMines += 1
+        Loop
+        Dim OWeight(UBound(ActiveObjects)) As Double
+        For i As Integer = 1 To UBound(ActiveObjects) Step 1
+            If ActiveObjects(i).hasExternalGuard Then
+                OWeight(i) = 1 / (ActiveObjects(i).Size + 4) ^ 2
+            Else
+                OWeight(i) = 1 / (ActiveObjects(i).Size + 2) ^ 2
+            End If
+        Next i
+        Dim AllObjList(sum - p), s As Integer
+        Dim Weight(sum - p) As Double
+        Dim ids As New List(Of Integer)
+        Dim t As Integer = 0
+        For i As Integer = 0 To UBound(nObj) Step 1
+            For j As Integer = 1 To nObj(i) Step 1
+                AllObjList(t) = i
+                Weight(t) = OWeight(i)
+                ids.Add(t)
+                t += 1
+            Next j
+        Next i
+        Do While ids.Count > 0
+            s = comm.RandomSelection(ids, Weight, True)
+            ids.Remove(s)
+            nearWith(p) = -1
+            Call AddObjId(places, nObj, AllObjList(s), p, areaUsed)
+            If areaUsed >= LocArea(1) Then
+                ReDim Preserve places(p - 1), nearWith(p - 1)
+                Exit Sub
+            End If
+        Loop
+    End Sub
+    Private Sub AddObjId(ByRef places() As Integer, ByRef nObj() As Integer, ByRef id As Integer, _
+                         ByRef p As Integer, ByRef AreaUsed As Integer)
+        places(p) = ActiveObjects(id).TypeID
+        AreaUsed = CInt(AreaUsed + (ActiveObjects(id).Area * 1.15))
+        nObj(id) -= 1
+        p += 1
+    End Sub
+    Private Sub FillLocation(ByRef GroupID As Integer, ByRef LocId As Integer, ByRef m As Map, ByRef LocsPlacing() As Location.Borders, _
+                             ByRef LocArea()() As Integer, ByVal settMap As SettingsMap, ByRef settLoc As SettingsLoc, _
+                             ByVal symmId As Integer, ByVal IsRaceLoc As Boolean, LocSymmMult() As Double, _
+                             ByRef LocFreeCells()(,) As Boolean, ByRef Term As TerminationCondition)
+        Dim tmpm As Map = m
+        Dim tmpLocsPlacing() As Location.Borders = LocsPlacing
+        Dim tmpLocFreeCells()(,) As Boolean = LocFreeCells
+        Dim TT As TerminationCondition = Term
+        Dim places(), nearWith() As Integer
+        places = Nothing : nearWith = Nothing
+        Call MakeLocObjectsList(places, nearWith, settLoc, IsRaceLoc, LocArea(LocId - 1), symmId, LocSymmMult(LocId - 1))
         Dim ok As Boolean = False
         Do While Not ok
+            Call TT.CheckTime()
+            If TT.ExitFromLoops Then
+                Term = TT
+                Exit Do
+            End If
             Dim v()() As Point = Nothing
-            If symmID > -1 Then
+            If symmId > -1 Or Not IsRaceLoc Then
                 ReDim v(0)
-                Call ObjectsPlacingVariants(places, 1, m, LocsPlacing, nearWith, v(0))
+                Call ObjectsPlacingVariants(places, LocId, tmpm, settMap, tmpLocsPlacing, _
+                                            tmpLocFreeCells(LocId - 1), nearWith, symmId, v(0), TT)
             Else
                 ReDim v(settMap.nRaces - 1)
                 Parallel.For(0, settMap.nRaces, _
                  Sub(i As Integer)
-                     Call ObjectsPlacingVariants(places, i + 1, m, LocsPlacing, nearWith, v(i))
+                     Call ObjectsPlacingVariants(places, i + 1, tmpm, settMap, tmpLocsPlacing, _
+                                                 tmpLocFreeCells(i), nearWith, symmId, v(i), TT)
                  End Sub)
+            End If
+            If TT.ExitFromLoops Then
+                Term = TT
+                Exit Do
             End If
             nearWith = Nothing
             Dim minN As Integer = Integer.MaxValue
             For i As Integer = 0 To UBound(v) Step 1
-                If IsNothing(v(i)) Then Throw New Exception("Как минимум одна из стартовых локаций настолько маленькая, что я не могу разместить даже столицу")
+                If IsNothing(v(i)) Then
+                    If IsRaceLoc Then
+                        Throw New Exception("Как минимум одна из стартовых локаций настолько маленькая, что я не могу разместить даже столицу")
+                    Else
+                        Exit Do
+                    End If
+                End If
                 If minN > UBound(v(i)) Then minN = UBound(v(i))
             Next i
             For i As Integer = 0 To UBound(v) Step 1
@@ -1133,139 +1739,31 @@ again:
                 minRsum = Math.Min(minRsum, Rsum)
                 maxRsum = Math.Max(maxRsum, Rsum)
             Next i
-            Dim tolerance As Double = 0.333 * (Math.Pow(1 + settRaceLoc.maxRadiusDispersion, 2) + _
-                         Math.Pow(1 + settRaceLoc.maxEccentricityDispersion, 2) + 1.2 ^ 2)
+            Dim tolerance As Double = 0.333 * (Math.Pow(1 + settLoc.maxRadiusDispersion, 2) + _
+                         Math.Pow(1 + settLoc.maxEccentricityDispersion, 2) + 1.2 ^ 2)
             If minRsum * tolerance < maxRsum Then ok = False
             If ok Then
+                Dim tmp_G As Integer = GroupID
                 Parallel.For(0, v.Length, _
                  Sub(i As Integer)
+                     Dim g As Integer = tmp_G + i * (minN + 1)
                      For n As Integer = 0 To minN Step 1
-                         Call PlaceObject(m, places(n), v(i)(n).X, v(i)(n).Y, settMap, symmID)
+                         Call PlaceObject(tmpm, places(n), v(i)(n).X, v(i)(n).Y, g + n, settMap, symmId)
                      Next n
                  End Sub)
+                GroupID += v.Length * (minN + 1)
             End If
         Loop
-
-        Exit Sub
-        Do While True
-            Dim baseAngle As Double = rndgen.PRand(0, 2 * Math.PI)
-            Dim tLoc() As Location
-            If symmID > -1 Then
-                tLoc = New Location() {New Location(m.Loc(0).pos, 1, 1, baseAngle, -1)}
-            Else
-                ReDim tLoc(settMap.nRaces - 1)
-                For i As Integer = 0 To settMap.nRaces - 1 Step 1
-                    tLoc(i) = New Location(m.Loc(i).pos, 1, 1, baseAngle + LocAng(i), i - settMap.nRaces)
-                Next i
-            End If
-
-
-
-
-            Exit Do
-        Loop
-
-    End Sub
-    Private Sub ObjectsPlacingVariants(ByRef objIDs() As Integer, ByRef locID As Integer, _
-                                       ByRef m As Map, ByRef LocsPlacing() As Location.Borders, _
-                                       ByRef NearWith() As Integer, ByRef output() As Point)
-        If IsNothing(NearWith) Then
-            ReDim NearWith(UBound(objIDs))
-            For i As Integer = 0 To UBound(NearWith) Step 1
-                NearWith(i) = -1
-            Next i
-        End If
-        Dim dx As Integer = LocsPlacing(locID - 1).minX
-        Dim dy As Integer = LocsPlacing(locID - 1).minY
-        Dim freeCells(LocsPlacing(locID - 1).maxX - dx, _
-                      LocsPlacing(locID - 1).maxY - dy) As Boolean
-        For y As Integer = 0 To UBound(freeCells, 2) Step 1
-            For x As Integer = 0 To UBound(freeCells, 1) Step 1
-                If Not m.board(x + dx, y + dy).isBorder And Not m.board(x + dx, y + dy).isAttended _
-                   AndAlso locID = m.board(x + dx, y + dy).locID.Item(0) Then
-                    freeCells(x, y) = True
-                End If
-            Next x
-        Next y
-        Dim tmpIDs() As Integer = CType(objIDs.Clone, Integer())
-        ReDim output(0)
-        Do While output(0).IsEmpty
-            ReDim output(UBound(tmpIDs))
-            Call PlaceObjRow(tmpIDs, 0, NearWith, freeCells, output)
-            If output(0).IsEmpty Then
-                If UBound(tmpIDs) > 0 Then
-                    ReDim Preserve tmpIDs(UBound(tmpIDs) - 1)
-                Else
-                    output = Nothing
-                    Exit Sub
-                End If
-            End If
-        Loop
-        For i As Integer = 0 To UBound(output) Step 1
-            output(i) = New Point(output(i).X + dx, output(i).Y + dy)
-        Next i
-    End Sub
-    Private Sub PlaceObjRow(ByRef objIDs() As Integer, ByRef n As Integer, _
-                            ByRef NearWith() As Integer, _
-                            ByRef freeCells(,) As Boolean, ByRef output() As Point)
-        Dim fc_bak(,) As Boolean = CType(freeCells.Clone, Boolean(,))
-        Dim fc(,) As Boolean
-        Dim selected As Integer
-        For i As Integer = 0 To n - 1 Step 1
-            Call PlaceObject(fc_bak, objIDs(i), output(i).X, output(i).Y)
-        Next i
-        Dim pointsList(freeCells.Length - 1) As Point
-        Dim pID As New List(Of Integer)
-        Dim np As Integer = -1
-        Dim Weight() As Double = Nothing
-        Dim desR, R As Double
-        If NearWith(n) > -1 Then
-            desR = (ActiveObjects(n).Size + ActiveObjects(NearWith(n)).Size + 5) * 0.25 * (1 + Math.Sqrt(2))
-            ReDim Weight(UBound(pointsList))
-        End If
-        For y As Integer = 0 To UBound(freeCells, 2) Step 1
-            For x As Integer = 0 To UBound(freeCells, 1) Step 1
-                If MayPlaceObject(fc_bak, objIDs(n), x, y) Then
-                    np += 1
-                    pointsList(np) = New Point(x, y)
-                    pID.Add(np)
-                    If Not IsNothing(Weight) Then
-                        R = Math.Sqrt(SqDist(output(NearWith(n)), pointsList(np)))
-                        Weight(np) = Math.Max(comm.Gauss(R, desR, 0.1), 0.0000001)
-                    End If
-                End If
-            Next x
-        Next y
-        If np = -1 Then
-            output(n) = Nothing
-            Exit Sub
-        End If
-        ReDim Preserve pointsList(np), Weight(np)
-        If n < UBound(objIDs) Then
-            Do While pID.Count > 0
-                fc = CType(fc_bak.Clone, Boolean(,))
-                selected = comm.RandomSelection(pID, False)
-                pID.Remove(selected)
-                output(n) = New Point(pointsList(selected).X, pointsList(selected).Y)
-                Call PlaceObject(fc, objIDs(n), output(n).X, output(n).Y)
-                Call PlaceObjRow(objIDs, n + 1, NearWith, fc, output)
-                If Not output(n + 1).IsEmpty Then pID.Clear()
-            Loop
-            If output(n + 1).IsEmpty Then output(n) = Nothing
-        Else
-            selected = comm.RandomSelection(pID, False)
-            pID.Clear()
-            output(n) = New Point(pointsList(selected).X, pointsList(selected).Y)
-        End If
+        m = tmpm
     End Sub
 
     Private Function ObjectBorders(ByRef id As Integer, ByRef x As Integer, ByRef y As Integer) As Location.Borders
         Dim res As Location.Borders
-        res.minX = x
-        res.minY = y
-        res.maxX = x + ActiveObjects(id).Size - 1
-        res.maxY = y + ActiveObjects(id).Size - 1
-        If ActiveObjects(id).needExpand Then
+        res.minX = x - 1
+        res.minY = y - 1
+        res.maxX = x + ActiveObjects(id).Size
+        res.maxY = y + ActiveObjects(id).Size
+        If ActiveObjects(id).hasExternalGuard Then
             res.minX -= 1
             res.minY -= 1
             res.maxX += 1
@@ -1279,7 +1777,7 @@ again:
         If b.minX < 0 Or b.minY < 0 Or b.maxX > m.xSize Or b.maxY > m.ySize Then Return False
         For j As Integer = b.minY To b.maxY Step 1
             For i As Integer = b.minX To b.maxX Step 1
-                If m.board(i, j).isBorder Or m.board(i, j).isAttended Then Return False
+                If m.board(i, j).isBorder Or m.board(i, j).isAttended Or Not m.board(i, j).locID.Item(0) = id Then Return False
             Next i
         Next j
         Return True
@@ -1295,19 +1793,20 @@ again:
         Next j
         Return True
     End Function
-    Private Sub PlaceObject(ByRef m As Map, ByRef id As Integer, ByRef x As Integer, ByRef y As Integer)
+    Private Sub PlaceObject(ByRef m As Map, ByRef id As Integer, ByRef x As Integer, ByRef y As Integer, ByRef GroupID As Integer)
         Dim b As Location.Borders = ObjectBorders(id, x, y)
         For j As Integer = b.minY To b.maxY Step 1
             For i As Integer = b.minX To b.maxX Step 1
                 m.board(i, j).isAttended = True
             Next i
         Next j
-        m.board(x, y).objectID = id
+        m.board(b.minX, b.minY).objectID = id
+        m.board(b.minX, b.minY).groupID = GroupID
     End Sub
     Private Sub PlaceObject(ByRef m As Map, ByRef id As Integer, ByRef x As Integer, ByRef y As Integer, _
-                            ByRef settMap As SettingsMap, ByRef symmId As Integer)
+                            ByRef GroupID As Integer, ByRef settMap As SettingsMap, ByRef symmId As Integer)
         If symmId < 0 Then
-            Call PlaceObject(m, id, x, y)
+            Call PlaceObject(m, id, x, y, GroupID)
         Else
             Dim b As Location.Borders = ObjectBorders(id, x, y)
             Dim p(3), plist() As Point
@@ -1324,7 +1823,10 @@ again:
                 Next i
             Next j
             For k As Integer = 0 To UBound(p) Step 1
-                If p(k).X < Integer.MaxValue And p(k).Y < Integer.MaxValue Then m.board(p(k).X, p(k).Y).objectID = id
+                If p(k).X < Integer.MaxValue And p(k).Y < Integer.MaxValue Then
+                    m.board(p(k).X, p(k).Y).objectID = id
+                    m.board(p(k).X, p(k).Y).groupID = GroupID
+                End If
             Next k
         End If
     End Sub
@@ -1337,6 +1839,30 @@ again:
         Next j
     End Sub
 
+    Private Sub MakeLabyrinth(ByRef m As Map, ByVal symmID As Integer, ByRef Term As TerminationCondition)
+        If Term.ExitFromLoops Then Exit Sub
+        Dim tmpm As Map = m
+        Parallel.For(0, m.Loc.Length, _
+         Sub(i As Integer)
+             If Not tmpm.Loc(i).IsObtainedBySymmery Then Call MakeLabyrinth(tmpm, i, symmID)
+         End Sub)
+        m = tmpm
+    End Sub
+    Private Sub MakeLabyrinth(ByRef m As Map, ByRef LocId As Integer, ByRef symmID As Integer)
+
+        Dim LocPlacing As New Location.Borders With {.minX = Integer.MaxValue, .minY = Integer.MaxValue, _
+                                                     .maxX = Integer.MinValue, .maxY = Integer.MinValue}
+        For y As Integer = 0 To m.ySize Step 1
+            For x As Integer = 0 To m.xSize Step 1
+                If m.board(x, y).locID.Item(0) = LocId Then
+                    LocPlacing.minX = Math.Min(LocPlacing.minX, x)
+                    LocPlacing.minY = Math.Min(LocPlacing.minY, y)
+                    LocPlacing.maxX = Math.Max(LocPlacing.maxX, x)
+                    LocPlacing.maxY = Math.Max(LocPlacing.maxY, y)
+                End If
+            Next x
+        Next y
+    End Sub
 End Class
 
 Public Class SymmetryOperations
@@ -1353,6 +1879,7 @@ Public Class SymmetryOperations
     Public Function L2(ByRef L As Location, ByRef m As InpenetrableMeshGen.Map) As Location
         Dim r As Location = L.Copy
         Call r.L2Rotation(m, Me)
+        r.IsObtainedBySymmery = True
         Return r
     End Function
     ''' <summary>Возвращает точку, повернутую на 90 градусов вокруг оси, находящейся в центре карты. Только для квадратных карт</summary>
@@ -1367,6 +1894,7 @@ Public Class SymmetryOperations
     Public Function L4(ByRef L As Location, ByRef m As InpenetrableMeshGen.Map) As Location
         Dim r As Location = L.Copy
         Call r.L4Rotation(m, Me)
+        r.IsObtainedBySymmery = True
         Return r
     End Function
     ''' <summary>Возвращает точку, отраженную в плоскости, параллельной оси Ox, и проходящей через центр карты</summary>
@@ -1381,6 +1909,7 @@ Public Class SymmetryOperations
     Public Function xM(ByRef L As Location, ByRef m As InpenetrableMeshGen.Map) As Location
         Dim r As Location = L.Copy
         Call r.xReflection(m, Me)
+        r.IsObtainedBySymmery = True
         Return r
     End Function
     ''' <summary>Возвращает точку, отраженную в плоскости, параллельной оси Oy, и проходящей через центр карты</summary>
@@ -1395,6 +1924,7 @@ Public Class SymmetryOperations
     Public Function yM(ByRef L As Location, ByRef m As InpenetrableMeshGen.Map) As Location
         Dim r As Location = L.Copy
         Call r.yReflection(m, Me)
+        r.IsObtainedBySymmery = True
         Return r
     End Function
     ''' <summary>Возвращает точку, отраженную в плоскости, параллельной диагонали {x, y}, и проходящей через центр карты. Только для квадратных карт</summary>
@@ -1409,6 +1939,7 @@ Public Class SymmetryOperations
     Public Function xy1M(ByRef L As Location, ByRef m As InpenetrableMeshGen.Map) As Location
         Dim r As Location = L.Copy
         Call r.xy1Reflection(m, Me)
+        r.IsObtainedBySymmery = True
         Return r
     End Function
     ''' <summary>Возвращает точку, отраженную в плоскости, параллельной диагонали {-x, y}, и проходящей через центр карты. Только для квадратных карт</summary>
@@ -1423,6 +1954,7 @@ Public Class SymmetryOperations
     Public Function xy2M(ByRef L As Location, ByRef m As InpenetrableMeshGen.Map) As Location
         Dim r As Location = L.Copy
         Call r.xy2Reflection(m, Me)
+        r.IsObtainedBySymmery = True
         Return r
     End Function
 
@@ -1521,19 +2053,21 @@ Public Class SymmetryOperations
         Else
             Dim x, y As Integer
             Dim a, b, alpha As Double
+            Dim isSymm As Boolean = True
             For i As Integer = 0 To UBound(L) Step 1
                 x += L(i).pos.X
                 y += L(i).pos.Y
                 a += L(i).gASize
                 b += L(i).gBSize
                 alpha += L(i).gAlpha
+                If Not L(i).IsObtainedBySymmery Then isSymm = False
             Next i
             x = CInt(x / L.Length)
             y = CInt(y / L.Length)
             a /= L.Length
             b /= L.Length
             alpha /= L.Length
-            Dim res As New Location(New Point(x, y), a, b, alpha, minID)
+            Dim res As New Location(New Point(x, y), a, b, alpha, minID, isSymm)
             Return New Location() {res}
         End If
     End Function
@@ -1685,6 +2219,8 @@ Public Class Location
     Private Asize, Bsize As Double
     Private invSigmaA, invSigmaB As Double
     Private alpha As Double
+    ''' <summary>True, если получена операцией симметрии</summary>
+    Public IsObtainedBySymmery As Boolean
 
     Friend Structure Borders
         Dim maxX, minX, maxY, minY As Integer
@@ -1705,7 +2241,7 @@ Public Class Location
     ''' <param name="b">Половина высоты</param>
     ''' <param name="angle">Угол наклона</param>
     ''' <param name="i">Номер локации, больше ноля</param>
-    Public Sub New(ByRef p As Point, ByRef a As Double, ByRef b As Double, ByRef angle As Double, ByRef i As Integer)
+    Public Sub New(ByRef p As Point, ByRef a As Double, ByRef b As Double, ByRef angle As Double, ByRef i As Integer, Optional ByRef symmetred As Boolean = False)
         pos = New Point(p.X, p.Y)
         invSigmaA = Math.Sqrt(0.5) * 0.5 / a
         invSigmaB = Math.Sqrt(0.5) * 0.5 / b
@@ -1716,10 +2252,11 @@ Public Class Location
         ID = i
         alpha = angle
         Call CosSinCalc()
+        IsObtainedBySymmery = symmetred
     End Sub
 
     Public Function Copy() As Location
-        Return New Location(pos, Asize, Bsize, alpha, ID)
+        Return New Location(pos, Asize, Bsize, alpha, ID, IsObtainedBySymmery)
     End Function
 
     Private Sub CosSinCalc()
@@ -1979,4 +2516,64 @@ Public Class ColorSelector
         End If
     End Function
 
+End Class
+
+Class TerminationCondition
+    Friend maxTime As Long
+    Dim startTime As Long
+    Public ExitFromLoops As Boolean
+
+    Public Sub New(ByRef maxT As Integer)
+        Call init(CLng(maxT))
+    End Sub
+    Public Sub New(ByRef maxT As Long)
+        Call init(maxT)
+    End Sub
+    Private Sub init(ByRef maxT As Long)
+        maxTime = maxT
+        startTime = CLng(Environment.TickCount)
+        ExitFromLoops = False
+    End Sub
+
+    Public Sub CheckTime()
+        Dim T As Long = CLng(Environment.TickCount)
+        Dim d As Long = DeltaTime(startTime, T)
+        If d > maxTime Then ExitFromLoops = True
+    End Sub
+
+    Private Function DeltaTime(ByRef startT As Long, ByRef endT As Long) As Long
+        If endT >= startT Then
+            Return endT - startT
+        Else
+            Return CLng(Integer.MaxValue) - startT + endT - CLng(Integer.MinValue)
+        End If
+    End Function
+
+End Class
+
+Public Class AttendedObject
+    ''' <summary>Номер записи в массиве со всеми посещаемыми объектами</summary>
+    Public ReadOnly TypeID As Integer
+    ''' <summary>Длина стороны объекта</summary>
+    Public ReadOnly Size As Integer
+    ''' <summary>Название объекта</summary>
+    Public ReadOnly Name As String
+    ''' <summary>Нужно ли размещать охраняющий отряд</summary>
+    Public ReadOnly hasExternalGuard As Boolean
+    ''' <summary>Площадь, которую нужно выделить под объект</summary>
+    Friend ReadOnly Area As Integer
+    ''' <summary>Положение объекта по X и Y относительно положения области, выделенной под него</summary>
+    Friend ReadOnly dxy As Integer
+
+    Public Sub New(ByRef objName As String, ByRef objSize As Integer, ByRef objTypeID As Integer, _
+                   Optional ByRef objHasExternalGuard As Boolean = False)
+        Name = objName
+        Size = objSize
+        TypeID = objTypeID
+        hasExternalGuard = objHasExternalGuard
+
+        dxy = 1
+        If hasExternalGuard Then dxy += 1
+        Area = CInt((Size + 2 * dxy) ^ 2)
+    End Sub
 End Class
