@@ -1477,7 +1477,7 @@ Public Class InpenetrableMeshGen
                 If tmpm.board(x, y).objectID > 0 Then
                     Dim id As Integer = tmpm.board(x, y).objectID
                     Dim gid As Integer = tmpm.board(x, y).groupID
-                    Dim d As Integer = ActiveObjects(tmpm.board(x, y).objectID).dxy
+                    Dim d As Integer = ActiveObjects(id).dxy
 
                     For j As Integer = 0 To UBound(ObjectBlank(id), 2) Step 1
                         For i As Integer = 0 To UBound(ObjectBlank(id), 1) Step 1
@@ -1493,6 +1493,10 @@ Public Class InpenetrableMeshGen
                         Next i
                     Next j
                     tmpm.board(x + d, y + d).groupID = gid
+                    If ActiveObjects(id).hasExternalGuard Then
+                        tmpm.board(x + d + ActiveObjects(id).Size, _
+                                   y + d + ActiveObjects(id).Size).groupID = gid
+                    End If
                 End If
             Next x
         Next y
