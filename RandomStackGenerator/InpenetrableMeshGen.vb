@@ -2097,10 +2097,8 @@ Public Class InpenetrableMeshGen
             Next y
             For y As Integer = 0 To ySize Step 1
                 For x As Integer = 0 To xSize Step 1
-                    If isLifeField(x, y) Then
-                        If W(x, y) > rndgen.Rand(0, maxW) Then
-                            free(x, y) = Not free(x, y)
-                        End If
+                    If isLifeField(x, y) AndAlso W(x, y) > rndgen.Rand(0, maxW) Then
+                        free(x, y) = Not free(x, y)
                     End If
                 Next x
             Next y
@@ -2108,17 +2106,51 @@ Public Class InpenetrableMeshGen
             If nloops > 2 Then
                 nextloop = False
                 Dim tconn(,) As Boolean = FindConnected(free, init)
-                For y As Integer = 0 To ySize Step 1
-                    For x As Integer = 0 To xSize Step 1
-                        If free(x, y) And connected(x, y) And Not tconn(x, y) Then
-                            nextloop = True
-                            Exit For
-                        End If
-                    Next x
-                    If nextloop Then Exit For
-                Next y
+                nextloop = Not CompareConnection(free, connected, tconn)
             End If
         Loop
+
+        For y As Integer = 1 To ySize - 1 Step 1
+            For x As Integer = 1 To xSize - 1 Step 1
+                W(x, y) = 0
+                If isLifeField(x, y) And free(x, y) Then
+                    Dim b As Location.Borders = NearestXY(x, y, xSize, ySize, 1)
+                    Dim ndead As Integer = 0
+                    For j As Integer = b.minY To b.maxY Step 1
+                        For i As Integer = b.minX To b.maxX Step 1
+                            If Not connected(i, j) Or Not free(i, j) Then
+                                ndead += 1
+                            End If
+                        Next i
+                    Next j
+                    If ndead < 1 And ndead < 5 Then
+                        Dim t As Integer = 0
+                        Dim i As Integer
+                        Dim j As Integer
+                        For k As Integer = -1 To 1 Step 2
+                            i = x + k
+                            j = y
+                            If Not connected(i, j) Or Not free(i, j) Then t += 1
+                            i = x
+                            j = y + k
+                            If Not connected(i, j) Or Not free(i, j) Then t += 1
+                        Next k
+                        If ndead = t Then W(x, y) = 0.3 + 0.1 * CDbl(ndead)
+                    End If
+                End If
+            Next x
+        Next y
+        For y As Integer = 1 To ySize - 1 Step 1
+            For x As Integer = 1 To xSize - 1 Step 1
+                If W(x, y) > 0 AndAlso W(x, y) > rndgen.Rand(0, maxW) Then
+                    free(x, y) = Not free(x, y)
+                    Dim tconn(,) As Boolean = FindConnected(free, init)
+                    If Not CompareConnection(free, connected, tconn) Then
+                        free(x, y) = Not free(x, y)
+                    End If
+                End If
+            Next x
+        Next y
 
         For y As Integer = 0 To ySize Step 1
             For x As Integer = 0 To xSize Step 1
@@ -2135,8 +2167,18 @@ Public Class InpenetrableMeshGen
             Next x
         Next y
 
-
     End Sub
+    Private Function CompareConnection(ByRef freeCells(,) As Boolean, ByRef connected1(,) As Boolean, _
+                                       ByRef connected2(,) As Boolean) As Boolean
+        Dim xSize As Integer = UBound(freeCells, 1)
+        Dim ySize As Integer = UBound(freeCells, 2)
+        For y As Integer = 0 To ySize Step 1
+            For x As Integer = 0 To xSize Step 1
+                If freeCells(x, y) And (Not connected1(x, y) = connected2(x, y)) Then Return False
+            Next x
+        Next y
+        Return True
+    End Function
 
 End Class
 
