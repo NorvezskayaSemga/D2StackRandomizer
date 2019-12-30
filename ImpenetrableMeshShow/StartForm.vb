@@ -63,7 +63,7 @@ Public Class StartForm
             grid = genmesh.SymmGen(sM, sR, sC, gt)
         End If
 
-        If Not genmesh.TestMap(grid) Then Exit Sub
+        If Not genmesh.TestMap(grid, False) Then Exit Sub
 
         If Not IsNothing(grid) Then
             Dim staclocgen As New StackLocationsGen
@@ -72,11 +72,15 @@ Public Class StartForm
             Exit Sub
         End If
 
-        If Not genmesh.TestMap(grid) Then Exit Sub
+        If Not genmesh.TestMap(grid, True) Then Exit Sub
 
         'запоминаем набор точек с наибольшим n
         'произвед 1/r - стат вес для nearwith = -1
 
+        Call ShowResult(grid)
+
+    End Sub
+    Public Sub ShowResult(ByRef grid As Map)
         Dim t(grid.xSize, grid.ySize) As Integer
         For x As Integer = 0 To grid.xSize Step 1
             For y As Integer = 0 To grid.ySize Step 1
@@ -84,7 +88,7 @@ Public Class StartForm
                     t(x, y) = 0
                 End If
                 If grid.board(x, y).isAttended Then
-                    t(x, y) = 51 + grid.board(x, y).objectID
+                    t(x, y) = 51 + 2 * grid.board(x, y).objectID
                 ElseIf grid.board(x, y).isPass Then
                     t(x, y) = 90
                 End If
@@ -99,10 +103,6 @@ Public Class StartForm
                 End If
             Next y
         Next x
-        Call ShowResult(t)
-
-    End Sub
-    Private Sub ShowResult(ByRef t(,) As Integer)
         Dim mult As Integer = zoom.CalcMultiplicator(Math.Max(UBound(t, 1), UBound(t, 2)) + 1)
         Dim mgrid(,) As Integer = zoom.Zoom(t, mult)
         Dim c(,) As Color = draw.MakeIslandsColorMap(mgrid)

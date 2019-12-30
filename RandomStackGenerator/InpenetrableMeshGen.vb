@@ -135,7 +135,7 @@ Public Class InpenetrableMeshGen
         Return result
     End Function
     ''' <summary>Вернет True, если все нормально, иначе стоит перегенерировать</summary>
-    Public Function TestMap(ByRef m As Map) As Boolean
+    Public Function TestMap(ByRef m As Map, ByRef testGuardLocs As Boolean) As Boolean
         If IsNothing(m) Then Return False
         For x As Integer = 0 To m.xSize Step 1
             For y As Integer = 0 To m.ySize Step 1
@@ -154,12 +154,21 @@ Public Class InpenetrableMeshGen
                 ElseIf m.board(x, y).isAttended And m.board(x, y).isPass Then
                     Console.WriteLine("Warning: object and pass on the same place")
                     Return False
-                ElseIf m.board(x, y).isBorder And m.board(x, y).GuardLoc Then
-                    Console.WriteLine("Warning: border and guard on the same place")
-                    Return False
-                ElseIf m.board(x, y).isAttended And m.board(x, y).GuardLoc And m.board(x, y).objectID = 0 Then
-                    Console.WriteLine("Warning: object and guard on the same place")
-                    Return False
+                End If
+                If testGuardLocs And m.board(x, y).GuardLoc Then
+                    If m.board(x, y).isBorder Then
+                        Console.WriteLine("Warning: border and guard on the same place")
+                        Return False
+                    ElseIf m.board(x, y).isAttended And m.board(x, y).objectID = 0 Then
+                        Console.WriteLine("Warning: object and guard on the same place")
+                        Return False
+                    ElseIf Not m.board(x, y).GuardLoc And (m.board(x, y).objectID = 2 Or m.board(x, y).objectID = 7) Then
+                        Console.WriteLine("Warning: internal guard for object is not set")
+                        Return False
+                    ElseIf (m.board(x, y).objectID = 2 Or m.board(x, y).objectID = 7) And m.board(x, y).groupID < 1 Then
+                        Console.WriteLine("Warning: group for internal guard for object is zero")
+                        Return False
+                    End If
                 End If
             Next y
         Next x
@@ -572,7 +581,7 @@ Public Class InpenetrableMeshGen
         Loop
     End Sub
 
-    Private Sub SetLocIdToCells(ByRef m As Map, ByRef settMap As SettingsMap)
+    Private Sub SetLocIdToCells(ByRef m As Map, ByVal settMap As SettingsMap)
 
         Dim allPoints()() As Point = Nothing
         Dim pID()() As Integer = Nothing
@@ -675,6 +684,117 @@ Public Class InpenetrableMeshGen
                     End If
                 End If
             Loop
+
+            Dim symmPoints(m.xSize, m.ySize)() As Point
+            Dim tmpm As Map = m
+            Parallel.For(0, m.Loc.Length, _
+             Sub(i As Integer)
+                 If tmpm.Loc(i).IsObtainedBySymmery Then
+                     Dim n1(), n2, maxDiff, sel, myj As Integer
+                     Dim t As Location.Borders
+                     Dim b As New Location.Borders With {.minX = Integer.MaxValue, .maxX = Integer.MinValue, _
+                                                         .miny = Integer.MaxValue, .maxy = Integer.MinValue}
+                     For y As Integer = 0 To tmpm.ySize Step 1
+                         For x As Integer = 0 To tmpm.xSize Step 1
+                             If tmpm.board(x, y).locID.Item(0) = tmpm.Loc(i).ID Then
+                                 b.minX = Math.Min(b.minX, x)
+                                 b.minY = Math.Min(b.minY, y)
+                                 b.maxX = Math.Max(b.maxX, x)
+                                 b.maxY = Math.Max(b.maxY, y)
+                                 symmPoints(x, y) = symm.ApplySymm(New Point(x, y), settMap.nRaces, tmpm, 1)
+                             End If
+                         Next x
+                     Next y
+
+                     Dim tryagain As Boolean = True
+                     Dim nIter As Integer = 0
+                     Do While tryagain And nIter < 1000
+                         tryagain = False
+                         nIter += 1
+                         For y As Integer = b.minY To b.maxY Step 1
+                             For x As Integer = b.minX To b.maxX Step 1
+                                 'для каждой точки и ее отражений считаем соседей для нас myid<>neubourid для каждого id отдельно, для отражений myid=neubourid если выгоднее поменять местами - меняем. повторяем цикл, пока выгодно менять
+                                 If Not IsNothing(symmPoints(x, y)) AndAlso symmPoints(x, y).Length > 1 Then
+                                     t = NearestXY(x, y, tmpm.xSize, tmpm.ySize, 1)
+                                     ReDim n1(UBound(tmpm.Loc))
+                                     For q As Integer = t.minY To t.maxY Step 1
+                                         For p As Integer = t.minX To t.maxX Step 1
+                                             If Not tmpm.board(p, q).locID.Item(0) = tmpm.Loc(i).ID Then
+                                                 n1(tmpm.board(p, q).locID.Item(0) - 1) += 1
+                                             End If
+                                         Next p
+                                     Next q
+                                     maxDiff = 6
+                                     sel = -1
+                                     myj = -1
+                                     For j As Integer = 0 To UBound(symmPoints(x, y)) Step 1
+                                         If Not x = symmPoints(x, y)(j).X Or Not y = symmPoints(x, y)(j).Y Then
+                                             n2 = 0
+                                             t = NearestXY(symmPoints(x, y)(j).X, symmPoints(x, y)(j).Y, tmpm.xSize, tmpm.ySize, 1)
+                                             For q As Integer = t.minY To t.maxY Step 1
+                                                 For p As Integer = t.minX To t.maxX Step 1
+                                                     If tmpm.board(p, q).locID.Item(0) = tmpm.Loc(i).ID Then
+                                                         n2 += 1
+                                                     End If
+                                                 Next p
+                                             Next q
+                                             If n2 > 0 And n1(tmpm.board(symmPoints(x, y)(j).X, symmPoints(x, y)(j).Y).locID.Item(0) - 1) > 0 _
+                                             And n2 = n1(tmpm.board(symmPoints(x, y)(j).X, symmPoints(x, y)(j).Y).locID.Item(0) - 1) Then
+                                                 Dim d As Integer = n2 + n1(tmpm.board(symmPoints(x, y)(j).X, symmPoints(x, y)(j).Y).locID.Item(0) - 1)
+                                                 If maxDiff < d Then
+                                                     maxDiff = d
+                                                     sel = j
+                                                 End If
+                                             End If
+                                         Else
+                                             myj = j
+                                         End If
+                                     Next j
+                                     If sel > -1 Then
+                                         Dim tID1, tID2 As Integer
+                                         tID1 = tmpm.board(symmPoints(x, y)(myj).X, symmPoints(x, y)(myj).Y).locID.Item(0)
+                                         tID2 = tmpm.board(symmPoints(x, y)(sel).X, symmPoints(x, y)(sel).Y).locID.Item(0)
+                                         tmpm.board(symmPoints(x, y)(myj).X, symmPoints(x, y)(myj).Y).locID.Clear()
+                                         tmpm.board(symmPoints(x, y)(sel).X, symmPoints(x, y)(sel).Y).locID.Clear()
+                                         tmpm.board(symmPoints(x, y)(myj).X, symmPoints(x, y)(myj).Y).locID.Add(tID2)
+                                         tmpm.board(symmPoints(x, y)(sel).X, symmPoints(x, y)(sel).Y).locID.Add(tID1)
+                                         b.minX = Math.Min(b.minX, symmPoints(x, y)(sel).X)
+                                         b.minY = Math.Min(b.minY, symmPoints(x, y)(sel).Y)
+                                         b.maxX = Math.Max(b.maxX, symmPoints(x, y)(sel).X)
+                                         b.maxY = Math.Max(b.maxY, symmPoints(x, y)(sel).Y)
+                                         If symmPoints(x, y).Length > 2 Then
+                                             Dim tj1, tj2 As Integer
+                                             tj1 = -1 : tj2 = -1
+                                             For j As Integer = 0 To UBound(symmPoints(x, y)) Step 1
+                                                 If Not j = myj And Not j = sel Then
+                                                     tj1 = j
+                                                     Exit For
+                                                 End If
+                                             Next j
+                                             For j As Integer = tj1 + 1 To UBound(symmPoints(x, y)) Step 1
+                                                 If Not j = myj And Not j = sel Then
+                                                     tj2 = j
+                                                     Exit For
+                                                 End If
+                                             Next j
+                                             tID1 = tmpm.board(symmPoints(x, y)(tj1).X, symmPoints(x, y)(tj1).Y).locID.Item(0)
+                                             tID2 = tmpm.board(symmPoints(x, y)(tj2).X, symmPoints(x, y)(tj2).Y).locID.Item(0)
+                                             tmpm.board(symmPoints(x, y)(tj1).X, symmPoints(x, y)(tj1).Y).locID.Clear()
+                                             tmpm.board(symmPoints(x, y)(tj2).X, symmPoints(x, y)(tj2).Y).locID.Clear()
+                                             tmpm.board(symmPoints(x, y)(tj1).X, symmPoints(x, y)(tj1).Y).locID.Add(tID2)
+                                             tmpm.board(symmPoints(x, y)(tj2).X, symmPoints(x, y)(tj2).Y).locID.Add(tID1)
+                                         End If
+                                         x = b.maxX
+                                         y = b.maxY
+                                         tryagain = True
+                                     End If
+                                 End If
+                             Next x
+                         Next y
+                     Loop
+                 End If
+             End Sub)
+            m = tmpm
         Else
             Do While idlist.Count > 0
                 Call makePointsList(m, idlist, allPoints, pID, Weight, minweight, selectedIDs, selectedWeight, calculatedWeights)
@@ -2956,6 +3076,14 @@ Public Class StackLocationsGen
                 Next p
             End If
         Next i
+        For y As Integer = 0 To m.ySize Step 1
+            For x As Integer = 0 To m.xSize Step 1
+                If Not m.board(x, y).GuardLoc And (m.board(x, y).objectID = 2 Or m.board(x, y).objectID = 7) Then
+                    m.board(x, y).GuardLoc = True
+                End If
+            Next x
+        Next y
+
     End Sub
 
     Private Function FillLocation(ByRef m As Map, ByRef settMap As InpenetrableMeshGen.SettingsMap, _

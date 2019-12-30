@@ -12,7 +12,7 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution 
 		TraceAndTestImpact.testsettings = TraceAndTestImpact.testsettings
 	EndProjectSection
 EndProject
-Project("{F184B08F-C81C-45F6-A57F-5ABD9991F28F}") = "ImpenetrableMeshShow", "ImpenetrableMeshShow\ImpenetrableMeshShow.vbproj", "{06CEDBA3-3200-4D4C-B293-38F87FF3BDB3}"
+Project("{F184B08F-C81C-45F6-A57F-5ABD9991F28F}") = "InpenetrableMeshShow", "ImpenetrableMeshShow\InpenetrableMeshShow.vbproj", "{06CEDBA3-3200-4D4C-B293-38F87FF3BDB3}"
 EndProject
 Global
 	GlobalSection(TestCaseManagementSettings) = postSolution
