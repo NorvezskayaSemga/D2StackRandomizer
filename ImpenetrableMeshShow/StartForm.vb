@@ -57,6 +57,7 @@ Public Class StartForm
         sC.minStackToStackDist = 5
 
         Dim gt As Integer = 3000
+again:
         If Not SymmCheckBox.Checked Then
             grid = genmesh.UnsymmGen(sM, sR, sC, gt)
         Else
@@ -67,7 +68,7 @@ Public Class StartForm
 
         If Not IsNothing(grid) Then
             Dim staclocgen As New StackLocationsGen
-            Call staclocgen.Gen(grid, sM, sR, sC)
+            If Not staclocgen.Gen(grid, sM, sR, sC, gt) Then GoTo again
         Else
             Exit Sub
         End If
@@ -90,13 +91,16 @@ Public Class StartForm
                 If grid.board(x, y).isAttended Then
                     t(x, y) = 51 + 2 * grid.board(x, y).objectID
                 ElseIf grid.board(x, y).isPass Then
-                    t(x, y) = 90
+                    't(x, y) = 90
                 End If
                 If grid.board(x, y).Penetrable Then
                     't(x, y) = 100
                 End If
                 If grid.board(x, y).GuardLoc Then
-                    t(x, y) = 40
+                    t(x, y) = 125
+                End If
+                If grid.board(x, y).PassGuardLoc Then
+                    t(x, y) = 185
                 End If
                 If grid.board(x, y).isBorder Then
                     t(x, y) = grid.board(x, y).locID.Item(0)
