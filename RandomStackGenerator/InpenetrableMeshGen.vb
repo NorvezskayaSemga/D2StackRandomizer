@@ -3448,6 +3448,7 @@ Public Class StackLocationsGen
                     Return Nothing
                 End If
             Next j
+            Return out
         End If
         Return Nothing
     End Function
