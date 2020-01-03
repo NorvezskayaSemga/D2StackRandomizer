@@ -1040,9 +1040,14 @@ Public Class InpenetrableMeshGen
         Next i
         Dim delList As New List(Of String)
         Dim nearRLocs As New List(Of Integer)
-        For i As Integer = 0 To settMap.nRaces - 1 Step 1
+        For i As Integer = 0 To UBound(tmpm.Loc) - 1 Step 1
             For j As Integer = i + 1 To UBound(tmpm.Loc) Step 1
-                Dim dR As Double = 2 * (settMap.minPassDist + 1)
+                Dim dR As Double
+                If i < settMap.nRaces Then
+                    dR = 2 * (settMap.minPassDist + 1)
+                Else
+                    dR = 0.7 * settMap.minPassDist + 1
+                End If
                 Do While dR >= 1
                     delList.Clear()
                     For Each k As String In LocBorders(i, j).Keys
@@ -1054,7 +1059,8 @@ Public Class InpenetrableMeshGen
                         For x As Integer = b.minX To b.maxX Step 1
                             For y As Integer = b.minY To b.maxY Step 1
                                 Dim id As Integer = tmpm.board(x, y).locID.Item(0) - 1
-                                If id < settMap.nRaces AndAlso Not nearRLocs.Contains(id) Then
+                                If (i >= settMap.nRaces And Not id = i And Not id = j AndAlso Not nearRLocs.Contains(id)) _
+                                OrElse (i < settMap.nRaces And id < settMap.nRaces AndAlso Not nearRLocs.Contains(id)) Then
                                     If CDbl(SqDist(p.X, p.Y, x, y)) <= minD Then
                                         nearRLocs.Add(id)
                                         If nearRLocs.Count > 1 Then
