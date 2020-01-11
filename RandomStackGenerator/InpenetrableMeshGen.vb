@@ -2,7 +2,7 @@
 Imports System.ComponentModel
 Imports System.Threading.Tasks
 
-Public Class InpenetrableMeshGen
+Public Class ImpenetrableMeshGen
 
     Public ReadOnly minLocationRadiusAtAll As Double
     Public Sub New()
@@ -48,8 +48,8 @@ Public Class InpenetrableMeshGen
         '''<summary>Минимальное расстояние между отрядами</summary>
         Dim minStackToStackDist As Double
 
-
-
+        '''<summary>Примерное количество опыта за убийство всех отрядов в локации</summary>
+        Dim expAmount As Double
     End Structure
     Public Structure SettingsMap
         ''' <summary>Правая граница карты (например, если генерируем карту 24x48, то сюда пишем 23)</summary>
@@ -69,6 +69,9 @@ Public Class InpenetrableMeshGen
         Dim AddGuardsBetweenLocations As Boolean
         ''' <summary>Множитель силы стражей проходов между локациями</summary>
         Dim PassGuardsPowerMultiplicator As Double
+        ''' <summary>Отношение максимального опыта, получаемого за зачистку локации среднего размера, к минимальному.
+        ''' Чем дальше локация от ближайшей столицы и чем ближе к центру, тем больше опыта за ее зачистку</summary>
+        Dim LocExpRatio As Double
     End Structure
 
     Private rndgen As New RndValueGen
@@ -244,9 +247,9 @@ Public Class InpenetrableMeshGen
     ''' Дробная часть определяет шанс округления большую сторону</param>
     ''' <param name="settCommLoc">Настройки для остальных локаций. 
     ''' Значение количества объектов для каждой локации будет умножаться на отношение площади локации к площади средней локации (Pi*AverageRadius^2).
-    ''' Дробная часть определяет шанс округления в большую сторону. В мслучае округления вниз дробная часть добавляется к максимальному количеству шахт</param>
+    ''' Дробная часть определяет шанс округления в большую сторону. В случае округления вниз дробная часть добавляется к максимальному количеству шахт</param>
     ''' <param name="maxGenTime">Максимальное время на операцию расстановки объектов.
-    ''' Она обычно производится меньше чем за секунду, но бывает, что выполняется дольше минуты.
+    ''' Она обычно производится меньше чем за пару секунд, но бывает, что выполняется дольше минуты.
     ''' В этом случае быстрее перегенерировать карту.
     ''' Если не получится с пяти попыток, вернет Nothing</param>
     Public Function UnsymmGen(ByRef settMap As SettingsMap, ByRef settRaceLoc As SettingsLoc, _
@@ -259,9 +262,9 @@ Public Class InpenetrableMeshGen
     ''' Дробная часть определяет шанс округления большую сторону</param>
     ''' <param name="settCommLoc">Настройки для остальных локаций. 
     ''' Значение количества объектов для каждой локации будет умножаться на отношение площади локации к площади средней локации (Pi*AverageRadius^2).
-    ''' Дробная часть определяет шанс округления в большую сторону</param>
+    ''' Дробная часть определяет шанс округления в большую сторону. В случае округления вниз дробная часть добавляется к максимальному количеству шахт</param>
     ''' <param name="maxGenTime">Максимальное время на операцию расстановки объектов.
-    ''' Она обычно производится меньше чем за секунду, но бывает, что выполняется дольше минуты.
+    ''' Она обычно производится меньше чем за пару секунд, но бывает, что выполняется дольше минуты.
     ''' В этом случае быстрее перегенерировать карту.
     ''' Если не получится с пяти попыток, вернет Nothing</param>
     ''' <param name="symmID">ID применяемой операпции симметрии (см. класс SymmetryOperations).
@@ -470,7 +473,7 @@ Public Class InpenetrableMeshGen
          Sub(i As Integer)
              Dim k As Integer = 0
              For j As Integer = 0 To UBound(borderPoints) Step 1
-                 k += SqDist(result.possiblePoints(i), borderPoints(j))
+                 k += result.possiblePoints(i).SqDist(borderPoints(j))
              Next j
              distToBorder(result.possiblePoints(i).X, result.possiblePoints(i).Y) = k
          End Sub)
@@ -482,7 +485,7 @@ Public Class InpenetrableMeshGen
              Dim d As Integer
              For j As Integer = 0 To UBound(result.possiblePoints) Step 1
                  If Not i = j AndAlso Math.Abs(k - distToBorder(result.possiblePoints(j).X, result.possiblePoints(j).Y)) <= dk Then
-                     d = SqDist(result.possiblePoints(i), result.possiblePoints(j))
+                     d = result.possiblePoints(i).SqDist(result.possiblePoints(j))
                      If d >= result.IminimumDist Then t.Add(j)
                  End If
              Next j
@@ -499,7 +502,7 @@ Public Class InpenetrableMeshGen
             minD1 = -1
             For j As Integer = 0 To nRaces - 1 Step 1
                 If Not j = i Then
-                    D = SqDist(RLocs(i).pos, RLocs(j).pos)
+                    D = RLocs(i).pos.SqDist(RLocs(j).pos)
                     If D < prep.IminimumDist Then Return False
                     If minD1 > -1 Then
                         If minD1 > D Then
@@ -657,7 +660,7 @@ Public Class InpenetrableMeshGen
                         Dim pl() As Point = symm.ApplySymm(m.Loc(pID(s)(selectedIDs(s)) - 1).pos, settMap.nRaces, m, 1)
                         If pl.Length = pp.Length Then
                             For i As Integer = 0 To UBound(pl) Step 1
-                                m.board(pp(i).X, pp(i).Y).locID.Add(m.Loc(FindLocIDByPosition(m, pl(i))).ID)
+                                m.board(pp(i).X, pp(i).Y).locID.Add(m.Loc(Location.FindLocIDByPosition(m, pl(i))).ID)
                             Next i
                         ElseIf pl.Length = 1 Then
                             For i As Integer = 0 To UBound(pp) Step 1
@@ -892,13 +895,6 @@ Public Class InpenetrableMeshGen
         calculatedWeights = tmp_calculatedWeights
     End Sub
     ''' <summary>Returns value from 0 To UBound(m.Loc)</summary>
-    Private Function FindLocIDByPosition(ByRef m As Map, ByRef p As Point) As Integer
-        For j As Integer = 0 To UBound(m.Loc) Step 1
-            If Math.Abs(m.Loc(j).pos.X - p.X) < 2 And Math.Abs(m.Loc(j).pos.Y - p.Y) < 2 Then Return j
-            If j = UBound(m.Loc) Then Throw New Exception("Не могу найти локацию по координате")
-        Next j
-        Return -1
-    End Function
 
     Private Sub SetBorders(ByRef m As Map, ByVal settMap As SettingsMap, ByRef Term As TerminationCondition)
 
@@ -1061,7 +1057,7 @@ Public Class InpenetrableMeshGen
                                 Dim id As Integer = tmpm.board(x, y).locID.Item(0) - 1
                                 If (i >= settMap.nRaces And Not id = i And Not id = j AndAlso Not nearRLocs.Contains(id)) _
                                 OrElse (i < settMap.nRaces And id < settMap.nRaces AndAlso Not nearRLocs.Contains(id)) Then
-                                    If CDbl(SqDist(p.X, p.Y, x, y)) <= minD Then
+                                    If CDbl(p.SqDist(x, y)) <= minD Then
                                         nearRLocs.Add(id)
                                         If nearRLocs.Count > 1 Then
                                             x = b.maxX
@@ -1097,7 +1093,7 @@ Public Class InpenetrableMeshGen
                         xsum = CInt(xsum / LocBorders(i, j).Count)
                         ysum = CInt(ysum / LocBorders(i, j).Count)
                         For Each p As Point In LocBorders(i, j).Values
-                            D = SqDist(p.X, p.Y, xsum, ysum)
+                            D = p.SqDist(xsum, ysum)
                             If D < minD Or (D = minD AndAlso rndgen.PRand(0, 1) > 0.5) Then
                                 minD = D
                                 k = p.X & "_" & p.Y
@@ -1126,7 +1122,7 @@ Public Class InpenetrableMeshGen
                              Dim p() As Point = symm.ApplySymm(tmpm.Loc(a(k)).pos, settMap.nRaces, tmpm, 1)
                              ReDim Id(k)(UBound(p))
                              For q As Integer = 0 To UBound(p) Step 1
-                                 Id(k)(q) = FindLocIDByPosition(tmpm, p(q))
+                                 Id(k)(q) = Location.FindLocIDByPosition(tmpm, p(q))
                              Next q
                          End Sub)
                         For r As Integer = 0 To UBound(Id(0)) Step 1
@@ -1169,7 +1165,7 @@ Public Class InpenetrableMeshGen
                      For p1 As Integer = 0 To UBound(pointsslist) - 1 Step 1
                          ids.Add(p1)
                          For p2 As Integer = p1 + 1 To UBound(pointsslist) Step 1
-                             D = SqDist(pointsslist(p1), pointsslist(p2))
+                             D = pointsslist(p1).SqDist(pointsslist(p2))
                              If maxD < D Then maxD = D
                          Next p2
                      Next p1
@@ -1180,7 +1176,7 @@ Public Class InpenetrableMeshGen
                          selected.Add(s)
                          ids.Remove(s)
                          For Each p As Integer In ids
-                             D = SqDist(pointsslist(s), pointsslist(p))
+                             D = pointsslist(s).SqDist(pointsslist(p))
                              If D < settMap.minPassDist * settMap.minPassDist Then delete.Add(p)
                          Next p
                          For Each p As Integer In delete
@@ -1244,7 +1240,7 @@ Public Class InpenetrableMeshGen
                             For y2 As Integer = 0 To m.ySize Step 1
                                 For x2 As Integer = 0 To m.xSize Step 1
                                     If conn2(x2, y2) Then
-                                        D = SqDist(x1, y1, x2, y2)
+                                        D = New Point(x1, y1).SqDist(x2, y2)
                                         If minD > D Then
                                             minD = D
                                             p1 = New Point(x1, y1)
@@ -1390,14 +1386,6 @@ Public Class InpenetrableMeshGen
         a = rndgen.PRand(0, Math.PI)
         r = Math.Max(r, minLocationRadiusAtAll)
         Return New Location(New Point(0, 0), r * e, r / e, a, id)
-    End Function
-    Friend Function SqDist(ByRef p1 As Point, ByRef p2 As Point) As Integer
-        Return SqDist(p1.X, p1.Y, p2.X, p2.Y)
-    End Function
-    Friend Function SqDist(ByRef x1 As Integer, ByRef y1 As Integer, ByRef x2 As Integer, ByRef y2 As Integer) As Integer
-        Dim dx As Integer = x1 - x2
-        Dim dy As Integer = y1 - y2
-        Return dx * dx + dy * dy
     End Function
 
     Private Sub PlaceActiveObjects(ByRef m As Map, ByVal settMap As SettingsMap, _
@@ -1621,7 +1609,12 @@ Public Class InpenetrableMeshGen
             output = bestOutput
         End If
         For i As Integer = 0 To UBound(output) Step 1
-            output(i) = New Point(output(i).X + dx, output(i).Y + dy)
+            If Not IsNothing(output(i)) Then
+                output(i) = New Point(output(i).X + dx, output(i).Y + dy)
+            Else
+                ReDim Preserve output(i - 1)
+                Exit For
+            End If
         Next i
     End Sub
     Private Sub PlaceObjRow(ByRef objIDs() As Integer, ByRef n As Integer, _
@@ -1663,15 +1656,15 @@ Public Class InpenetrableMeshGen
                     pointsList(np) = New Point(x, y)
                     pID.Add(np)
                     If NearWith(n) > -1 Then
-                        R = Math.Sqrt(SqDist(output(NearWith(n)), pointsList(np)))
+                        R = output(NearWith(n)).Dist(pointsList(np))
                         Weight(np) = comm.Gauss(R, desR, sigma)
                     ElseIf objIDs(n) = 1 Then
-                        R = Math.Sqrt(SqDist(LocCenter, pointsList(np)))
+                        R = LocCenter.Dist(pointsList(np))
                         Weight(np) = comm.Gauss(R, desR, sigma)
                     Else
                         Weight(np) = 1
                         For i As Integer = 0 To n - 1 Step 1
-                            R = Math.Sqrt(SqDist(output(i), pointsList(np)))
+                            R = output(i).Dist(pointsList(np))
                             Weight(np) *= (10 + R)
                         Next i
                     End If
@@ -1893,7 +1886,7 @@ Public Class InpenetrableMeshGen
             For i As Integer = 0 To UBound(v) Step 1
                 Rsum = 0
                 For n As Integer = 1 To minN Step 1
-                    Rsum += SqDist(v(i)(n), v(i)(0))
+                    Rsum += v(i)(n).SqDist(v(i)(0))
                 Next n
                 minRsum = Math.Min(minRsum, Rsum)
                 maxRsum = Math.Max(maxRsum, Rsum)
@@ -2667,6 +2660,14 @@ Public Class Location
         Return New Location(pos, Asize, Bsize, alpha, ID, IsObtainedBySymmery)
     End Function
 
+    Friend Shared Function FindLocIDByPosition(ByRef m As Map, ByRef p As Point) As Integer
+        For j As Integer = 0 To UBound(m.Loc) Step 1
+            If Math.Abs(m.Loc(j).pos.X - p.X) < 2 And Math.Abs(m.Loc(j).pos.Y - p.Y) < 2 Then Return j
+            If j = UBound(m.Loc) Then Throw New Exception("Не могу найти локацию по координате")
+        Next j
+        Return -1
+    End Function
+
     Private Sub CosSinCalc()
         cos = Math.Cos(alpha)
         sin = Math.Sin(alpha)
@@ -3035,27 +3036,18 @@ Public Class Map
         ''' <summary>Для объектов с одинаковым ID выставляются одинаковые параметры генерации отрядов и лута или одинаковый класс.
         ''' При необходимости выставляются одинаковые отряды и лут.</summary>
         Dim groupID As Integer
+        ''' <summary>Расы, допустимые для объекта, занимающего эту клетку</summary>
+        Dim objRace As List(Of Integer)
+        ''' <summary>Расы, допустимые для воинов отряда, занимающего эту клетку</summary>
+        Dim stackRace As List(Of Integer)
     End Structure
 End Class
 
 Public Class StackLocationsGen
 
-    Private genmap As New InpenetrableMeshGen
+    Private genmap As New ImpenetrableMeshGen
     Private symm As New SymmetryOperations
     Private comm As New Common
-
-    Private Function UnitExpKilledToExpBar(ByRef value As Double) As Double
-        Return 8.4639 * value - 72.748
-    End Function
-    Private Function UnitExpKilledToExpBar(ByRef value As Integer) As Integer
-        Return CInt(UnitExpKilledToExpBar(CDbl(value)))
-    End Function
-    Private Function UnitExpBarToExpKilled(ByRef value As Double) As Double
-        Return 0.1178 * value + 8.8477
-    End Function
-    Private Function UnitExpBarToExpKilled(ByRef value As Integer) As Integer
-        Return CInt(UnitExpBarToExpKilled(CDbl(value)))
-    End Function
 
     ''' <summary>Расставляет локации для отрядов на карту с подготовленную в InpenetrableMeshGen
     ''' Для руин и городов выставляет локации с параметрами отрядов там же, где и хранится objectID.
@@ -3070,9 +3062,9 @@ Public Class StackLocationsGen
     ''' <param name="maxGenTime">Максимальное время на операцию расстановки стражей проходов между локациями.
     ''' Она обычно производится меньше чем за секунду, но бывает, что выполняется дольше минуты.
     ''' В этом случае быстрее перегенерировать карту</param>
-    Public Function Gen(ByRef m As Map, ByVal settMap As InpenetrableMeshGen.SettingsMap, _
-                        ByVal settRaceLoc As InpenetrableMeshGen.SettingsLoc, _
-                        ByVal settCommLoc As InpenetrableMeshGen.SettingsLoc, _
+    Public Function Gen(ByRef m As Map, ByVal settMap As ImpenetrableMeshGen.SettingsMap, _
+                        ByVal settRaceLoc As ImpenetrableMeshGen.SettingsLoc, _
+                        ByVal settCommLoc As ImpenetrableMeshGen.SettingsLoc, _
                         ByRef maxGenTime As Integer) As Boolean
         Dim tmpm As Map = m
         Dim GroupID As Integer
@@ -3156,7 +3148,7 @@ Public Class StackLocationsGen
                     For j As Integer = t.minY To t.maxY Step 1
                         For i As Integer = t.minX To t.maxX Step 1
                             If m.board(i, j).GuardLoc And (Not x = i Or Not y = j) Then
-                                Dim d As Double = genmap.SqDist(x, y, i, j)
+                                Dim d As Double = New Point(x, y).SqDist(i, j)
                                 If m.board(i, j).locID.Item(0) <= settMap.nRaces Then
                                     d2 = mDistR
                                 Else
@@ -3198,7 +3190,15 @@ Public Class StackLocationsGen
         Dim term As New TerminationCondition(maxGenTime)
         If settMap.AddGuardsBetweenLocations Then
             Dim guards(UBound(m.Loc))()() As Point
-            Parallel.For(0, m.Loc.Length, _
+
+            'For i As Integer = 0 To m.Loc.Length - 1 Step 1
+            '    If Not tmpm.Loc(i).IsObtainedBySymmery Then
+            '        If Not term.ExitFromLoops Then
+            '            guards(i) = PlasePassesGuards(tmpm, settMap, tmpm.Loc(i).ID, term)
+            '        End If
+            '    End If
+            'Next i
+            Parallel.For(0, m.Loc.Length,
              Sub(i As Integer)
                  If Not tmpm.Loc(i).IsObtainedBySymmery Then
                      If term.ExitFromLoops Then Exit Sub
@@ -3235,8 +3235,8 @@ Public Class StackLocationsGen
         Return True
     End Function
 
-    Private Function FillLocation(ByRef m As Map, ByRef settMap As InpenetrableMeshGen.SettingsMap, _
-                                  ByRef settLoc As InpenetrableMeshGen.SettingsLoc, ByRef LocID As Integer) As List(Of Point)
+    Private Function FillLocation(ByRef m As Map, ByRef settMap As ImpenetrableMeshGen.SettingsMap, _
+                                  ByRef settLoc As ImpenetrableMeshGen.SettingsLoc, ByRef LocID As Integer) As List(Of Point)
 
         Dim b As New Location.Borders With {.minX = Integer.MaxValue, .maxX = Integer.MinValue, _
                                             .miny = Integer.MaxValue, .maxy = Integer.MinValue}
@@ -3294,7 +3294,7 @@ Public Class StackLocationsGen
                     For j As Integer = t.minY To t.maxY Step 1
                         For i As Integer = t.minX To t.maxX Step 1
                             If m.board(i + LPos.X, j + LPos.Y).GuardLoc _
-                            AndAlso genmap.SqDist(x, y, i, j) < settLoc.minStackToStackDist * settLoc.minStackToStackDist Then
+                            AndAlso New Point(x, y).SqDist(i, j) < settLoc.minStackToStackDist * settLoc.minStackToStackDist Then
                                 isPossiblePoint(x, y) = False
                             End If
                         Next i
@@ -3303,7 +3303,7 @@ Public Class StackLocationsGen
             Next x
         Next y
 
-        Dim StackPos(20) As List(Of Point)
+        Dim StackPos(Math.Max(24, Environment.ProcessorCount * 6) - 1) As List(Of Point)
         Dim rms(UBound(StackPos)) As Double
         Dim r(), rcut, averR As Double
         Dim tryagain As Boolean
@@ -3321,7 +3321,7 @@ Public Class StackLocationsGen
                     For p As Integer = 0 To StackPos(i).Count - 1 Step 1
                         For q As Integer = 0 To StackPos(i).Count - 1 Step 1
                             If Not p = q Then
-                                Dim d As Integer = genmap.SqDist(StackPos(i)(p), StackPos(i)(q))
+                                Dim d As Integer = StackPos(i)(p).SqDist(StackPos(i)(q))
                                 If d <= rcut * rcut Then r(p) += Math.Sqrt(d)
                             End If
                         Next q
@@ -3355,7 +3355,7 @@ Public Class StackLocationsGen
         Next p
         Return res
     End Function
-    Private Function PlaceStacks(ByRef isPossiblePoint(,) As Boolean, ByRef settLoc As InpenetrableMeshGen.SettingsLoc) As List(Of Point)
+    Private Function PlaceStacks(ByRef isPossiblePoint(,) As Boolean, ByRef settLoc As ImpenetrableMeshGen.SettingsLoc) As List(Of Point)
         Dim tolerance As Integer = CInt(Math.Ceiling(settLoc.minStackToStackDist))
         Dim minDistSq As Integer = CInt(Math.Ceiling(settLoc.minStackToStackDist * settLoc.minStackToStackDist))
         Dim xSize As Integer = UBound(isPossiblePoint, 1)
@@ -3386,7 +3386,7 @@ Public Class StackLocationsGen
             Dim t As Location.Borders = genmap.NearestXY(PossiblePoints(r).X, PossiblePoints(r).Y, xSize, ySize, tolerance)
             For j As Integer = t.minY To t.maxY Step 1
                 For i As Integer = t.minX To t.maxX Step 1
-                    If PosPID(i, j) > -1 AndAlso genmap.SqDist(PossiblePoints(r).X, PossiblePoints(r).Y, i, j) < minDistSq Then
+                    If PosPID(i, j) > -1 AndAlso PossiblePoints(r).SqDist(i, j) < minDistSq Then
                         IDs.Remove(PosPID(i, j))
                         PosPID(i, j) = -1
                     End If
@@ -3396,7 +3396,7 @@ Public Class StackLocationsGen
         Return output
     End Function
 
-    Private Function PlasePassesGuards(ByRef m As Map, ByRef settMap As InpenetrableMeshGen.SettingsMap, _
+    Private Function PlasePassesGuards(ByRef m As Map, ByRef settMap As ImpenetrableMeshGen.SettingsMap, _
                                        ByRef LocID As Integer, ByRef term As TerminationCondition) As Point()()
 
         Dim passes, gag As New List(Of String)
@@ -3430,11 +3430,22 @@ Public Class StackLocationsGen
             For x As Integer = 0 To m.xSize Step 1
                 If Not m.board(x, y).isBorder And Not m.board(x, y).isAttended Then
                     Dim s As String = x & "_" & y
-                    If Not gag.Contains(s) And Not passes.Contains(s) Then FreeInClosedState(x, y) = True
+                    If Not gag.Contains(s) AndAlso Not passes.Contains(s) Then FreeInClosedState(x, y) = True
                 End If
             Next x
         Next y
         gag = Nothing
+        For Each s As String In passes
+            Dim splited() As String = s.Split(CChar("_"))
+            Dim p As New Point(CInt(splited(0)), CInt(splited(1)))
+            Dim b As Location.Borders = genmap.NearestXY(p, m, 1)
+            For j As Integer = b.minY To b.maxY Step 1
+                For i As Integer = b.minX To b.maxX Step 1
+                    FreeInClosedState(i, j) = False
+                Next i
+            Next j
+        Next s
+
 
         Dim free(m.xSize, m.ySize), connected()(,) As Boolean
         For Each k As String In passes
@@ -3448,6 +3459,7 @@ Public Class StackLocationsGen
             Dim out(UBound(connected))() As Point
             For j As Integer = 0 To UBound(connected) Step 1
                 T = New TerminationCondition(term.maxTime)
+                'нужно передавать tfree, а освобождать не только connected, но и те, что рядом с ним
                 out(j) = HandlePath(m, connected(j), FreeInClosedState, NConnClosed, T)
                 If T.ExitFromLoops Then
                     term.ExitFromLoops = True
@@ -3466,38 +3478,43 @@ Public Class StackLocationsGen
         For y As Integer = 0 To m.ySize Step 1
             For x As Integer = 0 To m.xSize Step 1
                 If path(x, y) Then
-                    opened(x, y) = True
                     n += 1
+                    Dim b As Location.Borders = genmap.NearestXY(x, y, m.xSize, m.ySize, 1)
+                    For j As Integer = b.minY To b.maxY Step 1
+                        For i As Integer = b.minX To b.maxX Step 1
+                            If Not m.board(i, j).isBorder And Not m.board(i, j).isAttended Then opened(i, j) = True
+                        Next i
+                    Next j
                 End If
             Next x
         Next y
-        Dim pointsLuist(n) As Point
+        Dim pointsList(n) As Point
         Dim IDs As New List(Of Integer)
         n = -1
         For y As Integer = 0 To m.ySize Step 1
             For x As Integer = 0 To m.xSize Step 1
                 If path(x, y) Then
                     n += 1
-                    pointsLuist(n) = New Point(x, y)
+                    pointsList(n) = New Point(x, y)
                     IDs.Add(n)
                 End If
             Next x
         Next y
 
         Dim output(0) As Point
-        For k As Integer = 0 To UBound(pointsLuist) Step 1
+        For k As Integer = 0 To UBound(pointsList) Step 1
             term.CheckTime()
             If term.ExitFromLoops Then Return Nothing
             ReDim output(k)
-            Call PlaceGuardLoc(-1, pointsLuist, IDs, -1, 4, opened, NConnClosed, path, output)
+            Call PlaceGuardLoc(-1, pointsList, IDs, -1, 4, opened, NConnClosed, output)
             If Not IsNothing(output(0)) Then Exit For
         Next k
         If IsNothing(output(0)) Then
-            For k As Integer = 0 To UBound(pointsLuist) Step 1
+            For k As Integer = 0 To UBound(pointsList) Step 1
                 term.CheckTime()
                 If term.ExitFromLoops Then Return Nothing
                 ReDim output(k)
-                Call PlaceGuardLoc(-1, pointsLuist, IDs, -1, 0, opened, NConnClosed, path, output)
+                Call PlaceGuardLoc(-1, pointsList, IDs, -1, 0, opened, NConnClosed, output)
                 If Not IsNothing(output(0)) Then Exit For
             Next k
         End If
@@ -3521,20 +3538,20 @@ Public Class StackLocationsGen
     End Function
     Private Sub PlaceGuardLoc(ByRef n As Integer, ByRef pointsList() As Point, ByRef IDs As List(Of Integer), _
                               ByRef selected As Integer, ByRef minSqDist As Integer, ByRef opened(,) As Boolean, _
-                              ByRef NConnClosed As Integer, ByRef path(,) As Boolean, ByRef output() As Point)
+                              ByRef NConnClosed As Integer, ByRef output() As Point)
         If n > -1 Then output(n) = pointsList(selected)
         If n < UBound(output) Then
             Dim idsBak As New List(Of Integer)
             For Each i As Integer In IDs
                 If Not i = selected Then
-                    If minSqDist = 0 OrElse selected < 0 OrElse genmap.SqDist(pointsList(i), pointsList(selected)) >= minSqDist Then
+                    If minSqDist = 0 OrElse selected < 0 OrElse pointsList(i).SqDist(pointsList(selected)) >= minSqDist Then
                         idsBak.Add(i)
                     End If
                 End If
             Next i
             Do While idsBak.Count > 0
                 Dim sel As Integer = comm.RandomSelection(idsBak, False)
-                Call PlaceGuardLoc(n + 1, pointsList, idsBak, sel, minSqDist, opened, NConnClosed, path, output)
+                Call PlaceGuardLoc(n + 1, pointsList, idsBak, sel, minSqDist, opened, NConnClosed, output)
                 If IsNothing(output(n + 1)) Then
                     idsBak.Remove(sel)
                 Else
@@ -3548,7 +3565,7 @@ Public Class StackLocationsGen
                 Dim b As Location.Borders = genmap.NearestXY(p.X, p.Y, UBound(tp, 1), UBound(tp, 2), 1)
                 For j As Integer = b.minY To b.maxY Step 1
                     For i As Integer = b.minX To b.maxX Step 1
-                        If tp(i, j) And path(i, j) Then tp(i, j) = False
+                        tp(i, j) = False
                     Next i
                 Next j
             Next p
@@ -3560,9 +3577,54 @@ Public Class StackLocationsGen
 End Class
 
 Public Class Point
-    Public X, Y As Integer
+    ''' <summary>Координата по X</summary>
+    Public X As Integer
+    ''' <summary>Координата по Y</summary>
+    Public Y As Integer
+    ''' <param name="x">Координата по X</param>
+    ''' <param name="y">Координата по Y</param>
     Public Sub New(ByRef X As Integer, ByRef Y As Integer)
         Me.X = X
         Me.Y = Y
     End Sub
+
+    ''' <summary>Возвращает квадрат расстояния до точки</summary>
+    ''' <param name="p">Координаты точки</param>
+    Public Function SqDist(ByRef p As Point) As Integer
+        Return SqDist(p.X, p.Y)
+    End Function
+    ''' <summary>Возвращает квадрат расстояния до точки</summary>
+    ''' <param name="x">Координата по X</param>
+    ''' <param name="y">Координата по Y</param>
+    Public Function SqDist(ByRef x As Integer, ByRef y As Integer) As Integer
+        Dim dx As Integer = Me.X - x
+        Dim dy As Integer = Me.Y - y
+        Return dx * dx + dy * dy
+    End Function
+    ''' <summary>Возвращает квадрат расстояния до точки</summary>
+    ''' <param name="x">Координата по X</param>
+    ''' <param name="y">Координата по Y</param>
+    Public Function SqDist(ByRef x As Double, ByRef y As Double) As Double
+        Dim dx As Double = CDbl(Me.X) - x
+        Dim dy As Double = CDbl(Me.Y) - y
+        Return dx * dx + dy * dy
+    End Function
+    ''' <summary>Возвращает расстояние до точки</summary>
+    ''' <param name="p">Координаты точки</param>
+    Public Function Dist(ByRef p As Point) As Double
+        Return Dist(p.X, p.Y)
+    End Function
+    ''' <summary>Возвращает расстояние до точки</summary>
+    ''' <param name="x">Координата по X</param>
+    ''' <param name="y">Координата по Y</param>
+    Public Function Dist(ByRef x As Integer, ByRef y As Integer) As Double
+        Return Math.Sqrt(SqDist(x, y))
+    End Function
+    ''' <summary>Возвращает расстояние до точки</summary>
+    ''' <param name="x">Координата по X</param>
+    ''' <param name="y">Координата по Y</param>
+    Public Function Dist(ByRef x As Double, ByRef y As Double) As Double
+        Return Math.Sqrt(SqDist(x, y))
+    End Function
+
 End Class

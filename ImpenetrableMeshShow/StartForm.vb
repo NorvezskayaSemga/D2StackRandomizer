@@ -2,10 +2,12 @@
 
 Public Class StartForm
 
-    Dim genmesh As New InpenetrableMeshGen
+    Dim genmesh As New ImpenetrableMeshGen
     Dim zoom As New ArrayZoom
     Dim draw As New ColorSelector
     Dim symm As New SymmetryOperations
+    Dim stackstats As New StackPowerGen
+    Dim racegen As New RaceGen
 
     Private Sub GenButton_Click() Handles GenButton.Click
 
@@ -19,7 +21,7 @@ Public Class StartForm
             races = 4
         End If
 
-        Dim sM As InpenetrableMeshGen.SettingsMap
+        Dim sM As ImpenetrableMeshGen.SettingsMap
         sM.xSize = 95
         sM.ySize = 95
         sM.RaceLocsDistTolerance = 0.2
@@ -27,36 +29,42 @@ Public Class StartForm
         sM.minPassDist = 7
         sM.minPassWidth = 1.1
         sM.AddGuardsBetweenLocations = True
-        Dim sR As InpenetrableMeshGen.SettingsLoc
+        sM.LocExpRatio = 2
+        sM.PassGuardsPowerMultiplicator = 2
+
+        Dim sR As ImpenetrableMeshGen.SettingsLoc
         sR.AverageRadius = 20
         sR.maxEccentricityDispersion = 0.15
         sR.maxRadiusDispersion = 0
         sR.maxGoldMines = 2
-        sR.maxManaSources = 1
-        sR.maxCities = 0
-        sR.maxMages = 0
+        sR.maxManaSources = 3
+        sR.maxCities = 1
+        sR.maxMages = 1
         sR.maxMercenaries = 1
         sR.maxRuins = 1
-        sR.maxTrainers = 0
+        sR.maxTrainers = 1
         sR.maxVendors = 1
         sR.minStackToStackDist = 4
-        Dim sC As InpenetrableMeshGen.SettingsLoc
+        sR.expAmount = 3000
+
+        Dim sC As ImpenetrableMeshGen.SettingsLoc
         sC.AverageRadius = 15
         sC.maxEccentricityDispersion = 0.4
         sC.maxRadiusDispersion = 0.3
 
-        sC.maxGoldMines = 0.6
-        sC.maxManaSources = 0.6
-        sC.maxCities = 0.01
-        sC.maxMages = 0
-        sC.maxMercenaries = 0
-        sC.maxRuins = 0.5
+        sC.maxGoldMines = 1.6
+        sC.maxManaSources = 1.6
+        sC.maxCities = 0
+        sC.maxMages = 1
+        sC.maxMercenaries = 1
+        sC.maxRuins = 2
         sC.maxTrainers = 0
-        sC.maxVendors = 0.05
+        sC.maxVendors = 1
 
         sC.minStackToStackDist = 5
+        sC.expAmount = 2000
 
-        Dim gt As Integer = 3000
+        Dim gt As Integer = 5000
 again:
         If Not SymmCheckBox.Checked Then
             grid = genmesh.UnsymmGen(sM, sR, sC, gt)
@@ -74,6 +82,9 @@ again:
         End If
 
         If Not genmesh.TestMap(grid, True) Then Exit Sub
+
+        Dim ststats As Dictionary(Of Integer, RandStack.DesiredStats) = stackstats.Gen(grid, sM, sR, sC)
+        Call racegen.Gen(grid, ststats, Nothing)
 
         'запоминаем набор точек с наибольшим n
         'произвед 1/r - стат вес для nearwith = -1
@@ -103,7 +114,7 @@ again:
                     t(x, y) = 185
                 End If
                 If grid.board(x, y).isBorder Then
-                    t(x, y) = grid.board(x, y).locID.Item(0)
+                    t(x, y) = grid.board(x, y).objRace.Item(0)
                 End If
             Next y
         Next x
