@@ -38,11 +38,11 @@ Public Class StartForm
         sR.maxRadiusDispersion = 0
         sR.maxGoldMines = 2
         sR.maxManaSources = 3
-        sR.maxCities = 1
+        sR.maxCities = 0
         sR.maxMages = 1
-        sR.maxMercenaries = 1
-        sR.maxRuins = 1
-        sR.maxTrainers = 1
+        sR.maxMercenaries = 0
+        sR.maxRuins = 2
+        sR.maxTrainers = 0
         sR.maxVendors = 1
         sR.minStackToStackDist = 4
         sR.expAmount = 3000
@@ -54,12 +54,12 @@ Public Class StartForm
 
         sC.maxGoldMines = 1.6
         sC.maxManaSources = 1.6
-        sC.maxCities = 0
-        sC.maxMages = 1
-        sC.maxMercenaries = 1
+        sC.maxCities = 0.3
+        sC.maxMages = 0.1
+        sC.maxMercenaries = 0.1
         sC.maxRuins = 2
         sC.maxTrainers = 0
-        sC.maxVendors = 1
+        sC.maxVendors = 0.2
 
         sC.minStackToStackDist = 5
         sC.expAmount = 2000

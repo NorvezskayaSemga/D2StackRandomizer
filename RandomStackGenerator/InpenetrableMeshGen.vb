@@ -3040,6 +3040,8 @@ Public Class Map
         Dim objRace As List(Of Integer)
         ''' <summary>Расы, допустимые для воинов отряда, занимающего эту клетку</summary>
         Dim stackRace As List(Of Integer)
+        ''' <summary>True, если на клетке вода</summary>
+        Dim isWater As Boolean
     End Structure
 End Class
 

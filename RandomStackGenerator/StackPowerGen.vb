@@ -275,6 +275,7 @@ Public Class RaceGen
     Dim comm As New Common
     Dim rndgen As New RndValueGen
     Dim symm As New SymmetryOperations
+    Dim imp As New ImpenetrableMeshGen
 
     Private LocRaces() As String = New String() {"H:2:H,A,H+A,D,D+A,W", _
                                                  "U:2:U,A,D,D+A,W", _
@@ -323,6 +324,18 @@ Public Class RaceGen
         Dim nRaces As Integer = RacesAmount(m)
         Dim LocR() As Integer = GenLocRace(m, nRaces, PlayableRaces)
         Call SetLocRaceToCells(m, LocR, nRaces)
+        For y As Integer = 0 To m.ySize Step 1
+            For x As Integer = 0 To m.xSize Step 1
+                If m.board(x, y).GuardLoc Or m.board(x, y).PassGuardLoc Then
+                    Dim group As Integer = m.board(x, y).groupID
+                    If guards.Item(group).Race.Count = 0 Then
+                        For Each r As Integer In m.board(x, y).stackRace
+                            guards.Item(group).Race.Add(r)
+                        Next r
+                    End If
+                End If
+            Next x
+        Next y
     End Sub
 
     Private Function RacesAmount(ByRef m As Map) As Integer
@@ -359,7 +372,6 @@ Public Class RaceGen
         For i As Integer = 0 To UBound(LRaces) Step 1
             ids.Add(i)
         Next i
-        Dim imp As New ImpenetrableMeshGen
         For i As Integer = nRaces To UBound(LocR) Step 1
             If Not m.Loc(i).IsObtainedBySymmery Then
                 Dim R As Integer = LRaces(comm.RandomSelection(ids, LRacesWeight, True))
@@ -386,13 +398,14 @@ Public Class RaceGen
             races(i) = New List(Of Integer)
         Next i
         Dim rO, rS As New List(Of Integer)
+        Dim added As New List(Of String)
 
         For y As Integer = 0 To m.ySize Step 1
             For x As Integer = 0 To m.xSize Step 1
-                'нужно применять симметрию
                 If Not m.Loc(m.board(x, y).locID.Item(0) - 1).IsObtainedBySymmery And IsNothing(m.board(x, y).stackRace) Then
                     rO.Clear()
                     rS.Clear()
+                    added.Clear()
                     For Each r As Integer In m.board(x, y).locID
                         rO.Add(LocR(r - 1))
                     Next r
@@ -400,11 +413,32 @@ Public Class RaceGen
                     If m.board(x, y).locID.Item(0) > nRaces Then
                         For Each r As Integer In rO
                             For i As Integer = 0 To UBound(SRaces(r)) Step 1
-                                t += 1
-                                races(t).Clear()
+                                Dim str As String = ""
                                 For Each item As Integer In SRaces(r)(i)
-                                    races(t).Add(item)
+                                    str &= item & "_"
                                 Next item
+                                If str = "11_" AndAlso Not added.Contains(str) Then
+                                    Dim ok As Boolean = True
+                                    Dim b As Location.Borders = imp.NearestXY(x, y, m.xSize, m.ySize, 1)
+                                    For q As Integer = b.minY To b.maxY Step 1
+                                        For p As Integer = b.minX To b.maxX Step 1
+                                            If Not m.board(p, q).isWater Then
+                                                ok = False
+                                                p = b.maxX
+                                                q = b.maxY
+                                            End If
+                                        Next p
+                                    Next q
+                                    If Not ok Then added.Add(str)
+                                End If
+                                If Not added.Contains(str) Then
+                                    t += 1
+                                    races(t).Clear()
+                                    For Each item As Integer In SRaces(r)(i)
+                                        races(t).Add(item)
+                                    Next item
+                                    added.Add(str)
+                                End If
                             Next i
                         Next r
                     Else
@@ -442,7 +476,7 @@ Public Class RaceGen
             For x As Integer = 0 To m.xSize Step 1
                 m.board(x, y).objRace = New List(Of Integer)
                 For Each r As Integer In m.board(x, y).locID
-                    m.board(x, y).objRace.Add(LocR(r - 1))
+                    If Not m.board(x, y).objRace.Contains(LocR(r - 1)) Then m.board(x, y).objRace.Add(LocR(r - 1))
                 Next r
             Next x
         Next y
