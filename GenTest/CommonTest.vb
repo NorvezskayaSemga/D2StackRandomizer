@@ -83,7 +83,7 @@ Public Class CommonTest
         expected(3).Race.AddRange(New Integer() {1})
         expected(4).Race.AddRange(New Integer() {1})
 
-        Dim actual() As RandStack.DesiredStats = target.ParseDesiredStackStatsFile("%testfile%")
+        Dim actual() As RandStack.DesiredStats = target.ParseDesiredStackStatsFile(RandomStackGenerator.My.Resources.testFileKeyword)
 
         If expected.Length = actual.Length Then
             For i As Integer = 0 To UBound(expected) Step 1
@@ -118,7 +118,7 @@ Public Class CommonTest
     Public Sub ParseDesiredStackStatsFileTest2()
         Dim target As Common = New Common()
         Dim ok As Boolean = True
-        Dim path As String = "%testfile%"
+        Dim path As String = RandomStackGenerator.My.Resources.testFileKeyword
         Dim expected As String = _
         "ID location1 AverageExpBar 1000 ExpStackKilled 200 Race U StackSize 1 MaxGiants 0 MeleeCount 2 LootCost 0 CItemsExclude False NItemsExclude False" & vbNewLine & _
         "ID testloc2 AverageExpBar 100 ExpStackKilled 200 Race U+D StackSize 3 MaxGiants 1 MeleeCount 0 LootCost 3400 CItemsExclude False NItemsExclude False" & vbNewLine & _
@@ -229,7 +229,7 @@ Public Class CommonTest
                 actual(i) = False
             Next i
             For i As Integer = 0 To 10 * expected.Length Step 1
-                actual(target.RandomSelection(IDs, {fullStatsArray}, {av}, 0.1, serial)) = True
+                actual(target.RandomSelection(IDs, {fullStatsArray}, {av}, RandomStackGenerator.My.Resources.defaultSigma, serial)) = True
             Next i
             For i As Integer = 0 To UBound(expected) Step 1
                 If Not actual(i) = expected(i) Then ok = False

@@ -212,6 +212,15 @@ Namespace My.Resources
         End Property
         
         '''<summary>
+        '''  Looks up a localized string similar to %default%.
+        '''</summary>
+        Friend ReadOnly Property readDefaultFileKeyword() As String
+            Get
+                Return ResourceManager.GetString("readDefaultFileKeyword", resourceCulture)
+            End Get
+        End Property
+        
+        '''<summary>
         '''  Looks up a localized string similar to 1.
         '''</summary>
         Friend ReadOnly Property smallUnitsExpMultiplicator() As String
@@ -229,6 +238,15 @@ Namespace My.Resources
         Friend ReadOnly Property StackStatsFields() As String
             Get
                 Return ResourceManager.GetString("StackStatsFields", resourceCulture)
+            End Get
+        End Property
+        
+        '''<summary>
+        '''  Looks up a localized string similar to %testfile%.
+        '''</summary>
+        Friend ReadOnly Property testFileKeyword() As String
+            Get
+                Return ResourceManager.GetString("testFileKeyword", resourceCulture)
             End Get
         End Property
         

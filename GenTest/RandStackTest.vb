@@ -53,7 +53,10 @@ Public Class RandStackTest
     '
 #End Region
 
-    Dim excludeList() As String = New String() {"%default%", "%default%"}
+    Dim excludeList() As String = New String() {RandomStackGenerator.My.Resources.readDefaultFileKeyword, _
+                                                RandomStackGenerator.My.Resources.readDefaultFileKeyword}
+    Dim customRaceList() As String = New String() {RandomStackGenerator.My.Resources.readDefaultFileKeyword, _
+                                                   RandomStackGenerator.My.Resources.readDefaultFileKeyword}
     Dim UnitsList() As RandStack.Unit = Nothing
     Dim ItemsList() As RandStack.Item = Nothing
     Private Sub ReadTestUnits()
@@ -103,7 +106,7 @@ Public Class RandStackTest
     Public Sub RndPosTest()
         If IsNothing(UnitsList) Then Call ReadTestUnits()
         If IsNothing(ItemsList) Then Call ReadTestItems()
-        Dim target As RandStack_Accessor = New RandStack_Accessor(UnitsList, ItemsList, excludeList, False)
+        Dim target As RandStack_Accessor = New RandStack_Accessor(UnitsList, ItemsList, excludeList, customRaceList, False)
 
         Dim serial_ok, parallel_ok As Boolean
         serial_ok = True
@@ -210,7 +213,7 @@ Public Class RandStackTest
     Public Sub GenTest1()
         If IsNothing(UnitsList) Then Call ReadTestUnits()
         If IsNothing(ItemsList) Then Call ReadTestItems()
-        Dim target As RandStack_Accessor = New RandStack_Accessor(UnitsList, ItemsList, excludeList, False)
+        Dim target As RandStack_Accessor = New RandStack_Accessor(UnitsList, ItemsList, excludeList, customRaceList, False)
 
         Dim ok As Boolean = True
 
@@ -301,7 +304,7 @@ exittest:
     Public Sub StackStatsTest1()
         If IsNothing(UnitsList) Then Call ReadTestUnits()
         If IsNothing(ItemsList) Then Call ReadTestItems()
-        Dim target As RandStack_Accessor = New RandStack_Accessor(UnitsList, ItemsList, excludeList, False)
+        Dim target As RandStack_Accessor = New RandStack_Accessor(UnitsList, ItemsList, excludeList, customRaceList, False)
         Dim s As New RandStack.Stack With {.pos = New String() {"G000UU5356", "G000UU0174", "G005UU6111", _
                                                                 "G000000000", "G000UU0162", "G000UU0162"}, _
                                            .items = New List(Of String)}
@@ -340,7 +343,7 @@ exittest:
     Public Sub ItemsGenTest()
         If IsNothing(UnitsList) Then Call ReadTestUnits()
         If IsNothing(ItemsList) Then Call ReadTestItems()
-        Dim target As RandStack_Accessor = New RandStack_Accessor(UnitsList, ItemsList, excludeList, False)
+        Dim target As RandStack_Accessor = New RandStack_Accessor(UnitsList, ItemsList, excludeList, customRaceList, False)
         Dim ok As Boolean = True
         Dim cost, sum As Integer
         Dim genitems As List(Of String)
@@ -369,7 +372,7 @@ exittest:
     Public Sub GenTest2()
         If IsNothing(UnitsList) Then Call ReadTestUnits()
         If IsNothing(ItemsList) Then Call ReadTestItems()
-        Dim target As RandStack_Accessor = New RandStack_Accessor(UnitsList, ItemsList, excludeList, False)
+        Dim target As RandStack_Accessor = New RandStack_Accessor(UnitsList, ItemsList, excludeList, customRaceList, False)
 
         Dim ok As Boolean = True
 
@@ -398,7 +401,7 @@ exittest:
     Public Sub GenGagTest()
         If IsNothing(UnitsList) Then Call ReadTestUnits()
         If IsNothing(ItemsList) Then Call ReadTestItems()
-        Dim target As RandStack_Accessor = New RandStack_Accessor(UnitsList, ItemsList, excludeList, False)
+        Dim target As RandStack_Accessor = New RandStack_Accessor(UnitsList, ItemsList, excludeList, customRaceList, False)
 
         Dim ok As Boolean = True
         Dim UnapropriateStacks() As RandStack.Stack = New RandStack.Stack() { _
@@ -431,7 +434,7 @@ exittest:
         If IsNothing(UnitsList) Then Call ReadTestUnits()
         If IsNothing(ItemsList) Then Call ReadTestItems()
 
-        Dim target As RandStack_Accessor = New RandStack_Accessor(UnitsList, ItemsList, excludeList, False)
+        Dim target As RandStack_Accessor = New RandStack_Accessor(UnitsList, ItemsList, excludeList, customRaceList, False)
         Dim s As New RandStack.Stack With {.pos = New String() {"g000uu5130", "G000000000", "G000000000", _
                                                                 "G000000000", "G000000000", "g000uu5130"}, _
                                            .items = New List(Of String)}
@@ -453,7 +456,7 @@ exittest:
     Public Sub GenTest3()
         If IsNothing(UnitsList) Then Call ReadTestUnits()
         If IsNothing(ItemsList) Then Call ReadTestItems()
-        Dim target As RandStack_Accessor = New RandStack_Accessor(UnitsList, ItemsList, excludeList, False)
+        Dim target As RandStack_Accessor = New RandStack_Accessor(UnitsList, ItemsList, excludeList, customRaceList, False)
 
         Dim ok As Boolean = True
 
@@ -497,7 +500,7 @@ exittest:
     Public Sub GenTest4()
         If IsNothing(UnitsList) Then Call ReadTestUnits()
         If IsNothing(ItemsList) Then Call ReadTestItems()
-        Dim target As RandStack_Accessor = New RandStack_Accessor(UnitsList, ItemsList, excludeList, False)
+        Dim target As RandStack_Accessor = New RandStack_Accessor(UnitsList, ItemsList, excludeList, customRaceList, False)
 
         Dim ok As Boolean = True
 
@@ -526,7 +529,7 @@ exittest:
     Public Sub GenTest5()
         If IsNothing(UnitsList) Then Call ReadTestUnits()
         If IsNothing(ItemsList) Then Call ReadTestItems()
-        Dim target As RandStack_Accessor = New RandStack_Accessor(UnitsList, ItemsList, excludeList, False)
+        Dim target As RandStack_Accessor = New RandStack_Accessor(UnitsList, ItemsList, excludeList, customRaceList, False)
 
         Dim ok As Boolean = True
 
@@ -559,7 +562,7 @@ exittest:
     Public Sub GenTest6()
         If IsNothing(UnitsList) Then Call ReadTestUnits()
         If IsNothing(ItemsList) Then Call ReadTestItems()
-        Dim target As RandStack_Accessor = New RandStack_Accessor(UnitsList, ItemsList, excludeList, False)
+        Dim target As RandStack_Accessor = New RandStack_Accessor(UnitsList, ItemsList, excludeList, customRaceList, False)
 
         Dim ok As Boolean = True
 

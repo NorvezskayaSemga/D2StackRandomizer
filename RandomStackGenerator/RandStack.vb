@@ -240,14 +240,18 @@ Public Class RandStack
     ''' <param name="AllItemsList">Все предметы в игре</param>
     ''' <param name="ExcludeLists">Файлы со списками исключенных объектов. Записи в них могут повторяться. 
     ''' Допускается передача неинициализитрованного массива.
-    ''' Для чтения из дефолтного листа в массив нужно добавить строчку %default%</param>
+    ''' Для чтения из дефолтного листа в массив нужно добавить строчку %default% (наличие этого ключевого в файле запустит чтение дефолтного файла)</param>
+    ''' <param name="CustomUnitRace">Файлы со списками рас юнитов. Записи в них могут повторяться, но записи с повторяющимся ID будут перезаписываться. 
+    ''' Допускается передача неинициализитрованного массива.
+    ''' Для чтения из дефолтного листа в массив нужно добавить строчку %default% (наличие этого ключевого в файле запустит чтение дефолтного файла)</param>
     ''' <param name="serial">True, если код, использующий генератор выполняется в одном потоке</param>
-    Public Sub New(ByRef AllUnitsList() As Unit, ByRef AllItemsList() As Item, ByRef ExcludeLists() As String, ByRef serial As Boolean)
+    Public Sub New(ByRef AllUnitsList() As Unit, ByRef AllItemsList() As Item, ByRef ExcludeLists() As String, ByRef CustomUnitRace() As String, ByRef serial As Boolean)
         serialExecution = serial
         rndgen = comm.rndgen
         If IsNothing(AllUnitsList) Or IsNothing(AllItemsList) Then Exit Sub
 
         Call comm.ReadExcludedObjectsList(ExcludeLists)
+        Call comm.ReadCustomUnitRace(CustomUnitRace)
 
         Dim cat(UBound(AllUnitsList)) As Integer
         For i As Integer = 0 To UBound(AllUnitsList) Step 1
@@ -262,17 +266,11 @@ Public Class RandStack
             End If
         Next i
 
-        Dim splitedUnitRace() As String = comm.TxtSplit(My.Resources.UnitRace)
-        Dim srow() As String
-        Dim customRace As New Dictionary(Of String, String)
-        For i As Integer = 0 To UBound(splitedUnitRace) Step 1
-            srow = splitedUnitRace(i).Split(CChar(" "))
-            customRace.Add(srow(0).ToUpper, srow(2).ToUpper)
-        Next i
-        Call MakeAccessoryArrays(AllUnitsList, customRace, AllFighters, cat, 1, ExpBarFighters, ExpKilledFighters, multFighters)
-        Call MakeAccessoryArrays(AllUnitsList, customRace, AllLeaders, cat, 2, ExpBarLeaders, ExpKilledLeaders, multLeaders)
-        Call MakeAccessoryArrays(AllUnitsList, customRace, ExcludedUnits, cat, 0, Nothing, Nothing, Nothing)
+        Call MakeAccessoryArrays(AllUnitsList, comm.customRace, AllFighters, cat, 1, ExpBarFighters, ExpKilledFighters, multFighters)
+        Call MakeAccessoryArrays(AllUnitsList, comm.customRace, AllLeaders, cat, 2, ExpBarLeaders, ExpKilledLeaders, multLeaders)
+        Call MakeAccessoryArrays(AllUnitsList, comm.customRace, ExcludedUnits, cat, 0, Nothing, Nothing, Nothing)
 
+        Dim srow() As String
         Dim splitedItemsTypes() As String = comm.TxtSplit(My.Resources.Items)
         For i As Integer = 0 To UBound(splitedItemsTypes) Step 1
             srow = splitedItemsTypes(i).Split(CChar(" "))
@@ -917,6 +915,8 @@ Public Class Common
     Public excludedObjects As New List(Of String)
     ''' <summary>Список параметров отрядов с описанием</summary>
     Public StatFields() As StackStatsField
+    ''' <summary>Расы юнитов, назначаемые независимо от ресурсов игры</summary>
+    Public customRace As New Dictionary(Of String, String)
 
     Friend ConsumableItemsTypes, NonconsumableItemsTypes As New List(Of Integer)
 
@@ -971,9 +971,9 @@ Public Class Common
         Dim defaultStats As New RandStack.DesiredStats With {.ExpBarAverage = 200, .ExpStackKilled = 75, _
                                                              .MeleeCount = 2, .Race = New List(Of Integer), .StackSize = 2}
         defaultStats.Race.Add(1)
-        If Not path = "%testfile%" Then
+        If Not path = My.Resources.testFileKeyword.ToLower Then
             txt = TxtSplit(IO.File.ReadAllText(path).Replace("=", vbTab))
-        ElseIf path = "%default%" Then
+        ElseIf path = My.Resources.readDefaultFileKeyword.ToLower Then
             Return New RandStack.DesiredStats() {defaultStats}
         Else
             txt = TxtSplit(My.Resources.TestStackStats.Replace("=", vbTab))
@@ -1038,7 +1038,7 @@ Public Class Common
         For i As Integer = 0 To UBound(s) Step 1
             s(i) = TxtSplit(RandStack.DesiredStats.Print(content(i), RaceNumberToRaceChar).Replace(vbNewLine, vbTab))(0)
         Next i
-        If Not path = "%testfile%" Then
+        If Not path = My.Resources.testFileKeyword Then
             IO.File.WriteAllLines(path, s)
         Else
             path = ""
@@ -1235,12 +1235,12 @@ Public Class Common
 
     ''' <param name="ExcludeLists">Файлы со списками исключенных объектов. Записи в них могут повторяться. 
     ''' Допускается передача неинициализитрованного массива.
-    ''' Для чтения из дефолтного листа в массив нужно добавить строчку %default%</param>
+    ''' Для чтения из дефолтного листа в массив нужно добавить строчку %default% (наличие этого ключевого в файле запустит чтение дефолтного файла)</param>
     Public Sub ReadExcludedObjectsList(ByRef ExcludeLists() As String)
         If IsNothing(ExcludeLists) Then Exit Sub
         Dim s() As String
         For i As Integer = 0 To UBound(ExcludeLists) Step 1
-            If Not ExcludeLists(i) = "%default%" Then
+            If Not ExcludeLists(i).ToLower = My.Resources.readDefaultFileKeyword.ToLower Then
                 If IO.File.Exists(ExcludeLists(i)) Then
                     s = TxtSplit(IO.File.ReadAllText(ExcludeLists(i)))
                 Else
@@ -1252,10 +1252,43 @@ Public Class Common
             If Not IsNothing(s) Then
                 For j As Integer = 0 To UBound(s) Step 1
                     s(j) = s(j).ToUpper
-                    If Not excludedObjects.Contains(s(j)) Then excludedObjects.Add(s(j))
+                    If s(j) = My.Resources.readDefaultFileKeyword.ToUpper And Not ExcludeLists(i).ToLower = My.Resources.readDefaultFileKeyword.ToLower Then
+                        Call ReadExcludedObjectsList(New String() {My.Resources.readDefaultFileKeyword.ToLower})
+                    Else
+                        If Not excludedObjects.Contains(s(j)) Then excludedObjects.Add(s(j))
+                    End If
                 Next j
             End If
         Next i
     End Sub
 
+    ''' <param name="CustomUnitRace">Файлы со списками рас юнитов. Записи в них могут повторяться, но записи с повторяющимся ID будут перезаписываться. 
+    ''' Допускается передача неинициализитрованного массива.
+    ''' Для чтения из дефолтного листа в массив нужно добавить строчку %default% (наличие этого ключевого в файле запустит чтение дефолтного файла)</param>
+    Public Sub ReadCustomUnitRace(ByRef CustomUnitRace() As String)
+        If IsNothing(CustomUnitRace) Then Exit Sub
+        Dim s() , srow() As String
+        For i As Integer = 0 To UBound(CustomUnitRace) Step 1
+            If Not CustomUnitRace(i).ToLower = My.Resources.readDefaultFileKeyword.ToLower Then
+                If IO.File.Exists(CustomUnitRace(i)) Then
+                    s = TxtSplit(IO.File.ReadAllText(CustomUnitRace(i)))
+                Else
+                    s = Nothing
+                End If
+            Else
+                s = TxtSplit(My.Resources.UnitRace)
+            End If
+            If Not IsNothing(s) Then
+                For j As Integer = 0 To UBound(s) Step 1
+                    srow = s(j).Split(CChar(" "))
+                    If srow(0).ToLower = My.Resources.readDefaultFileKeyword.ToLower And Not CustomUnitRace(i).ToLower = My.Resources.readDefaultFileKeyword.ToLower Then
+                        Call ReadCustomUnitRace(New String() {My.Resources.readDefaultFileKeyword.ToLower})
+                    ElseIf srow.Length > 2 Then
+                        If customRace.ContainsKey(srow(0).ToUpper) Then customRace.Remove(srow(0).ToUpper)
+                        customRace.Add(srow(0).ToUpper, srow(2).ToUpper)
+                    End If
+                Next j
+            End If
+        Next i
+    End Sub
 End Class

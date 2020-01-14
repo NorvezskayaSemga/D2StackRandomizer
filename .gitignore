@@ -1,5 +1,9 @@
 RandomStackGenerator/obj/
 RandomStackGenerator/bin/
-RandomStackGenerator/D2MapEdit.csproj
 TestResults/
+ImpenetrableMeshShow/obj/
+ImpenetrableMeshShow/bin/
+GenTest/obj/
+GenTest/bin/
 .vs/
+testimpactdata.sdf

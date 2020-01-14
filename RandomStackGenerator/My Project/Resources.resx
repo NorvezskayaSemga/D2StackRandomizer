@@ -163,4 +163,10 @@
   <data name="defaultSigma" xml:space="preserve">
     <value>0.1</value>
   </data>
+  <data name="readDefaultFileKeyword" xml:space="preserve">
+    <value>%default%</value>
+  </data>
+  <data name="testFileKeyword" xml:space="preserve">
+    <value>%testfile%</value>
+  </data>
 </root>
