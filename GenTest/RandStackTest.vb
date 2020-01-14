@@ -12,7 +12,6 @@ Imports System.Threading.Tasks
 <TestClass()> _
 Public Class RandStackTest
 
-
     Private testContextInstance As TestContext
 
     '''<summary>
@@ -299,7 +298,7 @@ exittest:
     '''A test for StackStats
     '''</summary>
     <TestMethod()> _
-    Public Sub StackStatsTest()
+    Public Sub StackStatsTest1()
         If IsNothing(UnitsList) Then Call ReadTestUnits()
         If IsNothing(ItemsList) Then Call ReadTestItems()
         Dim target As RandStack_Accessor = New RandStack_Accessor(UnitsList, ItemsList, excludeList, False)
@@ -386,7 +385,7 @@ exittest:
             If Not ok Then Exit For
         Next i
         For r As Integer = 0 To UBound(races) Step 1
-            If Not raceokL(r) Or Not raceokF(r) Then ok = False
+            If Not raceokL(r) And Not raceokF(r) Then ok = False
         Next r
 
         If Not ok Then Assert.Inconclusive("Verify the correctness of this test method.")
@@ -420,6 +419,101 @@ exittest:
                 Exit For
             End If
         Next item
+
+        If Not ok Then Assert.Inconclusive("Verify the correctness of this test method.")
+    End Sub
+
+    '''<summary>
+    '''A test for StackStats
+    '''</summary>
+    <TestMethod()> _
+    Public Sub StackStatsTest2()
+        If IsNothing(UnitsList) Then Call ReadTestUnits()
+        If IsNothing(ItemsList) Then Call ReadTestItems()
+        Dim target As RandStack_Accessor = New RandStack_Accessor(UnitsList, ItemsList, excludeList, False)
+        Dim s As New RandStack.Stack With {.pos = New String() {"g000uu5130", "G000000000", "G000000000", _
+                                                                "G000000000", "G000000000", "g000uu5130"}, _
+                                           .items = New List(Of String)}
+        Dim res As RandStack.DesiredStats = target.StackStats(s)
+        Dim ok As Boolean = True
+        If Not res.Race.Contains(1) Or res.Race.Count > 1 Then ok = False
+        If Not res.ExpStackKilled = 60 Then ok = False
+        If Not res.ExpBarAverage = 50 Then ok = False
+        If Not res.MeleeCount = 2 Then ok = False
+        If Not res.StackSize = 2 Then ok = False
+
+        If Not ok Then Assert.Inconclusive("Verify the correctness of this test method.")
+    End Sub
+
+    '''<summary>
+    '''A test for Gen
+    '''</summary>
+    <TestMethod()> _
+    Public Sub GenTest3()
+        If IsNothing(UnitsList) Then Call ReadTestUnits()
+        If IsNothing(ItemsList) Then Call ReadTestItems()
+        Dim target As RandStack_Accessor = New RandStack_Accessor(UnitsList, ItemsList, excludeList, False)
+
+        Dim ok As Boolean = True
+
+        Dim s As New RandStack.Stack With {.pos = New String() {"g000uu5124", "G000000000", "G000000000", _
+                                                                "G000000000", "G000000000", "G000000000"}, _
+                                           .items = New List(Of String)}
+        Dim tstats As RandStack.DesiredStats = target.StackStats(s)
+
+        Dim stats As New RandStack.DesiredStats With {.ExpBarAverage = 950, .ExpStackKilled = 120, .Race = New List(Of Integer), _
+                                                      .StackSize = 1, .MaxGiants = 0, .MeleeCount = 1, .LootCost = 0}
+        Dim races() As Integer = New Integer() {10}
+        stats.Race.AddRange(races)
+
+        If Not stats.ExpBarAverage = tstats.ExpBarAverage Then ok = False
+        If Not stats.ExpStackKilled = tstats.ExpStackKilled Then ok = False
+        If Not stats.MaxGiants = tstats.MaxGiants Then ok = False
+        If Not stats.MeleeCount = tstats.MeleeCount Then ok = False
+        If Not stats.StackSize = tstats.StackSize Then ok = False
+        If Not stats.Race.Contains(tstats.Race.Item(0)) Then ok = False
+
+        If ok Then
+            Dim raceokL(UBound(races)), raceokF(UBound(races)) As Boolean
+            stats.Race.AddRange(races)
+
+            For i As Integer = 0 To 10000 Step 1
+                Dim stack As RandStack.Stack = target.Gen(stats, True)
+                ok = TestStack(stack, target, races, raceokL, raceokF)
+                If Not ok Then Exit For
+            Next i
+            For r As Integer = 0 To UBound(races) Step 1
+                If Not raceokL(r) And Not raceokF(r) Then ok = False
+            Next r
+        End If
+        If Not ok Then Assert.Inconclusive("Verify the correctness of this test method.")
+    End Sub
+
+    '''<summary>
+    '''A test for Gen
+    '''</summary>
+    <TestMethod()> _
+    Public Sub GenTest4()
+        If IsNothing(UnitsList) Then Call ReadTestUnits()
+        If IsNothing(ItemsList) Then Call ReadTestItems()
+        Dim target As RandStack_Accessor = New RandStack_Accessor(UnitsList, ItemsList, excludeList, False)
+
+        Dim ok As Boolean = True
+
+        Dim s As New RandStack.Stack With {.pos = New String() {"g000uu5119", "G000000000", "G000000000", _
+                                                                "G000000000", "G000000000", "G000000000"}, _
+                                           .items = New List(Of String)}
+        Dim stats As RandStack.DesiredStats = target.StackStats(s)
+
+        Dim c As Integer
+        For i As Integer = 0 To 10000 Step 1
+            Dim stack As RandStack.Stack = target.Gen(stats, True)
+            c = 0
+            For Each item As String In stack.pos
+                If Not item = "G000000000" Then c += 1
+            Next item
+            If c > 1 Then ok = False
+        Next i
 
         If Not ok Then Assert.Inconclusive("Verify the correctness of this test method.")
     End Sub

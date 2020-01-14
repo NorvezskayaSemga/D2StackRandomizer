@@ -504,6 +504,9 @@ Public Class RandStack
         Next i
         Dim PossibleLeaders, SelectedFighters As New List(Of Integer)
 
+        Dim maxExpBar As Double = Math.Max(10000, 2 * DynStackStats.ExpBarAverage)
+        Dim maxExpStrackKilled As Double = Math.Max(10000, 2 * DynStackStats.ExpStackKilled)
+
         'создаем список лидеров, которых вообще можем использовать
         PossibleLeaders.Clear()
         Dim Tolerance As Double = 0
@@ -513,7 +516,7 @@ Public Class RandStack
                 If SelectPossibleLeader(i, Tolerance, DynStackStats, GroundTile) Then PossibleLeaders.Add(i)
             Next i
 
-            If Tolerance * DynStackStats.ExpBarAverage > 10000 And Tolerance * DynStackStats.ExpStackKilled > 10000 Then
+            If Tolerance * DynStackStats.ExpBarAverage > maxExpBar And Tolerance * DynStackStats.ExpStackKilled > maxExpStrackKilled Then
                 If DynStackStats.MaxGiants < 1 Then
                     DynStackStats.MaxGiants = 1
                     Tolerance = 0

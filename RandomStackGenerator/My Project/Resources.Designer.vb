@@ -108,6 +108,15 @@ Namespace My.Resources
         End Property
         
         '''<summary>
+        '''  Looks up a localized string similar to 1.3.
+        '''</summary>
+        Friend ReadOnly Property expBarDispersion() As String
+            Get
+                Return ResourceManager.GetString("expBarDispersion", resourceCulture)
+            End Get
+        End Property
+        
+        '''<summary>
         '''  Looks up a localized string similar to 2.
         '''</summary>
         Friend ReadOnly Property giantUnitsExpMultiplicator() As String
@@ -148,6 +157,15 @@ Namespace My.Resources
         Friend ReadOnly Property JewelItemsCostMultiplicator() As String
             Get
                 Return ResourceManager.GetString("JewelItemsCostMultiplicator", resourceCulture)
+            End Get
+        End Property
+        
+        '''<summary>
+        '''  Looks up a localized string similar to 2.
+        '''</summary>
+        Friend ReadOnly Property lootCostDispersion() As String
+            Get
+                Return ResourceManager.GetString("lootCostDispersion", resourceCulture)
             End Get
         End Property
         
@@ -218,7 +236,7 @@ Namespace My.Resources
         '''4	G000IG0009	g0450:r0000:y0000:e0000:w0000
         '''7	G000IG0010	g1500:r0000:y0000:e0000:w0000
         '''4	G000IG0011	g0200:r0000:y0000:e0000:w0000
-        '''4	G0 [rest of string was truncated]&quot;;.
+        '''4	G000IG0012	g04 [rest of string was truncated]&quot;;.
         '''</summary>
         Friend ReadOnly Property TestItemsTable() As String
             Get
@@ -227,10 +245,13 @@ Namespace My.Resources
         End Property
         
         '''<summary>
-        '''  Looks up a localized string similar to ID location1 AverageExpBar = 1000	ExpStackKilled 200  Race=U StackSize 1 MaxGiants 0		MeleeSlots 2 LootCost 0
-        '''AverageExpBar = 100 ID testloc2 StackSize 3 MaxGiants 1		MeleeSlots -1 LootCost 3400 	ExpStackKilled 200  Race=U+D
-        '''ID=loc3 AverageExpBar = 1000 Race=Human StackSize 1 MeleeSlots 2 LootCost 0	ExpStackKilled 200   MaxGiants 0
-        '''.
+        '''  Looks up a localized string similar to #строка, начинающаяся с решетки, игнорируется
+        '''#разделители полей: пробел, таб, знак равенства
+        '''#идущие подрядразделители интерпретируются как один
+        '''ID location1 AverageExpBar = 1000	ExpStackKilled 200  Race=U StackSize 1 MaxGiants 0		MeleeSlots 2 LootCost 0
+        '''AverageExpBar = 100 ID testloc2 StackSize 3 MaxGiants 1		MeleeSlots -1 LootCost 3400 	ExpStackKilled 200  Race=U+d
+        '''ID=loc3 AverageExpBar = 1000 Race=HuMans StackSize 1 MeleeSlots 2 LootCost 0	ExpStackKilled 200   MaxGiants 0
+        '''ID=loc54 AverageExpBar =  [rest of string was truncated]&quot;;.
         '''</summary>
         Friend ReadOnly Property TestStackStats() As String
             Get
@@ -247,7 +268,7 @@ Namespace My.Resources
         '''g000uu0005	0	3	1	0	True	g000aa0005	115	950	0	False	3
         '''g000uu0006	0	1	1	1	True	g000aa0006	20	70	0	False	2
         '''g000uu0007	0	2	1	1	True	g000aa0007	60	500	0	False	2
-        '''g000uu0008	0	1	1	2	True	g000aa0008	 [rest of string was truncated]&quot;;.
+        '''g000uu0008	0	1	1	2	True	g000aa0008	15	75	0	 [rest of string was truncated]&quot;;.
         '''</summary>
         Friend ReadOnly Property TestUnitsTable() As String
             Get

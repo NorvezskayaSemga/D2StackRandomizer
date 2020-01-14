@@ -169,12 +169,15 @@
             End If
         Next id
 
+        Dim minD As Double = 0.8 * Math.Sqrt(2) / Math.Sqrt(CDbl(My.Resources.lootCostDispersion))
+        Dim maxD As Double = 0.8 * Math.Sqrt(2) * Math.Sqrt(CDbl(My.Resources.lootCostDispersion))
+
         Dim expKilled, LootCost As New Dictionary(Of Integer, Double)
         For Each id As Integer In guards.Keys
             If Not guards.Item(id).isPassGuard Then
                 Dim e As Double = LocTotalExp(guards.Item(id).LocID - 1) * W.Item(id) / Wsum(guards.Item(id).LocID - 1)
                 expKilled.Add(id, e)
-                Dim t As Double = e * rndgen.PRand(0.8, 1.6)
+                Dim t As Double = e * rndgen.PRand(minD, maxD)
                 WLoot.Add(id, t)
                 WLootSum(guards.Item(id).LocID - 1) += t
             End If
@@ -241,8 +244,11 @@
         Else
             maxGiants = rndgen.RndPos(4, True) - 1
         End If
+
+        Dim maxD As Double = Math.Sqrt(CDbl(My.Resources.expBarDispersion))
+        Dim minD As Double = 1 / maxD
         Dim avExpKilled As Double = eKilled / (stackSize - 0.5 * maxGiants)
-        Dim eBar As Integer = CInt(UnitExpKilledToExpBar(avExpKilled))
+        Dim eBar As Integer = CInt(UnitExpKilledToExpBar(avExpKilled) * rndgen.PRand(minD, maxD))
 
         Return New RandStack.DesiredStats With {.ExpStackKilled = CInt(eKilled), _
                                                 .StackSize = stackSize, _
