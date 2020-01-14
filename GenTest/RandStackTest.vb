@@ -242,7 +242,7 @@ Public Class RandStackTest
                                         GroundTile = True
                                     End If
 
-                                    Dim stack As RandStack.Stack = target.Gen(stats, GroundTile)
+                                    Dim stack As RandStack.Stack = target.Gen(stats, GroundTile, False)
                                     ok = TestStack(stack, target)
                                     If Not ok Then GoTo exittest
 
@@ -380,7 +380,7 @@ exittest:
         stats.Race.AddRange(races)
 
         For i As Integer = 0 To 10000 Step 1
-            Dim stack As RandStack.Stack = target.Gen(stats, True)
+            Dim stack As RandStack.Stack = target.Gen(stats, True, False)
             ok = TestStack(stack, target, races, raceokL, raceokF)
             If Not ok Then Exit For
         Next i
@@ -430,6 +430,7 @@ exittest:
     Public Sub StackStatsTest2()
         If IsNothing(UnitsList) Then Call ReadTestUnits()
         If IsNothing(ItemsList) Then Call ReadTestItems()
+
         Dim target As RandStack_Accessor = New RandStack_Accessor(UnitsList, ItemsList, excludeList, False)
         Dim s As New RandStack.Stack With {.pos = New String() {"g000uu5130", "G000000000", "G000000000", _
                                                                 "G000000000", "G000000000", "g000uu5130"}, _
@@ -478,7 +479,7 @@ exittest:
             stats.Race.AddRange(races)
 
             For i As Integer = 0 To 10000 Step 1
-                Dim stack As RandStack.Stack = target.Gen(stats, True)
+                Dim stack As RandStack.Stack = target.Gen(stats, True, False)
                 ok = TestStack(stack, target, races, raceokL, raceokF)
                 If Not ok Then Exit For
             Next i
@@ -507,7 +508,7 @@ exittest:
 
         Dim c As Integer
         For i As Integer = 0 To 10000 Step 1
-            Dim stack As RandStack.Stack = target.Gen(stats, True)
+            Dim stack As RandStack.Stack = target.Gen(stats, True, False)
             c = 0
             For Each item As String In stack.pos
                 If Not item = "G000000000" Then c += 1
@@ -517,4 +518,71 @@ exittest:
 
         If Not ok Then Assert.Inconclusive("Verify the correctness of this test method.")
     End Sub
+
+    '''<summary>
+    '''A test for Gen
+    '''</summary>
+    <TestMethod()> _
+    Public Sub GenTest5()
+        If IsNothing(UnitsList) Then Call ReadTestUnits()
+        If IsNothing(ItemsList) Then Call ReadTestItems()
+        Dim target As RandStack_Accessor = New RandStack_Accessor(UnitsList, ItemsList, excludeList, False)
+
+        Dim ok As Boolean = True
+
+        Dim s As New RandStack.Stack With {.pos = New String() {"g000uu5130", "g000uu5030", "G000000000", _
+                                                                "G000000000", "G000000000", "G000000000"}, _
+                                           .items = New List(Of String)}
+        Dim stats As RandStack.DesiredStats = target.StackStats(s)
+
+        Dim c As Integer
+        For i As Integer = 0 To 10000 Step 1
+            Dim stack As RandStack.Stack = target.Gen(stats, True, True)
+            c = 0
+            For Each item As String In stack.pos
+                If Not item = "G000000000" Then
+                    c += 1
+                    If target.FindUnitStats(item).unitBranch = 5 Then ok = False
+                End If
+            Next item
+            If c > 3 Then ok = False
+            If Not ok Then Exit For
+        Next i
+
+        If Not ok Then Assert.Inconclusive("Verify the correctness of this test method.")
+    End Sub
+
+    '''<summary>
+    '''A test for Gen
+    '''</summary>
+    <TestMethod()> _
+    Public Sub GenTest6()
+        If IsNothing(UnitsList) Then Call ReadTestUnits()
+        If IsNothing(ItemsList) Then Call ReadTestItems()
+        Dim target As RandStack_Accessor = New RandStack_Accessor(UnitsList, ItemsList, excludeList, False)
+
+        Dim ok As Boolean = True
+
+        Dim s As New RandStack.Stack With {.pos = New String() {"g000uu5117", "g000uu5018", "g000uu5017", _
+                                                                "g000uu5017", "g000uu5018", "G000000000"}, _
+                                           .items = New List(Of String)}
+        Dim stats As RandStack.DesiredStats = target.StackStats(s)
+        Dim expected As New List(Of String)
+        expected.AddRange(New String() {"g000000000", "g000uu5117", "g000uu5017", "g000uu5018", "g000uu8196"})
+
+        Dim noLeader As Boolean = False
+        For p As Integer = 0 To 1 Step 1
+            For i As Integer = 0 To 10000 Step 1
+                Dim stack As RandStack.Stack = target.Gen(stats, True, noLeader)
+                For Each item As String In stack.pos
+                    If Not expected.Contains(item.ToLower) Then ok = False
+                Next item
+                If Not ok Then Exit For
+            Next i
+            noLeader = Not noLeader
+        Next p
+
+        If Not ok Then Assert.Inconclusive("Verify the correctness of this test method.")
+    End Sub
+
 End Class

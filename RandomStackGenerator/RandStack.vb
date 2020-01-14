@@ -7,6 +7,7 @@ Public Class RandStack
     Private busytransfer() As Integer = New Integer() {1, -1, 3, -1, 5, -1}
     Private firstrow() As Integer = New Integer() {0, 2, 4}
     Private secondrow() As Integer = New Integer() {1, 3, 5}
+    Private itemGenSigma As Double = SigmaMultiplier(New DesiredStats With {.StackSize = 1})
 
     Public Structure Stack
         ''' <summary>ID юнита для каждой позиции</summary>
@@ -439,7 +440,7 @@ Public Class RandStack
                 If add Then IDs.Add(i)
             Next i
             If IDs.Count = 0 Then Exit Do
-            selected = comm.RandomSelection(IDs, New Double()() {ItemGoldCost}, New Double() {costBar}, multItems, serialExecution)
+            selected = comm.RandomSelection(IDs, New Double()() {ItemGoldCost}, New Double() {costBar}, multItems, itemGenSigma, serialExecution)
             result.Add(MagicItem(selected).itemID)
             DynCost = CInt(DynCost - MagicItem(selected).itemCost.Gold / multItems(selected))
         Loop
@@ -466,7 +467,7 @@ Public Class RandStack
             If add Then IDs.Add(i)
         Next i
         If IDs.Count > 0 Then
-            selected = comm.RandomSelection(IDs, New Double()() {ItemGoldCost}, New Double() {GoldCost}, multItems, serialExecution)
+            selected = comm.RandomSelection(IDs, New Double()() {ItemGoldCost}, New Double() {GoldCost}, multItems, itemGenSigma, serialExecution)
             result = MagicItem(selected).itemID
         End If
         Return result
@@ -494,7 +495,7 @@ Public Class RandStack
 
     ''' <param name="StackStats">Желаемые параметры стэка</param>
     ''' <param name="GroundTile">True, если на клетку нельзя ставить водных лидеров</param>
-    Public Function Gen(ByRef StackStats As DesiredStats, ByRef GroundTile As Boolean) As Stack
+    Public Function Gen(ByRef StackStats As DesiredStats, ByRef GroundTile As Boolean, ByRef NoLeader As Boolean) As Stack
 
         Dim DynStackStats As DesiredStats = DesiredStats.Copy(StackStats)
         DynStackStats.Race.Clear()
@@ -503,60 +504,64 @@ Public Class RandStack
             If Not DynStackStats.Race.Contains(s) Then DynStackStats.Race.Add(s)
         Next i
         Dim PossibleLeaders, SelectedFighters As New List(Of Integer)
-
-        Dim maxExpBar As Double = Math.Max(10000, 2 * DynStackStats.ExpBarAverage)
-        Dim maxExpStrackKilled As Double = Math.Max(10000, 2 * DynStackStats.ExpStackKilled)
-
-        'создаем список лидеров, которых вообще можем использовать
-        PossibleLeaders.Clear()
-        Dim Tolerance As Double = 0
-        Do While PossibleLeaders.Count = 0
-            Tolerance += 0.1
-            For i As Integer = 0 To UBound(AllLeaders) Step 1
-                If SelectPossibleLeader(i, Tolerance, DynStackStats, GroundTile) Then PossibleLeaders.Add(i)
-            Next i
-
-            If Tolerance * DynStackStats.ExpBarAverage > maxExpBar And Tolerance * DynStackStats.ExpStackKilled > maxExpStrackKilled Then
-                If DynStackStats.MaxGiants < 1 Then
-                    DynStackStats.MaxGiants = 1
-                    Tolerance = 0
-                Else
-                    Throw New Exception("Что-то не так в выборе возможных лидеров отряда" & vbNewLine & _
-                                        "Имя локации: " & StackStats.LocationName & vbNewLine & _
-                                        "StackStats:" & vbNewLine & DesiredStats.Print(StackStats, comm.RaceNumberToRaceChar) & vbNewLine & _
-                                        "DynStackStats:" & vbNewLine & DesiredStats.Print(DynStackStats, comm.RaceNumberToRaceChar))
-                End If
-            End If
-        Loop
-
-        Dim SelectedLeader As Integer = comm.RandomSelection(PossibleLeaders, {ExpBarLeaders}, {DynStackStats.ExpBarAverage}, multLeaders, serialExecution)
-
-        If SelectedLeader = -1 Then
-            Throw New Exception("Возможно, бесконечный цикл в случайном выборе из массива возможных лидеров" & vbNewLine & _
-                                "Имя локации: " & StackStats.LocationName & vbNewLine & _
-                                "StackStats:" & vbNewLine & DesiredStats.Print(StackStats, comm.RaceNumberToRaceChar) & vbNewLine & _
-                                "DynStackStats:" & vbNewLine & DesiredStats.Print(DynStackStats, comm.RaceNumberToRaceChar))
-        End If
         Dim FreeMeleeSlots As Integer = 3
+        Dim SelectedLeader As Integer = -1
 
-        'теперь нужно добрать воинов в отряд
-        Dim R As Double = rndgen.Rand(0, 1, serialExecution)
-        If R < 0.1 Then
-            DynStackStats.StackSize -= 1
-        ElseIf R > 0.9 Then
-            DynStackStats.StackSize += 1
-            If DynStackStats.StackSize - DynStackStats.MeleeCount < secondrow.Length Then DynStackStats.MeleeCount += 1
-        End If
-        DynStackStats.StackSize = Math.Min(Math.Min(DynStackStats.StackSize, AllLeaders(SelectedLeader).leadership), 6)
-        If AllLeaders(SelectedLeader).small Then
-            DynStackStats.StackSize = Math.Max(DynStackStats.StackSize, 1)
-        Else
-            DynStackStats.StackSize = Math.Max(DynStackStats.StackSize, 2)
-        End If
-        DynStackStats.MeleeCount = Math.Min(DynStackStats.MeleeCount, 3)
-        DynStackStats.MaxGiants = Math.Min(DynStackStats.MaxGiants, 3)
+        If Not NoLeader Then
 
-        Call ChangeLimit(AllLeaders, SelectedLeader, DynStackStats, FreeMeleeSlots)
+            Dim maxExpBar As Double = Math.Max(10000, 2 * DynStackStats.ExpBarAverage)
+            Dim maxExpStrackKilled As Double = Math.Max(10000, 2 * DynStackStats.ExpStackKilled)
+
+            'создаем список лидеров, которых вообще можем использовать
+            PossibleLeaders.Clear()
+            Dim Tolerance As Double = 0
+            Do While PossibleLeaders.Count = 0
+                Tolerance += 0.1
+                For i As Integer = 0 To UBound(AllLeaders) Step 1
+                    If SelectPossibleLeader(i, Tolerance, DynStackStats, GroundTile) Then PossibleLeaders.Add(i)
+                Next i
+
+                If Tolerance * DynStackStats.ExpBarAverage > maxExpBar And Tolerance * DynStackStats.ExpStackKilled > maxExpStrackKilled Then
+                    If DynStackStats.MaxGiants < 1 Then
+                        DynStackStats.MaxGiants = 1
+                        Tolerance = 0
+                    Else
+                        Throw New Exception("Что-то не так в выборе возможных лидеров отряда" & vbNewLine & _
+                                            "Имя локации: " & StackStats.LocationName & vbNewLine & _
+                                            "StackStats:" & vbNewLine & DesiredStats.Print(StackStats, comm.RaceNumberToRaceChar) & vbNewLine & _
+                                            "DynStackStats:" & vbNewLine & DesiredStats.Print(DynStackStats, comm.RaceNumberToRaceChar))
+                    End If
+                End If
+            Loop
+
+            Selectedleader = comm.RandomSelection(PossibleLeaders, {ExpBarLeaders}, {DynStackStats.ExpBarAverage}, multLeaders, SigmaMultiplier(DynStackStats), serialExecution)
+
+            If SelectedLeader = -1 Then
+                Throw New Exception("Возможно, бесконечный цикл в случайном выборе из массива возможных лидеров" & vbNewLine & _
+                                    "Имя локации: " & StackStats.LocationName & vbNewLine & _
+                                    "StackStats:" & vbNewLine & DesiredStats.Print(StackStats, comm.RaceNumberToRaceChar) & vbNewLine & _
+                                    "DynStackStats:" & vbNewLine & DesiredStats.Print(DynStackStats, comm.RaceNumberToRaceChar))
+            End If
+
+            'теперь нужно добрать воинов в отряд
+            Dim R As Double = rndgen.Rand(0, 1, serialExecution)
+            If R < 0.1 Then
+                DynStackStats.StackSize -= 1
+            ElseIf R > 0.9 Then
+                DynStackStats.StackSize += 1
+                If DynStackStats.StackSize - DynStackStats.MeleeCount < secondrow.Length Then DynStackStats.MeleeCount += 1
+            End If
+            DynStackStats.StackSize = Math.Min(Math.Min(DynStackStats.StackSize, AllLeaders(SelectedLeader).leadership), 6)
+            If AllLeaders(SelectedLeader).small Then
+                DynStackStats.StackSize = Math.Max(DynStackStats.StackSize, 1)
+            Else
+                DynStackStats.StackSize = Math.Max(DynStackStats.StackSize, 2)
+            End If
+            DynStackStats.MeleeCount = Math.Min(DynStackStats.MeleeCount, 3)
+            DynStackStats.MaxGiants = Math.Min(DynStackStats.MaxGiants, 3)
+
+            Call ChangeLimit(AllLeaders, SelectedLeader, DynStackStats, FreeMeleeSlots)
+        End If
 
         Dim fighter As Integer
         Do While DynStackStats.StackSize > 0
@@ -583,15 +588,25 @@ Public Class RandStack
         Loop
         'в итоге должны получить лидера и остальной отряд
         'дальше расставляем в зависимости от размера и дальности атаки и пишем в файл карты
-        Dim SelectedUnits(SelectedFighters.Count) As Unit
+        Dim SelectedUnits() As Unit
+        If NoLeader Then
+            ReDim SelectedUnits(SelectedFighters.Count - 1)
+        Else
+            ReDim SelectedUnits(SelectedFighters.Count)
+        End If
         Dim result As New Stack With {.leaderPos = -1}
         ReDim result.pos(UBound(busytransfer))
         Dim unitIsUsed(UBound(SelectedUnits)) As Boolean
         Dim firstRowSlots As Integer = 3
         Dim secondRowSlots As Integer = 3
 
-        SelectedUnits(0) = Unit.Copy(AllLeaders(SelectedLeader))
-        Dim n As Integer = 0
+        If Not NoLeader Then SelectedUnits(0) = Unit.Copy(AllLeaders(SelectedLeader))
+        Dim n As Integer
+        If NoLeader Then
+            n = -1
+        Else
+            n = 0
+        End If
         For Each i As Integer In SelectedFighters
             n += 1
             SelectedUnits(n) = Unit.Copy(AllFighters(i))
@@ -623,7 +638,7 @@ Public Class RandStack
                                                           "DynStackStats:" & vbNewLine & DesiredStats.Print(DynStackStats, comm.RaceNumberToRaceChar))
         Next i
         For i As Integer = 0 To UBound(result.pos) Step 1
-            If result.pos(i) = "" Then result.pos(i) = emptyitem
+            If result.pos(i) = "" Then result.pos(i) = emptyItem
         Next i
         result.items = ItemsGen(DynStackStats.LootCost, DynStackStats.excludeConsumableItems, DynStackStats.excludeNonconsumableItems)
         Return result
@@ -644,6 +659,9 @@ Public Class RandStack
         If AllLeaders(leaderID).EXPkilled > (1 + Tolerance) * StackStats.ExpStackKilled Then Return False
         Return True
     End Function
+    Private Function SigmaMultiplier(ByRef stat As DesiredStats) As Double
+        Return CDbl(My.Resources.defaultSigma) * (CDbl(stat.StackSize) + 0.1 * CDbl(stat.MaxGiants))
+    End Function
 
     Private Function SelectFighters(ByRef skipfilter1 As Boolean, ByRef skipfilter2 As Boolean, _
                                     ByRef DynStackStats As DesiredStats, ByRef FreeMeleeSlots As Integer) As Integer
@@ -663,7 +681,7 @@ Public Class RandStack
         If PossibleFighters.Count > 0 Then
             SelectedFighter = comm.RandomSelection(PossibleFighters, {ExpBarFighters, ExpKilledFighters}, _
                  {DynStackStats.ExpBarAverage, CDbl(DynStackStats.ExpStackKilled) / CDbl(DynStackStats.StackSize)}, _
-                 multFighters, serialExecution)
+                 multFighters, SigmaMultiplier(DynStackStats), serialExecution)
             If SelectedFighter = -1 Then Return -2
             Call ChangeLimit(AllFighters, SelectedFighter, DynStackStats, FreeMeleeSlots)
         Else
@@ -1092,10 +1110,11 @@ Public Class Common
     ''' <param name="DesiredStats">Какое значение будет иметь наибольший стат. вес (по одному на каждый массив значений)</param>
     ''' <param name="mult">Множитель "желаемого" значения, отражающий особенности выбираемого объекта (например, размер юнита или тип предмета).
     ''' Если не инициализирован, то считается что множитель для всех записей равен единице</param>
+    ''' <param name="BaseSmearing">Множитель для Сигмы в распределении Гаусса. Сигма=Множитель*Желаемое_значение</param>
     ''' <param name="serial">True, if use in serial code</param>
     Public Function RandomSelection(ByRef IDs As List(Of Integer), ByRef Stats()() As Double, _
                                     ByRef DesiredStats() As Double, ByRef mult() As Double, _
-                                    ByRef serial As Boolean) As Integer
+                                    ByRef BaseSmearing As Double, ByRef serial As Boolean) As Integer
         Dim noValue As Boolean = False
         If IsNothing(Stats) And IsNothing(DesiredStats) Then
             noValue = True
@@ -1118,7 +1137,7 @@ Public Class Common
                 Return -1
             End If
         End If
-        
+
         Dim WeightsSum As Double = 0
         Dim Weight() As Double
         Dim smearing As Double = 0
@@ -1128,10 +1147,14 @@ Public Class Common
             ReDim Weight(IDs.Max)
         Else
             ReDim Weight(UBound(Stats(0)))
+            If BaseSmearing <= 0 Then
+                Throw New Exception("RandomSelection: BaseSmearing должно быть положительным числом")
+                Return -1
+            End If
         End If
-
+        Dim maxSmearing As Double = Math.Max(10 * BaseSmearing, 10)
         Do While WeightsSum = 0
-            smearing += 0.1
+            smearing += BaseSmearing
             For Each i As Integer In IDs
                 Weight(i) = 1
                 If Not noValue Then
@@ -1146,7 +1169,7 @@ Public Class Common
                 End If
                 WeightsSum += Weight(i)
             Next i
-            If smearing > 10 Then Return -1
+            If smearing > maxSmearing Then Return -1
         Loop
         Return RandomSelection(IDs, Weight, serial)
     End Function
@@ -1157,18 +1180,19 @@ Public Class Common
     ''' Если же оба массива не инициализированы, то у всех записей будет одинаковый стат. вес</param>
     ''' <param name="Stats">Массивы параметров, по которым выбираем запись</param>
     ''' <param name="DesiredStats">Какое значение будет иметь наибольший стат. вес (по одному на каждый массив значений)</param>
+    ''' <param name="BaseSmearing">Множитель для Сигмы в распределении Гаусса. Сигма=Множитель*Желаемое_значение</param>
     ''' <param name="serial">True, if use in serial code</param>
     Public Function RandomSelection(ByRef IDs As List(Of Integer), ByRef Stats()() As Double, _
-                                    ByRef DesiredStats() As Double, _
+                                    ByRef DesiredStats() As Double, ByRef BaseSmearing As Double, _
                                     ByRef serial As Boolean) As Integer
-        Return RandomSelection(IDs, Stats, DesiredStats, Nothing, serial)
+        Return RandomSelection(IDs, Stats, DesiredStats, Nothing, BaseSmearing, serial)
     End Function
     ''' <summary>Dыбирает случайным образом запись из списка, считая, что у всех записей будет одинаковый стат. вес</summary>
     ''' <param name="IDs">Список намеров записей, из которых делается выбор</param>
     ''' <param name="serial">True, if use in serial code</param>
     Public Function RandomSelection(ByRef IDs As List(Of Integer), _
                                     ByRef serial As Boolean) As Integer
-        Return RandomSelection(IDs, Nothing, Nothing, serial)
+        Return RandomSelection(IDs, Nothing, Nothing, 0, serial)
     End Function
     ''' <summary>Dыбирает случайным образом запись из списка</summary>
     ''' <param name="IDs">Список намеров записей, из которых делается выбор.

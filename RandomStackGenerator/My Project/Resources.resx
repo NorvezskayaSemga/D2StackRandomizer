@@ -160,4 +160,7 @@
   <data name="lootCostDispersion" xml:space="preserve">
     <value>2</value>
   </data>
+  <data name="defaultSigma" xml:space="preserve">
+    <value>0.1</value>
+  </data>
 </root>

@@ -229,7 +229,7 @@ Public Class CommonTest
                 actual(i) = False
             Next i
             For i As Integer = 0 To 10 * expected.Length Step 1
-                actual(target.RandomSelection(IDs, {fullStatsArray}, {av}, serial)) = True
+                actual(target.RandomSelection(IDs, {fullStatsArray}, {av}, 0.1, serial)) = True
             Next i
             For i As Integer = 0 To UBound(expected) Step 1
                 If Not actual(i) = expected(i) Then ok = False
