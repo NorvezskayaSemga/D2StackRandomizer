@@ -1267,7 +1267,7 @@ Public Class Common
     ''' Для чтения из дефолтного листа в массив нужно добавить строчку %default% (наличие этого ключевого в файле запустит чтение дефолтного файла)</param>
     Public Sub ReadCustomUnitRace(ByRef CustomUnitRace() As String)
         If IsNothing(CustomUnitRace) Then Exit Sub
-        Dim s() , srow() As String
+        Dim s(), srow() As String
         For i As Integer = 0 To UBound(CustomUnitRace) Step 1
             If Not CustomUnitRace(i).ToLower = My.Resources.readDefaultFileKeyword.ToLower Then
                 If IO.File.Exists(CustomUnitRace(i)) Then
