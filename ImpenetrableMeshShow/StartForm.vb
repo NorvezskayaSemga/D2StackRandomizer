@@ -31,6 +31,7 @@ Public Class StartForm
         sM.AddGuardsBetweenLocations = True
         sM.LocExpRatio = 2
         sM.PassGuardsPowerMultiplicator = 2
+        sM.Wealth = 0.8
 
         Dim sR As ImpenetrableMeshGen.SettingsLoc
         sR.AverageRadius = 20

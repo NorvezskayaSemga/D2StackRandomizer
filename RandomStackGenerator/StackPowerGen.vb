@@ -169,8 +169,8 @@
             End If
         Next id
 
-        Dim minD As Double = 0.8 * Math.Sqrt(2) / Math.Sqrt(CDbl(My.Resources.lootCostDispersion))
-        Dim maxD As Double = 0.8 * Math.Sqrt(2) * Math.Sqrt(CDbl(My.Resources.lootCostDispersion))
+        Dim minD As Double = settMap.Wealth * Math.Sqrt(2) / Math.Sqrt(CDbl(My.Resources.lootCostDispersion))
+        Dim maxD As Double = settMap.Wealth * Math.Sqrt(2) * Math.Sqrt(CDbl(My.Resources.lootCostDispersion))
 
         Dim expKilled, LootCost As New Dictionary(Of Integer, Double)
         For Each id As Integer In guards.Keys

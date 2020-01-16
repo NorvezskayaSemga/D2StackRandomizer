@@ -72,6 +72,8 @@ Public Class ImpenetrableMeshGen
         ''' <summary>Отношение максимального опыта, получаемого за зачистку локации среднего размера, к минимальному.
         ''' Чем дальше локация от ближайшей столицы и чем ближе к центру, тем больше опыта за ее зачистку</summary>
         Dim LocExpRatio As Double
+        ''' <summary>Множитель стоимости лута нейтралов</summary>
+        Dim Wealth As Double
     End Structure
 
     Private rndgen As New RndValueGen
