@@ -265,31 +265,37 @@ End Class
 
 Public Class RaceGen
 
-    'Humans		H	6	1
-    'Undead		U	2
-    'Legions	L	3
-    'Clans		C	K	4
-    'Elves		E	7	14
-    'Neutral	N	5
-    'Greenskins	G	O	8
-    'Dragons	D	9
-    'Swamp		S	10
-    'Water		W	11
-    'Barbarians	B	12
-    'Animals	A	13
+    'Humans			    H	6	1
+    'Undead			    U	2
+    'Legions			L	3
+    'Clans			    C	K	4
+    'Elves			    E	7	14
+    'Neutral			N	5
+    'Greenskins		    G	O	8
+    'Dragons			D	9
+    'Swamp			    S	10
+    'Water			    W	11
+    'Barbarians		    B	12
+    'Animals			A	13
+    'AnimalSpider	    AS	15
+    'AnimalWhiteBear	AWB	16
+    'AnimalWolf		    AW	18
+    'AnimalGriffin	    AG	19
 
     Dim comm As New Common
     Dim rndgen As New RndValueGen
     Dim symm As New SymmetryOperations
     Dim imp As New ImpenetrableMeshGen
 
-    Private LocRaces() As String = New String() {"H:2:H,A,H+A,D,D+A,W", _
-                                                 "U:2:U,A,D,D+A,W", _
-                                                 "L:2:L,A,D,D+A,W", _
-                                                 "C:2:C,C+A,A,D,D+A,W", _
-                                                 "E:2:E,E+A,A,D,D+A,W", _
-                                                 "N:3:N,G,D,W,B,A,G+A,B+A,B+D,B+A+D,D+A", _
-                                                 "S:1:S,S+A,A,D,D+A,W"}
+    Private commonBlock As String = "D,D+A+AW+AG," & "W," & "A,AS,AW,A+AW+AG"
+
+    Private LocRaces() As String = New String() {"H:2:H,H+AW," & commonBlock, _
+                                                 "U:2:U,U+AS," & commonBlock, _
+                                                 "L:2:L," & commonBlock, _
+                                                 "C:2:C,C+AWB,AWB,AWB+AW," & commonBlock, _
+                                                 "E:2:E,E+A+AW+AG,E+AG," & commonBlock, _
+                                                 "N:3:N,G,B,G+AW+AS,B+AW,B+AW+D," & commonBlock, _
+                                                 "S:1:S,S+A,S+AS," & commonBlock}
     Dim LRaces() As Integer
     Dim LRacesWeight() As Double
     Dim SRaces()() As List(Of Integer)
