@@ -296,14 +296,17 @@ Public Class RaceGen
                                                  "E:2:E,E+A+AW+AG,E+AG," & commonBlock, _
                                                  "N:3:N,G,B,G+AW+AS,B+AW,B+AW+D," & commonBlock, _
                                                  "S:1:S,S+A,S+AS," & commonBlock}
+    Dim StackRaceWeight() As Double = New Double() {0, 1, 1, 1, 1, 0.75, 1, 1, 2, 0.25, 1, 3, 1, 1, 1, 1, 0.75, 0, 1, 1}
+    '                                               -, H, U, L, C,    N, H, E, G,    D, S, W, B, A, E,AS,  AWB, -. AW,AG 
     Dim LRaces() As Integer
-    Dim LRacesWeight() As Double
-    Dim SRaces()() As List(Of Integer)
+    Dim LRacesWeight(), SRacesWeight()() As Double
+    Dim SRaces()()() As Integer
     Dim neutralI As Integer = -1
 
     Public Sub New()
         ReDim LRaces(UBound(LocRaces)), LRacesWeight(UBound(LocRaces))
         Dim m As Integer = 0
+        Dim tmpRaceWeight As New Dictionary(Of String, Double)
         For i As Integer = 0 To UBound(LocRaces) Step 1
             Dim ch As String = LocRaces(i).Split(CChar(":"))(0)
             LRaces(i) = comm.RaceIdentifierToSubrace(ch)
@@ -313,18 +316,24 @@ Public Class RaceGen
         For i As Integer = 0 To UBound(LocRaces) Step 1
             LRacesWeight(i) = comm.RaceIdentifierToSubrace(LocRaces(i).Split(CChar(":"))(1))
         Next i
-        ReDim SRaces(m)
+        ReDim SRaces(m), SRacesWeight(m)
         For i As Integer = 0 To UBound(LocRaces) Step 1
             Dim races() As String = LocRaces(i).Split(CChar(":"))(2).Split(CChar(","))
-            ReDim SRaces(LRaces(i))(UBound(races))
+            ReDim SRaces(LRaces(i))(UBound(races)), SRacesWeight(LRaces(i))(UBound(races))
             For j As Integer = 0 To UBound(races) Step 1
-                SRaces(LRaces(i))(j) = New List(Of Integer)
                 Dim s() As String = races(j).Split(CChar("+"))
+                ReDim SRaces(LRaces(i))(j)(UBound(s))
                 For k As Integer = 0 To UBound(s) Step 1
-                    SRaces(LRaces(i))(j).Add(comm.RaceIdentifierToSubrace(s(k)))
+                    Dim rI As Integer = comm.RaceIdentifierToSubrace(s(k))
+                    SRaces(LRaces(i))(j)(k) = rI
+                    SRacesWeight(LRaces(i))(j) += StackRaceWeight(rI)
+                    If Not tmpRaceWeight.ContainsKey(s(k).ToUpper) Then tmpRaceWeight.Add(s(k).ToUpper, StackRaceWeight(rI))
                 Next k
+                SRacesWeight(LRaces(i))(j) /= SRaces(LRaces(i))(j).Length
+                Array.Sort(SRaces(LRaces(i))(j))
             Next j
         Next i
+        tmpRaceWeight.Clear()
     End Sub
 
     '''<summary>Сгенерирует для каждой локации и каждого отряда допустимые расы</summary>
@@ -402,15 +411,16 @@ Public Class RaceGen
     End Function
     Private Sub SetLocRaceToCells(ByRef m As Map, ByRef LocR() As Integer, ByRef nRaces As Integer)
         Dim t As Integer = 0
-        For Each item As List(Of Integer)() In SRaces
+        For Each item As Integer()() In SRaces
             If Not IsNothing(item) Then t += item.Length
         Next item
         Dim races(t - 1) As List(Of Integer)
         For i As Integer = 0 To UBound(races) Step 1
             races(i) = New List(Of Integer)
         Next i
-        Dim rO, rS As New List(Of Integer)
+        Dim rO, rS, IDs As New List(Of Integer)
         Dim added As New List(Of String)
+        Dim weight(t - 1) As Double
 
         For y As Integer = 0 To m.ySize Step 1
             For x As Integer = 0 To m.xSize Step 1
@@ -426,9 +436,9 @@ Public Class RaceGen
                         For Each r As Integer In rO
                             For i As Integer = 0 To UBound(SRaces(r)) Step 1
                                 Dim str As String = ""
-                                For Each item As Integer In SRaces(r)(i)
-                                    str &= item & "_"
-                                Next item
+                                For q As Integer = 0 To UBound(SRaces(r)(i)) Step 1
+                                    str &= SRaces(r)(i)(q).ToString & "_"
+                                Next q
                                 If str = "11_" AndAlso Not added.Contains(str) Then
                                     Dim ok As Boolean = True
                                     Dim b As Location.Borders = imp.NearestXY(x, y, m.xSize, m.ySize, 1)
@@ -444,25 +454,22 @@ Public Class RaceGen
                                     If Not ok Then added.Add(str)
                                 End If
                                 If Not added.Contains(str) Then
-                                    t += 1
-                                    races(t).Clear()
-                                    For Each item As Integer In SRaces(r)(i)
-                                        races(t).Add(item)
-                                    Next item
+                                    Call AddPossibleRace(t, r, i, races, weight)
                                     added.Add(str)
                                 End If
                             Next i
                         Next r
                     Else
                         For i As Integer = 0 To UBound(SRaces(neutralI)) Step 1
-                            t += 1
-                            races(t).Clear()
-                            For Each item As Integer In SRaces(neutralI)(i)
-                                races(t).Add(item)
-                            Next item
+                            Call AddPossibleRace(t, neutralI, i, races, weight)
                         Next i
                     End If
-                    Dim s As Integer = rndgen.RndPos(t + 1, True) - 1
+                    IDs.Clear()
+                    For i As Integer = 0 To t Step 1
+                        IDs.Add(i)
+                    Next i
+                    Dim s As Integer = comm.RandomSelection(IDs, weight, True) ' rndgen.RndPos(t + 1, True) - 1
+
                     For Each item As Integer In races(s)
                         rS.Add(item)
                     Next item
@@ -492,5 +499,14 @@ Public Class RaceGen
                 Next r
             Next x
         Next y
+    End Sub
+    Private Sub AddPossibleRace(ByRef t As Integer, raceLocID As Integer, ByRef i As Integer, _
+                                ByRef races() As List(Of Integer), ByRef weight() As Double)
+        t += 1
+        races(t).Clear()
+        weight(t) = SRacesWeight(neutralI)(i)
+        For q As Integer = 0 To UBound(SRaces(raceLocID)(i))
+            races(t).Add(SRaces(raceLocID)(i)(q))
+        Next q
     End Sub
 End Class
