@@ -16,6 +16,8 @@ Public Class RandStack
         Dim leaderPos As Integer
         ''' <summary>Предметы отряда. GxxxIGxxxx</summary>
         Dim items As List(Of String)
+        ''' <summary>Имя отряда</summary>
+        Dim name As String
     End Structure
 
     Public Structure Unit
