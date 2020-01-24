@@ -8,6 +8,7 @@ Public Class StartForm
     Dim symm As New SymmetryOperations
     Dim stackstats As New StackPowerGen
     Dim racegen As New RaceGen
+    Dim names As New SetName
 
     Private Sub GenButton_Click() Handles GenButton.Click
 

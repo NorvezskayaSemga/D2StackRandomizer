@@ -117,6 +117,15 @@ Namespace My.Resources
         End Property
         
         '''<summary>
+        '''  Looks up a localized string similar to .
+        '''</summary>
+        Friend ReadOnly Property ExcludeIDsForNames() As String
+            Get
+                Return ResourceManager.GetString("ExcludeIDsForNames", resourceCulture)
+            End Get
+        End Property
+        
+        '''<summary>
         '''  Looks up a localized string similar to 1.3.
         '''</summary>
         Friend ReadOnly Property expBarDispersion() As String
@@ -191,18 +200,22 @@ Namespace My.Resources
         '''  Looks up a localized string similar to #строка, начинающаяся с решетки, игнорируется
         '''#Идентификаторы рас.
         '''#В конце каждой строки ID, на который будут заменяться все остальные ID стртоки
-        '''Humans		H	6	1
-        '''Undead		U	2
-        '''Legions		L	3
-        '''Clans		C	K	4
-        '''Elves		E	7	14
-        '''Neutral		N	5
-        '''Greenskins	G	O	8
-        '''Dragons		D	9
-        '''Swamp		S	10
-        '''Water		W	11
-        '''Barbarians	B	12
-        '''Animals		A	13
+        '''Humans			H	6	1
+        '''Undead			U	2
+        '''Legions			L	3
+        '''Clans			C	K	4
+        '''Elves			E	7	14
+        '''Neutral			N	5
+        '''Greenskins		G	O	8
+        '''Dragons			D	9
+        '''Swamp			S	10
+        '''Water			W	11
+        '''Barbarians		B	12
+        '''Animals			A	13
+        '''AnimalSpider	AS	15
+        '''AnimalWhiteBear	AWB	16
+        '''AnimalWolf		AW	18
+        '''AnimalGriffin	AG	19
         '''.
         '''</summary>
         Friend ReadOnly Property Races() As String
