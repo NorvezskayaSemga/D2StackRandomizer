@@ -28,8 +28,12 @@
 
     Private Sub DownloadList()
         Dim w As New System.Net.WebClient
+        Dim Tn() As String = Nothing
+        Dim Tw() As Double = Nothing
         Try
-            Dim str() As String = w.DownloadString(link).Replace(Chr(10), vbNewLine).Split(CChar(vbNewLine))
+            Dim byteData() As Byte = w.DownloadData(link)
+            Dim d As String = Text.Encoding.UTF8.GetString(byteData)
+            Dim str() As String = d.Replace(Chr(10), vbNewLine).Split(CChar(vbNewLine))
             Dim base As String = ""
             For Each s As String In str
                 If s.Contains("var warmupData") Then
@@ -37,15 +41,37 @@
                     Exit For
                 End If
             Next s
-            If Not base = "" Then
-                str = base.Split(CChar("<"))
-                Dim n As Integer = 0
-                Dim m As Integer = 0
-                For i As Integer = 0 To UBound(str) Step 1
-                    If Not str(i).Contains("font-family") Then
-                        str(i) = ""
+            If base = "" Then
+                w.Dispose()
+                Exit Sub
+            End If
+            str = base.Split(CChar("<"))
+            Dim n As Integer = 0
+            Dim m As Integer = 0
+            For i As Integer = 0 To UBound(str) Step 1
+                If Not str(i).Contains("font-family") Then
+                    str(i) = ""
+                Else
+                    str(i) = str(i).Substring(str(i).IndexOf(">") + 1)
+                    Console.WriteLine(str(i))
+                    If n >= m Then
+                        m += 1
                     Else
-                        str(i) = str(i).Substring(str(i).IndexOf(">") + 1)
+                        n += 1
+                    End If
+                End If
+            Next i
+            If n > 0 Then
+                ReDim Tn(n - 1), Tw(n - 1)
+                n = 0
+                m = 0
+                For i As Integer = 0 To UBound(str) Step 1
+                    If Not str(i) = "" Then
+                        If n = m Then
+                            Tn(n) = str(i)
+                        Else
+                            Tw(n) = CDbl(str(i))
+                        End If
                         If n >= m Then
                             m += 1
                         Else
@@ -53,37 +79,31 @@
                         End If
                     End If
                 Next i
-                If n > 0 Then
-                    ReDim name(n - 1)
-                    n = 0
-                    m = 0
-                    For i As Integer = 0 To UBound(str) Step 1
-                        If Not str(i) = "" Then
-                            If n = m Then
-                                name(n) = str(i)
-                            Else
-                                weight(n) = CDbl(str(i))
-                            End If
-                            If n >= m Then
-                                m += 1
-                            Else
-                                n += 1
-                            End If
-                        End If
-                    Next i
-                    Dim wsum As Double = 0
-                    For i As Integer = 0 To UBound(name) Step 1
-                        wsum += weight(i)
-                    Next i
-                    For i As Integer = 0 To UBound(name) Step 1
-                        weight(i) /= wsum
-                    Next i
-                End If
-                base = base
+                Dim wsum As Double = 0
+                For i As Integer = 0 To UBound(Tn) Step 1
+                    wsum += Tw(i)
+                Next i
+                For i As Integer = 0 To UBound(Tn) Step 1
+                    Tw(i) /= wsum
+                Next i
             End If
         Catch ex As Exception
             Console.WriteLine(ex.Message)
         End Try
+        If Not IsNothing(Tn) And Not IsNothing(Tw) Then
+            Dim added As New Dictionary(Of String, Integer)
+            ReDim name(UBound(Tn)), weight(UBound(Tw))
+            For i As Integer = 0 To UBound(Tn) Step 1
+                Dim s As String = Tn(i).ToUpper
+                If Not added.ContainsKey(s) Then
+                    name(added.Count) = Tn(i)
+                    added.Add(s, added.Count)
+                End If
+                weight(added.Item(s)) += Tw(i)
+            Next i
+            ReDim Preserve name(added.Count - 1), weight(added.Count - 1)
+        End If
+        w.Dispose()
     End Sub
 
     Private Sub PrintNames()
