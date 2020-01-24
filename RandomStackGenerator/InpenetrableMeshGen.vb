@@ -3459,7 +3459,7 @@ Public Class StackLocationsGen
         connected = GetConnected(free)
         If Not IsNothing(connected) Then
             Dim T As TerminationCondition
-            Dim NConnClosed As Integer = GetConnected(FreeInClosedState).Length
+            Dim NConnClosed As Integer = NConnected(FreeInClosedState, m) 'GetConnected(FreeInClosedState).Length
             Dim out(UBound(connected))() As Point
             For j As Integer = 0 To UBound(connected) Step 1
                 T = New TerminationCondition(term.maxTime)
@@ -3510,7 +3510,7 @@ Public Class StackLocationsGen
             term.CheckTime()
             If term.ExitFromLoops Then Return Nothing
             ReDim output(k)
-            Call PlaceGuardLoc(-1, pointsList, IDs, -1, 4, opened, NConnClosed, output)
+            Call PlaceGuardLoc(-1, pointsList, IDs, -1, 4, opened, NConnClosed, output, m)
             If Not IsNothing(output(0)) Then Exit For
         Next k
         If IsNothing(output(0)) Then
@@ -3518,7 +3518,7 @@ Public Class StackLocationsGen
                 term.CheckTime()
                 If term.ExitFromLoops Then Return Nothing
                 ReDim output(k)
-                Call PlaceGuardLoc(-1, pointsList, IDs, -1, 0, opened, NConnClosed, output)
+                Call PlaceGuardLoc(-1, pointsList, IDs, -1, 0, opened, NConnClosed, output, m)
                 If Not IsNothing(output(0)) Then Exit For
             Next k
         End If
@@ -3542,7 +3542,7 @@ Public Class StackLocationsGen
     End Function
     Private Sub PlaceGuardLoc(ByRef n As Integer, ByRef pointsList() As Point, ByRef IDs As List(Of Integer), _
                               ByRef selected As Integer, ByRef minSqDist As Integer, ByRef opened(,) As Boolean, _
-                              ByRef NConnClosed As Integer, ByRef output() As Point)
+                              ByRef NConnClosed As Integer, ByRef output() As Point, ByRef m As Map)
         If n > -1 Then output(n) = pointsList(selected)
         If n < UBound(output) Then
             Dim idsBak As New List(Of Integer)
@@ -3555,7 +3555,7 @@ Public Class StackLocationsGen
             Next i
             Do While idsBak.Count > 0
                 Dim sel As Integer = comm.RandomSelection(idsBak, False)
-                Call PlaceGuardLoc(n + 1, pointsList, idsBak, sel, minSqDist, opened, NConnClosed, output)
+                Call PlaceGuardLoc(n + 1, pointsList, idsBak, sel, minSqDist, opened, NConnClosed, output, m)
                 If IsNothing(output(n + 1)) Then
                     idsBak.Remove(sel)
                 Else
@@ -3573,10 +3573,26 @@ Public Class StackLocationsGen
                     Next i
                 Next j
             Next p
-            Dim m As Integer = GetConnected(tp).Length
-            If NConnClosed > m Then output(n) = Nothing
+            Dim r As Integer = NConnected(tp, m) 'GetConnected(tp).Length
+            If NConnClosed > r Then output(n) = Nothing
         End If
     End Sub
+    Private Function NConnected(ByRef free(,) As Boolean, ByRef m As Map) As Integer
+        Dim conn()(,) As Boolean = GetConnected(free)
+        Dim n As Integer = 0
+        For i As Integer = 0 To UBound(conn) Step 1
+            For y As Integer = 0 To m.ySize Step 1
+                For x As Integer = 0 To m.xSize Step 1
+                    If conn(i)(x, y) And Not m.board(x, y).isPass Then
+                        n += 1
+                        x = m.xSize
+                        y = m.ySize
+                    End If
+                Next x
+            Next y
+        Next i
+        Return n
+    End Function
 
 End Class
 
