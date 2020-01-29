@@ -8,6 +8,7 @@
         Dim CenDist As Double
         Dim CapDist As Double
         Dim isPassGuard As Boolean
+        Dim isObjectGuard As Boolean
         Dim LocID As Integer
     End Structure
 
@@ -66,6 +67,7 @@
                     locs.Add(m.board(x, y).groupID, New StackLoc With {.CapDist = CapDist, _
                                                                        .CenDist = CenDist, _
                                                                        .isPassGuard = m.board(x, y).PassGuardLoc, _
+                                                                       .isObjectGuard = m.board(x, y).isObjectGuard, _
                                                                        .pos = New Point(x, y), _
                                                                        .LocID = m.board(x, y).locID.Item(0)})
                 End If
@@ -175,7 +177,13 @@
         Dim expKilled, LootCost As New Dictionary(Of Integer, Double)
         For Each id As Integer In guards.Keys
             If Not guards.Item(id).isPassGuard Then
-                Dim e As Double = LocTotalExp(guards.Item(id).LocID - 1) * W.Item(id) / Wsum(guards.Item(id).LocID - 1)
+                Dim stackPowerMultiplier As Double
+                If guards.Item(id).isObjectGuard Then
+                    stackPowerMultiplier = settMap.ObjectGuardsPowerMultiplicator
+                Else
+                    stackPowerMultiplier = 1
+                End If
+                Dim e As Double = stackPowerMultiplier * LocTotalExp(guards.Item(id).LocID - 1) * W.Item(id) / Wsum(guards.Item(id).LocID - 1)
                 expKilled.Add(id, e)
                 Dim t As Double = e * rndgen.PRand(minD, maxD)
                 WLoot.Add(id, t)

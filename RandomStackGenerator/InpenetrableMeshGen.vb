@@ -69,6 +69,8 @@ Public Class ImpenetrableMeshGen
         Dim AddGuardsBetweenLocations As Boolean
         ''' <summary>Множитель силы стражей проходов между локациями</summary>
         Dim PassGuardsPowerMultiplicator As Double
+        ''' <summary>Множитель силы стражей посещаемых объектов</summary>
+        Dim ObjectGuardsPowerMultiplicator As Double
         ''' <summary>Отношение максимального опыта, получаемого за зачистку локации среднего размера, к минимальному.
         ''' Чем дальше локация от ближайшей столицы и чем ближе к центру, тем больше опыта за ее зачистку</summary>
         Dim LocExpRatio As Double
@@ -1559,6 +1561,7 @@ Public Class ImpenetrableMeshGen
                         For i As Integer = 0 To UBound(ObjectBlank(id), 1) Step 1
                             tmpm.board(x + i, y + j).groupID = ObjectBlank(id)(i, j).groupID
                             tmpm.board(x + i, y + j).GuardLoc = ObjectBlank(id)(i, j).GuardLoc
+                            If tmpm.board(x + i, y + j).GuardLoc Then tmpm.board(x + i, y + j).isObjectGuard = True
                             tmpm.board(x + i, y + j).isAttended = ObjectBlank(id)(i, j).isAttended
                             tmpm.board(x + i, y + j).isBorder = ObjectBlank(id)(i, j).isBorder
                             tmpm.board(x + i, y + j).Penetrable = ObjectBlank(id)(i, j).Penetrable
@@ -3027,6 +3030,8 @@ Public Class Map
         Dim isPass As Boolean
         ''' <summary>True, если клетка находится под посещаемым объектом</summary>
         Dim isAttended As Boolean
+        ''' <summary>True, отряд является внешней или внутренней охраной посещаемого объекта</summary>
+        Dim isObjectGuard As Boolean
         ''' <summary>True, если на клетке нужно разместить обычный отряд</summary>
         Dim GuardLoc As Boolean
         ''' <summary>True, если на клетке нужно разместить отряд, охраняющий проход в соседнюю локацию</summary>
