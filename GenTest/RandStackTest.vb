@@ -1,4 +1,6 @@
-﻿Imports Microsoft.VisualStudio.TestTools.UnitTesting
+﻿Imports System.Collections.Generic
+
+Imports Microsoft.VisualStudio.TestTools.UnitTesting
 
 Imports RandomStackGenerator
 Imports System.Threading.Tasks
@@ -559,24 +561,54 @@ exittest:
     '''A test for Gen
     '''</summary>
     <TestMethod()> _
-    Public Sub GenTest6()
+    Public Sub GenTest61()
+
+        Dim target As RandStack_Accessor = Nothing
+        Dim stats As RandStack.DesiredStats = TestGoblinsGenStats(target)
+
+        Dim ok As Boolean = TestGoblinsGen(target, stats, True)
+
+        If Not ok Then Assert.Inconclusive("Verify the correctness of this test method.")
+    End Sub
+    '''<summary>
+    '''A test for Gen
+    '''</summary>
+    <TestMethod()> _
+    Public Sub GenTest62()
+
+        Dim target As RandStack_Accessor = Nothing
+        Dim stats As RandStack.DesiredStats = TestGoblinsGenStats(target)
+
+        Dim ok As Boolean = TestGoblinsGen(target, stats, False)
+
+        If Not ok Then Assert.Inconclusive("Verify the correctness of this test method.")
+    End Sub
+    Private Function TestGoblinsGenStats(ByRef target As RandStack_Accessor) As RandStack.DesiredStats
         If IsNothing(UnitsList) Then Call ReadTestUnits()
         If IsNothing(ItemsList) Then Call ReadTestItems()
-        Dim target As RandStack_Accessor = New RandStack_Accessor(UnitsList, ItemsList, excludeList, customRaceList, False)
-
-        Dim ok As Boolean = True
-
+        target = New RandStack_Accessor(UnitsList, ItemsList, excludeList, customRaceList, False)
         Dim s As New RandStack.Stack With {.pos = New String() {"g000uu5117", "g000uu5018", "g000uu5017", _
                                                                 "g000uu5017", "g000uu5018", "G000000000"}, _
                                            .items = New List(Of String)}
-        Dim stats As RandStack.DesiredStats = target.StackStats(s)
+        Return target.StackStats(s)
+    End Function
+    Private Function TestGoblinsGen(ByRef target As RandStack_Accessor, ByRef stats As RandStack.DesiredStats, _
+                                    ByRef TestOverload1 As Boolean) As Boolean
+        Dim ok As Boolean = True
         Dim expected As New List(Of String)
         expected.AddRange(New String() {"g000000000", "g000uu5117", "g000uu5017", "g000uu5018", "g000uu8196"})
+
+        If Not TestOverload1 Then expected.AddRange(New String() {"g000uu7539", "g001uu7539"})
 
         Dim noLeader As Boolean = False
         For p As Integer = 0 To 1 Step 1
             For i As Integer = 0 To 10000 Step 1
-                Dim stack As RandStack.Stack = target.Gen(stats, True, noLeader)
+                Dim stack As RandStack.Stack
+                If TestOverload1 Then
+                    stack = target.Gen(stats, True, noLeader)
+                Else
+                    stack = target.Gen(stats.ExpStackKilled, stats.LootCost, stats.Race, stats.excludeConsumableItems, stats.excludeNonconsumableItems, True, False)
+                End If
                 For Each item As String In stack.pos
                     If Not expected.Contains(item.ToLower) Then ok = False
                 Next item
@@ -584,8 +616,7 @@ exittest:
             Next i
             noLeader = Not noLeader
         Next p
-
-        If Not ok Then Assert.Inconclusive("Verify the correctness of this test method.")
-    End Sub
+        Return ok
+    End Function
 
 End Class

@@ -12,18 +12,6 @@
         Dim LocID As Integer
     End Structure
 
-    Private Function UnitExpKilledToExpBar(ByRef value As Double) As Double
-        Return 8.4639 * value - 72.748
-    End Function
-    Private Function UnitExpKilledToExpBar(ByRef value As Integer) As Integer
-        Return CInt(UnitExpKilledToExpBar(CDbl(value)))
-    End Function
-    Private Function UnitExpBarToExpKilled(ByRef value As Double) As Double
-        Return 0.1178 * value + 8.8477
-    End Function
-    Private Function UnitExpBarToExpKilled(ByRef value As Integer) As Integer
-        Return CInt(UnitExpBarToExpKilled(CDbl(value)))
-    End Function
 
     '''<summary>Вернет таблицу, где ключ - ID группы, значение - параметры генерации без определенной расы отряда</summary>
     ''' <param name="m">Заготовка карты после работы генератора положения отрядов</param>
@@ -239,24 +227,47 @@
         Return res
     End Function
     Private Function GenDesiredStats(ByRef expKilled As Double, ByRef LootCost As Double, ByRef groupID As Integer) As RandStack.DesiredStats
+        Return StackStatsGen.GenDesiredStats(expKilled, LootCost, rndgen, groupID)
+    End Function
+End Class
+
+Class StackStatsGen
+
+    Private Shared Function UnitExpKilledToExpBar(ByRef value As Double) As Double
+        Return Math.Max(8.4639 * value - 72.748, 50)
+    End Function
+    Private Shared Function UnitExpKilledToExpBar(ByRef value As Integer) As Integer
+        Return CInt(UnitExpKilledToExpBar(CDbl(value)))
+    End Function
+    Private Shared Function UnitExpBarToExpKilled(ByRef value As Double) As Double
+        Return Math.Max(0.1178 * value + 8.8477, 10)
+    End Function
+    Private Shared Function UnitExpBarToExpKilled(ByRef value As Integer) As Integer
+        Return CInt(UnitExpBarToExpKilled(CDbl(value)))
+    End Function
+
+    Friend Shared Function GenDesiredStats(ByRef expKilled As Double, ByRef LootCost As Double, ByRef rndGen As RandomStackGenerator.RndValueGen) As RandStack.DesiredStats
+        Return StackStatsGen.GenDesiredStats(expKilled, LootCost, rndGen, -1)
+    End Function
+    Friend Shared Function GenDesiredStats(ByRef expKilled As Double, ByRef LootCost As Double, ByRef rndGen As RandomStackGenerator.RndValueGen, ByRef groupID As Integer) As RandStack.DesiredStats
         Dim eKilled As Double = expKilled
-        Dim stackSize As Integer = rndgen.RndPos(6, True)
-        Dim meleeCount As Integer = rndgen.RndPos(Math.Min(stackSize, 3), True)
+        Dim stackSize As Integer = rndGen.RndPos(6, True)
+        Dim meleeCount As Integer = rndGen.RndPos(Math.Min(stackSize, 3), True)
         Dim maxGiants As Integer
         If stackSize < 2 Then
             maxGiants = 0
         ElseIf stackSize < 4 Then
-            maxGiants = rndgen.RndPos(2, True) - 1
+            maxGiants = rndGen.RndPos(2, True) - 1
         ElseIf stackSize < 6 Then
-            maxGiants = rndgen.RndPos(3, True) - 1
+            maxGiants = rndGen.RndPos(3, True) - 1
         Else
-            maxGiants = rndgen.RndPos(4, True) - 1
+            maxGiants = rndGen.RndPos(4, True) - 1
         End If
 
         Dim maxD As Double = Math.Sqrt(CDbl(My.Resources.expBarDispersion))
         Dim minD As Double = 1 / maxD
         Dim avExpKilled As Double = eKilled / (stackSize - 0.5 * maxGiants)
-        Dim eBar As Integer = CInt(UnitExpKilledToExpBar(avExpKilled) * rndgen.PRand(minD, maxD))
+        Dim eBar As Integer = CInt(UnitExpKilledToExpBar(avExpKilled) * rndGen.PRand(minD, maxD))
 
         Return New RandStack.DesiredStats With {.ExpStackKilled = CInt(eKilled), _
                                                 .StackSize = stackSize, _
@@ -269,7 +280,10 @@
                                                 .excludeNonconsumableItems = False, _
                                                 .excludeConsumableItems = False}
     End Function
+
+
 End Class
+
 
 Public Class RaceGen
 

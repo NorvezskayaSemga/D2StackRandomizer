@@ -64,7 +64,7 @@ Public Class ArrayZoomTest
         Dim expected() As Integer = New Integer() {12, 8, 6, 4, 4}
         Dim ok As Boolean = True
         For i As Integer = 0 To UBound(sizes) Step 1
-            If Not target.CalcMultiplicator(sizes(i)) = expected(i) Then
+            If Not target.CalcMultiplicator(sizes(i), 576) = expected(i) Then
                 ok = False
                 Exit For
             End If

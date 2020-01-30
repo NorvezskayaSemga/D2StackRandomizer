@@ -2763,6 +2763,7 @@ End Class
 
 Public Class ArrayZoom
 
+    ''' <summary>Увеличит массив в multiplicator раз</summary>
     Public Function Zoom(ByVal grid(,) As Integer, ByVal multiplicator As Integer) As Integer(,)
         Dim imgXSize As Integer = UBound(grid, 1)
         Dim imgYSize As Integer = UBound(grid, 2)
@@ -2785,8 +2786,11 @@ Public Class ArrayZoom
         Return res
     End Function
 
-    Public Function CalcMultiplicator(ByRef size As Integer) As Integer
-        Dim maxSize As Integer = 576
+    ''' <summary>Определит, во сколько раз нужно увеличить массив</summary>
+    ''' <param name="size">max(ширина,высота)</param>
+    ''' <param name="desiredsize">максимальный размер</param>
+    Public Function CalcMultiplicator(ByRef size As Integer, ByRef desiredsize As Integer) As Integer
+        Dim maxSize As Integer = desiredsize
         Dim m As Integer = 0
         Do While (m + 1) * size <= maxSize
             m += 1
@@ -2802,7 +2806,8 @@ Public Class ColorSelector
     Private maxBrightness As Integer = CInt(CDbl(3 * ColorCubeSize) * 0.9)
     Private minBrightness As Integer = CInt(CDbl(3 * ColorCubeSize) * 0.1)
 
-    Public Function MakeIslandsColorMap(ByRef grid(,) As Integer) As Color(,)
+    ''' <summary>Подберет цвета в зависимости от значений в ячейках</summary>
+    Public Function MakeColorMap(ByRef grid(,) As Integer) As Color(,)
 
         Dim imgXSize As Integer = UBound(grid, 1)
         Dim imgYSize As Integer = UBound(grid, 2)

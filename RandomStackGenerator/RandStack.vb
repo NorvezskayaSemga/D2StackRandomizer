@@ -493,8 +493,10 @@ Public Class RandStack
         Return result
     End Function
 
+    ''' <summary>Создаст отряд  в соответствие с желаемыми параметрами. Не нужно пытаться создать отряд водных жителей на земле</summary>
     ''' <param name="StackStats">Желаемые параметры стэка</param>
-    ''' <param name="GroundTile">True, если на клетку нельзя ставить водных лидеров</param>
+    ''' <param name="GroundTile">True, если на клетку нельзя ставить водных лидеров. Водной считается клетка с водой, окруженная со всех сторон клетками с водой</param>
+    ''' <param name="NoLeader">True, если стэк находится внутри руин или города</param>
     Public Function Gen(ByRef StackStats As DesiredStats, ByRef GroundTile As Boolean, ByRef NoLeader As Boolean) As Stack
 
         Dim DynStackStats As DesiredStats = DesiredStats.Copy(StackStats)
@@ -534,7 +536,7 @@ Public Class RandStack
                 End If
             Loop
 
-            Selectedleader = comm.RandomSelection(PossibleLeaders, {ExpBarLeaders}, {DynStackStats.ExpBarAverage}, multLeaders, SigmaMultiplier(DynStackStats), serialExecution)
+            SelectedLeader = comm.RandomSelection(PossibleLeaders, {ExpBarLeaders}, {DynStackStats.ExpBarAverage}, multLeaders, SigmaMultiplier(DynStackStats), serialExecution)
 
             If SelectedLeader = -1 Then
                 Throw New Exception("Возможно, бесконечный цикл в случайном выборе из массива возможных лидеров" & vbNewLine & _
@@ -642,6 +644,23 @@ Public Class RandStack
         Next i
         result.items = ItemsGen(DynStackStats.LootCost, DynStackStats.excludeConsumableItems, DynStackStats.excludeNonconsumableItems)
         Return result
+    End Function
+    ''' <summary>Создаст отряд  в соответствие с желаемыми параметрами. Не нужно пытаться создать отряд водных жителей на земле</summary>
+    ''' <param name="ExpStackKilled">Примерный опыт за убийство стэка</param>
+    ''' <param name="LootCost">Стоимость лута (предметы со стоимостью в золоте, равной нулю, не добавляются). При расчете стоимость драгоценностей уменьшается в два раза</param>
+    ''' <param name="Races">Допустимые расы юнитов в отряде</param>
+    ''' <param name="excludeConsumableItems">Не генерировать зелья, сферы, талисманы и свитки</param>
+    ''' <param name="excludeNonconsumableItems">Не генерировать надеваемые предметы и посохи</param>
+    ''' <param name="GroundTile">True, если на клетку нельзя ставить водных лидеров. Водной считается клетка с водой, окруженная со всех сторон клетками с водой</param>
+    ''' <param name="NoLeader">True, если стэк находится внутри руин или города</param>
+    Public Function Gen(ByRef ExpStackKilled As Integer, ByRef LootCost As Double, ByRef Races As List(Of Integer), _
+                             ByRef excludeConsumableItems As Boolean, ByRef excludeNonconsumableItems As Boolean, _
+                             ByRef GroundTile As Boolean, ByRef NoLeader As Boolean) As Stack
+        Dim StackStat As DesiredStats = StackStatsGen.GenDesiredStats(CDbl(ExpStackKilled), LootCost, rndgen)
+        StackStat.Race = Races
+        StackStat.excludeNonconsumableItems = excludeNonconsumableItems
+        StackStat.excludeConsumableItems = excludeConsumableItems
+        Return Gen(StackStat, GroundTile, NoLeader)
     End Function
     Private Function SelectPossibleLeader(ByRef leaderID As Integer, ByRef Tolerance As Double, _
                                           ByRef StackStats As DesiredStats, ByRef GroundTile As Boolean) As Boolean
@@ -815,7 +834,7 @@ Public Class RndValueGen
 
     Private Function RndDbl() As Double
         If betTick = 0 Or System.Double.IsInfinity(betTick) Then
-            betTick = (4 + delimiterBias / 2 + Math.Pow(delimiterBias + 1, 3))
+            betTick = (4 + 0.5 * delimiterBias + Math.Pow(delimiterBias + 1, 3))
         End If
         betTick = (Now.Ticks - betTick) * (4 + delimiterBias) * 0.112
         Dim tick As Double = betTick
@@ -829,12 +848,12 @@ Public Class RndValueGen
         tick = tick * Math.Pow(9.999, 19 - CInt(Math.Log10(tick)))
         Dim RAM As Double
         For i As Integer = 0 To 40 Step 1
-            RAM = (RAM + Threading.Thread.VolatileRead(tick + i)) / 2
+            RAM = (RAM + Threading.Thread.VolatileRead(tick + i)) * 0.5
         Next i
         'RAM = Math.Abs(RAM)
         RAM = RAM * Math.Pow(10, 15 - CInt(Math.Log10(RAM)))
         RAM = CDbl(Mid(((lastRAM + RAM) / 2).ToString, 5))
-        RAM = RAM * Math.Pow(10, 15 - CInt(Math.Log10(RAM)))
+        RAM = RAM * Math.Pow(10, 15 - CInt(Math.Log10(RAM))) + 0.1
         lastRAM = RAM
 
         tempPat += 1
@@ -842,7 +861,7 @@ Public Class RndValueGen
         If delimiterBias > 3 Then delimiterBias = 0
 
         Dim c1 As Double = RAM / (tempPat + delimiterBias)
-        Dim c2 As Double = tick / (100 + Math.Pow(4, 1 + delimiterBias)) * (c1 + 1) / c1
+        Dim c2 As Double = (tick * (c1 + 1)) / ((100 + Math.Pow(4, 1 + delimiterBias)) * c1)
         c2 *= Math.Pow(10, CInt(Math.Log10(c1)) - CInt(Math.Log10(c2)))
         Dim c3 As Double = Math.Pow(9.1 + delimiterBias, 6 + delimiterBias) _
             * Math.Sqrt(CDbl(Threading.Thread.CurrentThread.ManagedThreadId) + delimiterBias) _
@@ -1050,7 +1069,7 @@ Public Class Common
         End If
     End Sub
 
-    ''' <summary>Возвращает ID, соответствующее файлам игры</summary>
+    ''' <summary>Возвращает ID расы, соответствующее файлам игры</summary>
     ''' <param name="ID">Идентификатор расы (файл races.txt)</param>
     Public Function RaceIdentifierToSubrace(ByRef ID As String) As Integer
         Dim uID As String = ID.ToUpper
@@ -1061,13 +1080,13 @@ Public Class Common
             Return -1
         End If
     End Function
-    ''' <summary>Возвращает ID, соответствующее файлам игры</summary>
+    ''' <summary>Возвращает ID расы, соответствующее файлам игры</summary>
     ''' <param name="ID">Идентификатор расы (файл races.txt)</param>
     Public Function RaceIdentifierToSubrace(ByRef ID As Integer) As Integer
         Return RaceIdentifierToSubrace(ID.ToString)
     End Function
 
-    ''' <summary>Разбивает на строки текст по разделителям Chr(10) и Chr(13). Заменяет все табы на пробелы, удаляет повторяющиеся подряд пробелы, удаляет пробелы в начале и конце строки. Не добавляет в выходной массив стироки, начинающиеся с #</summary>
+    ''' <summary>Разбивает на строки текст по разделителям Chr(10) и Chr(13). Заменяет все табы на пробелы, удаляет повторяющиеся подряд пробелы, удаляет пробелы в начале и конце строки. Не добавляет в выходной массив строки, начинающиеся с #</summary>
     ''' <param name="TXT">Какой-нибудь текст</param>
     Public Function TxtSplit(ByRef TXT As String) As String()
         Dim splited() As String = TXT.Replace(Chr(10), Chr(13)).Replace(vbTab, " ").Split(Chr(13))
@@ -1235,6 +1254,7 @@ Public Class Common
         Return Math.Exp(-0.5 * ((X - avX) / (sigma * avX)) ^ 2)
     End Function
 
+    ''' <summary>Читает список юнитов и предметов, которые не должен использовать генератор</summary>
     ''' <param name="ExcludeLists">Файлы со списками исключенных объектов. Записи в них могут повторяться. 
     ''' Допускается передача неинициализитрованного массива.
     ''' Для чтения из дефолтного листа в массив нужно добавить строчку %default% (наличие этого ключевого в файле запустит чтение дефолтного файла)</param>
@@ -1264,6 +1284,7 @@ Public Class Common
         Next i
     End Sub
 
+    ''' <summary>Читает список, переопределяющий расы нужных юнитов</summary>
     ''' <param name="CustomUnitRace">Файлы со списками рас юнитов. Записи в них могут повторяться, но записи с повторяющимся ID будут перезаписываться. 
     ''' Допускается передача неинициализитрованного массива.
     ''' Для чтения из дефолтного листа в массив нужно добавить строчку %default% (наличие этого ключевого в файле запустит чтение дефолтного файла)</param>

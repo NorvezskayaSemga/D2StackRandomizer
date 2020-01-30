@@ -1,6 +1,6 @@
 ﻿Imports RandomStackGenerator
 
-Public Class StartForm
+Friend Class StartForm
 
     Dim genmesh As New ImpenetrableMeshGen
     Dim zoom As New ArrayZoom
@@ -120,9 +120,9 @@ again:
                 End If
             Next y
         Next x
-        Dim mult As Integer = zoom.CalcMultiplicator(Math.Max(UBound(t, 1), UBound(t, 2)) + 1)
+        Dim mult As Integer = zoom.CalcMultiplicator(Math.Max(UBound(t, 1), UBound(t, 2)) + 1, 576)
         Dim mgrid(,) As Integer = zoom.Zoom(t, mult)
-        Dim c(,) As Color = draw.MakeIslandsColorMap(mgrid)
+        Dim c(,) As Color = draw.MakeColorMap(mgrid)
         Dim xsize As Integer = UBound(c, 1)
         Dim ysize As Integer = UBound(c, 2)
         Dim img As Bitmap

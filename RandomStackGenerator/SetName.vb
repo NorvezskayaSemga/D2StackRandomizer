@@ -137,6 +137,7 @@
         Next i
     End Sub
 
+    '''<summary>Присвоит имена всем отрядам в списке</summary>
     ''' <param name="stacks">Уже сгенерированные стэки</param>
     ''' <param name="R">Инициализированный класс</param>
     Public Sub GenNames(ByRef stacks() As RandStack.Stack, ByRef R As RandStack)
