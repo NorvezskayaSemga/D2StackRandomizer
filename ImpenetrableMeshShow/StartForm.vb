@@ -9,6 +9,7 @@ Friend Class StartForm
     Dim stackstats As New StackPowerGen
     Dim racegen As New RaceGen
     Dim names As New SetName
+    Dim watergenerator As New WaterGen
 
     Private Sub GenButton_Click() Handles GenButton.Click
 
@@ -74,7 +75,7 @@ again:
             grid = genmesh.SymmGen(sM, sR, sC, gt)
         End If
 
-        If Not genmesh.TestMap(grid, False) Then Exit Sub
+        If Not genmesh.TestMap(grid) Then Exit Sub
 
         If Not IsNothing(grid) Then
             Dim staclocgen As New StackLocationsGen
@@ -83,9 +84,10 @@ again:
             Exit Sub
         End If
 
-        If Not genmesh.TestMap(grid, True) Then Exit Sub
+        If Not genmesh.TestMap(grid) Then Exit Sub
 
         Call stackstats.Gen(grid, sM, sR, sC)
+        Call watergenerator.Gen(grid, sM)
         Call racegen.Gen(grid, Nothing)
 
         'запоминаем набор точек с наибольшим n

@@ -24,10 +24,17 @@
                    ByRef settMap As ImpenetrableMeshGen.SettingsMap, _
                    ByRef settRaceLoc As ImpenetrableMeshGen.SettingsLoc, _
                    ByRef settCommLoc As ImpenetrableMeshGen.SettingsLoc)
+
+        If Not m.complited.StacksPlacing_Done Or Not m.complited.MeshTestII_Done Then
+            Throw New Exception("Сначала нужно выполнить StackLocations.Gen " & _
+                                "и протестировать результат с помощью ImpenetrableMeshGen.TestMap")
+        End If
+
         If settMap.LocExpRatio < 1 Then settMap.LocExpRatio = 1 / settMap.LocExpRatio
         Dim guards As Dictionary(Of Integer, StackLoc) = MakeGuardsList(m)
         Dim LocTotalExp() As Double = MakeLocationsList(m, settMap, settRaceLoc, settCommLoc)
         m.groupStats = GenStacksStats(settMap, guards, LocTotalExp)
+        m.complited.StacksDesiredStatsGen_Done=True
     End Sub
 
     Private Function MakeGuardsList(ByRef m As Map) As Dictionary(Of Integer, StackLoc)
@@ -360,6 +367,11 @@ Public Class RaceGen
     ''' <param name="m">Заготовка карты после работы генератора положения отрядов и их силы</param>
     ''' <param name="PlayableRaces">За какие расы будем играть. Если Nothing, то расы будут сгенерированы</param>
     Public Sub Gen(ByRef m As Map, ByRef PlayableRaces() As Integer)
+
+        If Not m.complited.WaterCreation_Done Then
+            Throw New Exception("Сначала нужно выполнить WaterGen.Gen")
+        End If
+
         Dim nRaces As Integer = RacesAmount(m)
         Dim LocR() As Integer = GenLocRace(m, nRaces, PlayableRaces)
         Call SetLocRaceToCells(m, LocR, nRaces)
@@ -375,6 +387,7 @@ Public Class RaceGen
                 End If
             Next x
         Next y
+        m.complited.StacksRaceGen_Done = True
     End Sub
 
     Private Function RacesAmount(ByRef m As Map) As Integer

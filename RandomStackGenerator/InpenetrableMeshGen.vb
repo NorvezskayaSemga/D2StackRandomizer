@@ -144,8 +144,11 @@ Public Class ImpenetrableMeshGen
         Return result
     End Function
     ''' <summary>Вернет True, если все нормально, иначе стоит перегенерировать</summary>
-    Public Function TestMap(ByRef m As Map, ByRef testGuardLocs As Boolean) As Boolean
+    Public Function TestMap(ByRef m As Map) As Boolean
         If IsNothing(m) Then Return False
+        If Not m.complited.LoationsCreation_Done Then
+            Throw New Exception("Сначала нужно выполнить ImpenetrableMeshGen.SymmGen или ImpenetrableMeshGen.UnsymmGen")
+        End If
         For x As Integer = 0 To m.xSize Step 1
             For y As Integer = 0 To m.ySize Step 1
                 If m.board(x, y).isBorder And m.board(x, y).isAttended Then
@@ -164,7 +167,7 @@ Public Class ImpenetrableMeshGen
                     Console.WriteLine("Warning: object and pass are on the same place")
                     Return False
                 End If
-                If testGuardLocs And m.board(x, y).GuardLoc Then
+                If m.complited.StacksPlacing_Done And m.board(x, y).GuardLoc Then
                     If m.board(x, y).isBorder Then
                         Console.WriteLine("Warning: border and guard are on the same place")
                         Return False
@@ -179,13 +182,13 @@ Public Class ImpenetrableMeshGen
                         Return False
                     End If
                 End If
-                If testGuardLocs Then
+                If m.complited.StacksPlacing_Done Then
                     If Not m.board(x, y).GuardLoc And (m.board(x, y).objectID = 2 Or m.board(x, y).objectID = 7) Then
                         Console.WriteLine("Warning: internal guard for object is not set")
                         Return False
                     End If
                 End If
-                If testGuardLocs And m.board(x, y).PassGuardLoc Then
+                If m.complited.StacksPlacing_Done And m.board(x, y).PassGuardLoc Then
                     If m.board(x, y).isBorder Then
                         Console.WriteLine("Warning: border and pass guard are on the same place")
                         Return False
@@ -202,6 +205,11 @@ Public Class ImpenetrableMeshGen
                 End If
             Next y
         Next x
+        If m.complited.StacksPlacing_Done Then
+            m.complited.MeshTestII_Done = True
+        Else
+            m.complited.MeshTestI_Done = True
+        End If
         Return True
     End Function
 
@@ -232,7 +240,10 @@ Public Class ImpenetrableMeshGen
                 Dim t6 As Integer = Environment.TickCount
                 Console.WriteLine("RLocs: " & t1 - t0 & vbTab & "CLocs: " & t2 - t1 & vbTab & "IDset: " & t3 - t2 & vbTab & "BordSet: " & t4 - t3 & vbTab & "PlaceActive: " & t5 - t4 & vbTab & "MakeMaze: " & t6 - t5)
                 AttemptsN += 1
-                If Not term.ExitFromLoops Then Return m
+                If Not term.ExitFromLoops Then
+                    m.complited.LoationsCreation_Done = True
+                    Return m
+                End If
                 nTry = 0
             Catch ex As Exception
                 If nTry > 1 Then
@@ -3010,6 +3021,8 @@ Public Class Map
     Public ReadOnly symmID As Integer
     ''' <summary>Желаемые статы для каждой группы стэков. Индексы групп (key) хранятся в board(,).groupID</summary>
     Public groupStats As Dictionary(Of Integer, RandStack.DesiredStats)
+    ''' <summary>Какие этапы закончены</summary>
+    Public complited As ComplitedSteps
 
     ''' <param name="xDim">Правая граница карты (например, если генерируем карту 24x48, то сюда пишем 23)</param>
     ''' <param name="yDim">Верхняя граница карты (например, если генерируем карту 24x48, то сюда пишем 47)</param>
@@ -3057,6 +3070,17 @@ Public Class Map
         ''' <summary>True, если на клетке вода</summary>
         Dim isWater As Boolean
     End Structure
+
+    Public Structure ComplitedSteps
+        Dim LoationsCreation_Done As Boolean
+        Dim MeshTestI_Done As Boolean
+        Dim StacksPlacing_Done As Boolean
+        Dim MeshTestII_Done As Boolean
+        Dim StacksDesiredStatsGen_Done As Boolean
+        Dim WaterCreation_Done As Boolean
+        Dim StacksRaceGen_Done As Boolean
+    End Structure
+
 End Class
 
 Public Class StackLocationsGen
@@ -3082,6 +3106,12 @@ Public Class StackLocationsGen
                         ByVal settRaceLoc As ImpenetrableMeshGen.SettingsLoc, _
                         ByVal settCommLoc As ImpenetrableMeshGen.SettingsLoc, _
                         ByRef maxGenTime As Integer) As Boolean
+
+        If Not m.complited.LoationsCreation_Done Or Not m.complited.MeshTestI_Done Then
+            Throw New Exception("Сначала нужно выполнить ImpenetrableMeshGen.SymmGen или " & _
+                                "ImpenetrableMeshGen.UnsymmGen и протестировать результат с помощью ImpenetrableMeshGen.TestMap")
+        End If
+
         Dim tmpm As Map = m
         Dim GroupID As Integer
         Dim t0 As Integer = Environment.TickCount
@@ -3248,6 +3278,7 @@ Public Class StackLocationsGen
         m = tmpm
         Dim t1 As Integer = Environment.TickCount
         Console.WriteLine("Stacks locations " & t1 - t0)
+        m.complited.StacksPlacing_Done = True
         Return True
     End Function
 
@@ -3658,5 +3689,18 @@ Public Class Point
     Public Function Dist(ByRef x As Double, ByRef y As Double) As Double
         Return Math.Sqrt(SqDist(x, y))
     End Function
+
+End Class
+
+Public Class WaterGen
+
+    Public Sub Gen(ByRef m As Map, ByRef settMap As ImpenetrableMeshGen.SettingsMap)
+
+        If Not m.complited.StacksDesiredStatsGen_Done Then
+            Throw New Exception("Сначала нужно выполнить StackPowerGen.Gen")
+        End If
+
+        m.complited.WaterCreation_Done = True
+    End Sub
 
 End Class
