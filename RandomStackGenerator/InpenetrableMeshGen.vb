@@ -3008,6 +3008,8 @@ Public Class Map
     Public ReadOnly ySize As Integer
     ''' <summary>Идентификатор симметрии, применяемой при генерации</summary>
     Public ReadOnly symmID As Integer
+    ''' <summary>Желаемые статы для каждой группы стэков. Индексы групп (key) хранятся в board(,).groupID</summary>
+    Public groupStats As Dictionary(Of Integer, RandStack.DesiredStats)
 
     ''' <param name="xDim">Правая граница карты (например, если генерируем карту 24x48, то сюда пишем 23)</param>
     ''' <param name="yDim">Верхняя граница карты (например, если генерируем карту 24x48, то сюда пишем 47)</param>

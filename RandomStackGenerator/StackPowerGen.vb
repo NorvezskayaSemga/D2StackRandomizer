@@ -20,15 +20,15 @@
     ''' Дробная часть определяет шанс округления большую сторону</param>
     ''' <param name="settCommLoc">Настройки для остальных локаций. 
     ''' Значение количества опыта для каждой локации будет умножаться на отношение площади локации к площади средней локации (Pi*AverageRadius^2)</param>>
-    Public Function Gen(ByRef m As Map, _
+    Public Sub Gen(ByRef m As Map, _
                    ByRef settMap As ImpenetrableMeshGen.SettingsMap, _
                    ByRef settRaceLoc As ImpenetrableMeshGen.SettingsLoc, _
-                   ByRef settCommLoc As ImpenetrableMeshGen.SettingsLoc) As Dictionary(Of Integer, RandStack.DesiredStats)
+                   ByRef settCommLoc As ImpenetrableMeshGen.SettingsLoc)
         If settMap.LocExpRatio < 1 Then settMap.LocExpRatio = 1 / settMap.LocExpRatio
         Dim guards As Dictionary(Of Integer, StackLoc) = MakeGuardsList(m)
         Dim LocTotalExp() As Double = MakeLocationsList(m, settMap, settRaceLoc, settCommLoc)
-        Return GenStacksStats(settMap, guards, LocTotalExp)
-    End Function
+        m.groupStats = GenStacksStats(settMap, guards, LocTotalExp)
+    End Sub
 
     Private Function MakeGuardsList(ByRef m As Map) As Dictionary(Of Integer, StackLoc)
         Dim locs As New Dictionary(Of Integer, StackLoc)
@@ -281,9 +281,7 @@ Class StackStatsGen
                                                 .excludeConsumableItems = False}
     End Function
 
-
 End Class
-
 
 Public Class RaceGen
 
@@ -360,10 +358,8 @@ Public Class RaceGen
 
     '''<summary>Сгенерирует для каждой локации и каждого отряда допустимые расы</summary>
     ''' <param name="m">Заготовка карты после работы генератора положения отрядов и их силы</param>
-    ''' <param name="guards">Результат работы генератора силы отрядов</param>
     ''' <param name="PlayableRaces">За какие расы будем играть. Если Nothing, то расы будут сгенерированы</param>
-    Public Sub Gen(ByRef m As Map, ByRef guards As Dictionary(Of Integer, RandStack.DesiredStats), _
-                   ByRef PlayableRaces() As Integer)
+    Public Sub Gen(ByRef m As Map, ByRef PlayableRaces() As Integer)
         Dim nRaces As Integer = RacesAmount(m)
         Dim LocR() As Integer = GenLocRace(m, nRaces, PlayableRaces)
         Call SetLocRaceToCells(m, LocR, nRaces)
@@ -371,9 +367,9 @@ Public Class RaceGen
             For x As Integer = 0 To m.xSize Step 1
                 If m.board(x, y).GuardLoc Or m.board(x, y).PassGuardLoc Then
                     Dim group As Integer = m.board(x, y).groupID
-                    If guards.Item(group).Race.Count = 0 Then
+                    If m.groupStats.Item(group).Race.Count = 0 Then
                         For Each r As Integer In m.board(x, y).stackRace
-                            guards.Item(group).Race.Add(r)
+                            m.groupStats.Item(group).Race.Add(r)
                         Next r
                     End If
                 End If

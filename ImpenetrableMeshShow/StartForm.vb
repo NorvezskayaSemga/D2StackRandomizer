@@ -85,8 +85,8 @@ again:
 
         If Not genmesh.TestMap(grid, True) Then Exit Sub
 
-        Dim ststats As Dictionary(Of Integer, RandStack.DesiredStats) = stackstats.Gen(grid, sM, sR, sC)
-        Call racegen.Gen(grid, ststats, Nothing)
+        Call stackstats.Gen(grid, sM, sR, sC)
+        Call racegen.Gen(grid, Nothing)
 
         'запоминаем набор точек с наибольшим n
         'произвед 1/r - стат вес для nearwith = -1
