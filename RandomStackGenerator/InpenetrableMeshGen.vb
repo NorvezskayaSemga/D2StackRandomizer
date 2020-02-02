@@ -3122,6 +3122,38 @@ Public Class StackLocationsGen
         Dim GroupID As Integer
         Dim t0 As Integer = Environment.TickCount
 
+        Call PlaceCommonStacks(tmpm, settMap, settRaceLoc, settCommLoc, GroupID)
+
+        If settMap.AddGuardsBetweenLocations Then
+            Dim term As New TerminationCondition(maxGenTime)
+            Dim guards(UBound(m.Loc))()() As Point
+            Parallel.For(0, m.Loc.Length,
+             Sub(i As Integer)
+                 If Not tmpm.Loc(i).IsObtainedBySymmery Then
+                     If term.ExitFromLoops Then Exit Sub
+                     guards(i) = PlasePassesGuards(tmpm, settMap, tmpm.Loc(i).ID, term)
+                 End If
+             End Sub)
+            If term.ExitFromLoops Then Return False
+
+            Dim gList() As Point = ConvertPointsArray(guards)
+
+            Call RemoveExcessPassGuards(tmpm, settMap, gList)
+
+            Call PlacePassGuards(tmpm, gList, GroupID, settMap)
+        End If
+        m = tmpm
+        Dim t1 As Integer = Environment.TickCount
+        Console.WriteLine("Stacks locations " & t1 - t0)
+        m.complited.StacksPlacing_Done = True
+        Return True
+    End Function
+
+    Private Sub PlaceCommonStacks(ByRef m As Map, ByVal settMap As ImpenetrableMeshGen.SettingsMap, _
+                                  ByVal settRaceLoc As ImpenetrableMeshGen.SettingsLoc, _
+                                  ByVal settCommLoc As ImpenetrableMeshGen.SettingsLoc, _
+                                  ByRef GroupID As Integer)
+        Dim tmpm As Map = m
         For y As Integer = 0 To m.ySize Step 1
             For x As Integer = 0 To m.xSize Step 1
                 If m.board(x, y).objectID = 8 Then
@@ -3239,55 +3271,8 @@ Public Class StackLocationsGen
                 End If
             Next x
         Next y
-        Dim term As New TerminationCondition(maxGenTime)
-        If settMap.AddGuardsBetweenLocations Then
-            Dim guards(UBound(m.Loc))()() As Point
-
-            'For i As Integer = 0 To m.Loc.Length - 1 Step 1
-            '    If Not tmpm.Loc(i).IsObtainedBySymmery Then
-            '        If Not term.ExitFromLoops Then
-            '            guards(i) = PlasePassesGuards(tmpm, settMap, tmpm.Loc(i).ID, term)
-            '        End If
-            '    End If
-            'Next i
-            Parallel.For(0, m.Loc.Length,
-             Sub(i As Integer)
-                 If Not tmpm.Loc(i).IsObtainedBySymmery Then
-                     If term.ExitFromLoops Then Exit Sub
-                     guards(i) = PlasePassesGuards(tmpm, settMap, tmpm.Loc(i).ID, term)
-                 End If
-             End Sub)
-            If term.ExitFromLoops Then Return False
-
-            For i As Integer = 0 To UBound(m.Loc) Step 1
-                If Not IsNothing(guards(i)) Then
-                    For j As Integer = 0 To UBound(guards(i)) Step 1
-                        If Not IsNothing(guards(i)(j)) Then
-                            For Each p As Point In guards(i)(j)
-                                GroupID += 1
-                                If m.symmID > -1 Then
-                                    Dim pp() As Point = symm.ApplySymm(p, settMap.nRaces, m, 1)
-                                    For Each item As Point In pp
-                                        m.board(item.X, item.Y).groupID = GroupID
-                                        m.board(item.X, item.Y).PassGuardLoc = True
-                                    Next item
-                                Else
-                                    m.board(p.X, p.Y).groupID = GroupID
-                                    m.board(p.X, p.Y).PassGuardLoc = True
-                                End If
-                            Next p
-                        End If
-                    Next j
-                End If
-            Next i
-        End If
         m = tmpm
-        Dim t1 As Integer = Environment.TickCount
-        Console.WriteLine("Stacks locations " & t1 - t0)
-        m.complited.StacksPlacing_Done = True
-        Return True
-    End Function
-
+    End Sub
     Private Function FillLocation(ByRef m As Map, ByRef settMap As ImpenetrableMeshGen.SettingsMap, _
                                   ByRef settLoc As ImpenetrableMeshGen.SettingsLoc, ByRef LocID As Integer) As List(Of Point)
 
@@ -3643,6 +3628,107 @@ Public Class StackLocationsGen
         Return n
     End Function
 
+    Private Function ConvertPointsArray(ByRef guards()()() As Point) As Point()
+        If IsNothing(guards) Then Return Nothing
+        Dim n As Integer = -1
+        For i As Integer = 0 To UBound(guards) Step 1
+            If Not IsNothing(guards(i)) Then
+                For j As Integer = 0 To UBound(guards(i)) Step 1
+                    If Not IsNothing(guards(i)(j)) Then n += guards(i)(j).Length
+                Next j
+            End If
+        Next i
+        If n = -1 Then Return Nothing
+        Dim res(n) As Point
+        n = -1
+        For i As Integer = 0 To UBound(guards) Step 1
+            If Not IsNothing(guards(i)) Then
+                For j As Integer = 0 To UBound(guards(i)) Step 1
+                    If Not IsNothing(guards(i)(j)) Then
+                        For k As Integer = 0 To UBound(guards(i)(j)) Step 1
+                            n += 1
+                            res(n) = guards(i)(j)(k)
+                        Next k
+                    End If
+                Next j
+            End If
+        Next i
+        Return res
+    End Function
+    Private Sub RemoveExcessPassGuards(ByRef m As Map, ByRef settMap As ImpenetrableMeshGen.SettingsMap, _
+                                       ByRef guards() As Point)
+        If IsNothing(guards) Then Exit Sub
+        Dim free(m.xSize, m.ySize) As Boolean
+        For y As Integer = 0 To m.ySize Step 1
+            For x As Integer = 0 To m.xSize Step 1
+                If Not m.board(x, y).isBorder And Not m.board(x, y).isAttended Then free(x, y) = True
+            Next x
+        Next y
+        Dim n As Integer
+        Dim excluded As New List(Of Integer)
+        Dim nLonsInFullyClosedState As Integer = CalcNDisconnectedLocs(free, m, settMap, guards, excluded)
+
+        For i As Integer = 0 To UBound(guards) Step 1
+            excluded.Add(i)
+            n = CalcNDisconnectedLocs(free, m, settMap, guards, excluded)
+            If nLonsInFullyClosedState > n Then excluded.Remove(i)
+        Next i
+        If guards.Length = excluded.Count Then
+            guards = Nothing
+            Exit Sub
+        End If
+        Dim res(UBound(guards) - excluded.Count) As Point
+        n = -1
+        For i As Integer = 0 To UBound(guards) Step 1
+            If Not excluded.Contains(i) Then
+                n += 1
+                res(n) = New Point(guards(i).X, guards(i).Y)
+            End If
+        Next i
+        guards = res
+    End Sub
+    Private Function CalcNDisconnectedLocs(ByRef free(,) As Boolean, ByRef m As Map, _
+                                           ByRef settMap As ImpenetrableMeshGen.SettingsMap, _
+                                           ByRef guards() As Point, ByRef excluded As List(Of Integer)) As Integer
+        Dim freeInClosedState(,) As Boolean = CType(free.Clone, Boolean(,))
+
+        For id As Integer = 0 To UBound(guards) Step 1
+            If Not excluded.Contains(id) Then
+                Dim b As Location.Borders = ImpenetrableMeshGen.NearestXY(guards(id), m, 1)
+                For x As Integer = b.minX To b.maxX Step 1
+                    For y As Integer = b.minY To b.maxY Step 1
+                        If m.symmID > -1 Then
+                            Dim pp() As Point = symm.ApplySymm(New Point(x, y), settMap.nRaces, m, 0)
+                            For Each item As Point In pp
+                                freeInClosedState(item.X, item.Y) = False
+                            Next item
+                        Else
+                            freeInClosedState(x, y) = False
+                        End If
+                    Next y
+                Next x
+            End If
+        Next id
+
+        Return NConnected(freeInClosedState, m)
+    End Function
+
+    Private Sub PlacePassGuards(ByRef m As Map, ByRef guards() As Point, ByRef GroupID As Integer, ByRef settMap As ImpenetrableMeshGen.SettingsMap)
+        If IsNothing(guards) Then Exit Sub
+        For Each p As Point In guards
+            GroupID += 1
+            If m.symmID > -1 Then
+                Dim pp() As Point = symm.ApplySymm(p, settMap.nRaces, m, 1)
+                For Each item As Point In pp
+                    m.board(item.X, item.Y).groupID = GroupID
+                    m.board(item.X, item.Y).PassGuardLoc = True
+                Next item
+            Else
+                m.board(p.X, p.Y).groupID = GroupID
+                m.board(p.X, p.Y).PassGuardLoc = True
+            End If
+        Next p
+    End Sub
 End Class
 
 Public Class Point
@@ -3739,7 +3825,7 @@ Public Class WaterGen
             lake = Location.GenLocSize(WaterLocSettings, 0, rndgen, minLocationRadiusAtAll)
 
 
-
+            Exit Do
         Loop
     End Sub
 

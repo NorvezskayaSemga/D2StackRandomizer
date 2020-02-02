@@ -63,10 +63,12 @@ Partial Class StartForm
         'sel3
         '
         Me.sel3.AutoSize = True
+        Me.sel3.Checked = True
         Me.sel3.Location = New System.Drawing.Point(18, 59)
         Me.sel3.Name = "sel3"
         Me.sel3.Size = New System.Drawing.Size(60, 17)
         Me.sel3.TabIndex = 2
+        Me.sel3.TabStop = True
         Me.sel3.Text = "4 races"
         Me.sel3.UseVisualStyleBackColor = True
         '
@@ -83,18 +85,18 @@ Partial Class StartForm
         'sel1
         '
         Me.sel1.AutoSize = True
-        Me.sel1.Checked = True
         Me.sel1.Location = New System.Drawing.Point(18, 13)
         Me.sel1.Name = "sel1"
         Me.sel1.Size = New System.Drawing.Size(60, 17)
         Me.sel1.TabIndex = 0
-        Me.sel1.TabStop = True
         Me.sel1.Text = "2 races"
         Me.sel1.UseVisualStyleBackColor = True
         '
         'SymmCheckBox
         '
         Me.SymmCheckBox.AutoSize = True
+        Me.SymmCheckBox.Checked = True
+        Me.SymmCheckBox.CheckState = System.Windows.Forms.CheckState.Checked
         Me.SymmCheckBox.Location = New System.Drawing.Point(630, 188)
         Me.SymmCheckBox.Name = "SymmCheckBox"
         Me.SymmCheckBox.Size = New System.Drawing.Size(98, 17)
