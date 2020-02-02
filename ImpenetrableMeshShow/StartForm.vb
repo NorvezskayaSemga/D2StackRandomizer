@@ -34,6 +34,7 @@ Friend Class StartForm
         sM.LocExpRatio = 2
         sM.PassGuardsPowerMultiplicator = 2
         sM.Wealth = 0.8
+        sM.WaterAmount = 0.4
 
         Dim sR As ImpenetrableMeshGen.SettingsLoc
         sR.AverageRadius = 20

@@ -312,7 +312,6 @@ Public Class RaceGen
     Dim comm As New Common
     Dim rndgen As New RndValueGen
     Dim symm As New SymmetryOperations
-    Dim imp As New ImpenetrableMeshGen
 
     Private commonBlock As String = "D,D+A+AW+AG," & "W," & "A,AS,AW,A+AW+AG"
 
@@ -472,7 +471,7 @@ Public Class RaceGen
                                 Next q
                                 If str = "11_" AndAlso Not added.Contains(str) Then
                                     Dim ok As Boolean = True
-                                    Dim b As Location.Borders = imp.NearestXY(x, y, m.xSize, m.ySize, 1)
+                                    Dim b As Location.Borders = ImpenetrableMeshGen.NearestXY(x, y, m.xSize, m.ySize, 1)
                                     For q As Integer = b.minY To b.maxY Step 1
                                         For p As Integer = b.minX To b.maxX Step 1
                                             If Not m.board(p, q).isWater Then

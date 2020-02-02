@@ -76,6 +76,8 @@ Public Class ImpenetrableMeshGen
         Dim LocExpRatio As Double
         ''' <summary>Множитель стоимости лута нейтралов</summary>
         Dim Wealth As Double
+        ''' <summary>Количество воды на карте. 0 - без воды, 1 - очень много</summary>
+        Dim WaterAmount As Double
     End Structure
 
     Private rndgen As New RndValueGen
@@ -326,15 +328,15 @@ Public Class ImpenetrableMeshGen
             Next x
         Next p
     End Sub
-    Friend Function NearestXY(ByRef x As Integer, ByRef y As Integer, _
-                              ByRef xSize As Integer, ByRef ySize As Integer, _
-                              ByRef tolerance As Integer) As Location.Borders
+    Friend Shared Function NearestXY(ByRef x As Integer, ByRef y As Integer, _
+                                     ByRef xSize As Integer, ByRef ySize As Integer, _
+                                     ByRef tolerance As Integer) As Location.Borders
         Return New Location.Borders With {.minx = Math.Max(x - tolerance, 0), _
                                           .maxx = Math.Min(x + tolerance, xSize), _
                                           .miny = Math.Max(y - tolerance, 0), _
                                           .maxy = Math.Min(y + tolerance, ySize)}
     End Function
-    Friend Function NearestXY(ByRef P As Point, ByRef M As Map, ByRef tolerance As Integer) As Location.Borders
+    Friend Shared Function NearestXY(ByRef P As Point, ByRef M As Map, ByRef tolerance As Integer) As Location.Borders
         Return NearestXY(P.X, P.Y, M.xSize, M.ySize, tolerance)
     End Function
 
@@ -407,7 +409,7 @@ Public Class ImpenetrableMeshGen
         Dim result As New PrepareToRaceLocGenResult
         ReDim result.raceLocs(settMap.nRaces - 1)
         For i As Integer = 0 To settMap.nRaces - 1 Step 1
-            result.raceLocs(i) = GenLocSize(settRaceLoc, i + 1)
+            result.raceLocs(i) = Location.GenLocSize(settRaceLoc, i + 1, rndgen, minLocationRadiusAtAll)
         Next i
 
         If Math.Max(settMap.xSize, settMap.ySize) < 2 * settRaceLoc.AverageRadius + 10 Then Throw New Exception("Слишком большой радиус начальных локаций")
@@ -549,7 +551,7 @@ Public Class ImpenetrableMeshGen
 
         Dim sLocs() As Location
         Do While nextloop
-            Dim loc As Location = GenLocSize(settCommLoc, id)
+            Dim loc As Location = Location.GenLocSize(settCommLoc, id, rndgen, minLocationRadiusAtAll)
             'make possible ids
             Dim b As Location.Borders = loc.XYborders(Integer.MaxValue, Integer.MaxValue, Integer.MinValue, Integer.MinValue)
             Dim add As Boolean
@@ -1392,15 +1394,6 @@ Public Class ImpenetrableMeshGen
             Next y
         Next i
         Return FindDisconnected(free, c)
-    End Function
-
-    Private Function GenLocSize(ByRef sett As SettingsLoc, ByRef id As Integer) As Location
-        Dim r, e, a As Double
-        r = rndgen.PRand(1 - sett.maxRadiusDispersion, 1 + sett.maxRadiusDispersion) * sett.AverageRadius
-        e = rndgen.PRand(1 - sett.maxEccentricityDispersion, 1 + sett.maxEccentricityDispersion)
-        a = rndgen.PRand(0, Math.PI)
-        r = Math.Max(r, minLocationRadiusAtAll)
-        Return New Location(New Point(0, 0), r * e, r / e, a, id)
     End Function
 
     Private Sub PlaceActiveObjects(ByRef m As Map, ByVal settMap As SettingsMap, _
@@ -2643,13 +2636,16 @@ Public Class Location
         Dim maxX, minX, maxY, minY As Integer
     End Structure
 
-    Friend Function gAlpha() As Double
+    ''' <summary>Возвращает угол поворота локации</summary>
+    Public Function gAlpha() As Double
         Return alpha
     End Function
-    Friend Function gASize() As Double
+    ''' <summary>Возвращает длину оси А</summary>
+    Public Function gASize() As Double
         Return Asize
     End Function
-    Friend Function gBSize() As Double
+    ''' <summary>Возвращает длину оси B</summary>
+    Public Function gBSize() As Double
         Return Bsize
     End Function
 
@@ -2768,6 +2764,16 @@ Public Class Location
     End Function
     Private Function Gauss(ByRef dX As Double, ByRef sigma As Double) As Double
         Return Math.Exp(-0.5 * (dX / sigma) ^ 2)
+    End Function
+
+    Friend Shared Function GenLocSize(ByRef sett As ImpenetrableMeshGen.SettingsLoc, ByRef id As Integer, _
+                                      ByRef rndgen As RndValueGen, ByRef minLocationRadiusAtAll As Double) As Location
+        Dim r, e, a As Double
+        r = rndgen.PRand(1 - sett.maxRadiusDispersion, 1 + sett.maxRadiusDispersion) * sett.AverageRadius
+        e = rndgen.PRand(1 - sett.maxEccentricityDispersion, 1 + sett.maxEccentricityDispersion)
+        a = rndgen.PRand(0, Math.PI)
+        r = Math.Max(r, minLocationRadiusAtAll)
+        Return New Location(New Point(0, 0), r * e, r / e, a, id)
     End Function
 
 End Class
@@ -3190,7 +3196,7 @@ Public Class StackLocationsGen
                     Else
                         d1 = mDistC
                     End If
-                    Dim t As Location.Borders = genmap.NearestXY(x, y, m.xSize, m.ySize, tolerance)
+                    Dim t As Location.Borders = ImpenetrableMeshGen.NearestXY(x, y, m.xSize, m.ySize, tolerance)
                     For j As Integer = t.minY To t.maxY Step 1
                         For i As Integer = t.minX To t.maxX Step 1
                             If m.board(i, j).GuardLoc And (Not x = i Or Not y = j) Then
@@ -3337,7 +3343,7 @@ Public Class StackLocationsGen
         For y As Integer = 0 To ySize Step 1
             For x As Integer = 0 To xSize Step 1
                 If isPossiblePoint(x, y) Then
-                    Dim t As Location.Borders = genmap.NearestXY(x, y, xSize, ySize, CInt(Math.Ceiling(settLoc.minStackToStackDist)))
+                    Dim t As Location.Borders = ImpenetrableMeshGen.NearestXY(x, y, xSize, ySize, CInt(Math.Ceiling(settLoc.minStackToStackDist)))
                     For j As Integer = t.minY To t.maxY Step 1
                         For i As Integer = t.minX To t.maxX Step 1
                             If m.board(i + LPos.X, j + LPos.Y).GuardLoc _
@@ -3430,7 +3436,7 @@ Public Class StackLocationsGen
             output.Add(PossiblePoints(r))
             IDs.Remove(r)
             PosPID(PossiblePoints(r).X, PossiblePoints(r).Y) = -1
-            Dim t As Location.Borders = genmap.NearestXY(PossiblePoints(r).X, PossiblePoints(r).Y, xSize, ySize, tolerance)
+            Dim t As Location.Borders = ImpenetrableMeshGen.NearestXY(PossiblePoints(r).X, PossiblePoints(r).Y, xSize, ySize, tolerance)
             For j As Integer = t.minY To t.maxY Step 1
                 For i As Integer = t.minX To t.maxX Step 1
                     If PosPID(i, j) > -1 AndAlso PossiblePoints(r).SqDist(i, j) < minDistSq Then
@@ -3450,7 +3456,7 @@ Public Class StackLocationsGen
         For y As Integer = 0 To m.ySize Step 1
             For x As Integer = 0 To m.xSize Step 1
                 If m.board(x, y).locID.Item(0) = LocID And m.board(x, y).isPass Then
-                    Dim b As Location.Borders = genmap.NearestXY(x, y, m.xSize, m.ySize, 1)
+                    Dim b As Location.Borders = ImpenetrableMeshGen.NearestXY(x, y, m.xSize, m.ySize, 1)
                     For j As Integer = b.minY To b.maxY Step 1
                         For i As Integer = b.minX To b.maxX Step 1
                             If m.board(i, j).locID.Item(0) > LocID And m.board(i, j).isPass Then
@@ -3485,7 +3491,7 @@ Public Class StackLocationsGen
         For Each s As String In passes
             Dim splited() As String = s.Split(CChar("_"))
             Dim p As New Point(CInt(splited(0)), CInt(splited(1)))
-            Dim b As Location.Borders = genmap.NearestXY(p, m, 1)
+            Dim b As Location.Borders = ImpenetrableMeshGen.NearestXY(p, m, 1)
             For j As Integer = b.minY To b.maxY Step 1
                 For i As Integer = b.minX To b.maxX Step 1
                     FreeInClosedState(i, j) = False
@@ -3526,7 +3532,7 @@ Public Class StackLocationsGen
             For x As Integer = 0 To m.xSize Step 1
                 If path(x, y) Then
                     n += 1
-                    Dim b As Location.Borders = genmap.NearestXY(x, y, m.xSize, m.ySize, 1)
+                    Dim b As Location.Borders = ImpenetrableMeshGen.NearestXY(x, y, m.xSize, m.ySize, 1)
                     For j As Integer = b.minY To b.maxY Step 1
                         For i As Integer = b.minX To b.maxX Step 1
                             If Not m.board(i, j).isBorder And Not m.board(i, j).isAttended Then opened(i, j) = True
@@ -3609,7 +3615,7 @@ Public Class StackLocationsGen
         Else
             Dim tp(,) As Boolean = CType(opened.Clone, Boolean(,))
             For Each p As Point In output
-                Dim b As Location.Borders = genmap.NearestXY(p.X, p.Y, UBound(tp, 1), UBound(tp, 2), 1)
+                Dim b As Location.Borders = ImpenetrableMeshGen.NearestXY(p.X, p.Y, UBound(tp, 1), UBound(tp, 2), 1)
                 For j As Integer = b.minY To b.maxY Step 1
                     For i As Integer = b.minX To b.maxX Step 1
                         tp(i, j) = False
@@ -3694,13 +3700,73 @@ End Class
 
 Public Class WaterGen
 
-    Public Sub Gen(ByRef m As Map, ByRef settMap As ImpenetrableMeshGen.SettingsMap)
+    Public ReadOnly minLocationRadiusAtAll As Double
+    Public Sub New()
+        minLocationRadiusAtAll = 2
+    End Sub
+
+    Private rndgen As New RndValueGen
+    'Private comm As New Common
+    'Private symm As New SymmetryOperations
+
+    Public Sub Gen(ByRef m As Map, ByVal settMap As ImpenetrableMeshGen.SettingsMap)
 
         If Not m.complited.StacksDesiredStatsGen_Done Then
             Throw New Exception("Сначала нужно выполнить StackPowerGen.Gen")
         End If
-
+        Dim tmpm As Map = m
+        'Parallel.For(0, tmpm.Loc.Length, Sub(i As Integer)
+        '                                      If Not tmpm.Loc(i).IsObtainedBySymmery Then Call PlaceWater(tmpm.Loc(i), settMap)
+        '                                  End Sub)
+        For i As Integer = 0 To tmpm.Loc.Length - 1 Step 1
+            If Not tmpm.Loc(i).IsObtainedBySymmery Then Call PlaceWater(tmpm, tmpm.Loc(i), settMap)
+        Next i
+        m = tmpm
         m.complited.WaterCreation_Done = True
     End Sub
+
+    Private Sub PlaceWater(ByRef m As Map, ByRef loc As Location, ByRef settMap As ImpenetrableMeshGen.SettingsMap)
+
+        Dim lake As Location
+        Dim WaterLocSettings As New ImpenetrableMeshGen.SettingsLoc
+        WaterLocSettings.AverageRadius = CInt(0.3 * Math.Sqrt(loc.gASize * loc.gBSize) * settMap.WaterAmount)
+        WaterLocSettings.maxRadiusDispersion = 0.25
+        WaterLocSettings.maxEccentricityDispersion = 0.35
+
+        Dim WaterAmount As Integer = WaterAmountCalc(m, loc, settMap)
+
+        Do While WaterAmount > minLocationRadiusAtAll * minLocationRadiusAtAll
+            lake = Location.GenLocSize(WaterLocSettings, 0, rndgen, minLocationRadiusAtAll)
+
+
+
+        Loop
+    End Sub
+
+    Private Function WaterAmountCalc(ByRef m As Map, ByRef loc As Location, ByRef settMap As ImpenetrableMeshGen.SettingsMap) As Integer
+        Dim WaterAmount As Integer
+        For i As Integer = 0 To m.xSize Step 1
+            For j As Integer = 0 To m.ySize Step 1
+                If m.board(i, j).locID(0) = Loc.ID And Not m.board(i, j).isAttended Then
+                    If m.board(i, j).isBorder Then
+                        Dim b As Location.Borders = ImpenetrableMeshGen.NearestXY(i, j, m.xSize, m.ySize, 1)
+                        For x As Integer = b.minX To b.maxX Step 1
+                            For y As Integer = b.minY To b.maxY Step 1
+                                If Not m.board(x, y).isBorder And Not m.board(x, y).isAttended Then
+                                    WaterAmount += 1
+                                    x = b.maxX
+                                    y = b.maxY
+                                End If
+                            Next y
+                        Next x
+                    Else
+                        WaterAmount += 1
+                    End If
+                End If
+            Next j
+        Next i
+        WaterAmount = CInt(Math.Floor(WaterAmount * Math.Min(settMap.WaterAmount, 1)))
+        Return WaterAmount
+    End Function
 
 End Class
