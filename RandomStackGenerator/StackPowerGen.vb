@@ -305,7 +305,7 @@ Public Class RaceGen
     'Barbarians		    B	12
     'Animals			A	13
     'AnimalSpider	    AS	15
-    'AnimalWhiteBear	AWB	16
+    'AnimalSnowTerr 	AST	16
     'AnimalWolf		    AW	18
     'AnimalGriffin	    AG	19
 
@@ -318,12 +318,12 @@ Public Class RaceGen
     Private LocRaces() As String = New String() {"H:2:H,H+AW," & commonBlock, _
                                                  "U:2:U,U+AS," & commonBlock, _
                                                  "L:2:L," & commonBlock, _
-                                                 "C:2:C,C+AWB,AWB,AWB+AW," & commonBlock, _
+                                                 "C:2:C,C+AST,AST,AST+AW," & commonBlock, _
                                                  "E:2:E,E+A+AW+AG,E+AG," & commonBlock, _
                                                  "N:3:N,G,B,G+AW+AS,B+AW,B+AW+D," & commonBlock, _
                                                  "S:1:S,S+A,S+AS," & commonBlock}
     Dim StackRaceWeight() As Double = New Double() {0, 1, 1, 1, 1, 0.75, 1, 1, 2, 0.25, 1, 3, 1, 1, 1, 1, 0.75, 0, 1, 1}
-    '                                               -, H, U, L, C,    N, H, E, G,    D, S, W, B, A, E,AS,  AWB, -. AW,AG 
+    '                                               -, H, U, L, C,    N, H, E, G,    D, S, W, B, A, E,AS,  AST, -. AW,AG 
     Dim LRaces() As Integer
     Dim LRacesWeight(), SRacesWeight()() As Double
     Dim SRaces()()() As Integer

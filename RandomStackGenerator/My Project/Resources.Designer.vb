@@ -213,7 +213,7 @@ Namespace My.Resources
         '''Barbarians		B	12
         '''Animals			A	13
         '''AnimalSpider	AS	15
-        '''AnimalWhiteBear	AWB	16
+        '''AnimalSnowTerr	AST	16
         '''AnimalWolf		AW	18
         '''AnimalGriffin	AG	19
         '''.
