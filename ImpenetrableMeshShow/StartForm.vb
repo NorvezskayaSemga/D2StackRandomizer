@@ -34,7 +34,7 @@ Friend Class StartForm
         sM.LocExpRatio = 2
         sM.PassGuardsPowerMultiplicator = 2
         sM.Wealth = 0.8
-        sM.WaterAmount = 0.4
+        sM.WaterAmount = 0.99
 
         Dim sR As ImpenetrableMeshGen.SettingsLoc
         sR.AverageRadius = 20
@@ -113,13 +113,15 @@ again:
                     't(x, y) = 100
                 End If
                 If grid.board(x, y).GuardLoc Then
-                    t(x, y) = 125
+                    't(x, y) = 125
                 End If
                 If grid.board(x, y).PassGuardLoc Then
-                    t(x, y) = 185
+                    't(x, y) = 185
                 End If
-                If grid.board(x, y).isBorder Then
-                    t(x, y) = grid.board(x, y).objRace.Item(0)
+                'If grid.board(x, y).isBorder Then
+                't(x, y) = grid.board(x, y).objRace.Item(0)
+                If grid.board(x, y).isWater Then
+                    t(x, y) = 108
                 End If
             Next y
         Next x

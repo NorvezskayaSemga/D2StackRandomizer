@@ -128,6 +128,7 @@ Public Class ImpenetrableMeshGen
                 Next k
                 result(i)(r - d + 1, r - d + 1).GuardLoc = True
             End If
+
             If symmId > -1 Then
                 Dim p() As Point
                 For y As Integer = 0 To r Step 1
@@ -3792,54 +3793,103 @@ Public Class WaterGen
     End Sub
 
     Private rndgen As New RndValueGen
-    'Private comm As New Common
-    'Private symm As New SymmetryOperations
+    Private comm As New Common
+    Private symm As New SymmetryOperations
 
-    Public Sub Gen(ByRef m As Map, ByVal settMap As ImpenetrableMeshGen.SettingsMap)
+    Public Sub Gen(ByRef m As Map, ByRef settMap As ImpenetrableMeshGen.SettingsMap)
 
         If Not m.complited.StacksDesiredStatsGen_Done Then
             Throw New Exception("Сначала нужно выполнить StackPowerGen.Gen")
         End If
-        Dim tmpm As Map = m
-        'Parallel.For(0, tmpm.Loc.Length, Sub(i As Integer)
-        '                                      If Not tmpm.Loc(i).IsObtainedBySymmery Then Call PlaceWater(tmpm.Loc(i), settMap)
-        '                                  End Sub)
-        For i As Integer = 0 To tmpm.Loc.Length - 1 Step 1
-            If Not tmpm.Loc(i).IsObtainedBySymmery Then Call PlaceWater(tmpm, tmpm.Loc(i), settMap)
+
+        Dim HaveToBeGround(m.xSize, m.ySize) As Boolean
+        For i As Integer = 0 To m.xSize Step 1
+            For j As Integer = 0 To m.ySize Step 1
+                If m.board(i, j).isAttended Or m.board(i, j).Penetrable Then HaveToBeGround(i, j) = True
+                If m.board(i, j).objectID = 8 Then
+                    Dim b As Location.Borders = ImpenetrableMeshGen.NearestXY(i, j, m.xSize, m.ySize, 1)
+                    For x As Integer = b.minX To b.maxX Step 1
+                        For y As Integer = b.minY To b.maxY Step 1
+                            HaveToBeGround(x, y) = True
+                        Next y
+                    Next x
+                End If
+            Next j
         Next i
-        m = tmpm
+        If m.symmID > -1 Then
+            For i As Integer = 0 To m.xSize Step 1
+                For j As Integer = 0 To m.ySize Step 1
+                    If HaveToBeGround(i, j) Then
+                        Dim pp() As Point = symm.ApplySymm(New Point(i, j), settMap.nRaces, m, 1)
+                        For k As Integer = 0 To UBound(pp) Step 1
+                            Dim tx As Integer = pp(k).X
+                            Dim ty As Integer = pp(k).Y
+                            HaveToBeGround(tx, ty) = True
+                        Next k
+                    End If
+                Next j
+            Next i
+        End If
+
+        For i As Integer = 0 To m.Loc.Length - 1 Step 1
+            If Not m.Loc(i).IsObtainedBySymmery Then Call PlaceWater(m, m.Loc(i), settMap, HaveToBeGround)
+        Next i
+        Call Extend(m, settMap, HaveToBeGround)
         m.complited.WaterCreation_Done = True
     End Sub
 
-    Private Sub PlaceWater(ByRef m As Map, ByRef loc As Location, ByRef settMap As ImpenetrableMeshGen.SettingsMap)
+    Private Sub PlaceWater(ByRef m As Map, ByRef loc As Location, ByRef settMap As ImpenetrableMeshGen.SettingsMap, ByRef HaveToBeGround(,) As Boolean)
 
         Dim lake As Location
-        Dim WaterLocSettings As New ImpenetrableMeshGen.SettingsLoc
-        WaterLocSettings.AverageRadius = CInt(0.3 * Math.Sqrt(loc.gASize * loc.gBSize) * settMap.WaterAmount)
-        WaterLocSettings.maxRadiusDispersion = 0.25
-        WaterLocSettings.maxEccentricityDispersion = 0.35
-
-        Dim WaterAmount As Integer = WaterAmountCalc(m, loc, settMap)
+        Dim WaterLocSettings As New ImpenetrableMeshGen.SettingsLoc With {.AverageRadius = CInt(0.3 * Math.Sqrt(loc.gASize * loc.gBSize) * settMap.WaterAmount), _
+                                                                          .maxRadiusDispersion = 0.25, _
+                                                                          .maxEccentricityDispersion = 0.35}
+        Dim freeCell(,) As Boolean = Nothing
+        Dim WaterAmount As Integer = WaterAmountCalc(m, loc, settMap, freeCell, HaveToBeGround)
+        Dim n As Integer = -1
+        For i As Integer = 0 To m.xSize Step 1
+            For j As Integer = 0 To m.ySize Step 1
+                If freeCell(i, j) Then n += 1
+            Next j
+        Next i
+        Dim points(n) As Point
+        Dim AllIds As New List(Of Integer)
+        n = -1
+        For i As Integer = 0 To m.xSize Step 1
+            For j As Integer = 0 To m.ySize Step 1
+                If freeCell(i, j) Then
+                    n += 1
+                    points(n) = New Point(i, j)
+                    AllIds.Add(n)
+                End If
+            Next j
+        Next i
 
         Do While WaterAmount > minLocationRadiusAtAll * minLocationRadiusAtAll
             lake = Location.GenLocSize(WaterLocSettings, 0, rndgen, minLocationRadiusAtAll)
-
-
-            Exit Do
+            Dim selected As Integer = SelectLakePlace(AllIds, points, m, 0.5 * WaterLocSettings.AverageRadius)
+            If selected < 0 Then Exit Do
+            Call PlaceLake(AllIds, points, m, selected, freeCell, lake, WaterAmount, settMap, HaveToBeGround)
         Loop
     End Sub
-
-    Private Function WaterAmountCalc(ByRef m As Map, ByRef loc As Location, ByRef settMap As ImpenetrableMeshGen.SettingsMap) As Integer
-        Dim WaterAmount As Integer
+    Private Function WaterAmountCalc(ByRef m As Map, ByRef loc As Location, ByRef settMap As ImpenetrableMeshGen.SettingsMap, _
+                                     ByRef freeCell(,) As Boolean, ByRef HaveToBeGround(,) As Boolean) As Integer
+        ReDim freeCell(m.xSize, m.ySize)
+        Dim WaterAmount, Watered As Integer
         For i As Integer = 0 To m.xSize Step 1
             For j As Integer = 0 To m.ySize Step 1
-                If m.board(i, j).locID(0) = Loc.ID And Not m.board(i, j).isAttended Then
+                If m.board(i, j).locID(0) = loc.ID And Not HaveToBeGround(i, j) Then
                     If m.board(i, j).isBorder Then
                         Dim b As Location.Borders = ImpenetrableMeshGen.NearestXY(i, j, m.xSize, m.ySize, 1)
                         For x As Integer = b.minX To b.maxX Step 1
                             For y As Integer = b.minY To b.maxY Step 1
-                                If Not m.board(x, y).isBorder And Not m.board(x, y).isAttended Then
+                                If Not m.board(x, y).isBorder And Not HaveToBeGround(x, y) Then
                                     WaterAmount += 1
+                                    If m.board(i, j).isWater Then
+                                        Watered += 1
+                                    Else
+                                        freeCell(i, j) = True
+                                    End If
                                     x = b.maxX
                                     y = b.maxY
                                 End If
@@ -3847,12 +3897,161 @@ Public Class WaterGen
                         Next x
                     Else
                         WaterAmount += 1
+                        If m.board(i, j).isWater Then
+                            Watered += 1
+                        Else
+                            freeCell(i, j) = True
+                        End If
                     End If
                 End If
             Next j
         Next i
-        WaterAmount = CInt(Math.Floor(WaterAmount * Math.Min(settMap.WaterAmount, 1)))
+        WaterAmount = CInt(Math.Floor(WaterAmount * Math.Min(settMap.WaterAmount, 1))) - Watered
         Return WaterAmount
     End Function
+    Private Function SelectLakePlace(ByRef AllIds As List(Of Integer), ByRef points() As Point, ByRef m As Map, ByRef lakeDist As Double) As Integer
+        Dim IDs As New List(Of Integer)
+        Dim add As Boolean
+        Dim b As Location.Borders
+        For p As Integer = 0 To 1 Step 1
+            For Each i As Integer In AllIds
+                add = True
+                b = ImpenetrableMeshGen.NearestXY(points(i), m, CInt(lakeDist))
+                For x As Integer = b.minX To b.maxX Step 1
+                    For y As Integer = b.minY To b.maxY Step 1
+                        If m.board(x, y).isWater AndAlso (p = 1 OrElse points(i).SqDist(x, y) < lakeDist * lakeDist) Then
+                            add = False
+                            x = b.maxX
+                            y = b.maxY
+                        End If
+                    Next y
+                Next x
+                If add Then IDs.Add(i)
+            Next i
+            If IDs.Count > 0 Then Exit For
+        Next p
+        If IDs.Count = 0 Then Return -1
+        Return comm.RandomSelection(IDs, True)
+    End Function
+    Private Sub PlaceLake(ByRef AllIds As List(Of Integer), ByRef points() As Point, ByRef m As Map, ByRef selected As Integer, ByRef freeCell(,) As Boolean, _
+                          ByRef lake As Location, ByRef WaterAmount As Integer, ByRef settMap As ImpenetrableMeshGen.SettingsMap, ByRef HaveToBeGround(,) As Boolean)
+        'размещаем эллиптическое озеро
+        AllIds.Remove(selected)
+        lake.pos = points(selected)
+        Dim a, r As New List(Of Point)
+        For i As Integer = 0 To m.xSize Step 1
+            For j As Integer = 0 To m.ySize Step 1
+                If Not HaveToBeGround(i, j) AndAlso lake.IsInside(i, j) Then
+                    If Not m.board(i, j).isWater Then a.Add(New Point(i, j))
+                    Call SetWaterCellSymm(i, j, m, freeCell, WaterAmount, settMap)
+                End If
+            Next j
+        Next i
+
+        'делаем берег неровным
+        For L As Integer = 0 To 1 Step 1
+            r.Clear()
+            For Each p As Point In a
+                If m.board(p.X, p.Y).isWater Then
+                    Dim b As Location.Borders = ImpenetrableMeshGen.NearestXY(p, m, 1)
+                    For x As Integer = b.minX To b.maxX Step 1
+                        For y As Integer = b.minY To b.maxY Step 1
+                            If Not m.board(x, y).isWater Then
+                                r.Add(p)
+                                x = b.maxX
+                                y = b.maxY
+                            End If
+                        Next y
+                    Next x
+                End If
+            Next p
+            For Each p As Point In r
+                If rndgen.PRand(0, 1) < 0.25 Then
+                    Call SetGroundCellSymm(p.X, p.Y, m, settMap)
+                End If
+            Next p
+        Next L
+
+        'размещем острова
+
+    End Sub
+    Private Sub SetWaterCellSymm(ByRef i As Integer, ByRef j As Integer, ByRef m As Map, ByRef freeCell(,) As Boolean, _
+                                 ByRef WaterAmount As Integer, ByRef settMap As ImpenetrableMeshGen.SettingsMap)
+        If m.symmID > -1 Then
+            Dim pp() As Point = symm.ApplySymm(New Point(i, j), settMap.nRaces, m, 1)
+            For k As Integer = 0 To UBound(pp) Step 1
+                Dim tx As Integer = pp(k).X
+                Dim ty As Integer = pp(k).Y
+                Call SetWaterCell(tx, ty, m, freeCell, WaterAmount)
+            Next k
+        Else
+            Call SetWaterCell(i, j, m, freeCell, WaterAmount)
+        End If
+    End Sub
+    Private Sub SetWaterCell(ByRef i As Integer, ByRef j As Integer, ByRef m As Map, ByRef freeCell(,) As Boolean, ByRef WaterAmount As Integer)
+        If Not IsNothing(freeCell) AndAlso freeCell(i, j) Then
+            freeCell(i, j) = False
+            WaterAmount -= 1
+        End If
+        m.board(i, j).isWater = True
+    End Sub
+    Private Sub SetGroundCellSymm(ByRef i As Integer, ByRef j As Integer, ByRef m As Map, ByRef settMap As ImpenetrableMeshGen.SettingsMap)
+        If m.symmID > -1 Then
+            Dim pp() As Point = symm.ApplySymm(New Point(i, j), settMap.nRaces, m, 1)
+            For k As Integer = 0 To UBound(pp) Step 1
+                Dim tx As Integer = pp(k).X
+                Dim ty As Integer = pp(k).Y
+                m.board(tx, ty).isWater = False
+            Next k
+        Else
+            m.board(i, j).isWater = False
+        End If
+    End Sub
+
+    Private Sub Extend(ByRef m As Map, ByRef settMap As ImpenetrableMeshGen.SettingsMap, ByRef HaveToBeGround(,) As Boolean)
+        Dim n As Integer
+        Dim var As New List(Of Point)
+        For i As Integer = 0 To m.xSize Step 1
+            For j As Integer = 0 To m.ySize Step 1
+                If m.board(i, j).isWater Then
+                    Dim b As Location.Borders = ImpenetrableMeshGen.NearestXY(i, j, m.xSize, m.ySize, 1)
+                    n = 0
+                    var.Clear()
+                    For x As Integer = b.minX To b.maxX Step 1
+                        For y As Integer = b.minY To b.maxY Step 1
+                            If x = i Or y = j Then
+                                If m.board(x, y).isWater Then
+                                    n += 1
+                                Else
+                                    If (Not x = i Or Not y = j) And Not HaveToBeGround(x, y) Then var.Add(New Point(x, y))
+                                End If
+                            End If
+                        Next y
+                    Next x
+                    If n < 2 And var.Count > 0 Then
+                        n = rndgen.RndPos(var.Count, True) - 1
+                        Dim p As Point = var.Item(n)
+                        Call SetWaterCellSymm(p.X, p.Y, m, Nothing, Nothing, settMap)
+                    End If
+                End If
+            Next j
+        Next i
+        For i As Integer = 0 To m.xSize Step 1
+            For j As Integer = 0 To m.ySize Step 1
+                If m.board(i, j).isWater Then
+                    Dim b As Location.Borders = ImpenetrableMeshGen.NearestXY(i, j, m.xSize, m.ySize, 1)
+                    n = 0
+                    For x As Integer = b.minX To b.maxX Step 1
+                        For y As Integer = b.minY To b.maxY Step 1
+                            If x = i Or y = j Then
+                                If m.board(x, y).isWater Then n += 1
+                            End If
+                        Next y
+                    Next x
+                    If n < 2 Then Call SetGroundCellSymm(i, j, m, settMap)
+                End If
+            Next j
+        Next i
+    End Sub
 
 End Class

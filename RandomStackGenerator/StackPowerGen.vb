@@ -378,7 +378,7 @@ Public Class RaceGen
             For x As Integer = 0 To m.xSize Step 1
                 If m.board(x, y).GuardLoc Or m.board(x, y).PassGuardLoc Then
                     Dim group As Integer = m.board(x, y).groupID
-                    If m.groupStats.Item(group).Race.Count = 0 Then
+                    If m.groupStats.Item(group).Race.Count = 0 Then 'AndAlso Not IsNothing(m.board(x, y).stackRace) Then
                         For Each r As Integer In m.board(x, y).stackRace
                             m.groupStats.Item(group).Race.Add(r)
                         Next r
@@ -386,6 +386,11 @@ Public Class RaceGen
                 End If
             Next x
         Next y
+        For Each key As Integer In m.groupStats.Keys
+            If IsNothing(m.groupStats.Item(key).Race) OrElse m.groupStats.Item(key).Race.Count = 0 Then
+                Throw New Exception("Группа с ID " & key & " не имеет расы")
+            End If
+        Next key
         m.complited.StacksRaceGen_Done = True
     End Sub
 
@@ -448,78 +453,17 @@ Public Class RaceGen
         For i As Integer = 0 To UBound(races) Step 1
             races(i) = New List(Of Integer)
         Next i
-        Dim rO, rS, IDs As New List(Of Integer)
-        Dim added As New List(Of String)
         Dim weight(t - 1) As Double
 
-        For y As Integer = 0 To m.ySize Step 1
-            For x As Integer = 0 To m.xSize Step 1
-                If Not m.Loc(m.board(x, y).locID.Item(0) - 1).IsObtainedBySymmery And IsNothing(m.board(x, y).stackRace) Then
-                    rO.Clear()
-                    rS.Clear()
-                    added.Clear()
-                    For Each r As Integer In m.board(x, y).locID
-                        rO.Add(LocR(r - 1))
-                    Next r
-                    t = -1
-                    If m.board(x, y).locID.Item(0) > nRaces Then
-                        For Each r As Integer In rO
-                            For i As Integer = 0 To UBound(SRaces(r)) Step 1
-                                Dim str As String = ""
-                                For q As Integer = 0 To UBound(SRaces(r)(i)) Step 1
-                                    str &= SRaces(r)(i)(q).ToString & "_"
-                                Next q
-                                If str = "11_" AndAlso Not added.Contains(str) Then
-                                    Dim ok As Boolean = True
-                                    Dim b As Location.Borders = ImpenetrableMeshGen.NearestXY(x, y, m.xSize, m.ySize, 1)
-                                    For q As Integer = b.minY To b.maxY Step 1
-                                        For p As Integer = b.minX To b.maxX Step 1
-                                            If Not m.board(p, q).isWater Then
-                                                ok = False
-                                                p = b.maxX
-                                                q = b.maxY
-                                            End If
-                                        Next p
-                                    Next q
-                                    If Not ok Then added.Add(str)
-                                End If
-                                If Not added.Contains(str) Then
-                                    Call AddPossibleRace(t, r, i, races, weight)
-                                    added.Add(str)
-                                End If
-                            Next i
-                        Next r
-                    Else
-                        For i As Integer = 0 To UBound(SRaces(neutralI)) Step 1
-                            Call AddPossibleRace(t, neutralI, i, races, weight)
-                        Next i
+        For NLoop As Integer = 0 To 1 Step 1
+            For y As Integer = 0 To m.ySize Step 1
+                For x As Integer = 0 To m.xSize Step 1
+                    If IsNothing(m.board(x, y).stackRace) And (Not m.Loc(m.board(x, y).locID.Item(0) - 1).IsObtainedBySymmery Or NLoop = 1) Then
+                        Call SetCellRace(m, LocR, nRaces, races, weight, x, y)
                     End If
-                    IDs.Clear()
-                    For i As Integer = 0 To t Step 1
-                        IDs.Add(i)
-                    Next i
-                    Dim s As Integer = comm.RandomSelection(IDs, weight, True) ' rndgen.RndPos(t + 1, True) - 1
-
-                    For Each item As Integer In races(s)
-                        rS.Add(item)
-                    Next item
-                    If m.symmID > -1 Then
-                        Dim pp() As Point = symm.ApplySymm(New Point(x, y), nRaces, m, 1)
-                        For Each p As Point In pp
-                            m.board(p.X, p.Y).stackRace = New List(Of Integer)
-                            For Each r As Integer In rS
-                                m.board(p.X, p.Y).stackRace.Add(r)
-                            Next r
-                        Next p
-                    Else
-                        m.board(x, y).stackRace = New List(Of Integer)
-                        For Each r As Integer In rS
-                            m.board(x, y).stackRace.Add(r)
-                        Next r
-                    End If
-                End If
-            Next x
-        Next y
+                Next x
+            Next y
+        Next NLoop
 
         For y As Integer = 0 To m.ySize Step 1
             For x As Integer = 0 To m.xSize Step 1
@@ -529,6 +473,71 @@ Public Class RaceGen
                 Next r
             Next x
         Next y
+    End Sub
+    Private Sub SetCellRace(ByRef m As Map, ByRef LocR() As Integer, ByRef nRaces As Integer, ByRef races() As List(Of Integer), _
+                            ByRef weight() As Double, ByRef x As Integer, ByRef y As Integer)
+        Dim rO, rS, IDs As New List(Of Integer)
+        Dim added As New List(Of String)
+        Dim t As Integer = -1
+
+        For Each r As Integer In m.board(x, y).locID
+            rO.Add(LocR(r - 1))
+        Next r
+        If m.board(x, y).locID.Item(0) > nRaces Then
+            For Each r As Integer In rO
+                For i As Integer = 0 To UBound(SRaces(r)) Step 1
+                    Dim str As String = ""
+                    For q As Integer = 0 To UBound(SRaces(r)(i)) Step 1
+                        str &= SRaces(r)(i)(q).ToString & "_"
+                    Next q
+                    If str = "11_" AndAlso Not added.Contains(str) Then
+                        Dim ok As Boolean = True
+                        Dim b As Location.Borders = ImpenetrableMeshGen.NearestXY(x, y, m.xSize, m.ySize, 1)
+                        For q As Integer = b.minY To b.maxY Step 1
+                            For p As Integer = b.minX To b.maxX Step 1
+                                If Not m.board(p, q).isWater Then
+                                    ok = False
+                                    p = b.maxX
+                                    q = b.maxY
+                                End If
+                            Next p
+                        Next q
+                        If Not ok Then added.Add(str)
+                    End If
+                    If Not added.Contains(str) Then
+                        Call AddPossibleRace(t, r, i, races, weight)
+                        added.Add(str)
+                    End If
+                Next i
+            Next r
+        Else
+            For i As Integer = 0 To UBound(SRaces(neutralI)) Step 1
+                Call AddPossibleRace(t, neutralI, i, races, weight)
+            Next i
+        End If
+        IDs.Clear()
+        For i As Integer = 0 To t Step 1
+            IDs.Add(i)
+        Next i
+        Dim s As Integer = comm.RandomSelection(IDs, weight, True) ' rndgen.RndPos(t + 1, True) - 1
+
+        For Each item As Integer In races(s)
+            rS.Add(item)
+        Next item
+        If m.symmID > -1 Then
+            Dim pp() As Point = symm.ApplySymm(New Point(x, y), nRaces, m, 1)
+            For Each p As Point In pp
+                m.board(p.X, p.Y).stackRace = New List(Of Integer)
+                For Each r As Integer In rS
+                    m.board(p.X, p.Y).stackRace.Add(r)
+                Next r
+            Next p
+        Else
+            m.board(x, y).stackRace = New List(Of Integer)
+            For Each r As Integer In rS
+                m.board(x, y).stackRace.Add(r)
+            Next r
+        End If
     End Sub
     Private Sub AddPossibleRace(ByRef t As Integer, raceLocID As Integer, ByRef i As Integer, _
                                 ByRef races() As List(Of Integer), ByRef weight() As Double)
