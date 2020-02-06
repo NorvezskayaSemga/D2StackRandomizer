@@ -3969,7 +3969,7 @@ Public Class WaterGen
                 End If
             Next p
             For Each p As Point In coastalTile
-                If rndgen.PRand(0, 1) < 0.25 Then
+                If rndgen.PRand(0, 1) < 0.25 - 0.1 * CDbl(L) Then
                     Call SetGroundCellSymm(p.X, p.Y, m, settMap)
                 End If
             Next p
@@ -3978,7 +3978,7 @@ Public Class WaterGen
 
         'размещем острова
         Dim minIslandR As Integer = 2
-        Dim maxIslandR As Integer = 4
+        Dim maxIslandR As Integer = 3
         Dim threshold As Double = 1 - (1 - settMap.WaterAmount) / ((0.5 * (minIslandR + maxIslandR)) ^ 2)
         Dim dD As Double = 0.05
         For Each p As Point In waterTiles
