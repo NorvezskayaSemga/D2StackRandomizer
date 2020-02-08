@@ -3791,6 +3791,7 @@ Public Class WaterGen
             Throw New Exception("Сначала нужно выполнить StackPowerGen.Gen")
         End If
 
+        Dim t0 As Integer = Environment.TickCount
         Dim HaveToBeGround(m.xSize, m.ySize) As Boolean
         For i As Integer = 0 To m.xSize Step 1
             For j As Integer = 0 To m.ySize Step 1
@@ -3825,6 +3826,7 @@ Public Class WaterGen
         Next i
         Call Extend(m, settMap, HaveToBeGround)
         m.complited.WaterCreation_Done = True
+        Console.WriteLine("Water gen " & Environment.TickCount - t0)
     End Sub
 
     Private Sub PlaceWater(ByRef m As Map, ByRef loc As Location, ByRef settMap As Map.SettingsMap, ByRef HaveToBeGround(,) As Boolean)
@@ -4033,9 +4035,13 @@ Public Class WaterGen
     End Sub
 
     Private Sub MakeRuinsWatered(ByRef m As Map, ByRef loc As Location, ByRef settMap As Map.SettingsMap)
+        Dim chance As Double = 0.1 + settMap.WaterAmount * 0.4
+        Dim makeWatered As Boolean
         For i As Integer = 0 To m.xSize Step 1
             For j As Integer = 0 To m.ySize Step 1
-                If m.board(i, j).locID(0) = loc.ID And m.board(i, j).objectID = 7 AndAlso rndgen.PRand(0, 1) < 0.1 Then
+                If m.board(i, j).locID(0) = loc.ID And m.board(i, j).objectID = 7 Then
+                    makeWatered = (rndgen.PRand(0, 1) < chance)
+
                     Dim d As Integer = 1
                     Dim x1 As Integer = Math.Max(i - d, 0)
                     Dim x2 As Integer = Math.Min(i + imp.ActiveObjects(m.board(i, j).objectID).Size + d - 1, m.xSize)
@@ -4043,7 +4049,11 @@ Public Class WaterGen
                     Dim y2 As Integer = Math.Min(j + imp.ActiveObjects(m.board(i, j).objectID).Size + d - 1, m.ySize)
                     For x As Integer = x1 To x2 Step 1
                         For y As Integer = y1 To y2 Step 1
-                            Call SetWaterCellSymm(x, y, m, Nothing, Nothing, settMap)
+                            If makeWatered Then
+                                Call SetWaterCellSymm(x, y, m, Nothing, Nothing, settMap)
+                            Else
+                                Call SetGroundCellSymm(x, y, m, settMap)
+                            End If
                         Next y
                     Next x
 
@@ -4053,10 +4063,13 @@ Public Class WaterGen
                     y2 = Math.Min(y2 + 1, m.ySize)
                     For x As Integer = x1 To x2 Step 1
                         For y As Integer = y1 To y2 Step 1
-                            If (x = x1 Or x = x2 Or y = y1 Or y = y2) And Not ((x = x1 Or x = x2) And (y = y1 Or y = y2)) And Not m.board(x, y).isWater And Not m.board(x, y).isAttended Then
-                                Dim r As Double = rndgen.PRand(0, 1)
-                                If r < 0.25 Then
-                                    Call SetWaterCellSymm(x, y, m, Nothing, Nothing, settMap)
+                            If (x = x1 Or x = x2 Or y = y1 Or y = y2) And Not ((x = x1 Or x = x2) And (y = y1 Or y = y2)) And Not m.board(x, y).isAttended Then
+                                If rndgen.PRand(0, 1) < 0.45 Then
+                                    If makeWatered Then
+                                        Call SetWaterCellSymm(x, y, m, Nothing, Nothing, settMap)
+                                    Else
+                                        Call SetGroundCellSymm(x, y, m, settMap)
+                                    End If
                                 End If
                             End If
                         Next y

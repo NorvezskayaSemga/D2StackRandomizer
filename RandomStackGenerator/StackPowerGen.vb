@@ -30,11 +30,13 @@
                                 "и протестировать результат с помощью ImpenetrableMeshGen.TestMap")
         End If
 
+        Dim t0 As Integer = Environment.TickCount
         If settMap.LocExpRatio < 1 Then settMap.LocExpRatio = 1 / settMap.LocExpRatio
         Dim guards As Dictionary(Of Integer, StackLoc) = MakeGuardsList(m)
         Dim LocTotalExp() As Double = MakeLocationsList(m, settMap, settRaceLoc, settCommLoc)
         m.groupStats = GenStacksStats(settMap, guards, LocTotalExp)
         m.complited.StacksDesiredStatsGen_Done = True
+        Console.WriteLine("Stacks stats gen " & Environment.TickCount - t0)
     End Sub
 
     Private Function MakeGuardsList(ByRef m As Map) As Dictionary(Of Integer, StackLoc)
@@ -371,6 +373,7 @@ Public Class RaceGen
             Throw New Exception("Сначала нужно выполнить WaterGen.Gen")
         End If
 
+        Dim t0 As Integer = Environment.TickCount
         Dim nRaces As Integer = RacesAmount(m)
         Dim LocR() As Integer = GenLocRace(m, nRaces, PlayableRaces)
         Call SetLocRaceToCells(m, LocR, nRaces)
@@ -392,6 +395,7 @@ Public Class RaceGen
             End If
         Next key
         m.complited.StacksRaceGen_Done = True
+        Console.WriteLine("Stacks race gen " & Environment.TickCount - t0)
     End Sub
 
     Private Function RacesAmount(ByRef m As Map) As Integer
