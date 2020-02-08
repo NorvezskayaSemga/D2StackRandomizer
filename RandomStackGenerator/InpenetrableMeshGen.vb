@@ -19,67 +19,6 @@ Public Class ImpenetrableMeshGen
         Dim equalDist(,) As List(Of Integer)
     End Structure
 
-    Public Structure SettingsLoc
-        ''' <summary>Средний радиус локаций</summary>
-        Dim AverageRadius As Integer
-        ''' <summary>Локации будут в форме эллипсов со случайным эксцентриситетом от (1-D)/(1+D) до (1+D)/(1-D)</summary>
-        Dim maxEccentricityDispersion As Double
-        ''' <summary>При достаточном количестве места будут создаваться локации размером от (1-D)*R до (1+D)*R.
-        ''' Когда свободного места станет недостаточно R начнет постепенно уменьшаться до половины от начального значения</summary>
-        Dim maxRadiusDispersion As Double
-
-        '''<summary>Количество золотых шахт на локацию</summary>
-        Dim maxGoldMines As Double
-        '''<summary>Количество источников маны на локацию</summary>
-        Dim maxManaSources As Double
-        '''<summary>Количество нейтральных городов на локацию</summary>
-        Dim maxCities As Double
-        '''<summary>Количество торговцев на локацию</summary>
-        Dim maxVendors As Double
-        '''<summary>Количество лагерей наемников на локацию</summary>
-        Dim maxMercenaries As Double
-        '''<summary>Количество башен мага на локацию</summary>
-        Dim maxMages As Double
-        '''<summary>Количество тренеров на локацию</summary>
-        Dim maxTrainers As Double
-        '''<summary>Количество руин на локацию</summary>
-        Dim maxRuins As Double
-
-        '''<summary>Минимальное расстояние между отрядами</summary>
-        Dim minStackToStackDist As Double
-
-        '''<summary>Примерное количество опыта за убийство всех отрядов в локации</summary>
-        Dim expAmount As Double
-    End Structure
-    Public Structure SettingsMap
-        ''' <summary>Правая граница карты (например, если генерируем карту 24x48, то сюда пишем 23)</summary>
-        Dim xSize As Integer
-        ''' <summary>Верхняя граница карты (например, если генерируем карту 24x48, то сюда пишем 47)</summary>
-        Dim ySize As Integer
-        ''' <summary>Минимальное расстояние между проходами</summary>
-        Dim minPassDist As Double
-        ''' <summary>Минимальная ширина проходов</summary>
-        Dim minPassWidth As Double
-        ''' <summary>Количество рас</summary>
-        Dim nRaces As Integer
-        ''' <summary>Генератор будет располагать локации со столицами так, чтобы для каждой из локаций выполнялось следующиее условие:
-        ''' R1*(1+T) >= R2, при этом R2 > R1, где R1 и R2 - расстояние до двух ближайших локаций со столицами</summary>
-        Dim RaceLocsDistTolerance As Double
-        ''' <summary>Расставлять ли стражей проходов между локациями</summary>
-        Dim AddGuardsBetweenLocations As Boolean
-        ''' <summary>Множитель силы стражей проходов между локациями</summary>
-        Dim PassGuardsPowerMultiplicator As Double
-        ''' <summary>Множитель силы стражей посещаемых объектов</summary>
-        Dim ObjectGuardsPowerMultiplicator As Double
-        ''' <summary>Отношение максимального опыта, получаемого за зачистку локации среднего размера, к минимальному.
-        ''' Чем дальше локация от ближайшей столицы и чем ближе к центру, тем больше опыта за ее зачистку</summary>
-        Dim LocExpRatio As Double
-        ''' <summary>Множитель стоимости лута нейтралов</summary>
-        Dim Wealth As Double
-        ''' <summary>Количество воды на карте. 0 - без воды, 1 - очень много</summary>
-        Dim WaterAmount As Double
-    End Structure
-
     Private rndgen As New RndValueGen
     Private comm As New Common
     Private symm As New SymmetryOperations
@@ -94,7 +33,8 @@ Public Class ImpenetrableMeshGen
                                                New AttendedObject("Ruins", 3, 7), _
                                                New AttendedObject("Mine", 1, 8)}
 
-    Private Function ActiveObjectsSet(ByRef settMap As SettingsMap, ByRef symmId As Integer) As Map.Cell()(,)
+    Private Function ActiveObjectsSet(ByRef settMap As Map.SettingsMap, ByRef symmId As Integer) As Map.Cell()(,)
+        Dim symm As New SymmetryOperations
         Dim result(UBound(ActiveObjects))(,) As Map.Cell
         For i As Integer = 1 To UBound(ActiveObjects) Step 1
             Dim r As Integer = ActiveObjects(i).Size + 2 * ActiveObjects(i).dxy - 1
@@ -146,78 +86,9 @@ Public Class ImpenetrableMeshGen
         Next i
         Return result
     End Function
-    ''' <summary>Вернет True, если все нормально, иначе стоит перегенерировать</summary>
-    Public Function TestMap(ByRef m As Map) As Boolean
-        If IsNothing(m) Then Return False
-        If Not m.complited.LoationsCreation_Done Then
-            Throw New Exception("Сначала нужно выполнить ImpenetrableMeshGen.SymmGen или ImpenetrableMeshGen.UnsymmGen")
-        End If
-        For x As Integer = 0 To m.xSize Step 1
-            For y As Integer = 0 To m.ySize Step 1
-                If m.board(x, y).isBorder And m.board(x, y).isAttended Then
-                    Console.WriteLine("Warning: border and object are on the same place")
-                    Return False
-                ElseIf m.board(x, y).isBorder And m.board(x, y).isPass Then
-                    Console.WriteLine("Warning: border and pass are on the same place")
-                    Return False
-                ElseIf m.board(x, y).isBorder And m.board(x, y).Penetrable Then
-                    Console.WriteLine("Warning: border and penetrable cell are on the same place")
-                    Return False
-                ElseIf m.board(x, y).isAttended And m.board(x, y).Penetrable Then
-                    Console.WriteLine("Warning: object and penetrable cell are on the same place")
-                    Return False
-                ElseIf m.board(x, y).isAttended And m.board(x, y).isPass Then
-                    Console.WriteLine("Warning: object and pass are on the same place")
-                    Return False
-                End If
-                If m.complited.StacksPlacing_Done And m.board(x, y).GuardLoc Then
-                    If m.board(x, y).isBorder Then
-                        Console.WriteLine("Warning: border and guard are on the same place")
-                        Return False
-                    ElseIf m.board(x, y).isAttended And m.board(x, y).objectID = 0 Then
-                        Console.WriteLine("Warning: object and guard are on the same place")
-                        Return False
-                    ElseIf (m.board(x, y).objectID = 2 Or m.board(x, y).objectID = 7) And m.board(x, y).groupID < 1 Then
-                        Console.WriteLine("Warning: group for internal guard for object is zero")
-                        Return False
-                    ElseIf m.board(x, y).objectID > 0 AndAlso ActiveObjects(m.board(x, y).objectID).hasExternalGuard Then
-                        Console.WriteLine("Warning: object with external guard has internal one")
-                        Return False
-                    End If
-                End If
-                If m.complited.StacksPlacing_Done Then
-                    If Not m.board(x, y).GuardLoc And (m.board(x, y).objectID = 2 Or m.board(x, y).objectID = 7) Then
-                        Console.WriteLine("Warning: internal guard for object is not set")
-                        Return False
-                    End If
-                End If
-                If m.complited.StacksPlacing_Done And m.board(x, y).PassGuardLoc Then
-                    If m.board(x, y).isBorder Then
-                        Console.WriteLine("Warning: border and pass guard are on the same place")
-                        Return False
-                    ElseIf m.board(x, y).isAttended Then
-                        Console.WriteLine("Warning: object and pass guard are on the same place")
-                        Return False
-                    ElseIf m.board(x, y).GuardLoc Then
-                        Console.WriteLine("Warning: common guard and pass guard are on the same place")
-                        Return False
-                    ElseIf m.board(x, y).groupID < 1 Then
-                        Console.WriteLine("Warning: group for pass guard is zero")
-                        Return False
-                    End If
-                End If
-            Next y
-        Next x
-        If m.complited.StacksPlacing_Done Then
-            m.complited.MeshTestII_Done = True
-        Else
-            m.complited.MeshTestI_Done = True
-        End If
-        Return True
-    End Function
 
-    Private Function CommonGen(ByRef settMap As SettingsMap, ByRef settRaceLoc As SettingsLoc, _
-                               ByRef settCommLoc As SettingsLoc, ByRef maxGenTime As Integer, _
+    Private Function CommonGen(ByRef settMap As Map.SettingsMap, ByRef settRaceLoc As Map.SettingsLoc, _
+                               ByRef settCommLoc As Map.SettingsLoc, ByRef maxGenTime As Integer, _
                                ByRef symmId As Integer) As Map
         settRaceLoc.minStackToStackDist = Math.Max(settRaceLoc.minStackToStackDist, 1)
         settCommLoc.minStackToStackDist = Math.Max(settCommLoc.minStackToStackDist, 1)
@@ -270,8 +141,8 @@ Public Class ImpenetrableMeshGen
     ''' Она обычно производится меньше чем за пару секунд, но бывает, что выполняется дольше минуты.
     ''' В этом случае быстрее перегенерировать карту.
     ''' Если не получится с пяти попыток, вернет Nothing</param>
-    Public Function UnsymmGen(ByRef settMap As SettingsMap, ByRef settRaceLoc As SettingsLoc, _
-                              ByRef settCommLoc As SettingsLoc, ByRef maxGenTime As Integer) As Map
+    Public Function UnsymmGen(ByRef settMap As Map.SettingsMap, ByRef settRaceLoc As Map.SettingsLoc, _
+                              ByRef settCommLoc As Map.SettingsLoc, ByRef maxGenTime As Integer) As Map
         Return CommonGen(settMap, settRaceLoc, settCommLoc, maxGenTime, -1)
     End Function
     ''' <summary>Генерирует заготовку ландшафта с использованием симметрии</summary>
@@ -287,8 +158,8 @@ Public Class ImpenetrableMeshGen
     ''' Если не получится с пяти попыток, вернет Nothing</param>
     ''' <param name="symmID">ID применяемой операпции симметрии (см. класс SymmetryOperations).
     ''' Если ID меньше ноля, будет выбрана случайная симметрия из тех, что подходят</param>
-    Public Function SymmGen(ByRef settMap As SettingsMap, ByRef settRaceLoc As SettingsLoc, _
-                            ByRef settCommLoc As SettingsLoc, ByRef maxGenTime As Integer, _
+    Public Function SymmGen(ByRef settMap As Map.SettingsMap, ByRef settRaceLoc As Map.SettingsLoc, _
+                            ByRef settCommLoc As Map.SettingsLoc, ByRef maxGenTime As Integer, _
                             Optional ByRef symmID As Integer = -1) As Map
         Dim s As Integer
         Dim slist As List(Of Integer) = symm.PossibleOperationsList(settMap.nRaces, settMap.xSize, settMap.ySize)
@@ -341,7 +212,7 @@ Public Class ImpenetrableMeshGen
         Return NearestXY(P.X, P.Y, M.xSize, M.ySize, tolerance)
     End Function
 
-    Private Function PlaceRaceLocations(ByRef settMap As SettingsMap, ByRef settRaceLoc As SettingsLoc, ByRef symmID As Integer) As Map
+    Private Function PlaceRaceLocations(ByRef settMap As Map.SettingsMap, ByRef settRaceLoc As Map.SettingsLoc, ByRef symmID As Integer) As Map
         Dim res As New Map(settMap.xSize, settMap.ySize, symmID)
         Dim ok As Boolean = False
         Dim raceLocs() As Location
@@ -406,7 +277,7 @@ Public Class ImpenetrableMeshGen
         Next i
         Return res
     End Function
-    Private Function PrepareToRaceLocGen(ByRef settMap As SettingsMap, ByRef settRaceLoc As SettingsLoc) As PrepareToRaceLocGenResult
+    Private Function PrepareToRaceLocGen(ByRef settMap As Map.SettingsMap, ByRef settRaceLoc As Map.SettingsLoc) As PrepareToRaceLocGenResult
         Dim result As New PrepareToRaceLocGenResult
         ReDim result.raceLocs(settMap.nRaces - 1)
         For i As Integer = 0 To settMap.nRaces - 1 Step 1
@@ -540,7 +411,7 @@ Public Class ImpenetrableMeshGen
         Return True
     End Function
 
-    Private Sub PlaceCommonLocs(ByRef m As Map, ByRef settMap As SettingsMap, ByRef settCommLoc As SettingsLoc)
+    Private Sub PlaceCommonLocs(ByRef m As Map, ByRef settMap As Map.SettingsMap, ByRef settCommLoc As Map.SettingsLoc)
 
         Dim id As Integer = m.Loc.Length + 1
         Dim dynRadiusDispersion As Double = settCommLoc.maxRadiusDispersion
@@ -625,7 +496,7 @@ Public Class ImpenetrableMeshGen
         Loop
     End Sub
 
-    Private Sub SetLocIdToCells(ByRef m As Map, ByVal settMap As SettingsMap)
+    Private Sub SetLocIdToCells(ByRef m As Map, ByVal settMap As Map.SettingsMap)
 
         Dim allPoints()() As Point = Nothing
         Dim pID()() As Integer = Nothing
@@ -914,7 +785,7 @@ Public Class ImpenetrableMeshGen
     End Sub
     ''' <summary>Returns value from 0 To UBound(m.Loc)</summary>
 
-    Private Sub SetBorders(ByRef m As Map, ByVal settMap As SettingsMap, ByRef Term As TerminationCondition)
+    Private Sub SetBorders(ByRef m As Map, ByVal settMap As Map.SettingsMap, ByRef Term As TerminationCondition)
 
         Dim tmpm As Map = m
         Dim del(tmpm.xSize, tmpm.ySize), freeze(tmpm.xSize, tmpm.ySize) As Boolean
@@ -1227,7 +1098,7 @@ Public Class ImpenetrableMeshGen
          End Sub)
         m = tmpm
     End Sub
-    Private Sub ConnectDisconnectedAreas(ByRef m As Map, ByRef settMap As SettingsMap, _
+    Private Sub ConnectDisconnectedAreas(ByRef m As Map, ByRef settMap As Map.SettingsMap, _
                                          ByRef Term As TerminationCondition)
         Dim conn2(0, 0) As Boolean
         Do While Not IsNothing(conn2)
@@ -1275,7 +1146,7 @@ Public Class ImpenetrableMeshGen
         Loop
     End Sub
     Private Sub MakePass(ByRef m As Map, ByRef init As Point, ByRef dest As Point, _
-                         ByRef settMap As SettingsMap)
+                         ByRef settMap As Map.SettingsMap)
         Dim vx As Double = dest.X - init.X
         Dim vy As Double = dest.Y - init.Y
         Dim n As Integer = CInt(10 * Math.Max((vx * vx + vy * vy), 1))
@@ -1397,8 +1268,8 @@ Public Class ImpenetrableMeshGen
         Return FindDisconnected(free, c)
     End Function
 
-    Private Sub PlaceActiveObjects(ByRef m As Map, ByVal settMap As SettingsMap, _
-                                   ByRef settRaceLoc As SettingsLoc, ByVal settCommLoc As SettingsLoc, _
+    Private Sub PlaceActiveObjects(ByRef m As Map, ByVal settMap As Map.SettingsMap, _
+                                   ByRef settRaceLoc As Map.SettingsLoc, ByVal settCommLoc As Map.SettingsLoc, _
                                    ByRef ObjectBlank()(,) As Map.Cell, ByRef Term As TerminationCondition)
         Dim tmpm As Map = m
         Dim LocsPlacing(UBound(tmpm.Loc)) As Location.Borders
@@ -1586,7 +1457,7 @@ Public Class ImpenetrableMeshGen
         Next y
     End Sub
     Private Sub ObjectsPlacingVariants(ByRef objIDs() As Integer, ByRef locID As Integer, _
-                                       ByRef m As Map, ByRef settMap As SettingsMap, _
+                                       ByRef m As Map, ByRef settMap As Map.SettingsMap, _
                                        ByRef LocsPlacing() As Location.Borders, _
                                        ByRef FreeCells(,) As Boolean, _
                                        ByRef NearWith() As Integer, ByRef symmID As Integer, _
@@ -1716,7 +1587,7 @@ Public Class ImpenetrableMeshGen
         End If
     End Sub
     Private Sub MakeLocObjectsList(ByRef places() As Integer, ByRef nearWith() As Integer, _
-                                   ByRef sett As SettingsLoc, ByRef isRaceLoc As Boolean, _
+                                   ByRef sett As Map.SettingsLoc, ByRef isRaceLoc As Boolean, _
                                    ByRef LocArea() As Integer, ByRef symmID As Integer, _
                                    ByRef LocSymmMult As Double)
         Dim nCapital, nMinMines As Integer
@@ -1840,7 +1711,7 @@ Public Class ImpenetrableMeshGen
         p += 1
     End Sub
     Private Sub FillLocation(ByRef GroupID As Integer, ByRef LocId As Integer, ByRef m As Map, ByRef LocsPlacing() As Location.Borders, _
-                             ByRef LocArea()() As Integer, ByVal settMap As SettingsMap, ByRef settLoc As SettingsLoc, _
+                             ByRef LocArea()() As Integer, ByVal settMap As Map.SettingsMap, ByRef settLoc As Map.SettingsLoc, _
                              ByVal symmId As Integer, ByVal IsRaceLoc As Boolean, LocSymmMult() As Double, _
                              ByRef LocFreeCells()(,) As Boolean, ByRef Term As TerminationCondition)
         Dim tmpm As Map = m
@@ -1966,7 +1837,7 @@ Public Class ImpenetrableMeshGen
         m.board(b.minX, b.minY).groupID = GroupID
     End Sub
     Private Sub PlaceObject(ByRef m As Map, ByRef id As Integer, ByRef x As Integer, ByRef y As Integer, _
-                            ByRef GroupID As Integer, ByRef settMap As SettingsMap)
+                            ByRef GroupID As Integer, ByRef settMap As Map.SettingsMap)
         If m.symmID < 0 Then
             Call PlaceObject(m, id, x, y, GroupID)
         Else
@@ -2001,7 +1872,7 @@ Public Class ImpenetrableMeshGen
         Next j
     End Sub
 
-    Private Sub MakeLabyrinth(ByRef m As Map, ByVal settMap As SettingsMap, ByRef Term As TerminationCondition)
+    Private Sub MakeLabyrinth(ByRef m As Map, ByVal settMap As Map.SettingsMap, ByRef Term As TerminationCondition)
         If Term.ExitFromLoops Then Exit Sub
         Dim tmpm As Map = m
         Dim TT(UBound(tmpm.Loc)) As TerminationCondition
@@ -2021,7 +1892,7 @@ Public Class ImpenetrableMeshGen
         Call ConnectDisconnectedAreas(tmpm, settMap, Term)
         m = tmpm
     End Sub
-    Private Sub MakeLabyrinth(ByRef m As Map, ByRef settMap As SettingsMap, ByRef LocId As Integer, ByRef symmID As Integer, _
+    Private Sub MakeLabyrinth(ByRef m As Map, ByRef settMap As Map.SettingsMap, ByRef LocId As Integer, ByRef symmID As Integer, _
                               ByRef Term As TerminationCondition)
 
         Dim b As New Location.Borders With {.minX = Integer.MaxValue, .minY = Integer.MaxValue, _
@@ -2112,7 +1983,7 @@ Public Class ImpenetrableMeshGen
             Next i
         End If
     End Sub
-    Private Sub LifeAlgo(ByRef m As Map, ByRef settMap As SettingsMap, ByRef connected(,) As Boolean, _
+    Private Sub LifeAlgo(ByRef m As Map, ByRef settMap As Map.SettingsMap, ByRef connected(,) As Boolean, _
                          ByRef init As Point, ByRef LPos As Point, ByRef Term As TerminationCondition)
 
         Dim xSize As Integer = UBound(connected, 1)
@@ -2767,7 +2638,7 @@ Public Class Location
         Return Math.Exp(-0.5 * (dX / sigma) ^ 2)
     End Function
 
-    Friend Shared Function GenLocSize(ByRef sett As ImpenetrableMeshGen.SettingsLoc, ByRef id As Integer, _
+    Friend Shared Function GenLocSize(ByRef sett As Map.SettingsLoc, ByRef id As Integer, _
                                       ByRef rndgen As RndValueGen, ByRef minLocationRadiusAtAll As Double) As Location
         Dim r, e, a As Double
         r = rndgen.PRand(1 - sett.maxRadiusDispersion, 1 + sett.maxRadiusDispersion) * sett.AverageRadius
@@ -3088,6 +2959,123 @@ Public Class Map
         Dim StacksRaceGen_Done As Boolean
     End Structure
 
+    Public Structure SettingsLoc
+        ''' <summary>Средний радиус локаций</summary>
+        Dim AverageRadius As Integer
+        ''' <summary>Локации будут в форме эллипсов со случайным эксцентриситетом от (1-D)/(1+D) до (1+D)/(1-D)</summary>
+        Dim maxEccentricityDispersion As Double
+        ''' <summary>При достаточном количестве места будут создаваться локации размером от (1-D)*R до (1+D)*R.
+        ''' Когда свободного места станет недостаточно R начнет постепенно уменьшаться до половины от начального значения</summary>
+        Dim maxRadiusDispersion As Double
+
+        '''<summary>Количество золотых шахт на локацию</summary>
+        Dim maxGoldMines As Double
+        '''<summary>Количество источников маны на локацию</summary>
+        Dim maxManaSources As Double
+        '''<summary>Количество нейтральных городов на локацию</summary>
+        Dim maxCities As Double
+        '''<summary>Количество торговцев на локацию</summary>
+        Dim maxVendors As Double
+        '''<summary>Количество лагерей наемников на локацию</summary>
+        Dim maxMercenaries As Double
+        '''<summary>Количество башен мага на локацию</summary>
+        Dim maxMages As Double
+        '''<summary>Количество тренеров на локацию</summary>
+        Dim maxTrainers As Double
+        '''<summary>Количество руин на локацию</summary>
+        Dim maxRuins As Double
+
+        '''<summary>Минимальное расстояние между отрядами</summary>
+        Dim minStackToStackDist As Double
+
+        '''<summary>Примерное количество опыта за убийство всех отрядов в локации</summary>
+        Dim expAmount As Double
+    End Structure
+    Public Structure SettingsMap
+        ''' <summary>Правая граница карты (например, если генерируем карту 24x48, то сюда пишем 23)</summary>
+        Dim xSize As Integer
+        ''' <summary>Верхняя граница карты (например, если генерируем карту 24x48, то сюда пишем 47)</summary>
+        Dim ySize As Integer
+        ''' <summary>Минимальное расстояние между проходами</summary>
+        Dim minPassDist As Double
+        ''' <summary>Минимальная ширина проходов</summary>
+        Dim minPassWidth As Double
+        ''' <summary>Количество рас</summary>
+        Dim nRaces As Integer
+        ''' <summary>Генератор будет располагать локации со столицами так, чтобы для каждой из локаций выполнялось следующиее условие:
+        ''' R1*(1+T) >= R2, при этом R2 > R1, где R1 и R2 - расстояние до двух ближайших локаций со столицами</summary>
+        Dim RaceLocsDistTolerance As Double
+        ''' <summary>Расставлять ли стражей проходов между локациями</summary>
+        Dim AddGuardsBetweenLocations As Boolean
+        ''' <summary>Множитель силы стражей проходов между локациями</summary>
+        Dim PassGuardsPowerMultiplicator As Double
+        ''' <summary>Множитель силы стражей посещаемых объектов</summary>
+        Dim ObjectGuardsPowerMultiplicator As Double
+        ''' <summary>Отношение максимального опыта, получаемого за зачистку локации среднего размера, к минимальному.
+        ''' Чем дальше локация от ближайшей столицы и чем ближе к центру, тем больше опыта за ее зачистку</summary>
+        Dim LocExpRatio As Double
+        ''' <summary>Множитель стоимости лута нейтралов</summary>
+        Dim Wealth As Double
+        ''' <summary>Количество воды на карте. 0 - без воды, 1 - очень много</summary>
+        Dim WaterAmount As Double
+    End Structure
+
+    ''' <summary>Вернет True, если все нормально, иначе стоит перегенерировать</summary>
+    Public Function TestMap() As String
+        Dim imp As New ImpenetrableMeshGen
+        If Not complited.LoationsCreation_Done Then
+            Throw New Exception("Сначала нужно выполнить ImpenetrableMeshGen.SymmGen или ImpenetrableMeshGen.UnsymmGen")
+        End If
+        For x As Integer = 0 To xSize Step 1
+            For y As Integer = 0 To ySize Step 1
+                If board(x, y).isBorder And board(x, y).isAttended Then
+                    Return "Warning: border and object are on the same place"
+                ElseIf board(x, y).isBorder And board(x, y).isPass Then
+                    Return "Warning: border and pass are on the same place"
+                ElseIf board(x, y).isBorder And board(x, y).Penetrable Then
+                    Return "Warning: border and penetrable cell are on the same place"
+                ElseIf board(x, y).isAttended And board(x, y).Penetrable Then
+                    Return "Warning: object and penetrable cell are on the same place"
+                ElseIf board(x, y).isAttended And board(x, y).isPass Then
+                    Return "Warning: object and pass are on the same place"
+                End If
+                If complited.StacksPlacing_Done And board(x, y).GuardLoc Then
+                    If board(x, y).isBorder Then
+                        Return "Warning: border and guard are on the same place"
+                    ElseIf board(x, y).isAttended And board(x, y).objectID = 0 Then
+                        Return "Warning: object and guard are on the same place"
+                    ElseIf (board(x, y).objectID = 2 Or board(x, y).objectID = 7) And board(x, y).groupID < 1 Then
+                        Return "Warning: group for internal guard for object is zero"
+                    ElseIf board(x, y).objectID > 0 AndAlso imp.ActiveObjects(board(x, y).objectID).hasExternalGuard Then
+                        Return "Warning: object with external guard has internal one"
+                    End If
+                End If
+                If complited.StacksPlacing_Done Then
+                    If Not board(x, y).GuardLoc And (board(x, y).objectID = 2 Or board(x, y).objectID = 7) Then
+                        Return "Warning: internal guard for object is not set"
+                    End If
+                End If
+                If complited.StacksPlacing_Done And board(x, y).PassGuardLoc Then
+                    If board(x, y).isBorder Then
+                        Return "Warning: border and pass guard are on the same place"
+                    ElseIf board(x, y).isAttended Then
+                        Return "Warning: object and pass guard are on the same place"
+                    ElseIf board(x, y).GuardLoc Then
+                        Return "Warning: common guard and pass guard are on the same place"
+                    ElseIf board(x, y).groupID < 1 Then
+                        Return "Warning: group for pass guard is zero"
+                    End If
+                End If
+            Next y
+        Next x
+        If complited.StacksPlacing_Done Then
+            complited.MeshTestII_Done = True
+        Else
+            complited.MeshTestI_Done = True
+        End If
+        Return ""
+    End Function
+
 End Class
 
 Public Class StackLocationsGen
@@ -3109,9 +3097,9 @@ Public Class StackLocationsGen
     ''' <param name="maxGenTime">Максимальное время на операцию расстановки стражей проходов между локациями.
     ''' Она обычно производится меньше чем за секунду, но бывает, что выполняется дольше минуты.
     ''' В этом случае быстрее перегенерировать карту</param>
-    Public Function Gen(ByRef m As Map, ByVal settMap As ImpenetrableMeshGen.SettingsMap, _
-                        ByVal settRaceLoc As ImpenetrableMeshGen.SettingsLoc, _
-                        ByVal settCommLoc As ImpenetrableMeshGen.SettingsLoc, _
+    Public Function Gen(ByRef m As Map, ByVal settMap As Map.SettingsMap, _
+                        ByVal settRaceLoc As Map.SettingsLoc, _
+                        ByVal settCommLoc As Map.SettingsLoc, _
                         ByRef maxGenTime As Integer) As Boolean
 
         If Not m.complited.LoationsCreation_Done Or Not m.complited.MeshTestI_Done Then
@@ -3150,9 +3138,9 @@ Public Class StackLocationsGen
         Return True
     End Function
 
-    Private Sub PlaceCommonStacks(ByRef m As Map, ByVal settMap As ImpenetrableMeshGen.SettingsMap, _
-                                  ByVal settRaceLoc As ImpenetrableMeshGen.SettingsLoc, _
-                                  ByVal settCommLoc As ImpenetrableMeshGen.SettingsLoc, _
+    Private Sub PlaceCommonStacks(ByRef m As Map, ByVal settMap As Map.SettingsMap, _
+                                  ByVal settRaceLoc As Map.SettingsLoc, _
+                                  ByVal settCommLoc As Map.SettingsLoc, _
                                   ByRef GroupID As Integer)
         Dim tmpm As Map = m
         For y As Integer = 0 To m.ySize Step 1
@@ -3274,8 +3262,8 @@ Public Class StackLocationsGen
         Next y
         m = tmpm
     End Sub
-    Private Function FillLocation(ByRef m As Map, ByRef settMap As ImpenetrableMeshGen.SettingsMap, _
-                                  ByRef settLoc As ImpenetrableMeshGen.SettingsLoc, ByRef LocID As Integer) As List(Of Point)
+    Private Function FillLocation(ByRef m As Map, ByRef settMap As Map.SettingsMap, _
+                                  ByRef settLoc As Map.SettingsLoc, ByRef LocID As Integer) As List(Of Point)
 
         Dim b As New Location.Borders With {.minX = Integer.MaxValue, .maxX = Integer.MinValue, _
                                             .miny = Integer.MaxValue, .maxy = Integer.MinValue}
@@ -3394,7 +3382,7 @@ Public Class StackLocationsGen
         Next p
         Return res
     End Function
-    Private Function PlaceStacks(ByRef isPossiblePoint(,) As Boolean, ByRef settLoc As ImpenetrableMeshGen.SettingsLoc) As List(Of Point)
+    Private Function PlaceStacks(ByRef isPossiblePoint(,) As Boolean, ByRef settLoc As Map.SettingsLoc) As List(Of Point)
         Dim tolerance As Integer = CInt(Math.Ceiling(settLoc.minStackToStackDist))
         Dim minDistSq As Integer = CInt(Math.Ceiling(settLoc.minStackToStackDist * settLoc.minStackToStackDist))
         Dim xSize As Integer = UBound(isPossiblePoint, 1)
@@ -3435,7 +3423,7 @@ Public Class StackLocationsGen
         Return output
     End Function
 
-    Private Function PlasePassesGuards(ByRef m As Map, ByRef settMap As ImpenetrableMeshGen.SettingsMap, _
+    Private Function PlasePassesGuards(ByRef m As Map, ByRef settMap As Map.SettingsMap, _
                                        ByRef LocID As Integer, ByRef term As TerminationCondition) As Point()()
 
         Dim passes, gag As New List(Of String)
@@ -3656,7 +3644,7 @@ Public Class StackLocationsGen
         Next i
         Return res
     End Function
-    Private Sub RemoveExcessPassGuards(ByRef m As Map, ByRef settMap As ImpenetrableMeshGen.SettingsMap, _
+    Private Sub RemoveExcessPassGuards(ByRef m As Map, ByRef settMap As Map.SettingsMap, _
                                        ByRef guards() As Point)
         If IsNothing(guards) Then Exit Sub
         Dim free(m.xSize, m.ySize) As Boolean
@@ -3689,7 +3677,7 @@ Public Class StackLocationsGen
         guards = res
     End Sub
     Private Function CalcNDisconnectedLocs(ByRef free(,) As Boolean, ByRef m As Map, _
-                                           ByRef settMap As ImpenetrableMeshGen.SettingsMap, _
+                                           ByRef settMap As Map.SettingsMap, _
                                            ByRef guards() As Point, ByRef excluded As List(Of Integer)) As Integer
         Dim freeInClosedState(,) As Boolean = CType(free.Clone, Boolean(,))
 
@@ -3714,7 +3702,7 @@ Public Class StackLocationsGen
         Return NConnected(freeInClosedState, m)
     End Function
 
-    Private Sub PlacePassGuards(ByRef m As Map, ByRef guards() As Point, ByRef GroupID As Integer, ByRef settMap As ImpenetrableMeshGen.SettingsMap)
+    Private Sub PlacePassGuards(ByRef m As Map, ByRef guards() As Point, ByRef GroupID As Integer, ByRef settMap As Map.SettingsMap)
         If IsNothing(guards) Then Exit Sub
         For Each p As Point In guards
             GroupID += 1
@@ -3797,7 +3785,7 @@ Public Class WaterGen
     Private symm As New SymmetryOperations
     Private imp As New ImpenetrableMeshGen
 
-    Public Sub Gen(ByRef m As Map, ByRef settMap As ImpenetrableMeshGen.SettingsMap)
+    Public Sub Gen(ByRef m As Map, ByRef settMap As Map.SettingsMap)
 
         If Not m.complited.StacksDesiredStatsGen_Done Then
             Throw New Exception("Сначала нужно выполнить StackPowerGen.Gen")
@@ -3839,12 +3827,12 @@ Public Class WaterGen
         m.complited.WaterCreation_Done = True
     End Sub
 
-    Private Sub PlaceWater(ByRef m As Map, ByRef loc As Location, ByRef settMap As ImpenetrableMeshGen.SettingsMap, ByRef HaveToBeGround(,) As Boolean)
+    Private Sub PlaceWater(ByRef m As Map, ByRef loc As Location, ByRef settMap As Map.SettingsMap, ByRef HaveToBeGround(,) As Boolean)
 
         Dim lake As Location
-        Dim WaterLocSettings As New ImpenetrableMeshGen.SettingsLoc With {.AverageRadius = CInt(0.3 * Math.Sqrt(loc.gASize * loc.gBSize) * settMap.WaterAmount), _
-                                                                          .maxRadiusDispersion = 0.25, _
-                                                                          .maxEccentricityDispersion = 0.35}
+        Dim WaterLocSettings As New Map.SettingsLoc With {.AverageRadius = CInt(0.3 * Math.Sqrt(loc.gASize * loc.gBSize) * settMap.WaterAmount), _
+                                                          .maxRadiusDispersion = 0.25, _
+                                                          .maxEccentricityDispersion = 0.35}
         Dim freeCell(,) As Boolean = Nothing
         Dim WaterAmount As Integer = WaterAmountCalc(m, loc, settMap, freeCell, HaveToBeGround)
         Dim n As Integer = -1
@@ -3876,7 +3864,7 @@ Public Class WaterGen
         Call MakeRuinsWatered(m, loc, settMap)
 
     End Sub
-    Private Function WaterAmountCalc(ByRef m As Map, ByRef loc As Location, ByRef settMap As ImpenetrableMeshGen.SettingsMap, _
+    Private Function WaterAmountCalc(ByRef m As Map, ByRef loc As Location, ByRef settMap As Map.SettingsMap, _
                                      ByRef freeCell(,) As Boolean, ByRef HaveToBeGround(,) As Boolean) As Integer
         ReDim freeCell(m.xSize, m.ySize)
         Dim WaterAmount, Watered As Integer
@@ -3937,7 +3925,7 @@ Public Class WaterGen
         If IDs.Count = 0 Then Return -1
         Return comm.RandomSelection(IDs, True)
     End Function
-    Private Sub PlaceLake(ByRef AllIds As List(Of Integer), ByRef points() As Point, ByRef m As Map, ByRef settMap As ImpenetrableMeshGen.SettingsMap, _
+    Private Sub PlaceLake(ByRef AllIds As List(Of Integer), ByRef points() As Point, ByRef m As Map, ByRef settMap As Map.SettingsMap, _
                           ByRef selected As Integer, ByRef freeCell(,) As Boolean, ByRef lake As Location, ByRef WaterAmount As Integer, ByRef HaveToBeGround(,) As Boolean)
         'размещаем эллиптическое озеро
         AllIds.Remove(selected)
@@ -4009,10 +3997,10 @@ Public Class WaterGen
                 End If
             End If
         Next p
-        
+
     End Sub
     Private Sub SetWaterCellSymm(ByRef i As Integer, ByRef j As Integer, ByRef m As Map, ByRef freeCell(,) As Boolean, _
-                                 ByRef WaterAmount As Integer, ByRef settMap As ImpenetrableMeshGen.SettingsMap)
+                                 ByRef WaterAmount As Integer, ByRef settMap As Map.SettingsMap)
         If m.symmID > -1 Then
             Dim pp() As Point = symm.ApplySymm(New Point(i, j), settMap.nRaces, m, 1)
             For k As Integer = 0 To UBound(pp) Step 1
@@ -4031,7 +4019,7 @@ Public Class WaterGen
         End If
         m.board(i, j).isWater = True
     End Sub
-    Private Sub SetGroundCellSymm(ByRef i As Integer, ByRef j As Integer, ByRef m As Map, ByRef settMap As ImpenetrableMeshGen.SettingsMap)
+    Private Sub SetGroundCellSymm(ByRef i As Integer, ByRef j As Integer, ByRef m As Map, ByRef settMap As Map.SettingsMap)
         If m.symmID > -1 Then
             Dim pp() As Point = symm.ApplySymm(New Point(i, j), settMap.nRaces, m, 1)
             For k As Integer = 0 To UBound(pp) Step 1
@@ -4044,7 +4032,7 @@ Public Class WaterGen
         End If
     End Sub
 
-    Private Sub MakeRuinsWatered(ByRef m As Map, ByRef loc As Location, ByRef settMap As ImpenetrableMeshGen.SettingsMap)
+    Private Sub MakeRuinsWatered(ByRef m As Map, ByRef loc As Location, ByRef settMap As Map.SettingsMap)
         For i As Integer = 0 To m.xSize Step 1
             For j As Integer = 0 To m.ySize Step 1
                 If m.board(i, j).locID(0) = loc.ID And m.board(i, j).objectID = 7 AndAlso rndgen.PRand(0, 1) < 0.1 Then
@@ -4078,7 +4066,7 @@ Public Class WaterGen
         Next i
     End Sub
 
-    Private Sub Extend(ByRef m As Map, ByRef settMap As ImpenetrableMeshGen.SettingsMap, ByRef HaveToBeGround(,) As Boolean)
+    Private Sub Extend(ByRef m As Map, ByRef settMap As Map.SettingsMap, ByRef HaveToBeGround(,) As Boolean)
         Dim n As Integer
         Dim var As New List(Of Point)
         For i As Integer = 0 To m.xSize Step 1

@@ -23,7 +23,7 @@ Friend Class StartForm
             races = 4
         End If
 
-        Dim sM As ImpenetrableMeshGen.SettingsMap
+        Dim sM As Map.SettingsMap
         sM.xSize = 95
         sM.ySize = 95
         sM.RaceLocsDistTolerance = 0.2
@@ -36,7 +36,7 @@ Friend Class StartForm
         sM.Wealth = 0.8
         sM.WaterAmount = 0.6
 
-        Dim sR As ImpenetrableMeshGen.SettingsLoc
+        Dim sR As Map.SettingsLoc
         sR.AverageRadius = 20
         sR.maxEccentricityDispersion = 0.15
         sR.maxRadiusDispersion = 0
@@ -51,7 +51,7 @@ Friend Class StartForm
         sR.minStackToStackDist = 4
         sR.expAmount = 3000
 
-        Dim sC As ImpenetrableMeshGen.SettingsLoc
+        Dim sC As Map.SettingsLoc
         sC.AverageRadius = 15
         sC.maxEccentricityDispersion = 0.4
         sC.maxRadiusDispersion = 0.3
@@ -76,7 +76,10 @@ again:
             grid = genmesh.SymmGen(sM, sR, sC, gt)
         End If
 
-        If Not genmesh.TestMap(grid) Then Exit Sub
+        If Not grid.TestMap = "" Then
+            Console.WriteLine(grid.TestMap)
+            Exit Sub
+        End If
 
         If Not IsNothing(grid) Then
             Dim staclocgen As New StackLocationsGen
@@ -85,7 +88,10 @@ again:
             Exit Sub
         End If
 
-        If Not genmesh.TestMap(grid) Then Exit Sub
+        If Not grid.TestMap = "" Then
+            Console.WriteLine(grid.TestMap)
+            Exit Sub
+        End If
 
         Call stackstats.Gen(grid, sM, sR, sC)
         Call watergenerator.Gen(grid, sM)

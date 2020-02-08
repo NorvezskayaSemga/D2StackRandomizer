@@ -21,9 +21,9 @@
     ''' <param name="settCommLoc">Настройки для остальных локаций. 
     ''' Значение количества опыта для каждой локации будет умножаться на отношение площади локации к площади средней локации (Pi*AverageRadius^2)</param>>
     Public Sub Gen(ByRef m As Map, _
-                   ByRef settMap As ImpenetrableMeshGen.SettingsMap, _
-                   ByRef settRaceLoc As ImpenetrableMeshGen.SettingsLoc, _
-                   ByRef settCommLoc As ImpenetrableMeshGen.SettingsLoc)
+                   ByRef settMap As Map.SettingsMap, _
+                   ByRef settRaceLoc As Map.SettingsLoc, _
+                   ByRef settCommLoc As Map.SettingsLoc)
 
         If Not m.complited.StacksPlacing_Done Or Not m.complited.MeshTestII_Done Then
             Throw New Exception("Сначала нужно выполнить StackLocations.Gen " & _
@@ -34,7 +34,7 @@
         Dim guards As Dictionary(Of Integer, StackLoc) = MakeGuardsList(m)
         Dim LocTotalExp() As Double = MakeLocationsList(m, settMap, settRaceLoc, settCommLoc)
         m.groupStats = GenStacksStats(settMap, guards, LocTotalExp)
-        m.complited.StacksDesiredStatsGen_Done=True
+        m.complited.StacksDesiredStatsGen_Done = True
     End Sub
 
     Private Function MakeGuardsList(ByRef m As Map) As Dictionary(Of Integer, StackLoc)
@@ -71,9 +71,9 @@
         Return locs
     End Function
     Private Function MakeLocationsList(ByRef m As Map, _
-                                       ByRef settMap As ImpenetrableMeshGen.SettingsMap, _
-                                       ByRef settRaceLoc As ImpenetrableMeshGen.SettingsLoc, _
-                                       ByRef settCommLoc As ImpenetrableMeshGen.SettingsLoc) As Double()
+                                       ByRef settMap As Map.SettingsMap, _
+                                       ByRef settRaceLoc As Map.SettingsLoc, _
+                                       ByRef settCommLoc As Map.SettingsLoc) As Double()
 
         Dim CapPos As New List(Of Point)
         Dim centerX, centerY As Double
@@ -150,7 +150,7 @@
         Return LExp
     End Function
 
-    Private Function GenStacksStats(ByRef settMap As ImpenetrableMeshGen.SettingsMap, _
+    Private Function GenStacksStats(ByRef settMap As Map.SettingsMap, _
                                     ByRef guards As Dictionary(Of Integer, StackLoc), _
                                     ByRef LocTotalExp() As Double) As Dictionary(Of Integer, RandStack.DesiredStats)
         Dim res As New Dictionary(Of Integer, RandStack.DesiredStats)
