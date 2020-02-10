@@ -27,7 +27,7 @@
 
         If Not m.complited.StacksPlacing_Done Or Not m.complited.MeshTestII_Done Then
             Throw New Exception("Сначала нужно выполнить StackLocations.Gen " & _
-                                "и протестировать результат с помощью ImpenetrableMeshGen.TestMap")
+                                "и протестировать результат с помощью m.TestMap")
         End If
 
         Dim t0 As Integer = Environment.TickCount

@@ -3104,7 +3104,7 @@ Public Class StackLocationsGen
 
         If Not m.complited.LoationsCreation_Done Or Not m.complited.MeshTestI_Done Then
             Throw New Exception("Сначала нужно выполнить ImpenetrableMeshGen.SymmGen или " & _
-                                "ImpenetrableMeshGen.UnsymmGen и протестировать результат с помощью ImpenetrableMeshGen.TestMap")
+                                "ImpenetrableMeshGen.UnsymmGen и протестировать результат с помощью m.TestMap")
         End If
 
         Dim tmpm As Map = m
