@@ -172,4 +172,10 @@
   <data name="ExcludeIDsForNames" type="System.Resources.ResXFileRef, System.Windows.Forms">
     <value>..\Resources\ExcludeIDsForNames.txt;System.String, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089;windows-1251</value>
   </data>
+  <data name="MapObjectRace" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\Resources\MapObjectRace.txt;System.String, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089;windows-1251</value>
+  </data>
+  <data name="minLocationRadiusAtAll" xml:space="preserve">
+    <value>7</value>
+  </data>
 </root>

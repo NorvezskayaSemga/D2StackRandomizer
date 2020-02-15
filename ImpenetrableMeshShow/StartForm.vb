@@ -10,8 +10,12 @@ Friend Class StartForm
     Dim racegen As New RaceGen
     Dim names As New SetName
     Dim watergenerator As New WaterGen
+    Dim comm As New Common
+    Dim objplace As New ImpenetrableObjects(Nothing, {"%default%"}, {"%default%"})
 
     Private Sub GenButton_Click() Handles GenButton.Click
+
+        Call comm.ReadExcludedObjectsList({"%default%"})
 
         Dim grid As Map
         Dim races As Integer
@@ -96,6 +100,8 @@ again:
         Call stackstats.Gen(grid, sM, sR, sC)
         Call watergenerator.Gen(grid, sM)
         Call racegen.Gen(grid, Nothing)
+
+        Call objplace.Gen(grid)
 
         'запоминаем набор точек с наибольшим n
         'произвед 1/r - стат вес для nearwith = -1

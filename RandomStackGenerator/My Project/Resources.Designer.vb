@@ -108,7 +108,11 @@ Namespace My.Resources
         '''g000uu3001
         '''g000uu3002
         '''g000uu3003
-        '''g000 [rest of string was truncated]&quot;;.
+        '''g000uu3004
+        '''g000uu8040
+        '''
+        '''#призыватели
+        '''#учени [rest of string was truncated]&quot;;.
         '''</summary>
         Friend ReadOnly Property ExcludeIDs() As String
             Get
@@ -117,7 +121,41 @@ Namespace My.Resources
         End Property
         
         '''<summary>
-        '''  Looks up a localized string similar to .
+        '''  Looks up a localized string similar to #волк
+        '''g000uu5039
+        '''g000uu5139
+        '''#псина
+        '''g000uu7533
+        '''g006uu1030
+        '''#вор
+        '''g000uu0023
+        '''g000uu0048
+        '''g000uu0074
+        '''g000uu0100
+        '''g000uu8013
+        '''g001uu0023
+        '''g001uu0048
+        '''g001uu0074
+        '''g001uu0100
+        '''g001uu8013
+        '''g000uu5300
+        '''g000uu5301
+        '''g000uu5302
+        '''g000uu5303
+        '''g000uu5304
+        '''#головорез
+        '''g000uu5031
+        '''g000uu5131
+        '''#разбойник
+        '''g000uu5030
+        '''g000uu5130
+        '''#крестьяник
+        '''g000uu5001
+        '''g000uu5101
+        '''#толстый бес
+        '''g000uu6004
+        '''g000uu6104
+        '''.
         '''</summary>
         Friend ReadOnly Property ExcludeIDsForNames() As String
             Get
@@ -188,6 +226,50 @@ Namespace My.Resources
         End Property
         
         '''<summary>
+        '''  Looks up a localized string similar to #строка, начинающаяся с решетки, игнорируется
+        '''#Первый столбец - идентификаторы объектов.
+        '''#В остальных - допустимые места расстановки объектов и расы
+        '''
+        '''#здания
+        '''g000mg0001	G	H C E N S
+        '''g000mg0002	G	C
+        '''g000mg0003	G	H N S
+        '''g000mg0004	G	L
+        '''g000mg0005	G	L
+        '''g000mg0006	G	-
+        '''g000mg0007	G	-
+        '''g000mg0008	G	-
+        '''g000mg0009	G	-
+        '''g000mg0010	G	-
+        '''g000mg0011	G	-
+        '''g000mg0012	G	-
+        '''g000mg0013	G	-
+        '''g000mg0014	G	-
+        '''g000mg0015	G	-
+        '''g000mg0016	G	-
+        '''g000mg0017	G	-
+        '''g000mg0018	G	-
+        '''g000mg0019	G	-
+        '''g000mg0020	G	-
+        '''g000mg0021	G	-
+        '''g [rest of string was truncated]&quot;;.
+        '''</summary>
+        Friend ReadOnly Property MapObjectRace() As String
+            Get
+                Return ResourceManager.GetString("MapObjectRace", resourceCulture)
+            End Get
+        End Property
+        
+        '''<summary>
+        '''  Looks up a localized string similar to 7.
+        '''</summary>
+        Friend ReadOnly Property minLocationRadiusAtAll() As String
+            Get
+                Return ResourceManager.GetString("minLocationRadiusAtAll", resourceCulture)
+            End Get
+        End Property
+        
+        '''<summary>
         '''  Looks up a localized string similar to 1.
         '''</summary>
         Friend ReadOnly Property nonJewelItemsCostMultiplicator() As String
@@ -246,7 +328,7 @@ Namespace My.Resources
         '''  Looks up a localized string similar to #строка, начинающаяся с решетки, игнорируется
         '''Строка без пробелов, табов и знаков равенства. Идентификатор локации (ID). На карте названия локаций для размещения отрядов должны состоять из ID, знака подчеркивания и любого символа(ов). Примеры:$newline$В файле: MyLocId ; На карте (одна локация): MyLocId_A$newline$В файле: Тир2_1 ; На карте (две локации): Тир2_1_A Тир2_1_B$newline$В файле: Kraken ; На карте (три локации): Kraken_LegionLoc Kraken_ClanLoc Kraken_CommonLoc
         '''ID
-        '''Целое число. Юниты с этой планкой [rest of string was truncated]&quot;;.
+        '''Целое число. Юниты с этой планкой оп [rest of string was truncated]&quot;;.
         '''</summary>
         Friend ReadOnly Property StackStatsFields() As String
             Get
@@ -291,7 +373,7 @@ Namespace My.Resources
         '''ID location1 AverageExpBar = 1000	ExpStackKilled 200  Race=U StackSize 1 MaxGiants 0		MeleeSlots 2 LootCost 0
         '''AverageExpBar = 100 ID testloc2 StackSize 3 MaxGiants 1		MeleeSlots -1 LootCost 3400 	ExpStackKilled 200  Race=U+d
         '''ID=loc3 AverageExpBar = 1000 Race=HuMans StackSize 1 MeleeSlots 2 LootCost 0	ExpStackKilled 200   MaxGiants 0
-        '''ID=loc54 AverageExpBar =  [rest of string was truncated]&quot;;.
+        '''ID=loc54 AverageExpBar = 1000 R [rest of string was truncated]&quot;;.
         '''</summary>
         Friend ReadOnly Property TestStackStats() As String
             Get

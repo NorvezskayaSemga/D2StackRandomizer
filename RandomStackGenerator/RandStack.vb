@@ -938,6 +938,8 @@ Public Class Common
     Public StatFields() As StackStatsField
     ''' <summary>Расы юнитов, назначаемые независимо от ресурсов игры</summary>
     Public customRace As New Dictionary(Of String, String)
+    ''' <summary>Допустимые расы локаций и поверхности, на которых можн ставить объекты</summary>
+    Public objectRace As New Dictionary(Of String, DecorationPlacingProperties)
 
     Friend ConsumableItemsTypes, NonconsumableItemsTypes As New List(Of Integer)
 
@@ -1254,6 +1256,7 @@ Public Class Common
         Return Math.Exp(-0.5 * ((X - avX) / (sigma * avX)) ^ 2)
     End Function
 
+    Delegate Sub readFunction(ByRef paths() As String)
     ''' <summary>Читает список юнитов и предметов, которые не должен использовать генератор</summary>
     ''' <param name="ExcludeLists">Файлы со списками исключенных объектов. Записи в них могут повторяться. 
     ''' Допускается передача неинициализитрованного массива.
@@ -1262,56 +1265,113 @@ Public Class Common
         If IsNothing(ExcludeLists) Then Exit Sub
         Dim s() As String
         For i As Integer = 0 To UBound(ExcludeLists) Step 1
-            If Not ExcludeLists(i).ToLower = My.Resources.readDefaultFileKeyword.ToLower Then
-                If IO.File.Exists(ExcludeLists(i)) Then
-                    s = TxtSplit(IO.File.ReadAllText(ExcludeLists(i)))
-                Else
-                    s = Nothing
-                End If
-            Else
-                s = TxtSplit(My.Resources.ExcludeIDs)
-            End If
-            If Not IsNothing(s) Then
-                For j As Integer = 0 To UBound(s) Step 1
-                    s(j) = s(j).ToUpper
-                    If s(j) = My.Resources.readDefaultFileKeyword.ToUpper And Not ExcludeLists(i).ToLower = My.Resources.readDefaultFileKeyword.ToLower Then
-                        Call ReadExcludedObjectsList(New String() {My.Resources.readDefaultFileKeyword.ToLower})
-                    Else
-                        If Not excludedObjects.Contains(s(j)) Then excludedObjects.Add(s(j))
-                    End If
-                Next j
-            End If
+            s = prepareToFileRead(ExcludeLists(i), My.Resources.ExcludeIDs)
+            Call ReadFile(1, s, ExcludeLists(i), AddressOf ReadExcludedObjectsList)
         Next i
     End Sub
-
     ''' <summary>Читает список, переопределяющий расы нужных юнитов</summary>
     ''' <param name="CustomUnitRace">Файлы со списками рас юнитов. Записи в них могут повторяться, но записи с повторяющимся ID будут перезаписываться. 
     ''' Допускается передача неинициализитрованного массива.
     ''' Для чтения из дефолтного листа в массив нужно добавить строчку %default% (наличие этого ключевого в файле запустит чтение дефолтного файла)</param>
     Public Sub ReadCustomUnitRace(ByRef CustomUnitRace() As String)
         If IsNothing(CustomUnitRace) Then Exit Sub
-        Dim s(), srow() As String
+        Dim s() As String
         For i As Integer = 0 To UBound(CustomUnitRace) Step 1
-            If Not CustomUnitRace(i).ToLower = My.Resources.readDefaultFileKeyword.ToLower Then
-                If IO.File.Exists(CustomUnitRace(i)) Then
-                    s = TxtSplit(IO.File.ReadAllText(CustomUnitRace(i)))
-                Else
-                    s = Nothing
-                End If
+            s = prepareToFileRead(CustomUnitRace(i), My.Resources.UnitRace)
+            Call ReadFile(2, s, CustomUnitRace(i), AddressOf ReadCustomUnitRace)
+        Next i
+    End Sub
+    ''' <summary>Читает список, определяющий принадлежность непроходимых объектов</summary>
+    ''' <param name="CustomBuildingRace">Файлы со списками рас и положений зданий. Записи в них могут повторяться, но записи с повторяющимся ID будут перезаписываться. 
+    ''' Допускается передача неинициализитрованного массива (будет прочтен дефолтный).
+    ''' Для чтения из дефолтного листа в массив нужно добавить строчку %default% (наличие этого ключевого в файле запустит чтение дефолтного файла)</param>
+    Public Sub ReadCustomBuildingRace(ByRef CustomBuildingRace() As String)
+        If IsNothing(CustomBuildingRace) Then
+            Call ReadCustomBuildingRace(New String() {My.Resources.readDefaultFileKeyword})
+            Exit Sub
+        End If
+        Dim s() As String
+        For i As Integer = 0 To UBound(CustomBuildingRace) Step 1
+            s = prepareToFileRead(CustomBuildingRace(i), My.Resources.MapObjectRace)
+            Call ReadFile(3, s, CustomBuildingRace(i), AddressOf ReadCustomBuildingRace)
+        Next i
+    End Sub
+    Private Function prepareToFileRead(ByRef filePath As String, ByRef defaultValues As String) As String()
+        If Not filePath.ToLower = My.Resources.readDefaultFileKeyword.ToLower Then
+            If IO.File.Exists(filePath) Then
+                Return TxtSplit(IO.File.ReadAllText(filePath))
             Else
-                s = TxtSplit(My.Resources.UnitRace)
+                Return Nothing
             End If
-            If Not IsNothing(s) Then
-                For j As Integer = 0 To UBound(s) Step 1
-                    srow = s(j).Split(CChar(" "))
-                    If srow(0).ToLower = My.Resources.readDefaultFileKeyword.ToLower And Not CustomUnitRace(i).ToLower = My.Resources.readDefaultFileKeyword.ToLower Then
-                        Call ReadCustomUnitRace(New String() {My.Resources.readDefaultFileKeyword.ToLower})
-                    ElseIf srow.Length > 2 Then
+        Else
+            Return TxtSplit(defaultValues)
+        End If
+    End Function
+    Private Sub ReadFile(ByRef mode As Integer, ByRef s() As String, ByRef filepath As String, ByRef f As readFunction)
+        If IsNothing(s) Then Exit Sub
+        Dim srow() As String
+        For j As Integer = 0 To UBound(s) Step 1
+            srow = s(j).Split(CChar(" "))
+            If srow(0).ToLower = My.Resources.readDefaultFileKeyword.ToUpper And Not filepath.ToLower = My.Resources.readDefaultFileKeyword.ToLower Then
+                Call f(New String() {My.Resources.readDefaultFileKeyword.ToLower})
+            Else
+                If mode = 1 Then
+                    If Not excludedObjects.Contains(srow(0).ToUpper) Then excludedObjects.Add(srow(0).ToUpper)
+                ElseIf mode = 2 Then
+                    If srow.Length > 2 Then
                         If customRace.ContainsKey(srow(0).ToUpper) Then customRace.Remove(srow(0).ToUpper)
                         customRace.Add(srow(0).ToUpper, srow(2).ToUpper)
                     End If
-                Next j
+                ElseIf mode = 3 Then
+                    If srow.Length > 1 Then
+                        If objectRace.ContainsKey(srow(0).ToUpper) Then objectRace.Remove(srow(0).ToUpper)
+                        objectRace.Add(srow(0).ToUpper, New DecorationPlacingProperties(srow, Me))
+                    End If
+                Else
+                    Throw New Exception("Invalid read mode: " & mode)
+                End If
+            End If
+        Next j
+    End Sub
+End Class
+
+Public MustInherit Class DecorationPlacingPropertiesFields
+    ''' <summary>Допустимые расы</summary>
+    Public race As New List(Of Integer)
+    ''' <summary>Можно лит ставить на суше</summary>
+    Public ground As Boolean
+    ''' <summary>Можно лит ставить на воде</summary>
+    Public water As Boolean
+End Class
+
+Public Class DecorationPlacingProperties
+    Inherits DecorationPlacingPropertiesFields
+
+    Public Sub New()
+    End Sub
+    ''' <param name="racesRow">Первый столбец - идентификаторы объектов. В остальных - допустимые места расстановки объектов и расы</param>
+    ''' <param name="comm">Инициализированный класс</param>
+    Public Sub New(ByRef racesRow() As String, ByRef comm As Common)
+        Call applyRaceRow(racesRow, comm)
+    End Sub
+
+    Private Sub applyRaceRow(ByRef racesRow() As String, ByRef comm As Common)
+        Dim id As Integer
+        For i As Integer = 1 To UBound(racesRow) Step 1
+            If racesRow(i).ToUpper = "G" Then
+                ground = True
+            ElseIf racesRow(i).ToUpper = "W" Then
+                water = True
+            Else
+                Try
+                    id = comm.RaceIdentifierToSubrace(racesRow(i))
+                    If Not race.Contains(id) Then race.Add(id)
+                Catch ex As Exception
+                    Console.WriteLine(ex.Message)
+                End Try
             End If
         Next i
     End Sub
+
 End Class
+

@@ -6,7 +6,7 @@ Public Class ImpenetrableMeshGen
 
     Public ReadOnly minLocationRadiusAtAll As Double
     Public Sub New()
-        minLocationRadiusAtAll = 7
+        minLocationRadiusAtAll = CDbl(My.Resources.minLocationRadiusAtAll)
     End Sub
 
     Private Structure PrepareToRaceLocGenResult
@@ -2957,6 +2957,7 @@ Public Class Map
         Dim StacksDesiredStatsGen_Done As Boolean
         Dim WaterCreation_Done As Boolean
         Dim StacksRaceGen_Done As Boolean
+        Dim ObjectsPlacing_Done As Boolean
     End Structure
 
     Public Structure SettingsLoc
@@ -4125,4 +4126,59 @@ Public Class WaterGen
         Next i
     End Sub
 
+End Class
+
+Class MapObject
+    Inherits DecorationPlacingPropertiesFields
+    ''' <summary>Ширина объекта</summary>
+    Protected Friend xSize As Integer
+    ''' <summary>Высота объекта</summary>
+    Protected Friend ySize As Integer
+End Class
+Public Class ImpenetrableObjects
+    Private comm As New Common
+    Private objects As New Dictionary(Of String, MapObject)
+
+    ''' <param name="ObjectsSize">Размеры всех объектов. Ключи - ID объектов</param>
+    ''' <param name="ExcludeLists">Файлы со списками исключенных объектов. Записи в них могут повторяться. 
+    ''' Допускается передача неинициализитрованного массива.
+    ''' Для чтения из дефолтного листа в массив нужно добавить строчку %default% (наличие этого ключевого в файле запустит чтение дефолтного файла)</param>
+    ''' <param name="CustomBuildingRace">Файлы со списками рас объектов. Записи в них могут повторяться, но записи с повторяющимся ID будут перезаписываться. 
+    ''' Допускается передача неинициализитрованного массива (тогда прочтем дефолтный файл).
+    ''' Для чтения из дефолтного листа в массив нужно добавить строчку %default% (наличие этого ключевого в файле запустит чтение дефолтного файла)</param>
+    Public Sub New(ByRef ObjectsSize As Dictionary(Of String, Size), ByRef ExcludeLists() As String, ByRef CustomBuildingRace() As String)
+        Call comm.ReadExcludedObjectsList(ExcludeLists)
+        Call comm.ReadCustomBuildingRace(CustomBuildingRace)
+        If IsNothing(ObjectsSize) Then Call JustForTest(ObjectsSize)
+        For Each k As String In ObjectsSize.Keys
+            If Not comm.excludedObjects.Contains(k.ToUpper) AndAlso comm.objectRace.ContainsKey(k.ToUpper) Then
+                If comm.objectRace.Item(k.ToUpper).race.Count > 0 _
+                And (comm.objectRace.Item(k.ToUpper).ground Or comm.objectRace.Item(k.ToUpper).water) Then
+                    objects.Add(k.ToUpper, New MapObject With {.xSize = ObjectsSize.Item(k).Width, _
+                                                               .ySize = ObjectsSize.Item(k).Height, _
+                                                               .ground = comm.objectRace.Item(k.ToUpper).ground, _
+                                                               .water = comm.objectRace.Item(k.ToUpper).water, _
+                                                               .race = comm.objectRace.Item(k.ToUpper).race})
+                End If
+            End If
+        Next k
+    End Sub
+    Private Sub JustForTest(ByRef ObjectsSize As Dictionary(Of String, Size))
+        Dim r As New RndValueGen
+        Dim testList() As String = New String() {"G000RU0000014", "G000RU0000015", "G000RU0000016", "G000RU0000017", "G000RU0000018", _
+                                                 "G000SI0000MAGE00", "G000SI0000MERH01", "G000SI0000MERC00", "G000SI0000TRAI03"}
+        ObjectsSize = New Dictionary(Of String, Size)
+        For Each t As String In testList
+            ObjectsSize.Add(t.ToUpper, New Size(r.RndPos(5, True), r.RndPos(5, True)))
+        Next t
+    End Sub
+
+    Public Sub Gen(ByRef m As Map)
+        If Not m.complited.StacksRaceGen_Done Then
+            Throw New Exception("Сначала нужно выполнить RaceGen.Gen")
+        End If
+
+
+        m.complited.ObjectsPlacing_Done = True
+    End Sub
 End Class
