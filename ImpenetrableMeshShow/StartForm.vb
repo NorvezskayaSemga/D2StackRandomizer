@@ -146,15 +146,12 @@ again:
                 If grid.board(x, y).isBorder Then
                     If Not IsNothing(grid.board(x, y).objectName) AndAlso grid.board(x, y).objectName.Length > 0 Then
                         Dim s As Size = ObjectsSize.Item(grid.board(x, y).objectName)
-                        If s.Width > 1 And grid.board(x, y).objectName.Substring(0, 1) = "M" Then
-                            s = s
-                        End If
                         For j As Integer = y To y + s.Height - 1 Step 1
                             For i As Integer = x To x + s.Width - 1 Step 1
-                                t(i, j) = 501
-                                If Not grid.board(i, j).isBorder Then
+                                If Not grid.board(i, j).isBorder Or t(i, j) > 500 Then
                                     Throw New Exception
                                 End If
+                                t(i, j) = 501
                             Next i
                         Next j
                     End If

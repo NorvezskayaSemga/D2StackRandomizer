@@ -4332,9 +4332,9 @@ Public Class ImpenetrableObjects
         Call PlaceCities(m, settMap)
         Call PlaceAttendedObjects(m)
         Call PlaceMines(m, settMap, settRaceLoc, settCommLoc)
-        'Call PlacePlateau(m, free)
+        Call PlacePlateau(m, free)
         Call PlaceMouintains(m, free)
-        Call PlaceOtherObjects()
+        Call PlaceOtherObjects(m, free)
         Call AddMerchItems()
         Call AddMercinaries()
         Call AddSpells()
@@ -4404,14 +4404,14 @@ Public Class ImpenetrableObjects
                               ByRef xSize As Integer, ByRef ySize As Integer, _
                               ByRef isGround As Boolean, ByRef isWater As Boolean, _
                               ByRef races As List(Of Integer)) As Boolean
-        If x + xSize > m.xSize Or y + ySize > m.ySize Then Return False
+        If x + xSize - 1 > m.xSize Or y + ySize - 1 > m.ySize Then Return False
         Dim x2 As Integer = x + xSize - 1
         Dim y2 As Integer = y + ySize - 1
+        If Not CheckRaces(m.board(x, y).objRace, races) Then Return False
         For j As Integer = y To y2 Step 1
             For i As Integer = x To x2 Step 1
                 If Not m.board(i, j).isBorder Or Not free(i, j) Then Return False
                 If Not CheckSurface(m.board(i, j).isWater, isGround, isWater) Then Return False
-                If Not CheckRaces(m.board(i, j).objRace, races) Then Return False
             Next i
         Next j
         Return True
@@ -5151,7 +5151,9 @@ Public Class ImpenetrableObjects
             Next i
         Next j
         If t Then
-            Return comm.rndgen.PRand(0, 1) < 0.2 - 0.02 * size
+            Dim r As Double = comm.rndgen.PRand(0, 1)
+            Dim d As Double = Math.Max(0.075 - 0.005 * size, 0.025)
+            Return r < d
         Else
             Return False
         End If
@@ -5179,8 +5181,52 @@ Public Class ImpenetrableObjects
         m.board(x, y).objectName = mountains(selected).name
     End Sub
 
-    Private Sub PlaceOtherObjects()
-
+    Private Sub PlaceOtherObjects(ByRef m As Map, ByRef free(,) As Boolean)
+        Dim IDs As New List(Of Integer)
+        Dim weight(UBound(objects)) As Double
+        Dim nextloop As Boolean = True
+        Dim k As Integer = 0
+        Dim f(,) As Boolean = free
+        Dim tmpm As Map = m
+        Do While nextloop And k < 5
+            nextloop = False
+            For y As Integer = 0 To tmpm.ySize Step 1
+                For x As Integer = 0 To tmpm.xSize Step 1
+                    If f(x, y) And tmpm.board(x, y).isBorder Then
+                        nextloop = True
+                        IDs.Clear()
+                        Dim xx As Integer = x
+                        Dim yy As Integer = y
+                        Parallel.For(0, objects.Length, _
+                         Sub(n As Integer)
+                             If MayPlace(tmpm, xx, yy, f, objects(n)) Then
+                                 IDs.Add(n)
+                                 weight(n) = ObjectWeight(tmpm, objects(n), xx, yy)
+                             End If
+                         End Sub)
+                        If IDs.Count > 0 Then
+                            Dim selected As Integer = comm.RandomSelection(IDs, weight, True)
+                            tmpm.board(x, y).objectName = objects(selected).name
+                            Call PlaceObject(f, x, y, objects(selected))
+                        End If
+                    End If
+                Next x
+            Next y
+            k += 1
+        Loop
+        Parallel.For(0, tmpm.ySize + 1,
+         Sub(y As Integer)
+             For x As Integer = 0 To tmpm.xSize Step 1
+                 If f(x, y) And tmpm.board(x, y).isBorder Then
+                     If IDs.Count > 0 Then
+                         f(x, y) = False
+                         tmpm.board(x, y).objectName = "MOMNE0100"
+                     End If
+                 End If
+             Next x
+         End Sub)
+        free = f
+        m = tmpm
     End Sub
 
     Private Sub AddSpells()
