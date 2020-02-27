@@ -208,9 +208,6 @@
   <data name="TestItemsTable" type="System.Resources.ResXFileRef, System.Windows.Forms">
     <value>..\resources\testitemstable.txt;System.String, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089;windows-1251</value>
   </data>
-  <data name="TestObjectSize" type="System.Resources.ResXFileRef, System.Windows.Forms">
-    <value>..\resources\testobjectsize.txt;System.String, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089;windows-1251</value>
-  </data>
   <data name="TestStackStats" type="System.Resources.ResXFileRef, System.Windows.Forms">
     <value>..\resources\teststackstats.txt;System.String, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089;windows-1251</value>
   </data>

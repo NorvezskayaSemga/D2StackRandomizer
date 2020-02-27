@@ -12,12 +12,14 @@ Friend Class StartForm
     Dim watergenerator As New WaterGen
     Dim comm As New Common
     Dim objplace As ImpenetrableObjects
+    Dim ObjectsSize As New Dictionary(Of String, Size)
 
     Private Sub GenButton_Click() Handles GenButton.Click
 
         Call comm.ReadExcludedObjectsList({"%default%"})
+        Call ReadObjSize()
 
-        objplace = New ImpenetrableObjects(Nothing, {"%default%"}, {"%default%"}, {"%default%"}, ReadSpells)
+        objplace = New ImpenetrableObjects(ObjectsSize, {"%default%"}, {"%default%"}, {"%default%"}, ReadSpells)
 
         Dim grid As Map
         Dim races As Integer
@@ -40,7 +42,7 @@ Friend Class StartForm
         sM.LocExpRatio = 2
         sM.PassGuardsPowerMultiplicator = 2
         sM.Wealth = 0.8
-        sM.WaterAmount = 0.6
+        sM.WaterAmount = 0.3
 
         Dim sR As Map.SettingsLoc
         sR.AverageRadius = 20
@@ -127,15 +129,35 @@ again:
                     't(x, y) = 100
                 End If
                 If grid.board(x, y).GuardLoc Then
-                    t(x, y) = 125
+                    't(x, y) = 125
                 End If
                 If grid.board(x, y).PassGuardLoc Then
-                    t(x, y) = 185
+                    't(x, y) = 185
                 End If
                 If grid.board(x, y).isBorder Then
                     t(x, y) = grid.board(x, y).objRace.Item(0)
                 ElseIf grid.board(x, y).isWater Then
-                    t(x, y) += 200
+                    't(x, y) += 200
+                End If
+            Next y
+        Next x
+        For x As Integer = 0 To grid.xSize Step 1
+            For y As Integer = 0 To grid.ySize Step 1
+                If grid.board(x, y).isBorder Then
+                    If Not IsNothing(grid.board(x, y).objectName) AndAlso grid.board(x, y).objectName.Length > 0 Then
+                        Dim s As Size = ObjectsSize.Item(grid.board(x, y).objectName)
+                        If s.Width > 1 And grid.board(x, y).objectName.Substring(0, 1) = "M" Then
+                            s = s
+                        End If
+                        For j As Integer = y To y + s.Height - 1 Step 1
+                            For i As Integer = x To x + s.Width - 1 Step 1
+                                t(i, j) = 501
+                                If Not grid.board(i, j).isBorder Then
+                                    Throw New Exception
+                                End If
+                            Next i
+                        Next j
+                    End If
                 End If
             Next y
         Next x
@@ -177,5 +199,16 @@ again:
         Next i
         Return res
     End Function
+
+    Private Function ReadObjSize() As Dictionary(Of String, Size)
+        Dim t() As String = comm.TxtSplit(My.Resources.TestObjectSize)
+        ObjectsSize.Clear()
+        For i As Integer = 1 To UBound(t) Step 1
+            Dim r() As String = t(i).Split(CChar(" "))
+            ObjectsSize.Add(r(0).ToUpper, New Size(CInt(r(1)), CInt(r(2))))
+        Next i
+        Return ObjectsSize
+    End Function
+
 
 End Class

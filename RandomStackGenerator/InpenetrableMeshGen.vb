@@ -602,112 +602,113 @@ Public Class ImpenetrableMeshGen
 
             Dim symmPoints(m.xSize, m.ySize)() As Point
             Dim tmpm As Map = m
-            Parallel.For(0, m.Loc.Length, _
-             Sub(i As Integer)
-                 If Not tmpm.Loc(i).IsObtainedBySymmery Then
-                     Dim n1(), n2, maxDiff, sel, myj As Integer
-                     Dim t As Location.Borders
-                     Dim b As New Location.Borders With {.minX = Integer.MaxValue, .maxX = Integer.MinValue, _
-                                                         .miny = Integer.MaxValue, .maxy = Integer.MinValue}
-                     For y As Integer = 0 To tmpm.ySize Step 1
-                         For x As Integer = 0 To tmpm.xSize Step 1
-                             If tmpm.board(x, y).locID.Item(0) = tmpm.Loc(i).ID Then
-                                 b.minX = Math.Min(b.minX, x)
-                                 b.minY = Math.Min(b.minY, y)
-                                 b.maxX = Math.Max(b.maxX, x)
-                                 b.maxY = Math.Max(b.maxY, y)
-                                 symmPoints(x, y) = symm.ApplySymm(New Point(x, y), settMap.nRaces, tmpm, 1)
-                             End If
-                         Next x
-                     Next y
+            'Parallel.For(0, m.Loc.Length, Sub(i As Integer)
+            For i As Integer = 0 To UBound(m.Loc) Step 1
+                If Not tmpm.Loc(i).IsObtainedBySymmery Then
+                    Dim n1(), n2, maxDiff, sel, myj As Integer
+                    Dim t As Location.Borders
+                    Dim b As New Location.Borders With {.minX = Integer.MaxValue, .maxX = Integer.MinValue, _
+                                                        .miny = Integer.MaxValue, .maxy = Integer.MinValue}
+                    For y As Integer = 0 To tmpm.ySize Step 1
+                        For x As Integer = 0 To tmpm.xSize Step 1
+                            If tmpm.board(x, y).locID.Item(0) = tmpm.Loc(i).ID Then
+                                b.minX = Math.Min(b.minX, x)
+                                b.minY = Math.Min(b.minY, y)
+                                b.maxX = Math.Max(b.maxX, x)
+                                b.maxY = Math.Max(b.maxY, y)
+                                symmPoints(x, y) = symm.ApplySymm(New Point(x, y), settMap.nRaces, tmpm, 1)
+                            End If
+                        Next x
+                    Next y
 
-                     Dim tryagain As Boolean = True
-                     Dim nIter As Integer = 0
-                     Do While tryagain And nIter < 1000
-                         tryagain = False
-                         nIter += 1
-                         For y As Integer = b.minY To b.maxY Step 1
-                             For x As Integer = b.minX To b.maxX Step 1
-                                 'для каждой точки и ее отражений считаем соседей для нас myid<>neubourid для каждого id отдельно, для отражений myid=neubourid если выгоднее поменять местами - меняем. повторяем цикл, пока выгодно менять
-                                 If Not IsNothing(symmPoints(x, y)) AndAlso symmPoints(x, y).Length > 1 Then
-                                     t = NearestXY(x, y, tmpm.xSize, tmpm.ySize, 1)
-                                     ReDim n1(UBound(tmpm.Loc))
-                                     For q As Integer = t.minY To t.maxY Step 1
-                                         For p As Integer = t.minX To t.maxX Step 1
-                                             If Not tmpm.board(p, q).locID.Item(0) = tmpm.Loc(i).ID Then
-                                                 n1(tmpm.board(p, q).locID.Item(0) - 1) += 1
-                                             End If
-                                         Next p
-                                     Next q
-                                     maxDiff = 3
-                                     sel = -1
-                                     myj = -1
-                                     For j As Integer = 0 To UBound(symmPoints(x, y)) Step 1
-                                         If Not x = symmPoints(x, y)(j).X Or Not y = symmPoints(x, y)(j).Y Then
-                                             n2 = 0
-                                             t = NearestXY(symmPoints(x, y)(j).X, symmPoints(x, y)(j).Y, tmpm.xSize, tmpm.ySize, 1)
-                                             For q As Integer = t.minY To t.maxY Step 1
-                                                 For p As Integer = t.minX To t.maxX Step 1
-                                                     If tmpm.board(p, q).locID.Item(0) = tmpm.Loc(i).ID Then
-                                                         n2 += 1
-                                                     End If
-                                                 Next p
-                                             Next q
-                                             If n2 > 0 And n2 = n1(tmpm.board(symmPoints(x, y)(j).X, symmPoints(x, y)(j).Y).locID.Item(0) - 1) Then
-                                                 Dim d As Integer = n2
-                                                 If maxDiff < d Then
-                                                     maxDiff = d
-                                                     sel = j
-                                                 End If
-                                             End If
-                                         Else
-                                             myj = j
-                                         End If
-                                     Next j
-                                     If sel > -1 Then
-                                         Dim tID1, tID2 As Integer
-                                         tID1 = tmpm.board(symmPoints(x, y)(myj).X, symmPoints(x, y)(myj).Y).locID.Item(0)
-                                         tID2 = tmpm.board(symmPoints(x, y)(sel).X, symmPoints(x, y)(sel).Y).locID.Item(0)
-                                         tmpm.board(symmPoints(x, y)(myj).X, symmPoints(x, y)(myj).Y).locID.Clear()
-                                         tmpm.board(symmPoints(x, y)(sel).X, symmPoints(x, y)(sel).Y).locID.Clear()
-                                         tmpm.board(symmPoints(x, y)(myj).X, symmPoints(x, y)(myj).Y).locID.Add(tID2)
-                                         tmpm.board(symmPoints(x, y)(sel).X, symmPoints(x, y)(sel).Y).locID.Add(tID1)
-                                         b.minX = Math.Min(b.minX, symmPoints(x, y)(sel).X)
-                                         b.minY = Math.Min(b.minY, symmPoints(x, y)(sel).Y)
-                                         b.maxX = Math.Max(b.maxX, symmPoints(x, y)(sel).X)
-                                         b.maxY = Math.Max(b.maxY, symmPoints(x, y)(sel).Y)
-                                         If symmPoints(x, y).Length > 2 Then
-                                             Dim tj1, tj2 As Integer
-                                             tj1 = -1 : tj2 = -1
-                                             For j As Integer = 0 To UBound(symmPoints(x, y)) Step 1
-                                                 If Not j = myj And Not j = sel Then
-                                                     tj1 = j
-                                                     Exit For
-                                                 End If
-                                             Next j
-                                             For j As Integer = tj1 + 1 To UBound(symmPoints(x, y)) Step 1
-                                                 If Not j = myj And Not j = sel Then
-                                                     tj2 = j
-                                                     Exit For
-                                                 End If
-                                             Next j
-                                             tID1 = tmpm.board(symmPoints(x, y)(tj1).X, symmPoints(x, y)(tj1).Y).locID.Item(0)
-                                             tID2 = tmpm.board(symmPoints(x, y)(tj2).X, symmPoints(x, y)(tj2).Y).locID.Item(0)
-                                             tmpm.board(symmPoints(x, y)(tj1).X, symmPoints(x, y)(tj1).Y).locID.Clear()
-                                             tmpm.board(symmPoints(x, y)(tj2).X, symmPoints(x, y)(tj2).Y).locID.Clear()
-                                             tmpm.board(symmPoints(x, y)(tj1).X, symmPoints(x, y)(tj1).Y).locID.Add(tID2)
-                                             tmpm.board(symmPoints(x, y)(tj2).X, symmPoints(x, y)(tj2).Y).locID.Add(tID1)
-                                         End If
-                                         x = b.maxX
-                                         y = b.maxY
-                                         tryagain = True
-                                     End If
-                                 End If
-                             Next x
-                         Next y
-                     Loop
-                 End If
-             End Sub)
+                    Dim tryagain As Boolean = True
+                    Dim nIter As Integer = 0
+                    Do While tryagain And nIter < 1000
+                        tryagain = False
+                        nIter += 1
+                        For y As Integer = b.minY To b.maxY Step 1
+                            For x As Integer = b.minX To b.maxX Step 1
+                                'для каждой точки и ее отражений считаем соседей для нас myid<>neubourid для каждого id отдельно, для отражений myid=neubourid если выгоднее поменять местами - меняем. повторяем цикл, пока выгодно менять
+                                If Not IsNothing(symmPoints(x, y)) AndAlso symmPoints(x, y).Length > 1 Then
+                                    t = NearestXY(x, y, tmpm.xSize, tmpm.ySize, 1)
+                                    ReDim n1(UBound(tmpm.Loc))
+                                    For q As Integer = t.minY To t.maxY Step 1
+                                        For p As Integer = t.minX To t.maxX Step 1
+                                            If Not tmpm.board(p, q).locID.Item(0) = tmpm.Loc(i).ID Then
+                                                n1(tmpm.board(p, q).locID.Item(0) - 1) += 1
+                                            End If
+                                        Next p
+                                    Next q
+                                    maxDiff = 3
+                                    sel = -1
+                                    myj = -1
+                                    For j As Integer = 0 To UBound(symmPoints(x, y)) Step 1
+                                        If Not x = symmPoints(x, y)(j).X Or Not y = symmPoints(x, y)(j).Y Then
+                                            n2 = 0
+                                            t = NearestXY(symmPoints(x, y)(j).X, symmPoints(x, y)(j).Y, tmpm.xSize, tmpm.ySize, 1)
+                                            For q As Integer = t.minY To t.maxY Step 1
+                                                For p As Integer = t.minX To t.maxX Step 1
+                                                    If tmpm.board(p, q).locID.Item(0) = tmpm.Loc(i).ID Then
+                                                        n2 += 1
+                                                    End If
+                                                Next p
+                                            Next q
+                                            If n2 > 0 And n2 = n1(tmpm.board(symmPoints(x, y)(j).X, symmPoints(x, y)(j).Y).locID.Item(0) - 1) Then
+                                                Dim d As Integer = n2
+                                                If maxDiff < d Then
+                                                    maxDiff = d
+                                                    sel = j
+                                                End If
+                                            End If
+                                        Else
+                                            myj = j
+                                        End If
+                                    Next j
+                                    If sel > -1 Then
+                                        Dim tID1, tID2 As Integer
+                                        tID1 = tmpm.board(symmPoints(x, y)(myj).X, symmPoints(x, y)(myj).Y).locID.Item(0)
+                                        tID2 = tmpm.board(symmPoints(x, y)(sel).X, symmPoints(x, y)(sel).Y).locID.Item(0)
+                                        tmpm.board(symmPoints(x, y)(myj).X, symmPoints(x, y)(myj).Y).locID.Clear()
+                                        tmpm.board(symmPoints(x, y)(sel).X, symmPoints(x, y)(sel).Y).locID.Clear()
+                                        tmpm.board(symmPoints(x, y)(myj).X, symmPoints(x, y)(myj).Y).locID.Add(tID2)
+                                        tmpm.board(symmPoints(x, y)(sel).X, symmPoints(x, y)(sel).Y).locID.Add(tID1)
+                                        b.minX = Math.Min(b.minX, symmPoints(x, y)(sel).X)
+                                        b.minY = Math.Min(b.minY, symmPoints(x, y)(sel).Y)
+                                        b.maxX = Math.Max(b.maxX, symmPoints(x, y)(sel).X)
+                                        b.maxY = Math.Max(b.maxY, symmPoints(x, y)(sel).Y)
+                                        If symmPoints(x, y).Length > 2 Then
+                                            Dim tj1, tj2 As Integer
+                                            tj1 = -1 : tj2 = -1
+                                            For j As Integer = 0 To UBound(symmPoints(x, y)) Step 1
+                                                If Not j = myj And Not j = sel Then
+                                                    tj1 = j
+                                                    Exit For
+                                                End If
+                                            Next j
+                                            For j As Integer = tj1 + 1 To UBound(symmPoints(x, y)) Step 1
+                                                If Not j = myj And Not j = sel Then
+                                                    tj2 = j
+                                                    Exit For
+                                                End If
+                                            Next j
+                                            tID1 = tmpm.board(symmPoints(x, y)(tj1).X, symmPoints(x, y)(tj1).Y).locID.Item(0)
+                                            tID2 = tmpm.board(symmPoints(x, y)(tj2).X, symmPoints(x, y)(tj2).Y).locID.Item(0)
+                                            tmpm.board(symmPoints(x, y)(tj1).X, symmPoints(x, y)(tj1).Y).locID.Clear()
+                                            tmpm.board(symmPoints(x, y)(tj2).X, symmPoints(x, y)(tj2).Y).locID.Clear()
+                                            tmpm.board(symmPoints(x, y)(tj1).X, symmPoints(x, y)(tj1).Y).locID.Add(tID2)
+                                            tmpm.board(symmPoints(x, y)(tj2).X, symmPoints(x, y)(tj2).Y).locID.Add(tID1)
+                                        End If
+                                        x = b.maxX
+                                        y = b.maxY
+                                        tryagain = True
+                                    End If
+                                End If
+                            Next x
+                        Next y
+                    Loop
+                End If
+            Next i
+            ' End Sub)
             m = tmpm
         Else
             Do While idlist.Count > 0
@@ -4210,7 +4211,6 @@ Public Class ImpenetrableObjects
         Call comm.ReadExcludedObjectsList(ExcludeLists)
         Call comm.ReadCustomBuildingRace(CustomBuildingRace)
         Call comm.ReadPlateauConstructionDescription(PlateauConstructionDescription)
-        If IsNothing(ObjectsSize) Then Call JustForTest(ObjectsSize)
 
         raceSpells = spells
 
@@ -4314,15 +4314,7 @@ Public Class ImpenetrableObjects
         trainers = objList(5)
         objects = objList(6)
     End Sub
-    Private Sub JustForTest(ByRef ObjectsSize As Dictionary(Of String, Size))
-        Dim t() As String = comm.TxtSplit(My.Resources.TestObjectSize)
-        ObjectsSize = New Dictionary(Of String, Size)
-        For i As Integer = 1 To UBound(t) Step 1
-            Dim r() As String = t(i).Split(CChar(" "))
-            ObjectsSize.Add(r(0), New Size(CInt(r(1)), CInt(r(2))))
-        Next i
-    End Sub
-
+  
     Public Sub Gen(ByRef m As Map, ByRef settMap As Map.SettingsMap, ByRef settRaceLoc As Map.SettingsLoc, ByRef settCommLoc As Map.SettingsLoc)
         If Not m.complited.StacksRaceGen_Done Then
             Throw New Exception("Сначала нужно выполнить RaceGen.Gen")
@@ -4340,8 +4332,8 @@ Public Class ImpenetrableObjects
         Call PlaceCities(m, settMap)
         Call PlaceAttendedObjects(m)
         Call PlaceMines(m, settMap, settRaceLoc, settCommLoc)
-        Call PlacePlateau(m, free)
-        Call PlaceMouintains()
+        'Call PlacePlateau(m, free)
+        Call PlaceMouintains(m, free)
         Call PlaceOtherObjects()
         Call AddMerchItems()
         Call AddMercinaries()
@@ -4372,6 +4364,83 @@ Public Class ImpenetrableObjects
             Next i
         End If
         Return IDs
+    End Function
+
+    Private Function MayPlace(ByRef m As Map, ByRef x As Integer, ByRef y As Integer, _
+                          ByRef free(,) As Boolean, ByRef obj As MapObject) As Boolean
+        Return MayPlace(m, x, y, free, obj.xSize, obj.ySize, obj.ground, obj.water, obj.race)
+    End Function
+    Private Function MayPlace(ByRef m As Map, ByRef x As Integer, ByRef y As Integer, _
+                              ByRef free(,) As Boolean, ByRef obj As Plateau, ByRef Connector(,) As Integer) As Boolean
+        Dim t As Boolean
+        If Not IsNothing(obj.border) Then
+            If obj.border.X = 0 Then
+                If x > 0 Then Return False
+            ElseIf obj.border.Y = 0 Then
+                If y > 0 Then Return False
+            ElseIf obj.border.X + 1 = obj.xSize Then
+                If Not x + obj.border.X = m.xSize Then Return False
+            ElseIf obj.border.Y + 1 = obj.ySize Then
+                If Not y + obj.border.Y = m.ySize Then Return False
+            End If
+        End If
+        Dim xx, yy As Integer
+        For i As Integer = 0 To UBound(obj.connectors) Step 1
+            t = True
+            For j As Integer = 0 To UBound(obj.connectors(i)) Step 1
+                Call connectorPos(xx, yy, x, y, obj.connectors(i)(j), obj)
+                If xx < 0 Or yy < 0 Or xx > m.xSize Or yy > m.ySize Then Return False
+                If Not IsNothing(Connector) AndAlso Not Connector(xx, yy) = 1 Then
+                    t = False
+                    Exit For
+                End If
+            Next j
+            If t Then Exit For
+        Next i
+        If Not t Then Return False
+        Return MayPlace(m, x, y, free, obj.xSize, obj.ySize, obj.ground, obj.water, obj.race)
+    End Function
+    Private Function MayPlace(ByRef m As Map, ByRef x As Integer, ByRef y As Integer, ByRef free(,) As Boolean, _
+                              ByRef xSize As Integer, ByRef ySize As Integer, _
+                              ByRef isGround As Boolean, ByRef isWater As Boolean, _
+                              ByRef races As List(Of Integer)) As Boolean
+        If x + xSize > m.xSize Or y + ySize > m.ySize Then Return False
+        Dim x2 As Integer = x + xSize - 1
+        Dim y2 As Integer = y + ySize - 1
+        For j As Integer = y To y2 Step 1
+            For i As Integer = x To x2 Step 1
+                If Not m.board(i, j).isBorder Or Not free(i, j) Then Return False
+                If Not CheckSurface(m.board(i, j).isWater, isGround, isWater) Then Return False
+                If Not CheckRaces(m.board(i, j).objRace, races) Then Return False
+            Next i
+        Next j
+        Return True
+    End Function
+    Private Function CheckSurface(ByRef waterSurface As Boolean, ByRef isGround As Boolean, ByRef isWater As Boolean) As Boolean
+        If waterSurface Then
+            If Not isWater Then Return False
+        Else
+            If Not isGround Then Return False
+        End If
+        Return True
+    End Function
+    Private Function CheckRaces(ByRef mRaces As List(Of Integer), ByRef objRaces As List(Of Integer)) As Boolean
+        For Each r As Integer In mRaces
+            If objRaces.Contains(r) Then Return True
+        Next r
+        Return False
+    End Function
+
+    Private Function ObjectWeight(ByRef m As Map, ByRef obj As MapObject, _
+                                  ByRef x As Integer, ByRef y As Integer) As Double
+        Dim w As Double = 1
+        Dim b As Location.Borders = ImpenetrableMeshGen.NearestXY(x, y, m.xSize, m.ySize, 12)
+        For p As Integer = b.minY To b.maxY Step 1
+            For q As Integer = b.minX To b.maxX Step 1
+                If obj.name = m.board(q, p).objectName Then w *= 0.5
+            Next q
+        Next p
+        Return w
     End Function
 
     Private Sub PlaceAttendedObjects(ByRef m As Map)
@@ -4706,7 +4775,7 @@ Public Class ImpenetrableObjects
         Dim IDs As List(Of Integer)
         Dim id As Integer
         Dim ok As Boolean
-        For i As Integer = 0 To UBound(m.Loc) Step 1
+        For i As Integer = 0 To 2 * m.Loc.Length Step 1
             IDs = makeIDs(plateau, True, False)
             Do While IDs.Count > 0
                 id = comm.RandomSelection(IDs, True)
@@ -4749,70 +4818,6 @@ Public Class ImpenetrableObjects
                 places.RemoveAt(id)
             End If
         Loop
-        Return False
-    End Function
-    Private Function MayPlace(ByRef m As Map, ByRef x As Integer, ByRef y As Integer, _
-                              ByRef free(,) As Boolean, ByRef obj As MapObject) As Boolean
-        Return MayPlace(m, x, y, free, obj.xSize, obj.ySize, obj.ground, obj.water, obj.race)
-    End Function
-    Private Function MayPlace(ByRef m As Map, ByRef x As Integer, ByRef y As Integer, _
-                              ByRef free(,) As Boolean, ByRef obj As Plateau, ByRef Connector(,) As Integer) As Boolean
-        Dim t As Boolean
-        If Not IsNothing(obj.border) Then
-            If obj.border.X = 0 Then
-                If x > 0 Then Return False
-            ElseIf obj.border.Y = 0 Then
-                If y > 0 Then Return False
-            ElseIf obj.border.X + 1 = obj.xSize Then
-                If Not x + obj.border.X = m.xSize Then Return False
-            ElseIf obj.border.Y + 1 = obj.ySize Then
-                If Not y + obj.border.Y = m.ySize Then Return False
-            End If
-        End If
-        Dim xx, yy As Integer
-        For i As Integer = 0 To UBound(obj.connectors) Step 1
-            t = True
-            For j As Integer = 0 To UBound(obj.connectors(i)) Step 1
-                Call connectorPos(xx, yy, x, y, obj.connectors(i)(j), obj)
-                If xx < 0 Or yy < 0 Or xx > m.xSize Or yy > m.ySize Then Return False
-                If Not IsNothing(Connector) AndAlso Not Connector(xx, yy) = 1 Then
-                    t = False
-                    Exit For
-                End If
-            Next j
-            If t Then Exit For
-        Next i
-        If Not t Then Return False
-        Return MayPlace(m, x, y, free, obj.xSize, obj.ySize, obj.ground, obj.water, obj.race)
-    End Function
-    Private Function MayPlace(ByRef m As Map, ByRef x As Integer, ByRef y As Integer, ByRef free(,) As Boolean, _
-                              ByRef xSize As Integer, ByRef ySize As Integer, _
-                              ByRef isGround As Boolean, ByRef isWater As Boolean, _
-                              ByRef races As List(Of Integer)) As Boolean
-        If x + xSize > m.xSize Or y + ySize > m.ySize Then Return False
-        Dim x2 As Integer = x + xSize - 1
-        Dim y2 As Integer = y + ySize - 1
-        For j As Integer = y To y2 Step 1
-            For i As Integer = x To x2 Step 1
-                If Not m.board(i, j).isBorder Or Not free(i, j) Then Return False
-                If Not CheckSurface(m.board(i, j).isWater, isGround, isWater) Then Return False
-                If Not CheckRaces(m.board(i, j).objRace, races) Then Return False
-            Next i
-        Next j
-        Return True
-    End Function
-    Private Function CheckSurface(ByRef waterSurface As Boolean, ByRef isGround As Boolean, ByRef isWater As Boolean) As Boolean
-        If waterSurface Then
-            If Not isWater Then Return False
-        Else
-            If Not isGround Then Return False
-        End If
-        Return True
-    End Function
-    Private Function CheckRaces(ByRef mRaces As List(Of Integer), ByRef objRaces As List(Of Integer)) As Boolean
-        For Each r As Integer In mRaces
-            If objRaces.Contains(r) Then Return True
-        Next r
         Return False
     End Function
 
@@ -4928,9 +4933,250 @@ Public Class ImpenetrableObjects
         Return False
     End Function
 
+    Private Sub PlaceMouintains(ByRef m As Map, ByRef free(,) As Boolean)
 
-    Private Sub PlaceMouintains()
+        Dim Tmp(,) As Integer
+        Dim sizeslist, IDs As New List(Of Integer)
+        Dim pos As New List(Of Point)
+        For Each obj As MapObject In mountains
+            If Not sizeslist.Contains(obj.xSize) Then sizeslist.Add(obj.xSize)
+        Next obj
+        Dim basicSize(sizeslist.Count - 1) As Integer
+        Dim weight(UBound(basicSize)) As Double
+        For s As Integer = 0 To sizeslist.Count - 1 Step 1
+            basicSize(s) = sizeslist.Item(s)
+            weight(s) = 1 / basicSize(s) ^ 2
+        Next s
+        sizeslist = Nothing
+        Array.Sort(basicSize)
+        Dim maxR As Integer
+        Dim ismountain(m.xSize, m.ySize) As Boolean
 
+        For s As Integer = UBound(basicSize) To 0 Step -1
+            If basicSize(s) > 1 Then
+                Dim n As Integer = Math.Max(1, CInt(0.5 * UBound(m.Loc))) * Math.Max(1, 6 - basicSize(s))
+                For attempt As Integer = 0 To n Step 1
+                    ReDim Tmp(2 * (m.xSize + 1), 2 * (m.ySize + 1))
+                    Call PlaceTmpMountain(basicSize(s), m.xSize, m.ySize, Tmp)
+                    Dim minX, maxX, minY, maxY As Integer
+                    minX = m.xSize : minY = m.ySize
+                    maxX = minX + basicSize(s) - 1 : maxY = minY + basicSize(s) - 1
+
+                    maxR = s
+                    IDs.Clear()
+                    For i As Integer = 0 To maxR - 1 Step 1
+                        IDs.Add(i)
+                    Next i
+                    Dim k As Integer = 0
+                    Do While k < 7
+                        k += 1
+                        pos.Clear()
+                        Dim r As Integer = comm.RandomSelection(IDs, weight, True) 'comm.rndgen.RndPos(maxR, True) - 1
+                        Parallel.For(0, UBound(Tmp, 2) + 1, _
+                         Sub(y As Integer)
+                             For x As Integer = 0 To UBound(Tmp, 1) Step 1
+                                 If MayPlaceMountainBlock(basicSize(r), x, y, Tmp, minX, maxX, minY, maxY) Then
+                                     pos.Add(New Point(x, y))
+                                 End If
+                             Next x
+                         End Sub)
+                        If pos.Count > 0 Then
+                            Dim selected As Integer = comm.rndgen.RndPos(pos.Count, True) - 1
+                            Call PlaceTmpMountain(basicSize(r), pos.Item(selected).X, pos.Item(selected).Y, Tmp)
+                            minX = Math.Min(minX, pos.Item(selected).X)
+                            minY = Math.Min(minY, pos.Item(selected).Y)
+                            maxX = Math.Max(maxX, pos.Item(selected).X + basicSize(r) - 1)
+                            maxY = Math.Max(maxY, pos.Item(selected).Y + basicSize(r) - 1)
+                        Else
+                            If r = 0 Then
+                                Exit Do
+                            Else
+                                maxR = r
+                                IDs.Clear()
+                                For i As Integer = 0 To maxR - 1 Step 1
+                                    IDs.Add(i)
+                                Next i
+                            End If
+                        End If
+                    Loop
+
+                    pos.Clear()
+                    For y As Integer = 0 To m.ySize Step 1
+                        For x As Integer = 0 To m.xSize Step 1
+                            If MayPlaceMountainBlock(m, free, x, y, Tmp, minX, maxX, minY, maxY) Then pos.Add(New Point(x, y))
+                        Next x
+                    Next y
+                    If pos.Count > 0 Then
+                        Dim selected As Integer = comm.rndgen.RndPos(pos.Count, True) - 1
+                        Call PlaceMountainBlock(m, free, pos(selected).X, pos(selected).Y, Tmp, minX, maxX, minY, maxY, ismountain)
+                    End If
+                Next attempt
+            End If
+        Next s
+        For s As Integer = UBound(basicSize) To 0 Step -1
+            If basicSize(s) < 4 Then
+                Dim j1 As Integer = m.ySize
+                Dim j2 As Integer = 0
+                Dim i1 As Integer = m.xSize
+                Dim i2 As Integer = 0
+                Dim s1 As Integer = -1
+                For a As Integer = 0 To 3 Step 1
+                    j1 = m.ySize - j1
+                    j2 = m.ySize - j2
+                    i1 = m.xSize - i1
+                    i2 = m.xSize - i2
+                    s1 = -s1
+                    For j As Integer = j1 To j2 Step s1
+                        For i As Integer = i1 To i2 Step s1
+                            If MayPlaceSingleMountain(m, free, i, j, basicSize(s), ismountain) Then
+                                Call PlaceSingleMountain(m, free, i, j, basicSize(s), ismountain)
+                            End If
+                        Next i
+                    Next j
+                Next a
+            End If
+        Next s
+    End Sub
+    Private Sub PlaceTmpMountain(ByRef size As Integer, ByRef x As Integer, ByRef y As Integer, tmp(,) As Integer)
+        For j As Integer = y To y + size - 1 Step 1
+            For i As Integer = x To x + size - 1 Step 1
+                tmp(i, j) = size
+            Next i
+        Next j
+    End Sub
+    Private Function MayPlaceMountainBlock(ByRef size As Integer, ByRef x As Integer, ByRef y As Integer, tmp(,) As Integer, _
+                                           ByRef minX As Integer, ByRef maxX As Integer, _
+                                           ByRef minY As Integer, ByRef maxY As Integer) As Boolean
+        If x + size - 1 > UBound(tmp, 1) Then Return False
+        If y + size - 1 > UBound(tmp, 2) Then Return False
+
+        If x + size < minX Then Return False
+        If y + size < minY Then Return False
+        If x > maxX + 1 Then Return False
+        If y > maxY + 1 Then Return False
+
+        Dim t As Boolean = False
+        Dim e As Boolean = False
+        For j As Integer = y To y + size - 1 Step 1
+            For i As Integer = x To x + size - 1 Step 1
+                If tmp(i, j) > 0 Then
+                    Return False
+                ElseIf Not t Then
+                    Dim b As Location.Borders = ImpenetrableMeshGen.NearestXY(i, j, UBound(tmp, 1), UBound(tmp, 2), 1)
+                    For p As Integer = b.minY To b.maxY Step 1
+                        For q As Integer = b.minX To b.maxX Step 1
+                            If tmp(q, p) > size Then
+                                t = True
+                                Exit For
+                            ElseIf tmp(q, p) = size Then
+                                e = True
+                            End If
+                        Next q
+                        If t Then Exit For
+                    Next p
+                End If
+            Next i
+        Next j
+        If Not t And e AndAlso comm.rndgen.PRand(0, 1) < 0.01 Then Return True
+        Return t
+    End Function
+    Private Function MayPlaceMountainBlock(ByRef m As Map, ByRef free(,) As Boolean, _
+                                           ByRef x As Integer, ByRef y As Integer, tmp(,) As Integer, _
+                                           ByRef minX As Integer, ByRef maxX As Integer, _
+                                           ByRef minY As Integer, ByRef maxY As Integer) As Boolean
+        Dim dx As Integer = maxX - minX
+        Dim dy As Integer = maxY - minY
+        If x + dx > m.xSize Then Return False
+        If y + dy > m.ySize Then Return False
+        For j As Integer = 0 To dy Step 1
+            For i As Integer = 0 To dx Step 1
+                If tmp(minX + i, minY + j) > 0 Then
+                    If Not TestCellForMountain(m, free, x + i, y + j) Then Return False
+                End If
+            Next i
+        Next j
+        Return True
+    End Function
+    Private Function TestCellForMountain(ByRef m As Map, ByRef free(,) As Boolean, _
+                                         ByRef x As Integer, ByRef y As Integer) As Boolean
+        If Not free(x, y) Then Return False
+        If Not m.board(x, y).isBorder Then Return False
+        'If m.board(x, y).isWater Then Return False
+        Return True
+    End Function
+    Private Sub PlaceMountainBlock(ByRef m As Map, ByRef free(,) As Boolean, _
+                                   ByRef x As Integer, ByRef y As Integer, tmp(,) As Integer, _
+                                   ByRef minX As Integer, ByRef maxX As Integer, _
+                                   ByRef minY As Integer, ByRef maxY As Integer, _
+                                   ByRef ismountain(,) As Boolean)
+        Dim dx As Integer = maxX - minX
+        Dim dy As Integer = maxY - minY
+        Dim IDs As New List(Of Integer)
+        For j As Integer = 0 To dy Step 1
+            For i As Integer = 0 To dx Step 1
+                If tmp(minX + i, minY + j) > 0 Then
+                    Dim size As Integer = tmp(minX + i, minY + j)
+                    For p As Integer = 0 To size - 1 Step 1
+                        For q As Integer = 0 To size - 1 Step 1
+                            tmp(minX + i + q, minY + j + p) = 0
+                        Next q
+                    Next p
+                    Call PlaceSingleMountain(m, free, x + i, y + j, size, ismountain)
+                End If
+            Next i
+        Next j
+    End Sub
+    Private Function MayPlaceSingleMountain(ByRef m As Map, ByRef free(,) As Boolean, _
+                                            ByRef x As Integer, ByRef y As Integer, _
+                                            ByRef size As Integer, _
+                                            ByRef ismountain(,) As Boolean) As Boolean
+        If x + size - 1 > m.xSize Then Return False
+        If y + size - 1 > m.ySize Then Return False
+        Dim t As Boolean = False
+        For j As Integer = y To y + size - 1 Step 1
+            For i As Integer = x To x + size - 1 Step 1
+                If Not TestCellForMountain(m, free, i, j) Then Return False
+                If Not t Then
+                    Dim b As Location.Borders = ImpenetrableMeshGen.NearestXY(i, j, m.xSize, m.ySize, 1)
+                    For p As Integer = b.minY To b.maxY Step 1
+                        For q As Integer = b.minX To b.maxX Step 1
+                            If ismountain(q, p) Then
+                                t = True
+                                Exit For
+                            End If
+                        Next q
+                        If t Then Exit For
+                    Next p
+                End If
+            Next i
+        Next j
+        If t Then
+            Return comm.rndgen.PRand(0, 1) < 0.2 - 0.02 * size
+        Else
+            Return False
+        End If
+    End Function
+    Private Sub PlaceSingleMountain(ByRef m As Map, ByRef free(,) As Boolean, _
+                                    ByRef x As Integer, ByRef y As Integer, _
+                                    ByRef size As Integer, _
+                                    ByRef ismountain(,) As Boolean)
+        For p As Integer = 0 To size - 1 Step 1
+            For q As Integer = 0 To size - 1 Step 1
+                free(x + q, y + p) = False
+                m.board(x + q, y + p).isWater = False
+                ismountain(x + q, y + p) = True
+            Next q
+        Next p
+        Dim IDs As New List(Of Integer)
+        Dim weight(UBound(mountains)) As Double
+        For n As Integer = 0 To UBound(mountains) Step 1
+            If mountains(n).xSize = size AndAlso CheckRaces(m.board(x, y).objRace, mountains(n).race) Then
+                IDs.Add(n)
+                weight(n) = ObjectWeight(m, mountains(n), x, y)
+            End If
+        Next n
+        Dim selected As Integer = comm.RandomSelection(IDs, weight, True)
+        m.board(x, y).objectName = mountains(selected).name
     End Sub
 
     Private Sub PlaceOtherObjects()

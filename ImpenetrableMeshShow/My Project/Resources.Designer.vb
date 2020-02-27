@@ -61,6 +61,47 @@ Namespace My.Resources
         End Property
         
         '''<summary>
+        '''  Looks up a localized string similar to LMARK_ID	CX	CY
+        '''g000mg0004	1	1
+        '''g000mg0005	1	1
+        '''g000mg0006	3	3
+        '''g000mg0007	3	3
+        '''g000mg0008	3	3
+        '''g000mg0009	3	3
+        '''g000mg0010	3	3
+        '''g000mg0011	3	3
+        '''g000mg0012	3	3
+        '''g000mg0013	3	3
+        '''g000mg0014	3	3
+        '''g000mg0015	1	1
+        '''g000mg0016	1	1
+        '''g000mg0017	1	1
+        '''g000mg0018	1	1
+        '''g000mg0019	1	1
+        '''g000mg0020	2	2
+        '''g000mg0021	2	2
+        '''g000mg0022	1	1
+        '''g000mg0023	1	1
+        '''g000mg0024	2	2
+        '''g000mg0031	1	1
+        '''g000mg0032	1	1
+        '''g000mg0036	1	1
+        '''g000mg0037	1	1
+        '''g000mg0038	1	1
+        '''g000mg0039	1	1
+        '''g000mg0040	1	1
+        '''g000mg0046	2	2
+        '''g000mg0047	2	2
+        '''g000mg0048	2	2
+        ''' [rest of string was truncated]&quot;;.
+        '''</summary>
+        Friend ReadOnly Property TestObjectSize() As String
+            Get
+                Return ResourceManager.GetString("TestObjectSize", resourceCulture)
+            End Get
+        End Property
+        
+        '''<summary>
         '''  Looks up a localized string similar to SPELL_ID	CATEGORY	LEVEL	CASTING_C	AREA
         '''g000ss0001	3	1	g0000:r0000:y0100:e0000:w0000	1
         '''g000ss0002	3	1	g0000:r0000:y0100:e0000:w0000	1
