@@ -142,17 +142,8 @@
   <data name="StackStatsFields" type="System.Resources.ResXFileRef, System.Windows.Forms">
     <value>..\Resources\StackStatsFields.txt;System.String, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089;windows-1251</value>
   </data>
-  <data name="TestItemsTable" type="System.Resources.ResXFileRef, System.Windows.Forms">
-    <value>..\Resources\TestItemsTable.txt;System.String, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089;windows-1251</value>
-  </data>
-  <data name="TestUnitsTable" type="System.Resources.ResXFileRef, System.Windows.Forms">
-    <value>..\Resources\TestUnitsTable.txt;System.String, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089;windows-1251</value>
-  </data>
   <data name="UnitRace" type="System.Resources.ResXFileRef, System.Windows.Forms">
     <value>..\Resources\UnitRace.txt;System.String, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089;windows-1251</value>
-  </data>
-  <data name="TestStackStats" type="System.Resources.ResXFileRef, System.Windows.Forms">
-    <value>..\Resources\TestStackStats.txt;System.String, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089;windows-1251</value>
   </data>
   <data name="expBarDispersion" xml:space="preserve">
     <value>1.3</value>
@@ -177,5 +168,53 @@
   </data>
   <data name="minLocationRadiusAtAll" xml:space="preserve">
     <value>7</value>
+  </data>
+  <data name="PlateauConstructor" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\Resources\PlateauConstructor.txt;System.String, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089;windows-1251</value>
+  </data>
+  <data name="objKeyMage" xml:space="preserve">
+    <value>G000SI0000MAGE</value>
+  </data>
+  <data name="objKeyMercenaries" xml:space="preserve">
+    <value>G000SI0000MERC</value>
+  </data>
+  <data name="objKeyMerchant" xml:space="preserve">
+    <value>G000SI0000MERH</value>
+  </data>
+  <data name="objKeyMountain" xml:space="preserve">
+    <value>MOMNE</value>
+  </data>
+  <data name="objKeyRuin" xml:space="preserve">
+    <value>G000RU</value>
+  </data>
+  <data name="objKeyTrainer" xml:space="preserve">
+    <value>G000SI0000TRAI</value>
+  </data>
+  <data name="mineTypeGold" xml:space="preserve">
+    <value>gold</value>
+  </data>
+  <data name="mineTypeRandomMana" xml:space="preserve">
+    <value>randmana</value>
+  </data>
+  <data name="mineTypeT1Mana" xml:space="preserve">
+    <value>t1mana</value>
+  </data>
+  <data name="mineTypeT3Mana" xml:space="preserve">
+    <value>t3mana</value>
+  </data>
+  <data name="Lords" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\Resources\Lords.txt;System.String, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089;windows-1251</value>
+  </data>
+  <data name="TestItemsTable" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\resources\testitemstable.txt;System.String, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089;windows-1251</value>
+  </data>
+  <data name="TestObjectSize" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\resources\testobjectsize.txt;System.String, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089;windows-1251</value>
+  </data>
+  <data name="TestStackStats" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\resources\teststackstats.txt;System.String, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089;windows-1251</value>
+  </data>
+  <data name="TestUnitsTable" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\resources\testunitstable.txt;System.String, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089;windows-1251</value>
   </data>
 </root>

@@ -226,6 +226,30 @@ Namespace My.Resources
         End Property
         
         '''<summary>
+        '''  Looks up a localized string similar to g000LR0001	H
+        '''g000LR0002	H
+        '''g000LR0003	H
+        '''g000LR0004	C
+        '''g000LR0005	C
+        '''g000LR0006	C
+        '''g000LR0007	L
+        '''g000LR0008	L
+        '''g000LR0009	L
+        '''g000LR0010	U
+        '''g000LR0011	U
+        '''g000LR0012	U
+        '''g000LR0016	E
+        '''g000LR0017	E
+        '''g000LR0018	E
+        '''.
+        '''</summary>
+        Friend ReadOnly Property Lords() As String
+            Get
+                Return ResourceManager.GetString("Lords", resourceCulture)
+            End Get
+        End Property
+        
+        '''<summary>
         '''  Looks up a localized string similar to #строка, начинающаяся с решетки, игнорируется
         '''#Первый столбец - идентификаторы объектов.
         '''#В остальных - допустимые места расстановки объектов и расы
@@ -236,27 +260,56 @@ Namespace My.Resources
         '''g000mg0003	G	H N S
         '''g000mg0004	G	L
         '''g000mg0005	G	L
-        '''g000mg0006	G	-
-        '''g000mg0007	G	-
-        '''g000mg0008	G	-
-        '''g000mg0009	G	-
-        '''g000mg0010	G	-
-        '''g000mg0011	G	-
-        '''g000mg0012	G	-
-        '''g000mg0013	G	-
-        '''g000mg0014	G	-
-        '''g000mg0015	G	-
-        '''g000mg0016	G	-
-        '''g000mg0017	G	-
-        '''g000mg0018	G	-
-        '''g000mg0019	G	-
-        '''g000mg0020	G	-
-        '''g000mg0021	G	-
-        '''g [rest of string was truncated]&quot;;.
+        '''g000mg0006	G	H L C U E N S
+        '''g000mg0007	G	H L C U E N S
+        '''g000mg0008	G	H L C U E N S
+        '''g000mg0009	G	H L C U E N S
+        '''g000mg0010	G	H L C U E N S
+        '''g000mg0011	G	H L C U E N S
+        '''g000mg0012	G	H L C U E N S
+        '''g000mg0013	G	H L C U E N S
+        '''g000mg0014	G	H L C U E N S
+        '''g000m [rest of string was truncated]&quot;;.
         '''</summary>
         Friend ReadOnly Property MapObjectRace() As String
             Get
                 Return ResourceManager.GetString("MapObjectRace", resourceCulture)
+            End Get
+        End Property
+        
+        '''<summary>
+        '''  Looks up a localized string similar to gold.
+        '''</summary>
+        Friend ReadOnly Property mineTypeGold() As String
+            Get
+                Return ResourceManager.GetString("mineTypeGold", resourceCulture)
+            End Get
+        End Property
+        
+        '''<summary>
+        '''  Looks up a localized string similar to randmana.
+        '''</summary>
+        Friend ReadOnly Property mineTypeRandomMana() As String
+            Get
+                Return ResourceManager.GetString("mineTypeRandomMana", resourceCulture)
+            End Get
+        End Property
+        
+        '''<summary>
+        '''  Looks up a localized string similar to t1mana.
+        '''</summary>
+        Friend ReadOnly Property mineTypeT1Mana() As String
+            Get
+                Return ResourceManager.GetString("mineTypeT1Mana", resourceCulture)
+            End Get
+        End Property
+        
+        '''<summary>
+        '''  Looks up a localized string similar to t3mana.
+        '''</summary>
+        Friend ReadOnly Property mineTypeT3Mana() As String
+            Get
+                Return ResourceManager.GetString("mineTypeT3Mana", resourceCulture)
             End Get
         End Property
         
@@ -275,6 +328,95 @@ Namespace My.Resources
         Friend ReadOnly Property nonJewelItemsCostMultiplicator() As String
             Get
                 Return ResourceManager.GetString("nonJewelItemsCostMultiplicator", resourceCulture)
+            End Get
+        End Property
+        
+        '''<summary>
+        '''  Looks up a localized string similar to G000SI0000MAGE.
+        '''</summary>
+        Friend ReadOnly Property objKeyMage() As String
+            Get
+                Return ResourceManager.GetString("objKeyMage", resourceCulture)
+            End Get
+        End Property
+        
+        '''<summary>
+        '''  Looks up a localized string similar to G000SI0000MERC.
+        '''</summary>
+        Friend ReadOnly Property objKeyMercenaries() As String
+            Get
+                Return ResourceManager.GetString("objKeyMercenaries", resourceCulture)
+            End Get
+        End Property
+        
+        '''<summary>
+        '''  Looks up a localized string similar to G000SI0000MERH.
+        '''</summary>
+        Friend ReadOnly Property objKeyMerchant() As String
+            Get
+                Return ResourceManager.GetString("objKeyMerchant", resourceCulture)
+            End Get
+        End Property
+        
+        '''<summary>
+        '''  Looks up a localized string similar to MOMNE.
+        '''</summary>
+        Friend ReadOnly Property objKeyMountain() As String
+            Get
+                Return ResourceManager.GetString("objKeyMountain", resourceCulture)
+            End Get
+        End Property
+        
+        '''<summary>
+        '''  Looks up a localized string similar to G000RU.
+        '''</summary>
+        Friend ReadOnly Property objKeyRuin() As String
+            Get
+                Return ResourceManager.GetString("objKeyRuin", resourceCulture)
+            End Get
+        End Property
+        
+        '''<summary>
+        '''  Looks up a localized string similar to G000SI0000TRAI.
+        '''</summary>
+        Friend ReadOnly Property objKeyTrainer() As String
+            Get
+                Return ResourceManager.GetString("objKeyTrainer", resourceCulture)
+            End Get
+        End Property
+        
+        '''<summary>
+        '''  Looks up a localized string similar to #строка, начинающаяся с решетки, игнорируется
+        '''#Первый столбец - идентификаторы объектов.
+        '''#В остальных - как скреплять объекты
+        '''#U = 1/-1 1/0
+        '''#D = 1/2 1/3
+        '''#L = -1/1 0/1
+        '''#R = 2/1 3/1
+        '''#B - должна быть граница карты (указывается только одна точка, которая не находится в углу объекта)
+        '''#UB = 1/0
+        '''#DB = 1/2
+        '''#LB = 0/1
+        '''#RB = 2/1
+        '''#W = водопад
+        '''
+        '''#обычные
+        '''g000mg0008	U L
+        '''g000mg0010	L R
+        '''g000mg0013	U D
+        '''g000mg0060	D R
+        '''g000mg0063	U L
+        '''
+        '''#затычки
+        '''g000mg0009	R
+        '''g000mg0011	L
+        '''g000mg0061	U
+        '''g000mg0062	D
+        '''g000mg [rest of string was truncated]&quot;;.
+        '''</summary>
+        Friend ReadOnly Property PlateauConstructor() As String
+            Get
+                Return ResourceManager.GetString("PlateauConstructor", resourceCulture)
             End Get
         End Property
         
@@ -363,6 +505,47 @@ Namespace My.Resources
         Friend ReadOnly Property TestItemsTable() As String
             Get
                 Return ResourceManager.GetString("TestItemsTable", resourceCulture)
+            End Get
+        End Property
+        
+        '''<summary>
+        '''  Looks up a localized string similar to LMARK_ID	CX	CY
+        '''g000mg0004	1	1
+        '''g000mg0005	1	1
+        '''g000mg0006	3	3
+        '''g000mg0007	3	3
+        '''g000mg0008	3	3
+        '''g000mg0009	3	3
+        '''g000mg0010	3	3
+        '''g000mg0011	3	3
+        '''g000mg0012	3	3
+        '''g000mg0013	3	3
+        '''g000mg0014	3	3
+        '''g000mg0015	1	1
+        '''g000mg0016	1	1
+        '''g000mg0017	1	1
+        '''g000mg0018	1	1
+        '''g000mg0019	1	1
+        '''g000mg0020	2	2
+        '''g000mg0021	2	2
+        '''g000mg0022	1	1
+        '''g000mg0023	1	1
+        '''g000mg0024	2	2
+        '''g000mg0031	1	1
+        '''g000mg0032	1	1
+        '''g000mg0036	1	1
+        '''g000mg0037	1	1
+        '''g000mg0038	1	1
+        '''g000mg0039	1	1
+        '''g000mg0040	1	1
+        '''g000mg0046	2	2
+        '''g000mg0047	2	2
+        '''g000mg0048	2	2
+        ''' [rest of string was truncated]&quot;;.
+        '''</summary>
+        Friend ReadOnly Property TestObjectSize() As String
+            Get
+                Return ResourceManager.GetString("TestObjectSize", resourceCulture)
             End Get
         End Property
         

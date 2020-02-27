@@ -940,12 +940,31 @@ Public Class Common
     Public customRace As New Dictionary(Of String, String)
     ''' <summary>Допустимые расы локаций и поверхности, на которых можн ставить объекты</summary>
     Public objectRace As New Dictionary(Of String, DecorationPlacingProperties)
+    ''' <summary>Описывает то, как цеплять друг к другу "Плато" и "Водопады"</summary>
+    Public PlateauConstruction As New Dictionary(Of String, String)
+    ''' <summary>Расы лордов</summary>
+    Public LordsRace As New Dictionary(Of String, Integer)
 
     Friend ConsumableItemsTypes, NonconsumableItemsTypes As New List(Of Integer)
 
     Public Structure StackStatsField
         Dim name As String
         Dim description As String
+    End Structure
+
+    Public Structure Spell
+        ''' <summary>ID заклинания</summary>
+        Dim name As String
+        ''' <summary>Цена изучения для каждого лорда. Ключ - id лорда в верхнем регистре. Список лордов хранится в Common.LordsRace</summary>
+        Dim researchCost As Dictionary(Of String, RandStack.Cost)
+        ''' <summary>Цена применения</summary>
+        Dim castCost As RandStack.Cost
+        ''' <summary>Уровень заклинания</summary>
+        Dim level As Integer
+        ''' <summary>Тип заклинания</summary>
+        Dim category As Integer
+        ''' <summary>Площадь действия заклинания</summary>
+        Dim area As Integer
     End Structure
 
     Public Sub New()
@@ -977,6 +996,12 @@ Public Class Common
             StatFields(k).description = StatFields(k).description.Replace("$gm$", My.Resources.giantUnitsExpMultiplicator)
             StatFields(k).description = StatFields(k).description.Replace("$ri$", racesList)
             StatFields(k).description = StatFields(k).description.Replace("$newline$", vbNewLine)
+        Next i
+
+        Dim lords() As String = TxtSplit(My.Resources.Lords)
+        For i As Integer = 0 To UBound(lords) Step 1
+            Dim s() As String = lords(i).Split(CChar(" "))
+            LordsRace.Add(s(0).ToUpper, RaceIdentifierToSubrace(s(1)))
         Next i
 
         ConsumableItemsTypes.AddRange(New Integer() {4, 5, 6, 7, 8, 11, 12})
@@ -1296,6 +1321,21 @@ Public Class Common
             Call ReadFile(3, s, CustomBuildingRace(i), AddressOf ReadCustomBuildingRace)
         Next i
     End Sub
+    ''' <summary>Читает описание того, как цеплять друг к другу "Плато" и "Водопады"</summary>
+    ''' <param name="PlateauConstructionDescription">Файлы с описаниями.
+    ''' Допускается передача неинициализитрованного массива (будет прочтен дефолтный).
+    ''' Для чтения из дефолтного листа в массив нужно добавить строчку %default% (наличие этого ключевого в файле запустит чтение дефолтного файла)</param>
+    Public Sub ReadPlateauConstructionDescription(ByRef PlateauConstructionDescription() As String)
+        If IsNothing(PlateauConstructionDescription) Then
+            Call ReadPlateauConstructionDescription(New String() {My.Resources.readDefaultFileKeyword})
+            Exit Sub
+        End If
+        Dim s() As String
+        For i As Integer = 0 To UBound(PlateauConstructionDescription) Step 1
+            s = prepareToFileRead(PlateauConstructionDescription(i), My.Resources.PlateauConstructor)
+            Call ReadFile(4, s, PlateauConstructionDescription(i), AddressOf ReadPlateauConstructionDescription)
+        Next i
+    End Sub
     Private Function prepareToFileRead(ByRef filePath As String, ByRef defaultValues As String) As String()
         If Not filePath.ToLower = My.Resources.readDefaultFileKeyword.ToLower Then
             If IO.File.Exists(filePath) Then
@@ -1309,7 +1349,7 @@ Public Class Common
     End Function
     Private Sub ReadFile(ByRef mode As Integer, ByRef s() As String, ByRef filepath As String, ByRef f As readFunction)
         If IsNothing(s) Then Exit Sub
-        Dim srow() As String
+        Dim srow(), r As String
         For j As Integer = 0 To UBound(s) Step 1
             srow = s(j).Split(CChar(" "))
             If srow(0).ToLower = My.Resources.readDefaultFileKeyword.ToUpper And Not filepath.ToLower = My.Resources.readDefaultFileKeyword.ToLower Then
@@ -1326,6 +1366,16 @@ Public Class Common
                     If srow.Length > 1 Then
                         If objectRace.ContainsKey(srow(0).ToUpper) Then objectRace.Remove(srow(0).ToUpper)
                         objectRace.Add(srow(0).ToUpper, New DecorationPlacingProperties(srow, Me))
+                    End If
+                ElseIf mode = 4 Then
+                    If srow.Length > 1 Then
+                        If PlateauConstruction.ContainsKey(srow(0).ToUpper) Then PlateauConstruction.Remove(srow(0).ToUpper)
+                        r = ""
+                        For i As Integer = 1 To UBound(srow) Step 1
+                            If i > 1 Then r &= " "
+                            r &= srow(i)
+                        Next i
+                        PlateauConstruction.Add(srow(0).ToUpper, r.ToUpper)
                     End If
                 Else
                     Throw New Exception("Invalid read mode: " & mode)

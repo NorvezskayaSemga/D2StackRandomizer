@@ -11,6 +11,7 @@
 Option Strict On
 Option Explicit On
 
+Imports System
 
 Namespace My.Resources
     
@@ -21,20 +22,20 @@ Namespace My.Resources
     '''<summary>
     '''  A strongly-typed resource class, for looking up localized strings, etc.
     '''</summary>
-    <Global.System.CodeDom.Compiler.GeneratedCodeAttribute("System.Resources.Tools.StronglyTypedResourceBuilder", "4.0.0.0"), _
-     Global.System.Diagnostics.DebuggerNonUserCodeAttribute(), _
-     Global.System.Runtime.CompilerServices.CompilerGeneratedAttribute(), _
-     Global.Microsoft.VisualBasic.HideModuleNameAttribute()> _
+    <Global.System.CodeDom.Compiler.GeneratedCodeAttribute("System.Resources.Tools.StronglyTypedResourceBuilder", "4.0.0.0"),  _
+     Global.System.Diagnostics.DebuggerNonUserCodeAttribute(),  _
+     Global.System.Runtime.CompilerServices.CompilerGeneratedAttribute(),  _
+     Global.Microsoft.VisualBasic.HideModuleNameAttribute()>  _
     Friend Module Resources
-
+        
         Private resourceMan As Global.System.Resources.ResourceManager
-
+        
         Private resourceCulture As Global.System.Globalization.CultureInfo
-
+        
         '''<summary>
         '''  Returns the cached ResourceManager instance used by this class.
         '''</summary>
-        <Global.System.ComponentModel.EditorBrowsableAttribute(Global.System.ComponentModel.EditorBrowsableState.Advanced)> _
+        <Global.System.ComponentModel.EditorBrowsableAttribute(Global.System.ComponentModel.EditorBrowsableState.Advanced)>  _
         Friend ReadOnly Property ResourceManager() As Global.System.Resources.ResourceManager
             Get
                 If Object.ReferenceEquals(resourceMan, Nothing) Then
@@ -44,19 +45,57 @@ Namespace My.Resources
                 Return resourceMan
             End Get
         End Property
-
+        
         '''<summary>
         '''  Overrides the current thread's CurrentUICulture property for all
         '''  resource lookups using this strongly typed resource class.
         '''</summary>
-        <Global.System.ComponentModel.EditorBrowsableAttribute(Global.System.ComponentModel.EditorBrowsableState.Advanced)> _
+        <Global.System.ComponentModel.EditorBrowsableAttribute(Global.System.ComponentModel.EditorBrowsableState.Advanced)>  _
         Friend Property Culture() As Global.System.Globalization.CultureInfo
             Get
                 Return resourceCulture
             End Get
-            Set(ByVal value As Global.System.Globalization.CultureInfo)
+            Set
                 resourceCulture = value
             End Set
+        End Property
+        
+        '''<summary>
+        '''  Looks up a localized string similar to SPELL_ID	CATEGORY	LEVEL	CASTING_C	AREA
+        '''g000ss0001	3	1	g0000:r0000:y0100:e0000:w0000	1
+        '''g000ss0002	3	1	g0000:r0000:y0100:e0000:w0000	1
+        '''g000ss0003	3	1	g0000:r0000:y0100:e0000:w0000	1
+        '''g000ss0004	0	1	g0000:r0000:y0100:e0000:w0000	1
+        '''g000ss0005	3	1	g0000:r0000:y0100:e0000:w0000	1
+        '''g000ss0006	8	2	g0000:r0000:y0200:e0000:w0000	1
+        '''g000ss0007	2	2	g0000:r0000:y0200:e0000:w0000	1
+        '''g000ss0008	4	2	g0000:r0000:y0200:e0000:w0000	1
+        '''g000ss0009	7	2	g0000:r0000:y0200:e0000:w0000	5
+        '''g000ss0011	3	3	g0000:r0000:y0150:e0000:w [rest of string was truncated]&quot;;.
+        '''</summary>
+        Friend ReadOnly Property TestSpells() As String
+            Get
+                Return ResourceManager.GetString("TestSpells", resourceCulture)
+            End Get
+        End Property
+        
+        '''<summary>
+        '''  Looks up a localized string similar to LORD_ID	SPELL_ID	RESEARCH
+        '''g000LR0001	g000ss0001	g0000:r0000:y0200:e0000:w0000
+        '''g000LR0001	g000ss0002	g0000:r0000:y0200:e0000:w0000
+        '''g000LR0001	g000ss0003	g0000:r0000:y0200:e0000:w0000
+        '''g000LR0001	g000ss0004	g0000:r0000:y0200:e0000:w0000
+        '''g000LR0001	g000ss0005	g0000:r0000:y0200:e0000:w0000
+        '''g000LR0001	g000ss0006	g0000:r0000:y0400:e0000:w0000
+        '''g000LR0001	g000ss0007	g0000:r0000:y0400:e0000:w0000
+        '''g000LR0001	g000ss0008	g0000:r0000:y0400:e0000:w0000
+        '''g000LR0001	g000ss0009	g0000:r0000:y0400:e0000:w0000
+        '''g000LR00 [rest of string was truncated]&quot;;.
+        '''</summary>
+        Friend ReadOnly Property TestSpellsRace() As String
+            Get
+                Return ResourceManager.GetString("TestSpellsRace", resourceCulture)
+            End Get
         End Property
     End Module
 End Namespace

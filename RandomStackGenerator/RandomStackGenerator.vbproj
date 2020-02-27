@@ -115,11 +115,6 @@
     </Resource>
   </ItemGroup>
   <ItemGroup>
-    <None Include="Resources\TestUnitsTable.txt">
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-    </None>
-  </ItemGroup>
-  <ItemGroup>
     <Resource Include="Resources\Races.txt">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Resource>
@@ -135,12 +130,29 @@
     </None>
   </ItemGroup>
   <ItemGroup>
+    <None Include="Resources\StackStatsFields.txt">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="Resources\ExcludeIDsForNames.txt" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="Resources\MapObjectRace.txt" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="Resources\PlateauConstructor.txt" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="Resources\Lords.txt" />
+  </ItemGroup>
+  <ItemGroup>
     <None Include="Resources\TestItemsTable.txt">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
   </ItemGroup>
   <ItemGroup>
-    <None Include="Resources\StackStatsFields.txt">
+    <None Include="Resources\TestUnitsTable.txt">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
   </ItemGroup>
@@ -150,10 +162,7 @@
     </None>
   </ItemGroup>
   <ItemGroup>
-    <None Include="Resources\ExcludeIDsForNames.txt" />
-  </ItemGroup>
-  <ItemGroup>
-    <None Include="Resources\MapObjectRace.txt" />
+    <None Include="Resources\TestObjectSize.txt" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.VisualBasic.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 

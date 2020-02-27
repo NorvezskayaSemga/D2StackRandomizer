@@ -11,11 +11,13 @@ Friend Class StartForm
     Dim names As New SetName
     Dim watergenerator As New WaterGen
     Dim comm As New Common
-    Dim objplace As New ImpenetrableObjects(Nothing, {"%default%"}, {"%default%"})
+    Dim objplace As ImpenetrableObjects
 
     Private Sub GenButton_Click() Handles GenButton.Click
 
         Call comm.ReadExcludedObjectsList({"%default%"})
+
+        objplace = New ImpenetrableObjects(Nothing, {"%default%"}, {"%default%"}, {"%default%"}, ReadSpells)
 
         Dim grid As Map
         Dim races As Integer
@@ -60,12 +62,12 @@ Friend Class StartForm
         sC.maxEccentricityDispersion = 0.4
         sC.maxRadiusDispersion = 0.3
 
-        sC.maxGoldMines = 1.6
-        sC.maxManaSources = 1.6
-        sC.maxCities = 0.3
+        sC.maxGoldMines = 0.6
+        sC.maxManaSources = 0.6
+        sC.maxCities = 2
         sC.maxMages = 0.1
         sC.maxMercenaries = 0.1
-        sC.maxRuins = 2
+        sC.maxRuins = 0.1
         sC.maxTrainers = 0
         sC.maxVendors = 0.2
 
@@ -101,7 +103,7 @@ again:
         Call watergenerator.Gen(grid, sM)
         Call racegen.Gen(grid, Nothing)
 
-        Call objplace.Gen(grid)
+        Call objplace.Gen(grid, sM, sR, sC)
 
         'запоминаем набор точек с наибольшим n
         'произвед 1/r - стат вес для nearwith = -1
@@ -155,5 +157,25 @@ again:
         Next i
         PictureBox1.Image = img
     End Sub
+
+    Private Function ReadSpells() As Dictionary(Of String, Common.Spell)
+        Dim spells() As String = comm.TxtSplit(My.Resources.TestSpells)
+        Dim rspells() As String = comm.TxtSplit(My.Resources.TestSpellsRace)
+        Dim res As New Dictionary(Of String, Common.Spell)
+        For i As Integer = 1 To UBound(spells) Step 1
+            Dim s() As String = spells(i).Split(" ")
+            res.Add(s(0).ToUpper, New Common.Spell With {.area = s(4), _
+                                                         .castCost = RandStack.Cost.Read(s(3)), _
+                                                         .category = s(1), _
+                                                         .level = s(2), _
+                                                         .name = s(0).ToUpper, _
+                                                         .researchCost = New Dictionary(Of String, RandStack.Cost)})
+        Next i
+        For i As Integer = 1 To UBound(rspells) Step 1
+            Dim s() As String = rspells(i).Split(" ")
+            res.Item(s(1).ToUpper).researchCost.Add(s(0).ToUpper, RandStack.Cost.Read(s(2)))
+        Next i
+        Return res
+    End Function
 
 End Class

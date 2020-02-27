@@ -1409,18 +1409,20 @@ Public Class ImpenetrableMeshGen
         Dim TT(UBound(tmpm.Loc)) As TerminationCondition
         Dim maxTime As Long = Term.maxTime
 
-        Parallel.For(settMap.nRaces, tmpm.Loc.Length, _
-         Sub(i As Integer)
-             If Not tmpm.Loc(i).IsObtainedBySymmery Then
-                 TT(i) = New TerminationCondition(maxTime)
-                 For j As Integer = 0 To UBound(tmpm.Loc) Step 1
-                     If Not IsNothing(TT(j)) Then TT(i).ExitFromLoops = TT(i).ExitFromLoops Or TT(j).ExitFromLoops
-                 Next j
-                 If TT(i).ExitFromLoops Then Exit Sub
-                 Call FillLocation(GroupID, tmpm.Loc(i).ID, tmpm, LocsPlacing, LocArea, settMap, settCommLoc, _
-                                   tmpm.symmID, False, LocSymmMult, LocFreeCells, TT(i))
-             End If
-         End Sub)
+        'Parallel.For(settMap.nRaces, tmpm.Loc.Length, _
+        ' Sub(i As Integer)
+        For i As Integer = settMap.nRaces To UBound(tmpm.Loc) Step 1
+            If Not tmpm.Loc(i).IsObtainedBySymmery Then
+                TT(i) = New TerminationCondition(maxTime)
+                For j As Integer = 0 To UBound(tmpm.Loc) Step 1
+                    If Not IsNothing(TT(j)) Then TT(i).ExitFromLoops = TT(i).ExitFromLoops Or TT(j).ExitFromLoops
+                Next j
+                If TT(i).ExitFromLoops Then Exit Sub
+                Call FillLocation(GroupID, tmpm.Loc(i).ID, tmpm, LocsPlacing, LocArea, settMap, settCommLoc, _
+                                  tmpm.symmID, False, LocSymmMult, LocFreeCells, TT(i))
+            End If
+        Next i
+        ' End Sub)
         For i As Integer = 0 To UBound(tmpm.Loc) Step 1
             If Not IsNothing(TT(i)) Then Term.ExitFromLoops = Term.ExitFromLoops Or TT(i).ExitFromLoops
         Next i
@@ -1455,6 +1457,9 @@ Public Class ImpenetrableMeshGen
                 End If
             Next x
         Next y
+
+
+
     End Sub
     Private Sub ObjectsPlacingVariants(ByRef objIDs() As Integer, ByRef locID As Integer, _
                                        ByRef m As Map, ByRef settMap As Map.SettingsMap, _
@@ -2936,6 +2941,8 @@ Public Class Map
         Dim PassGuardLoc As Boolean
         ''' <summary>Если клетка является углом посещаемого объекта c наименьшей координатой по X и Y, то здесь хранится ID объекта</summary>
         Dim objectID As Integer
+        ''' <summary>Если клетка является углом объекта c наименьшей координатой по X и Y, то здесь хранится ID объекта, как он записан в ресурсах игры</summary>
+        Dim objectName As String
         ''' <summary>Если клетка является углом посещаемого объекта c наименьшей координатой по X и Y, то здесь хранится подтип объекта</summary>
         Dim Subtype As Integer
         ''' <summary>Для объектов с одинаковым ID выставляются одинаковые параметры генерации отрядов и лута или одинаковый класс.
@@ -2991,6 +2998,29 @@ Public Class Map
 
         '''<summary>Примерное количество опыта за убийство всех отрядов в локации</summary>
         Dim expAmount As Double
+
+        '''<summary>Минимальный уровень заклинаний в лавке мага</summary>
+        Dim mageSpellsMaxLevel As Integer
+        '''<summary>Максимальный уровень заклинаний в лавке мага</summary>
+        Dim mageSpellsMinLevel As Integer
+        '''<summary>Количество заклинаний в лавке мага</summary>
+        Dim mageSpellsCount As Integer
+        '''<summary>Могут ли встречаться в лавке мага заклинания, действующие на всю карту</summary>
+        Dim mageGlobalSpellsEnabled As Boolean
+
+        '''<summary>Максимальная планка опыта у маленьких наемников (для больших в два раза выше)</summary>
+        Dim mercinariesMaxExpBar As Integer
+        '''<summary>Минимальная планка опыта у маленьких наемников (для больших в два раза выше)</summary>
+        Dim mercinariesMinExpBar As Integer
+        '''<summary>Количество наемников в лагере</summary>
+        Dim mercinariesCount As Integer
+
+        '''<summary>Максимальная стоимость предмета у торговца</summary>
+        Dim merchMaxItemCost As Integer
+        '''<summary>Минимальная стоимость предмета у торговца</summary>
+        Dim merchMinItemCost As Integer
+        '''<summary>Полная стоимость лута у торговца</summary>
+        Dim merchLootCost As Integer
     End Structure
     Public Structure SettingsMap
         ''' <summary>Правая граница карты (например, если генерируем карту 24x48, то сюда пишем 23)</summary>
@@ -3019,6 +3049,8 @@ Public Class Map
         Dim Wealth As Double
         ''' <summary>Количество воды на карте. 0 - без воды, 1 - очень много</summary>
         Dim WaterAmount As Double
+        '''<summary>Максимальный уровень заклинаний в столице</summary>
+        Dim spellsMaxLevel As Integer
     End Structure
 
     ''' <summary>Вернет True, если все нормально, иначе стоит перегенерировать</summary>
@@ -4134,10 +4166,33 @@ Class MapObject
     Protected Friend xSize As Integer
     ''' <summary>Высота объекта</summary>
     Protected Friend ySize As Integer
+    ''' <summary>Имя объекта</summary>
+    Protected Friend name As String
+End Class
+Class Plateau
+    Inherits MapObject
+    ''' <summary>Как скреплять объекты</summary>
+    Protected Friend connectors()() As Point
+    ''' <summary>Эти точки должны быть на границе карты</summary>
+    Protected Friend border As Point
+    ''' <summary>Является ли водопадом</summary>
+    Protected Friend isWaterfall As Boolean
 End Class
 Public Class ImpenetrableObjects
+
+    Private symm As New SymmetryOperations
     Private comm As New Common
-    Private objects As New Dictionary(Of String, MapObject)
+    Private objects, mountains, ruins, mages, merchants, mercenaries, trainers As MapObject()
+    Private plateau() As Plateau
+    Private maxPlateauSize As Integer
+    Private maxChainLen As Integer = 7
+    Private raceSpells As Dictionary(Of String, Common.Spell)
+
+    Private Structure PlateauPlacingResult
+        Dim obj() As Plateau
+        Dim pos() As Point
+        Dim n As Integer
+    End Structure
 
     ''' <param name="ObjectsSize">Размеры всех объектов. Ключи - ID объектов</param>
     ''' <param name="ExcludeLists">Файлы со списками исключенных объектов. Записи в них могут повторяться. 
@@ -4146,39 +4201,752 @@ Public Class ImpenetrableObjects
     ''' <param name="CustomBuildingRace">Файлы со списками рас объектов. Записи в них могут повторяться, но записи с повторяющимся ID будут перезаписываться. 
     ''' Допускается передача неинициализитрованного массива (тогда прочтем дефолтный файл).
     ''' Для чтения из дефолтного листа в массив нужно добавить строчку %default% (наличие этого ключевого в файле запустит чтение дефолтного файла)</param>
-    Public Sub New(ByRef ObjectsSize As Dictionary(Of String, Size), ByRef ExcludeLists() As String, ByRef CustomBuildingRace() As String)
+    ''' <param name="PlateauConstructionDescription">Файлы с описаниями.
+    ''' Допускается передача неинициализитрованного массива (будет прочтен дефолтный).
+    ''' Для чтения из дефолтного листа в массив нужно добавить строчку %default% (наличие этого ключевого в файле запустит чтение дефолтного файла)</param>
+    ''' <param name="spells">Все заклинания в игре. Ключ - id заклинания</param>
+    Public Sub New(ByRef ObjectsSize As Dictionary(Of String, Size), ByRef ExcludeLists() As String, ByRef CustomBuildingRace() As String, _
+                   ByRef PlateauConstructionDescription() As String, ByRef spells As Dictionary(Of String, Common.Spell))
         Call comm.ReadExcludedObjectsList(ExcludeLists)
         Call comm.ReadCustomBuildingRace(CustomBuildingRace)
+        Call comm.ReadPlateauConstructionDescription(PlateauConstructionDescription)
         If IsNothing(ObjectsSize) Then Call JustForTest(ObjectsSize)
+
+        raceSpells = spells
+
+        Dim objType() As String = New String() {My.Resources.objKeyMage, My.Resources.objKeyMercenaries, My.Resources.objKeyMerchant, _
+                                                My.Resources.objKeyMountain, My.Resources.objKeyRuin, My.Resources.objKeyTrainer, ""}
+        Dim objList(UBound(objType))() As MapObject
         For Each k As String In ObjectsSize.Keys
             If Not comm.excludedObjects.Contains(k.ToUpper) AndAlso comm.objectRace.ContainsKey(k.ToUpper) Then
                 If comm.objectRace.Item(k.ToUpper).race.Count > 0 _
                 And (comm.objectRace.Item(k.ToUpper).ground Or comm.objectRace.Item(k.ToUpper).water) Then
-                    objects.Add(k.ToUpper, New MapObject With {.xSize = ObjectsSize.Item(k).Width, _
-                                                               .ySize = ObjectsSize.Item(k).Height, _
-                                                               .ground = comm.objectRace.Item(k.ToUpper).ground, _
-                                                               .water = comm.objectRace.Item(k.ToUpper).water, _
-                                                               .race = comm.objectRace.Item(k.ToUpper).race})
+
+                    Dim g As MapObject = New MapObject With {.xSize = ObjectsSize.Item(k).Width, _
+                                                             .ySize = ObjectsSize.Item(k).Height, _
+                                                             .ground = comm.objectRace.Item(k.ToUpper).ground, _
+                                                             .water = comm.objectRace.Item(k.ToUpper).water, _
+                                                             .race = comm.objectRace.Item(k.ToUpper).race, _
+                                                             .name = k.ToUpper}
+                    If comm.PlateauConstruction.ContainsKey(k.ToUpper) Then
+                        Dim isWaterfall As Boolean = False
+                        Dim connectors()() As Point = Nothing
+                        Dim boundary As Point = Nothing
+                        Dim t() As String = comm.PlateauConstruction.Item(k.ToUpper).ToUpper.Replace(vbTab, " ").Split(CChar(" "))
+                        Dim dx As Integer = 3 - g.xSize
+                        Dim dy As Integer = 3 - g.ySize
+                        For i As Integer = 0 To UBound(t) Step 1
+                            If t(i) = "W" Then
+                                isWaterfall = True
+                            ElseIf t(i) = "U" Or t(i) = "D" Or t(i) = "L" Or t(i) = "R" Then
+                                Dim p1 As Point = Nothing
+                                Dim p2 As Point = Nothing
+                                If IsNothing(connectors) Then
+                                    ReDim connectors(0)
+                                Else
+                                    ReDim Preserve connectors(connectors.Length)
+                                End If
+                                If t(i) = "U" Then
+                                    p1 = New Point(1, -1)
+                                    p2 = New Point(1, 0)
+                                ElseIf t(i) = "D" Then
+                                    p1 = New Point(1, 2 - dy)
+                                    p2 = New Point(1, 3 - dy)
+                                ElseIf t(i) = "L" Then
+                                    p1 = New Point(-1, 1)
+                                    p2 = New Point(0, 1)
+                                ElseIf t(i) = "R" Then
+                                    p1 = New Point(2 - dx, 1)
+                                    p2 = New Point(3 - dx, 1)
+                                End If
+                                connectors(UBound(connectors)) = New Point() {p1, p2}
+                            ElseIf t(i) = "UB" Or t(i) = "DB" Or t(i) = "LB" Or t(i) = "RB" Then
+                                Dim p1 As Point = Nothing
+                                If t(i) = "UB" Then
+                                    p1 = New Point(1, 0)
+                                ElseIf t(i) = "DB" Then
+                                    p1 = New Point(1, 2 - dy)
+                                ElseIf t(i) = "LB" Then
+                                    p1 = New Point(0, 1)
+                                ElseIf t(i) = "RB" Then
+                                    p1 = New Point(2 - dx, 1)
+                                End If
+                                boundary = p1
+                            End If
+                        Next i
+                        If IsNothing(plateau) Then
+                            ReDim plateau(0)
+                        Else
+                            ReDim Preserve plateau(plateau.Length)
+                        End If
+                        plateau(UBound(plateau)) = New Plateau With {.xSize = g.xSize, _
+                                                                     .ySize = g.ySize, _
+                                                                     .ground = g.ground, _
+                                                                     .water = g.water, _
+                                                                     .race = g.race, _
+                                                                     .name = g.name, _
+                                                                     .isWaterfall = isWaterfall, _
+                                                                     .connectors = connectors, _
+                                                                     .border = boundary}
+                        maxPlateauSize = Math.Max(maxPlateauSize, Math.Max(g.xSize, g.ySize))
+                    Else
+                        For i As Integer = 0 To UBound(objType) Step 1
+                            If i = UBound(objType) _
+                            OrElse (k.Length > objType(i).Length AndAlso k.ToUpper.Substring(0, objType(i).Length) = objType(i).ToUpper) Then
+                                If IsNothing(objList(i)) Then
+                                    ReDim objList(i)(0)
+                                Else
+                                    ReDim Preserve objList(i)(objList(i).Length)
+                                End If
+                                objList(i)(UBound(objList(i))) = g
+                                Exit For
+                            End If
+                        Next i
+                    End If
                 End If
             End If
         Next k
+        mages = objList(0)
+        mercenaries = objList(1)
+        merchants = objList(2)
+        mountains = objList(3)
+        ruins = objList(4)
+        trainers = objList(5)
+        objects = objList(6)
     End Sub
     Private Sub JustForTest(ByRef ObjectsSize As Dictionary(Of String, Size))
-        Dim r As New RndValueGen
-        Dim testList() As String = New String() {"G000RU0000014", "G000RU0000015", "G000RU0000016", "G000RU0000017", "G000RU0000018", _
-                                                 "G000SI0000MAGE00", "G000SI0000MERH01", "G000SI0000MERC00", "G000SI0000TRAI03"}
+        Dim t() As String = comm.TxtSplit(My.Resources.TestObjectSize)
         ObjectsSize = New Dictionary(Of String, Size)
-        For Each t As String In testList
-            ObjectsSize.Add(t.ToUpper, New Size(r.RndPos(5, True), r.RndPos(5, True)))
-        Next t
+        For i As Integer = 1 To UBound(t) Step 1
+            Dim r() As String = t(i).Split(CChar(" "))
+            ObjectsSize.Add(r(0), New Size(CInt(r(1)), CInt(r(2))))
+        Next i
     End Sub
 
-    Public Sub Gen(ByRef m As Map)
+    Public Sub Gen(ByRef m As Map, ByRef settMap As Map.SettingsMap, ByRef settRaceLoc As Map.SettingsLoc, ByRef settCommLoc As Map.SettingsLoc)
         If Not m.complited.StacksRaceGen_Done Then
             Throw New Exception("Сначала нужно выполнить RaceGen.Gen")
         End If
 
+        Dim t0 As Integer = Environment.TickCount
+
+        Dim free(m.xSize, m.ySize) As Boolean
+        For y As Integer = 0 To m.ySize Step 1
+            For x As Integer = 0 To m.xSize Step 1
+                free(x, y) = True
+            Next x
+        Next y
+
+        Call PlaceCities(m, settMap)
+        Call PlaceAttendedObjects(m)
+        Call PlaceMines(m, settMap, settRaceLoc, settCommLoc)
+        Call PlacePlateau(m, free)
+        Call PlaceMouintains()
+        Call PlaceOtherObjects()
+        Call AddMerchItems()
+        Call AddMercinaries()
+        Call AddSpells()
+
+        Dim t1 As Integer = Environment.TickCount
+        Console.WriteLine("Objects types definition: " & t1 - t0)
 
         m.complited.ObjectsPlacing_Done = True
     End Sub
+
+    Private Function makeIDs(ByRef a() As MapObject) As List(Of Integer)
+        Dim IDs As New List(Of Integer)
+        For i As Integer = 0 To UBound(plateau) Step 1
+            IDs.Add(i)
+        Next i
+        Return IDs
+    End Function
+    Private Function makeIDs(ByRef a() As Plateau, ByRef initOnly As Boolean, ByRef noWaterfalls As Boolean) As List(Of Integer)
+        Dim IDs As New List(Of Integer)
+        If initOnly Then
+            For i As Integer = 0 To UBound(a) Step 1
+                If a(i).connectors.Length = 1 Then IDs.Add(i)
+            Next i
+        Else
+            For i As Integer = 0 To UBound(a) Step 1
+                If (noWaterfalls And Not a(i).isWaterfall) Or Not noWaterfalls Then IDs.Add(i)
+            Next i
+        End If
+        Return IDs
+    End Function
+
+    Private Sub PlaceAttendedObjects(ByRef m As Map)
+        Dim objList() As MapObject
+        Dim IDs As New List(Of Integer)
+        Dim id As Integer
+        For y As Integer = 0 To m.ySize Step 1
+            For x As Integer = 0 To m.xSize Step 1
+                If m.board(x, y).objectID > 2 And m.board(x, y).objectID < 8 Then
+                    If m.board(x, y).objectID = 3 Then
+                        objList = merchants
+                    ElseIf m.board(x, y).objectID = 4 Then
+                        objList = mercenaries
+                    ElseIf m.board(x, y).objectID = 5 Then
+                        objList = mages
+                    ElseIf m.board(x, y).objectID = 6 Then
+                        objList = trainers
+                    ElseIf m.board(x, y).objectID = 7 Then
+                        objList = ruins
+                    Else
+                        objList = Nothing
+                    End If
+                    IDs.Clear()
+                    For i As Integer = 0 To UBound(objList) Step 1
+                        If CheckSurface(m.board(x, y).isWater, objList(i).ground, objList(i).water) _
+                        AndAlso CheckRaces(m.board(x, y).objRace, objList(i).race) Then
+                            IDs.Add(i)
+                        End If
+                    Next i
+                    If IDs.Count > 0 Then
+                        id = comm.RandomSelection(IDs, True)
+                    Else
+                        id = -1
+                    End If
+                    m.board(x, y).objectName = objList(id).name
+                End If
+            Next x
+        Next y
+    End Sub
+    Private Sub PlaceCities(ByRef m As Map, ByRef settMap As Map.SettingsMap)
+        Dim cityGroup As New Dictionary(Of Integer, List(Of Point))
+        For y As Integer = 0 To m.ySize Step 1
+            For x As Integer = 0 To m.xSize Step 1
+                If m.board(x, y).objectID = 1 Then
+                    If m.board(x, y).objRace.Item(0) = comm.RaceIdentifierToSubrace("H") Then
+                        m.board(x, y).objectName = "G000FT0000HU0"
+                    ElseIf m.board(x, y).objRace.Item(0) = comm.RaceIdentifierToSubrace("U") Then
+                        m.board(x, y).objectName = "G000FT0000UN0"
+                    ElseIf m.board(x, y).objRace.Item(0) = comm.RaceIdentifierToSubrace("C") Then
+                        m.board(x, y).objectName = "G000FT0000DWC0"
+                    ElseIf m.board(x, y).objRace.Item(0) = comm.RaceIdentifierToSubrace("L") Then
+                        m.board(x, y).objectName = "G000FT0000HE0"
+                    ElseIf m.board(x, y).objRace.Item(0) = comm.RaceIdentifierToSubrace("E") Then
+                        m.board(x, y).objectName = "G000FT0000EL0"
+                    End If
+                ElseIf m.board(x, y).objectID = 2 Then
+                    Dim g As Integer = m.board(x, y).groupID
+                    If Not cityGroup.ContainsKey(g) Then cityGroup.Add(g, New List(Of Point))
+                    cityGroup.Item(g).Add(New Point(x, y))
+                End If
+            Next x
+        Next y
+        If cityGroup.Count > 0 Then
+            For Each L As List(Of Point) In cityGroup.Values
+                Dim town As String
+                If m.board(L.Item(0).X, L.Item(0).Y).locID.Item(0) <= settMap.nRaces Then
+                    town = "G000FT0000NE1"
+                Else
+                    Dim r As Double = comm.rndgen.PRand(0, 1)
+                    If r > 0.3 Then
+                        town = "G000FT0000NE1"
+                    ElseIf r > 0.1 Then
+                        town = "G000FT0000NE2"
+                    Else
+                        town = "G000FT0000NE3"
+                    End If
+                End If
+                For Each p As Point In L
+                    m.board(p.X, p.Y).objectName = town
+                Next p
+            Next L
+        End If
+    End Sub
+    Private Sub PlaceMines(ByRef m As Map, ByRef settMap As Map.SettingsMap, _
+                           ByRef settRaceLoc As Map.SettingsLoc, ByRef settCommLoc As Map.SettingsLoc)
+        Dim mineType(m.xSize, m.ySize) As String
+        For i As Integer = 0 To UBound(m.Loc) Step 1
+            If Not m.Loc(i).IsObtainedBySymmery Then
+                If i < settMap.nRaces Then
+                    Call PlaceMinesInRaceLoc(m, settMap, settRaceLoc, m.Loc(i), mineType)
+                Else
+                    Call PlaceMinesInCommonLoc(m, settMap, settCommLoc, m.Loc(i), mineType)
+                End If
+            End If
+        Next i
+        'установить для шахт конкретный вид ресурсов
+        Dim raceMana As Dictionary(Of Integer, RandStack.Cost()) = RacesManaUsing()
+        Dim raceManaTier As Dictionary(Of Integer, String()) = ManaTier(raceMana)
+        Dim mines As New Dictionary(Of String, String)
+        Dim IDs As New List(Of Integer)
+        mines.Add("gold", "G000CR0000GL")
+        mines.Add("green", "G000CR0000GR")
+        mines.Add("black", "G000CR0000RG")
+        mines.Add("white", "G000CR0000WH")
+        mines.Add("red", "G000CR0000RD")
+        mines.Add("blue", "G000CR0000YE")
+        For y As Integer = 0 To m.ySize Step 1
+            For x As Integer = 0 To m.xSize Step 1
+                If Not mineType(x, y) = "" Then
+                    Dim types() As String = Nothing
+                    Dim weights() As Double = Nothing
+                    If mineType(x, y) = My.Resources.mineTypeGold Then
+                        types = New String() {"gold"}
+                        weights = New Double() {1}
+                    ElseIf mineType(x, y) = My.Resources.mineTypeT1Mana Or mineType(x, y) = My.Resources.mineTypeT3Mana Then
+                        Dim tier As Integer
+                        If mineType(x, y) = My.Resources.mineTypeT1Mana Then
+                            tier = 1
+                        Else
+                            tier = 3
+                        End If
+                        types = raceManaTier(m.board(x, y).objRace(0))(tier).Split(CChar(" "))
+                        ReDim weights(UBound(types))
+                        For i As Integer = 0 To UBound(types) Step 1
+                            If types(i) = "gold" Then
+                                weights(i) = raceMana(m.board(x, y).objRace(0))(tier).Gold
+                            ElseIf types(i) = "green" Then
+                                weights(i) = raceMana(m.board(x, y).objRace(0))(tier).Green
+                            ElseIf types(i) = "black" Then
+                                weights(i) = raceMana(m.board(x, y).objRace(0))(tier).Black
+                            ElseIf types(i) = "white" Then
+                                weights(i) = raceMana(m.board(x, y).objRace(0))(tier).White
+                            ElseIf types(i) = "red" Then
+                                weights(i) = raceMana(m.board(x, y).objRace(0))(tier).Red
+                            ElseIf types(i) = "blue" Then
+                                weights(i) = raceMana(m.board(x, y).objRace(0))(tier).Blue
+                            End If
+                        Next i
+                    ElseIf mineType(x, y) = My.Resources.mineTypeRandomMana Then
+                        types = New String() {"green", "black", "white", "red", "blue"}
+                        weights = New Double() {1, 1, 1, 1, 1}
+                    End If
+                    IDs.Clear()
+                    For i As Integer = 0 To UBound(types) Step 1
+                        IDs.Add(i)
+                    Next i
+                    Dim r As Integer = comm.RandomSelection(IDs, True)
+                    m.board(x, y).objectName = types(r)
+                End If
+            Next x
+        Next y
+    End Sub
+    Private Sub PlaceMinesInRaceLoc(ByRef m As Map, ByRef settMap As Map.SettingsMap, ByRef settRaceLoc As Map.SettingsLoc, _
+                                    ByRef Loc As Location, ByRef mineType(,) As String)
+        Dim ListPos As New List(Of Point)
+        Dim capitalPos As Point = Nothing
+        For y As Integer = 0 To m.ySize Step 1
+            For x As Integer = 0 To m.xSize Step 1
+                If m.board(x, y).locID.Item(0) = Loc.ID Then
+                    If m.board(x, y).objectID = 8 Then
+                        ListPos.Add(New Point(x, y))
+                    ElseIf m.board(x, y).objectID = 1 Then
+                        capitalPos = New Point(x, y)
+                    End If
+                End If
+            Next x
+        Next y
+        Dim pos() As Point = ListPos.ToArray
+        Dim dist(UBound(pos)) As Integer
+        For i As Integer = 0 To UBound(pos) Step 1
+            dist(i) = capitalPos.SqDist(pos(i))
+        Next i
+        Array.Sort(dist, pos)
+        Dim goldLimit As Double = CDbl(pos.Length) * settRaceLoc.maxGoldMines / (settRaceLoc.maxGoldMines + settRaceLoc.maxManaSources + 0.001)
+        Dim manaLimit As Double = CDbl(pos.Length) * settRaceLoc.maxManaSources / (settRaceLoc.maxGoldMines + settRaceLoc.maxManaSources + 0.001)
+        Dim manaCounter As Integer = 0
+        For i As Integer = 0 To UBound(pos) Step 1
+            If i = 0 And goldLimit > 0 Then
+                Call SetMineType(m, settMap.nRaces, mineType, pos(i), My.Resources.mineTypeGold)
+                goldLimit -= 1
+            ElseIf i = 1 And manaLimit > 0 Then
+                Call SetMineType(m, settMap.nRaces, mineType, pos(i), My.Resources.mineTypeT1Mana)
+                manaLimit -= 1
+                manaCounter += 1
+            Else
+                If PlaceGoldMine(goldLimit, manaLimit, settRaceLoc) Then
+                    Call SetMineType(m, settMap.nRaces, mineType, pos(i), My.Resources.mineTypeGold)
+                    goldLimit -= 1
+                Else
+                    If manaCounter > 1 And settMap.spellsMaxLevel > 2 Then
+                        Call SetMineType(m, settMap.nRaces, mineType, pos(i), My.Resources.mineTypeT3Mana)
+                        manaCounter = 0
+                    Else
+                        Call SetMineType(m, settMap.nRaces, mineType, pos(i), My.Resources.mineTypeT1Mana)
+                        manaCounter += 1
+                    End If
+                    manaLimit -= 1
+                End If
+            End If
+        Next i
+    End Sub
+    Private Sub PlaceMinesInCommonLoc(ByRef m As Map, ByRef settMap As Map.SettingsMap, ByRef settCommLoc As Map.SettingsLoc, _
+                                      ByRef Loc As Location, ByRef mineType(,) As String)
+        Dim ListPos As New List(Of Point)
+        For y As Integer = 0 To m.ySize Step 1
+            For x As Integer = 0 To m.xSize Step 1
+                If m.board(x, y).locID.Item(0) = Loc.ID And m.board(x, y).objectID = 8 Then ListPos.Add(New Point(x, y))
+            Next x
+        Next y
+        Dim goldLimit As Double = CDbl(ListPos.Count) * settCommLoc.maxGoldMines / (settCommLoc.maxGoldMines + settCommLoc.maxManaSources + 0.001)
+        Dim manaLimit As Double = CDbl(ListPos.Count) * settCommLoc.maxManaSources / (settCommLoc.maxGoldMines + settCommLoc.maxManaSources + 0.001)
+        Dim r1 As Double
+        Dim r2 As Double = settCommLoc.maxGoldMines / (settCommLoc.maxManaSources + 0.001)
+        For Each p As Point In ListPos
+            r1 = goldLimit / (manaLimit + 0.001)
+            If PlaceGoldMine(goldLimit, manaLimit, settCommLoc) Then
+                Call SetMineType(m, settMap.nRaces, mineType, p, My.Resources.mineTypeGold)
+                goldLimit -= 1
+            Else
+                Call SetMineType(m, settMap.nRaces, mineType, p, My.Resources.mineTypeRandomMana)
+                manaLimit -= 1
+            End If
+        Next p
+    End Sub
+    Private Function PlaceGoldMine(ByRef goldLimit As Double, ByRef manaLimit As Double, ByRef settLoc As Map.SettingsLoc) As Boolean
+        If goldLimit > 0 Then
+            Dim r1 As Double = goldLimit / (manaLimit + 0.001)
+            Dim r2 As Double = settLoc.maxGoldMines / (settLoc.maxManaSources + 0.001)
+            If goldLimit > 0 And manaLimit > 0 And goldLimit + manaLimit < 1 Then
+                Dim R As Double = comm.rndgen.PRand(0, goldLimit + manaLimit)
+                Return R < settLoc.maxGoldMines
+            Else
+                If r1 > r2 Or manaLimit <= 0 Then
+                    Return True
+                Else
+                    Return False
+                End If
+            End If
+        Else
+            If manaLimit > 0 Then
+                Return False
+            Else
+                Dim R As Double = comm.rndgen.PRand(0, settLoc.maxGoldMines + settLoc.maxManaSources)
+                Return R < settLoc.maxGoldMines
+            End If
+        End If
+    End Function
+    Private Sub SetMineType(ByRef m As Map, ByRef nRaces As Integer, ByRef mineType(,) As String, _
+                            ByRef p As Point, ByRef type As String)
+        'Console.WriteLine(type)
+        If m.symmID > -1 Then
+            Dim pp() As Point = symm.ApplySymm(p, nRaces, m, 1)
+            For i As Integer = 0 To UBound(pp) Step 1
+                mineType(pp(i).X, pp(i).Y) = type
+            Next i
+        Else
+            mineType(p.X, p.Y) = type
+        End If
+    End Sub
+    Private Function RacesManaUsing() As Dictionary(Of Integer, RandStack.Cost())
+        Dim r() As String = comm.TxtSplit(My.Resources.Races)
+        Dim res As New Dictionary(Of Integer, RandStack.Cost())
+        For i As Integer = 0 To UBound(r) Step 1
+            Dim s() As String = r(i).Split(CChar(" "))
+            res.Add(comm.RaceIdentifierToSubrace(s(UBound(s))), New RandStack.Cost() {Nothing, Nothing, Nothing, Nothing, Nothing, Nothing})
+        Next i
+        For Each s As Common.Spell In raceSpells.Values
+            If s.researchCost.Count > 0 Then
+                For Each L As String In s.researchCost.Keys
+                    Dim LRace As Integer = comm.LordsRace.Item(L)
+                    Dim c1 As RandStack.Cost = s.researchCost.Item(L)
+                    Dim c2 As RandStack.Cost = s.castCost
+                    res.Item(LRace)(s.level).Black = c1.Black + c2.Black
+                    res.Item(LRace)(s.level).Blue = c1.Blue + c2.Blue
+                    res.Item(LRace)(s.level).Gold = c1.Gold + c2.Gold
+                    res.Item(LRace)(s.level).Green = c1.Green + c2.Green
+                    res.Item(LRace)(s.level).Red = c1.Red + c2.Red
+                    res.Item(LRace)(s.level).White = c1.White + c2.White
+                Next L
+            End If
+        Next s
+        Dim remove As New List(Of Integer)
+        For Each i As Integer In res.Keys
+            For j As Integer = 1 To 5 Step 1
+                res.Item(i)(0).Black += res.Item(i)(j).Black
+                res.Item(i)(0).Blue += res.Item(i)(j).Blue
+                res.Item(i)(0).Gold += res.Item(i)(j).Gold
+                res.Item(i)(0).Green += res.Item(i)(j).Green
+                res.Item(i)(0).Red += res.Item(i)(j).Red
+                res.Item(i)(0).White += res.Item(i)(j).White
+            Next j
+            If res.Item(i)(0).Black = 0 And res.Item(i)(0).Blue = 0 And res.Item(i)(0).Gold = 0 _
+            And res.Item(i)(0).Green = 0 And res.Item(i)(0).Red = 0 And res.Item(i)(0).White = 0 Then
+                remove.Add(i)
+            End If
+        Next i
+        For Each i As Integer In remove
+            res.Remove(i)
+        Next i
+        Return res
+    End Function
+    Private Function ManaTier(ByRef raceMana As Dictionary(Of Integer, RandStack.Cost())) As Dictionary(Of Integer, String())
+        Dim res As New Dictionary(Of Integer, String())
+        For Each i As Integer In raceMana.Keys
+            res.Add(i, New String() {"", "", "", "", "", ""})
+            For j As Integer = 1 To UBound(raceMana.Item(i)) Step 1
+                If raceMana.Item(i)(j).Black > 0 Then res.Item(i)(j) &= "black "
+                If raceMana.Item(i)(j).Blue > 0 Then res.Item(i)(j) &= "blue "
+                If raceMana.Item(i)(j).Gold > 0 Then res.Item(i)(j) &= "gold "
+                If raceMana.Item(i)(j).Green > 0 Then res.Item(i)(j) &= "green "
+                If raceMana.Item(i)(j).Red > 0 Then res.Item(i)(j) &= "red "
+                If raceMana.Item(i)(j).White > 0 Then res.Item(i)(j) &= "while "
+                res.Item(i)(j) = res.Item(i)(j).Remove(res.Item(i)(j).Length - 1)
+            Next j
+            For j As Integer = 1 To UBound(raceMana.Item(i)) - 1 Step 1
+                Dim s() As String = res.Item(i)(j).Split(CChar(" "))
+                For q As Integer = 0 To UBound(s) Step 1
+                    For k As Integer = j + 1 To UBound(raceMana.Item(i)) Step 1
+                        If s(q).Length > 0 Then res.Item(i)(k) = res.Item(i)(k).Replace(s(q), "")
+                    Next k
+                Next q
+            Next j
+            For j As Integer = 1 To UBound(raceMana.Item(i)) Step 1
+                res.Item(i)(j) = res.Item(i)(j).Trim
+            Next j
+        Next i
+        Return res
+    End Function
+
+    Private Sub PlacePlateau(ByRef m As Map, ByRef free(,) As Boolean)
+        Dim connectors(m.xSize, m.ySize) As Integer
+        Dim IDs As List(Of Integer)
+        Dim id As Integer
+        Dim ok As Boolean
+        For i As Integer = 0 To UBound(m.Loc) Step 1
+            IDs = makeIDs(plateau, True, False)
+            Do While IDs.Count > 0
+                id = comm.RandomSelection(IDs, True)
+                ok = TryToPlace(m, plateau(id), free, connectors)
+                If ok Then
+                    Exit Do
+                Else
+                    IDs.Remove(id)
+                End If
+            Loop
+            If IDs.Count = 0 Then Exit For
+        Next i
+    End Sub
+    Private Function TryToPlace(ByRef m As Map, ByRef basic As Plateau, _
+                                ByRef free(,) As Boolean, ByRef connectors(,) As Integer) As Boolean
+
+        'сначала пытаемся расположить базовый кусок (в каждом из возможных положений, пока не получится построить цепочку)
+        'после успешного расположения базового куска пытаемся построить от него цепочку
+        'если все получилось - возвращаем true
+        Dim places As New List(Of Point)
+        Dim res As New PlateauPlacingResult With {.n = -1}
+        ReDim res.obj(maxChainLen), res.pos(maxChainLen)
+        Dim id As Integer
+        Dim ok As Boolean
+        For y As Integer = 0 To m.ySize Step 1
+            For x As Integer = 0 To m.xSize Step 1
+                If MayPlace(m, x, y, free, basic, Nothing) Then places.Add(New Point(x, y))
+            Next x
+        Next y
+
+        Do While places.Count > 0
+            id = comm.rndgen.RndPos(places.Count, True) - 1
+            ok = MakeChain(m, basic, places(id).X, places(id).Y, free, connectors, res)
+            If ok Then
+                For i As Integer = 0 To res.n Step 1
+                    m.board(res.pos(i).X, res.pos(i).Y).objectName = res.obj(i).name
+                Next i
+                Return True
+            Else
+                places.RemoveAt(id)
+            End If
+        Loop
+        Return False
+    End Function
+    Private Function MayPlace(ByRef m As Map, ByRef x As Integer, ByRef y As Integer, _
+                              ByRef free(,) As Boolean, ByRef obj As MapObject) As Boolean
+        Return MayPlace(m, x, y, free, obj.xSize, obj.ySize, obj.ground, obj.water, obj.race)
+    End Function
+    Private Function MayPlace(ByRef m As Map, ByRef x As Integer, ByRef y As Integer, _
+                              ByRef free(,) As Boolean, ByRef obj As Plateau, ByRef Connector(,) As Integer) As Boolean
+        Dim t As Boolean
+        If Not IsNothing(obj.border) Then
+            If obj.border.X = 0 Then
+                If x > 0 Then Return False
+            ElseIf obj.border.Y = 0 Then
+                If y > 0 Then Return False
+            ElseIf obj.border.X + 1 = obj.xSize Then
+                If Not x + obj.border.X = m.xSize Then Return False
+            ElseIf obj.border.Y + 1 = obj.ySize Then
+                If Not y + obj.border.Y = m.ySize Then Return False
+            End If
+        End If
+        Dim xx, yy As Integer
+        For i As Integer = 0 To UBound(obj.connectors) Step 1
+            t = True
+            For j As Integer = 0 To UBound(obj.connectors(i)) Step 1
+                Call connectorPos(xx, yy, x, y, obj.connectors(i)(j), obj)
+                If xx < 0 Or yy < 0 Or xx > m.xSize Or yy > m.ySize Then Return False
+                If Not IsNothing(Connector) AndAlso Not Connector(xx, yy) = 1 Then
+                    t = False
+                    Exit For
+                End If
+            Next j
+            If t Then Exit For
+        Next i
+        If Not t Then Return False
+        Return MayPlace(m, x, y, free, obj.xSize, obj.ySize, obj.ground, obj.water, obj.race)
+    End Function
+    Private Function MayPlace(ByRef m As Map, ByRef x As Integer, ByRef y As Integer, ByRef free(,) As Boolean, _
+                              ByRef xSize As Integer, ByRef ySize As Integer, _
+                              ByRef isGround As Boolean, ByRef isWater As Boolean, _
+                              ByRef races As List(Of Integer)) As Boolean
+        If x + xSize > m.xSize Or y + ySize > m.ySize Then Return False
+        Dim x2 As Integer = x + xSize - 1
+        Dim y2 As Integer = y + ySize - 1
+        For j As Integer = y To y2 Step 1
+            For i As Integer = x To x2 Step 1
+                If Not m.board(i, j).isBorder Or Not free(i, j) Then Return False
+                If Not CheckSurface(m.board(i, j).isWater, isGround, isWater) Then Return False
+                If Not CheckRaces(m.board(i, j).objRace, races) Then Return False
+            Next i
+        Next j
+        Return True
+    End Function
+    Private Function CheckSurface(ByRef waterSurface As Boolean, ByRef isGround As Boolean, ByRef isWater As Boolean) As Boolean
+        If waterSurface Then
+            If Not isWater Then Return False
+        Else
+            If Not isGround Then Return False
+        End If
+        Return True
+    End Function
+    Private Function CheckRaces(ByRef mRaces As List(Of Integer), ByRef objRaces As List(Of Integer)) As Boolean
+        For Each r As Integer In mRaces
+            If objRaces.Contains(r) Then Return True
+        Next r
+        Return False
+    End Function
+
+    Private Sub PlaceObject(ByRef free(,) As Boolean, ByRef x As Integer, ByRef y As Integer, ByRef obj As MapObject)
+        Call PlaceObject(free, x, y, obj.xSize, obj.ySize, False)
+    End Sub
+    Private Sub PlaceObject(ByRef free(,) As Boolean, ByRef x As Integer, ByRef y As Integer, ByRef obj As Plateau, ByRef connectors(,) As Integer)
+        Call PlaceObject(free, x, y, obj.xSize, obj.ySize, False)
+        Call PlaceObject(free, x, y, obj, connectors, 1)
+    End Sub
+    Private Sub RemoveObject(ByRef free(,) As Boolean, ByRef x As Integer, ByRef y As Integer, ByRef obj As MapObject)
+        Call PlaceObject(free, x, y, obj.xSize, obj.ySize, True)
+    End Sub
+    Private Sub RemoveObject(ByRef free(,) As Boolean, ByRef x As Integer, ByRef y As Integer, ByRef obj As Plateau, ByRef connectors(,) As Integer)
+        Call PlaceObject(free, x, y, obj.xSize, obj.ySize, True)
+        Call PlaceObject(free, x, y, obj, connectors, -1)
+    End Sub
+    Private Sub PlaceObject(ByRef free(,) As Boolean, _
+                            ByRef x As Integer, ByRef y As Integer, _
+                            ByRef xSize As Integer, ByRef ySize As Integer, _
+                            ByRef whatSet As Boolean)
+        Dim x1 As Integer = x + xSize - 1
+        Dim y1 As Integer = y + ySize - 1
+        For j As Integer = y To y1 Step 1
+            For i As Integer = x To x1 Step 1
+                free(i, j) = whatSet
+            Next i
+        Next j
+    End Sub
+    Private Sub PlaceObject(ByRef free(,) As Boolean, _
+                            ByRef x As Integer, ByRef y As Integer, _
+                            ByRef obj As Plateau, ByRef connectors(,) As Integer, _
+                            ByRef whatAdd As Integer)
+        Dim xx, yy As Integer
+        For i As Integer = 0 To UBound(obj.connectors) Step 1
+            For j As Integer = 0 To UBound(obj.connectors(i)) Step 1
+                Call connectorPos(xx, yy, x, y, obj.connectors(i)(j), obj)
+                connectors(x + obj.connectors(i)(j).X, y + obj.connectors(i)(j).Y) += whatAdd
+            Next j
+        Next i
+    End Sub
+    Private Sub connectorPos(ByRef xOut As Integer, ByRef yOut As Integer, ByRef x As Integer, ByRef y As Integer, _
+                             ByRef connectorRelativePos As Point, ByRef obj As Plateau)
+        xOut = x + connectorRelativePos.X
+        yOut = y + connectorRelativePos.Y
+        'If connectorRelativePos.X > 0 Then xOut += obj.xSize - 1
+        'If connectorRelativePos.Y > 0 Then yOut += obj.ySize - 1
+    End Sub
+    Private Function MakeChain(ByRef m As Map, ByRef obj As Plateau, _
+                               ByRef x As Integer, ByRef y As Integer, _
+                               ByRef free(,) As Boolean, ByRef connectors(,) As Integer, _
+                               ByRef res As PlateauPlacingResult) As Boolean
+        res.n += 1
+        res.obj(res.n) = obj
+        res.pos(res.n) = New Point(x, y)
+
+        Call PlaceObject(free, x, y, obj, connectors)
+        Dim x1 As Integer = Math.Max(x - maxPlateauSize, 0)
+        Dim y1 As Integer = Math.Max(y - maxPlateauSize, 0)
+        Dim x2 As Integer = Math.Min(x + obj.xSize + maxPlateauSize - 1, m.xSize)
+        Dim y2 As Integer = Math.Min(y + obj.ySize + maxPlateauSize - 1, m.ySize)
+        Dim placeMore As Boolean = False
+        For j As Integer = y1 To y2 Step 1
+            For i As Integer = x1 To x2 Step 1
+                If connectors(i, j) = 1 Then
+                    placeMore = True
+                    i = x2
+                    j = y2
+                End If
+            Next i
+        Next j
+        If Not placeMore Then Return True
+
+        Dim IDs As List(Of Integer)
+        Dim id, nx, ny As Integer
+        If res.n < maxChainLen Then
+            IDs = makeIDs(plateau, False, True)
+        Else
+            IDs = makeIDs(plateau, True, True)
+        End If
+
+        Do While IDs.Count > 0
+            id = comm.rndgen.RndPos(IDs.Count, True) - 1
+            nx = -1
+            Dim p As Plateau = plateau(id)
+            For j As Integer = y1 To y2 Step 1
+                For i As Integer = x1 To x2 Step 1
+                    If j = 5 And i = 82 Then
+                        j = j
+                    End If
+                    If MayPlace(m, i, j, free, p, connectors) Then
+                        nx = i
+                        ny = j
+                        i = x2
+                        j = y2
+                    End If
+                Next i
+            Next j
+            If nx > -1 Then
+                If MakeChain(m, plateau(id), nx, ny, free, connectors, res) Then
+                    Return True
+                Else
+                    IDs.RemoveAt(id)
+                End If
+            Else
+                IDs.RemoveAt(id)
+            End If
+        Loop
+        Call RemoveObject(free, res.pos(res.n).X, res.pos(res.n).Y, res.obj(res.n), connectors)
+        res.obj(res.n) = Nothing
+        res.pos(res.n) = Nothing
+        res.n -= 1
+        Return False
+    End Function
+
+
+    Private Sub PlaceMouintains()
+
+    End Sub
+
+    Private Sub PlaceOtherObjects()
+
+    End Sub
+
+    Private Sub AddSpells()
+
+    End Sub
+
+    Private Sub AddMercinaries()
+
+    End Sub
+
+    Private Sub AddMerchItems()
+
+    End Sub
+
 End Class
