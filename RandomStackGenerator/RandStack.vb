@@ -85,12 +85,21 @@ Public Class RandStack
         ''' <summary>Не генерировать надеваемые предметы и посохи</summary>
         Dim excludeNonconsumableItems As Boolean
 
+        ''' <summary>Не nothing только для торговцев предметами и магией, а также лагеря наемников</summary>
+        Dim shopContent As List(Of String)
 
         Public Shared Function Copy(ByVal v As DesiredStats) As DesiredStats
             Dim RacesList As New List(Of Integer)
             For Each Item As Integer In v.Race
                 RacesList.Add(Item)
             Next Item
+            Dim shopContentList As List(Of String) = Nothing
+            If Not IsNothing(v.shopContent) Then
+                shopContentList = New List(Of String)
+                For Each Item As String In v.shopContent
+                    shopContentList.Add(Item)
+                Next Item
+            End If
             Return New DesiredStats With {.ExpBarAverage = v.ExpBarAverage, _
                                           .ExpStackKilled = v.ExpStackKilled, _
                                           .MaxGiants = v.MaxGiants, _
@@ -100,29 +109,40 @@ Public Class RandStack
                                           .LootCost = v.LootCost, _
                                           .LocationName = v.LocationName, _
                                           .excludeConsumableItems = v.excludeConsumableItems, _
-                                          .excludeNonconsumableItems = v.excludeNonconsumableItems}
+                                          .excludeNonconsumableItems = v.excludeNonconsumableItems, _
+                                          .shopContent = shopContentList}
         End Function
         ''' <param name="RaceNumberToRaceChar">Преобразует номер расы в ее текстовый идентификатор. Если передать Nothing, то будут печататься номера рас</param>
         Public Shared Function Print(ByVal v As DesiredStats, ByRef RaceNumberToRaceChar As Dictionary(Of Integer, String)) As String
-            Dim races As String = ""
-            For Each Item As Integer In v.Race
-                If Not races = "" Then races &= "+"
-                If Not IsNothing(RaceNumberToRaceChar) Then
-                    races &= RaceNumberToRaceChar.Item(Item)
-                Else
-                    races &= Item
-                End If
-            Next Item
-            Return "ID" & vbTab & v.LocationName & vbNewLine & _
-                   "AverageExpBar" & vbTab & v.ExpBarAverage & vbNewLine & _
-                   "ExpStackKilled" & vbTab & v.ExpStackKilled & vbNewLine & _
-                   "Race" & vbTab & races & vbNewLine & _
-                   "StackSize" & vbTab & v.StackSize & vbNewLine & _
-                   "MaxGiants" & vbTab & v.MaxGiants & vbNewLine & _
-                   "MeleeCount" & vbTab & v.MeleeCount & vbNewLine & _
-                   "LootCost" & vbTab & v.LootCost & vbNewLine & _
-                   "CItemsExclude" & vbTab & v.excludeConsumableItems & vbNewLine & _
-                   "NItemsExclude" & vbTab & v.excludeNonconsumableItems & vbNewLine
+            Dim s As String
+            If IsNothing(v.shopContent) Then
+                Dim races As String = ""
+                For Each Item As Integer In v.Race
+                    If Not races = "" Then races &= "+"
+                    If Not IsNothing(RaceNumberToRaceChar) Then
+                        races &= RaceNumberToRaceChar.Item(Item)
+                    Else
+                        races &= Item
+                    End If
+                Next Item
+                s = "AverageExpBar" & vbTab & v.ExpBarAverage & vbNewLine & _
+                    "ExpStackKilled" & vbTab & v.ExpStackKilled & vbNewLine & _
+                    "Race" & vbTab & races & vbNewLine & _
+                    "StackSize" & vbTab & v.StackSize & vbNewLine & _
+                    "MaxGiants" & vbTab & v.MaxGiants & vbNewLine & _
+                    "MeleeCount" & vbTab & v.MeleeCount & vbNewLine & _
+                    "LootCost" & vbTab & v.LootCost & vbNewLine & _
+                    "CItemsExclude" & vbTab & v.excludeConsumableItems & vbNewLine & _
+                    "NItemsExclude" & vbTab & v.excludeNonconsumableItems & vbNewLine
+            Else
+                Dim goods As String = ""
+                For Each Item As String In v.shopContent
+                    If Not goods = "" Then goods &= "+"
+                    goods &= Item
+                Next Item
+                s = "ShopContent" & vbTab & goods & vbNewLine
+            End If
+            Return "ID" & vbTab & v.LocationName & vbNewLine & s
         End Function
     End Structure
 
@@ -1017,7 +1037,8 @@ Public Class Common
     Public Function ParseDesiredStackStatsFile(ByRef path As String) As RandStack.DesiredStats()
         Dim txt(), s(), r(), fu As String
         Dim defaultStats As New RandStack.DesiredStats With {.ExpBarAverage = 200, .ExpStackKilled = 75, _
-                                                             .MeleeCount = 2, .Race = New List(Of Integer), .StackSize = 2}
+                                                             .MeleeCount = 2, .Race = New List(Of Integer), .StackSize = 2, _
+                                                             .shopContent = Nothing}
         defaultStats.Race.Add(1)
         If Not path = My.Resources.testFileKeyword.ToLower Then
             txt = TxtSplit(IO.File.ReadAllText(path).Replace("=", vbTab))
@@ -1070,6 +1091,12 @@ Public Class Common
                             Dim b As Boolean = False
                             If s(f + 1).ToUpper = "T" Or s(f + 1).ToUpper = "True" Or s(f + 1).ToUpper = "1" Then b = True
                             result(i).excludeNonconsumableItems = b 'NItensExclude
+                        ElseIf k = 10 Then
+                            r = s(f + 1).Split(CChar("+")) 'ShopContent
+                            result(i).shopContent = New List(Of String)
+                            For n As Integer = 0 To UBound(r) Step 1
+                                result(i).shopContent.Add(r(n).ToUpper)
+                            Next n
                         End If
                     End If
                 Next k

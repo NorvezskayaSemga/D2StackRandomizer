@@ -4335,9 +4335,6 @@ Public Class ImpenetrableObjects
         Call PlacePlateau(m, free)
         Call PlaceMouintains(m, free)
         Call PlaceOtherObjects(m, free)
-        Call AddMerchItems()
-        Call AddMercinaries()
-        Call AddSpells()
 
         Dim t1 As Integer = Environment.TickCount
         Console.WriteLine("Objects types definition: " & t1 - t0)
@@ -4580,8 +4577,8 @@ Public Class ImpenetrableObjects
                             End If
                         Next i
                     ElseIf mineType(x, y) = My.Resources.mineTypeRandomMana Then
-                        types = New String() {"green", "black", "white", "red", "blue"}
-                        weights = New Double() {1, 1, 1, 1, 1}
+                        types = New String() {My.Resources.mineTypeRandomMana}
+                        weights = New Double() {1}
                     End If
                     IDs.Clear()
                     For i As Integer = 0 To UBound(types) Step 1
@@ -5229,16 +5226,30 @@ Public Class ImpenetrableObjects
         m = tmpm
     End Sub
 
+End Class
+
+Public Class ObjectsContentSet
+
+    Dim comm As New Common
+    Dim manaSourcesTypes() As String = New String() {"G000CR0000GR", "G000CR0000RG", "G000CR0000WH", "G000CR0000RD", "G000CR0000YE"}
+
+    Public Function SetRandomMine() As String
+        Dim r As Integer = comm.rndgen.RndPos(manaSourcesTypes.Length, True) - 1
+        Return manaSourcesTypes(r)
+    End Function
+
     Private Sub AddSpells()
 
     End Sub
 
-    Private Sub AddMercinaries()
+    Private Sub AddMercenaries()
 
     End Sub
 
     Private Sub AddMerchItems()
 
     End Sub
+
+
 
 End Class

@@ -75,13 +75,18 @@ Public Class CommonTest
                .excludeConsumableItems = True}, _
             New RandStack.DesiredStats With {.LocationName = "l", .ExpBarAverage = 1000, .ExpStackKilled = 200, _
                .Race = New List(Of Integer), .StackSize = 1, .MaxGiants = 0, .MeleeCount = 2, .LootCost = 0, _
-               .excludeConsumableItems = True, .excludeNonconsumableItems = True}
+               .excludeConsumableItems = True, .excludeNonconsumableItems = True}, _
+            New RandStack.DesiredStats With {.LocationName = "22", .ExpBarAverage = 200, .ExpStackKilled = 75, .MeleeCount = 2, _
+                                             .Race = New List(Of Integer), .StackSize = 2, .shopContent = New List(Of String)}
             }
         expected(0).Race.AddRange(New Integer() {2})
         expected(1).Race.AddRange(New Integer() {2, 9})
         expected(2).Race.AddRange(New Integer() {1})
         expected(3).Race.AddRange(New Integer() {1})
         expected(4).Race.AddRange(New Integer() {1})
+        expected(5).Race.AddRange(New Integer() {1})
+
+        expected(5).shopContent.AddRange(New String() {"G000UU9999", "1000", "1000", "500"})
 
         Dim actual() As RandStack.DesiredStats = target.ParseDesiredStackStatsFile(RandomStackGenerator.My.Resources.testFileKeyword)
 
@@ -102,6 +107,13 @@ Public Class CommonTest
                     Next item
                 Else
                     ok = False
+                End If
+                If Not IsNothing(expected(i).shopContent) = IsNothing(actual(i).shopContent) Then
+                    ok = False
+                ElseIf Not IsNothing(expected(i).shopContent) Then
+                    For Each item As String In expected(i).shopContent
+                        If Not actual(i).shopContent.Contains(item) Then ok = False
+                    Next item
                 End If
             Next i
         Else
@@ -124,7 +136,8 @@ Public Class CommonTest
         "ID testloc2 AverageExpBar 100 ExpStackKilled 200 Race U+D StackSize 3 MaxGiants 1 MeleeCount 0 LootCost 3400 CItemsExclude False NItemsExclude False" & vbNewLine & _
         "ID loc3 AverageExpBar 1000 ExpStackKilled 200 Race H StackSize 1 MaxGiants 0 MeleeCount 2 LootCost 0 CItemsExclude False NItemsExclude False" & vbNewLine & _
         "ID loc54 AverageExpBar 1000 ExpStackKilled 200 Race H StackSize 1 MaxGiants 0 MeleeCount 2 LootCost 0 CItemsExclude True NItemsExclude False" & vbNewLine & _
-        "ID l AverageExpBar 1000 ExpStackKilled 200 Race H StackSize 1 MaxGiants 0 MeleeCount 2 LootCost 0 CItemsExclude True NItemsExclude True" & vbNewLine
+        "ID l AverageExpBar 1000 ExpStackKilled 200 Race H StackSize 1 MaxGiants 0 MeleeCount 2 LootCost 0 CItemsExclude True NItemsExclude True" & vbNewLine & _
+        "ID 22 ShopContent G000UU9999+1000+1000+500" & vbNewLine
         Dim content() As RandStack.DesiredStats = target.ParseDesiredStackStatsFile(path)
         Call target.WriteDesiredStackStats(path, content)
 
