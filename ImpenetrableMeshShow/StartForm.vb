@@ -43,38 +43,61 @@ Friend Class StartForm
         sM.PassGuardsPowerMultiplicator = 2
         sM.Wealth = 0.8
         sM.WaterAmount = 0.3
+        sM.spellsMaxLevel = 5
 
         Dim sR As Map.SettingsLoc
         sR.AverageRadius = 20
         sR.maxEccentricityDispersion = 0.15
         sR.maxRadiusDispersion = 0
-        sR.maxGoldMines = 2
-        sR.maxManaSources = 3
+        sR.maxGoldMines = 1
+        sR.maxManaSources = 2
         sR.maxCities = 0
         sR.maxMages = 1
-        sR.maxMercenaries = 0
-        sR.maxRuins = 2
+        sR.maxMercenaries = 1
+        sR.maxRuins = 0
         sR.maxTrainers = 0
         sR.maxVendors = 1
         sR.minStackToStackDist = 4
-        sR.expAmount = 3000
+        sR.expAmount = 6000
+
+        sR.mageGlobalSpellsEnabled = False
+        sR.mageSpellsCount = 5
+        sR.mageSpellsMaxLevel = 2
+        sR.mageSpellsMinLevel = 1
+        sR.merchItemsCost = 2000
+        sR.merchMaxItemCost = 1000
+        sR.merchMinItemCost = 0
+        sR.mercenariesCount = 3
+        sR.mercenariesMaxExpBar = 900
+        sR.mercenariesMinExpBar = 200
 
         Dim sC As Map.SettingsLoc
         sC.AverageRadius = 15
         sC.maxEccentricityDispersion = 0.4
         sC.maxRadiusDispersion = 0.3
 
-        sC.maxGoldMines = 0.6
-        sC.maxManaSources = 0.6
-        sC.maxCities = 2
-        sC.maxMages = 0.1
-        sC.maxMercenaries = 0.1
-        sC.maxRuins = 0.1
+        sC.maxGoldMines = 0
+        sC.maxManaSources = 1
+        sC.maxCities = 0
+        sC.maxMages = 1
+        sC.maxMercenaries = 1
+        sC.maxRuins = 0
         sC.maxTrainers = 0
-        sC.maxVendors = 0.2
+        sC.maxVendors = 1
 
         sC.minStackToStackDist = 5
-        sC.expAmount = 2000
+        sC.expAmount = 15000
+
+        sC.mageGlobalSpellsEnabled = True
+        sC.mageSpellsCount = 4
+        sC.mageSpellsMaxLevel = 4
+        sC.mageSpellsMinLevel = 2
+        sC.merchItemsCost = 4000
+        sC.merchMaxItemCost = 1500
+        sC.merchMinItemCost = 100
+        sC.mercenariesCount = 5
+        sC.mercenariesMaxExpBar = 1700
+        sC.mercenariesMinExpBar = 1000
 
         Dim gt As Integer = 10000
 again:
@@ -129,15 +152,15 @@ again:
                     't(x, y) = 100
                 End If
                 If grid.board(x, y).GuardLoc Then
-                    't(x, y) = 125
+                    t(x, y) = 125
                 End If
                 If grid.board(x, y).PassGuardLoc Then
-                    't(x, y) = 185
+                    t(x, y) = 185
                 End If
                 If grid.board(x, y).isBorder Then
                     t(x, y) = grid.board(x, y).objRace.Item(0)
                 ElseIf grid.board(x, y).isWater Then
-                    't(x, y) += 200
+                    t(x, y) += 200
                 End If
             Next y
         Next x
@@ -151,7 +174,7 @@ again:
                                 If Not grid.board(i, j).isBorder Or t(i, j) > 500 Then
                                     Throw New Exception
                                 End If
-                                t(i, j) = 501
+                                't(i, j) = 501
                             Next i
                         Next j
                     End If

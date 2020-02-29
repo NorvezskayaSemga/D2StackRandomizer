@@ -12,8 +12,7 @@
         Dim LocID As Integer
     End Structure
 
-
-    '''<summary>Вернет таблицу, где ключ - ID группы, значение - параметры генерации без определенной расы отряда</summary>
+    '''<summary>Заполнит m.groupStats, где ключ - ID группы, значение - параметры генерации без определенной расы отряда</summary>
     ''' <param name="m">Заготовка карты после работы генератора положения отрядов</param>
     ''' <param name="settMap">Общие настройки для карты</param>
     ''' <param name="settRaceLoc">Настройки для стартовых локаций играбельных рас.
@@ -34,8 +33,9 @@
         If settMap.LocExpRatio < 1 Then settMap.LocExpRatio = 1 / settMap.LocExpRatio
         Dim guards As Dictionary(Of Integer, StackLoc) = MakeGuardsList(m)
         Dim LocTotalExp() As Double = MakeLocationsList(m, settMap, settRaceLoc, settCommLoc)
-        m.groupStats = GenStacksStats(settMap, guards, LocTotalExp)
+        m.groupStats = GenStacksStats(settMap, guards, LocTotalExp, m)
         m.complited.StacksDesiredStatsGen_Done = True
+
         Console.WriteLine("Stacks stats gen " & Environment.TickCount - t0)
     End Sub
 
@@ -154,7 +154,7 @@
 
     Private Function GenStacksStats(ByRef settMap As Map.SettingsMap, _
                                     ByRef guards As Dictionary(Of Integer, StackLoc), _
-                                    ByRef LocTotalExp() As Double) As Dictionary(Of Integer, RandStack.DesiredStats)
+                                    ByRef LocTotalExp() As Double, ByRef m As Map) As Dictionary(Of Integer, RandStack.DesiredStats)
         Dim res As New Dictionary(Of Integer, RandStack.DesiredStats)
         Dim W, WLoot As New Dictionary(Of Integer, Double)
         Dim Wsum(UBound(LocTotalExp)), WLootSum(UBound(LocTotalExp)) As Double

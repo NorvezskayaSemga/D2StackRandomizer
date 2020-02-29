@@ -234,14 +234,14 @@ Public Class RandStack
         ''' <summary>GxxxIGxxxx</summary>
         Dim itemID As String
         ''' <summary>Описание типов в ./Resources/Items.txt</summary>
-        Dim Type As Integer
+        Dim type As Integer
         ''' <summary>Цена покупки предмета. При продаже цена в пять раз меньше</summary>
         Dim itemCost As Cost
 
         Public Shared Function Copy(ByVal v As Item) As Item
             Return New Item With {.name = v.name, _
                                   .itemID = v.itemID, _
-                                  .Type = v.Type, _
+                                  .type = v.type, _
                                   .itemCost = Cost.Copy(v.itemCost)}
         End Function
     End Structure
@@ -339,7 +339,7 @@ Public Class RandStack
         Dim add(UBound(allitems)) As Boolean
         For i As Integer = 0 To UBound(allitems) Step 1
             If Not comm.excludedObjects.Contains(allitems(i).itemID.ToUpper) _
-            And Not comm.excludedObjects.Contains(itemType.Item(allitems(i).Type)) _
+            And Not comm.excludedObjects.Contains(itemType.Item(allitems(i).type)) _
             And allitems(i).itemCost.Gold > 0 Then
                 add(i) = True
                 n += 1
@@ -357,7 +357,7 @@ Public Class RandStack
                 n += 1
                 items(n) = Item.Copy(allitems(i))
                 GoldCost(n) = items(n).itemCost.Gold
-                If itemType.Item(items(n).Type) = "JEWEL" Then
+                If itemType.Item(items(n).type) = "JEWEL" Then
                     mult(n) = CDbl(My.Resources.JewelItemsCostMultiplicator)
                 Else
                     mult(n) = CDbl(My.Resources.nonJewelItemsCostMultiplicator)
@@ -427,7 +427,7 @@ Public Class RandStack
         For Each Item As String In s.items
             m = FindItemStats(Item)
             If m.itemID = "" Then Throw New Exception("Неизвестный id предмета: " & Item)
-            If itemType.Item(m.Type) = "JEWEL" Then
+            If itemType.Item(m.type) = "JEWEL" Then
                 result.LootCost = CInt(result.LootCost + m.itemCost.Gold / CDbl(My.Resources.JewelItemsCostMultiplicator))
             Else
                 result.LootCost = CInt(result.LootCost + m.itemCost.Gold / CDbl(My.Resources.nonJewelItemsCostMultiplicator))
@@ -455,8 +455,8 @@ Public Class RandStack
             For i As Integer = 0 To UBound(MagicItem) Step 1
                 add = False
                 If MagicItem(i).itemCost.Gold <= maxCost * multItems(i) Then add = True
-                If excludeConsumableItems And comm.ConsumableItemsTypes.Contains(MagicItem(i).Type) Then add = False
-                If excludeNonconsumableItems And comm.NonconsumableItemsTypes.Contains(MagicItem(i).Type) Then add = False
+                If excludeConsumableItems And comm.ConsumableItemsTypes.Contains(MagicItem(i).type) Then add = False
+                If excludeNonconsumableItems And comm.NonconsumableItemsTypes.Contains(MagicItem(i).type) Then add = False
                 If add Then IDs.Add(i)
             Next i
             If IDs.Count = 0 Then Exit Do
@@ -482,8 +482,8 @@ Public Class RandStack
         For i As Integer = 0 To UBound(MagicItem) Step 1
             add = False
             If MagicItem(i).itemCost.Gold <= GoldCost * multItems(i) Then add = True
-            If excludeConsumableItems And comm.ConsumableItemsTypes.Contains(MagicItem(i).Type) Then add = False
-            If excludeNonconsumableItems And comm.NonconsumableItemsTypes.Contains(MagicItem(i).Type) Then add = False
+            If excludeConsumableItems And comm.ConsumableItemsTypes.Contains(MagicItem(i).type) Then add = False
+            If excludeNonconsumableItems And comm.NonconsumableItemsTypes.Contains(MagicItem(i).type) Then add = False
             If add Then IDs.Add(i)
         Next i
         If IDs.Count > 0 Then

@@ -1429,6 +1429,8 @@ Public Class ImpenetrableMeshGen
         Next i
         If Term.ExitFromLoops Then Exit Sub
 
+        Dim maxGroupID As Integer = ImpenetrableMeshGen.GetMaxGroupID(tmpm)
+
         For y As Integer = tmpm.ySize To 0 Step -1
             For x As Integer = tmpm.xSize To 0 Step -1
                 If tmpm.board(x, y).objectID > 0 Then
@@ -1452,14 +1454,13 @@ Public Class ImpenetrableMeshGen
                     Next j
                     tmpm.board(x + d, y + d).groupID = gid
                     If ActiveObjects(id).hasExternalGuard Then
+                        maxGroupID += 1
                         tmpm.board(x + d + ActiveObjects(id).Size, _
-                                   y + d + ActiveObjects(id).Size).groupID = gid
+                                   y + d + ActiveObjects(id).Size).groupID = maxGroupID 'gid
                     End If
                 End If
             Next x
         Next y
-
-
 
     End Sub
     Private Sub ObjectsPlacingVariants(ByRef objIDs() As Integer, ByRef locID As Integer, _
@@ -1795,6 +1796,15 @@ Public Class ImpenetrableMeshGen
         Loop
         m = tmpm
     End Sub
+    Friend Shared Function GetMaxGroupID(ByRef m As Map) As Integer
+        Dim maxGroupID As Integer = -1
+        For y As Integer = 0 To m.ySize Step 1
+            For x As Integer = 0 To m.xSize Step 1
+                maxGroupID = Math.Max(maxGroupID, m.board(x, y).groupID)
+            Next x
+        Next y
+        Return maxGroupID
+    End Function
 
     Friend Function ObjectBorders(ByRef id As Integer, ByRef x As Integer, ByRef y As Integer) As Location.Borders
         Dim res As Location.Borders
@@ -3010,18 +3020,18 @@ Public Class Map
         Dim mageGlobalSpellsEnabled As Boolean
 
         '''<summary>Максимальная планка опыта у маленьких наемников (для больших в два раза выше)</summary>
-        Dim mercinariesMaxExpBar As Integer
+        Dim mercenariesMaxExpBar As Integer
         '''<summary>Минимальная планка опыта у маленьких наемников (для больших в два раза выше)</summary>
-        Dim mercinariesMinExpBar As Integer
+        Dim mercenariesMinExpBar As Integer
         '''<summary>Количество наемников в лагере</summary>
-        Dim mercinariesCount As Integer
+        Dim mercenariesCount As Integer
 
         '''<summary>Максимальная стоимость предмета у торговца</summary>
         Dim merchMaxItemCost As Integer
         '''<summary>Минимальная стоимость предмета у торговца</summary>
         Dim merchMinItemCost As Integer
         '''<summary>Полная стоимость лута у торговца</summary>
-        Dim merchLootCost As Integer
+        Dim merchItemsCost As Integer
     End Structure
     Public Structure SettingsMap
         ''' <summary>Правая граница карты (например, если генерируем карту 24x48, то сюда пишем 23)</summary>
@@ -3819,6 +3829,9 @@ Public Class WaterGen
     Private symm As New SymmetryOperations
     Private imp As New ImpenetrableMeshGen
 
+    '''<summary>Сгенерирует озера на карте</summary>
+    ''' <param name="m">Карта с сгенерированной силой отрядов</param>
+    ''' <param name="settMap">Общие настройки для карты</param>
     Public Sub Gen(ByRef m As Map, ByRef settMap As Map.SettingsMap)
 
         If Not m.complited.StacksDesiredStatsGen_Done Then
@@ -4188,6 +4201,7 @@ Public Class ImpenetrableObjects
     Private maxPlateauSize As Integer
     Private maxChainLen As Integer = 7
     Private raceSpells As Dictionary(Of String, Common.Spell)
+    Private raceIdToString As New Dictionary(Of Integer, String)
 
     Private Structure PlateauPlacingResult
         Dim obj() As Plateau
@@ -4313,8 +4327,23 @@ Public Class ImpenetrableObjects
         ruins = objList(4)
         trainers = objList(5)
         objects = objList(6)
+
+        Dim races() As String = comm.TxtSplit(My.Resources.Races)
+        For Each s As String In races
+            Dim splited() As String = s.Split(CChar(" "))
+            raceIdToString.Add(CInt(splited(UBound(splited))), splited(1).ToUpper)
+        Next s
+
     End Sub
-  
+
+    ''' <summary>Определит ID объектов и настройки содержимого лавок</summary>
+    ''' <param name="m">Карта со сгенерированными расами отрядов</param>
+    ''' <param name="settMap">Общие настройки для карты</param>
+    ''' <param name="settRaceLoc">Настройки для стартовых локаций играбельных рас.
+    ''' Дробная часть определяет шанс округления большую сторону</param>
+    ''' <param name="settCommLoc">Настройки для остальных локаций. 
+    ''' Значение количества объектов для каждой локации будет умножаться на отношение площади локации к площади средней локации (Pi*AverageRadius^2).
+    ''' Дробная часть определяет шанс округления в большую сторону</param>
     Public Sub Gen(ByRef m As Map, ByRef settMap As Map.SettingsMap, ByRef settRaceLoc As Map.SettingsLoc, ByRef settCommLoc As Map.SettingsLoc)
         If Not m.complited.StacksRaceGen_Done Then
             Throw New Exception("Сначала нужно выполнить RaceGen.Gen")
@@ -4335,6 +4364,9 @@ Public Class ImpenetrableObjects
         Call PlacePlateau(m, free)
         Call PlaceMouintains(m, free)
         Call PlaceOtherObjects(m, free)
+        Call AddSpells(m, settMap, settRaceLoc, settCommLoc)
+        Call AddMercenaries(m, settMap, settRaceLoc, settCommLoc)
+        Call AddMerchantItems(m, settMap, settRaceLoc, settCommLoc)
 
         Dim t1 As Integer = Environment.TickCount
         Console.WriteLine("Objects types definition: " & t1 - t0)
@@ -4385,7 +4417,7 @@ Public Class ImpenetrableObjects
         For i As Integer = 0 To UBound(obj.connectors) Step 1
             t = True
             For j As Integer = 0 To UBound(obj.connectors(i)) Step 1
-                Call connectorPos(xx, yy, x, y, obj.connectors(i)(j), obj)
+                Call connectorPos(xx, yy, x, y, obj.connectors(i)(j))
                 If xx < 0 Or yy < 0 Or xx > m.xSize Or yy > m.ySize Then Return False
                 If Not IsNothing(Connector) AndAlso Not Connector(xx, yy) = 1 Then
                     t = False
@@ -4851,13 +4883,13 @@ Public Class ImpenetrableObjects
         Dim xx, yy As Integer
         For i As Integer = 0 To UBound(obj.connectors) Step 1
             For j As Integer = 0 To UBound(obj.connectors(i)) Step 1
-                Call connectorPos(xx, yy, x, y, obj.connectors(i)(j), obj)
-                connectors(x + obj.connectors(i)(j).X, y + obj.connectors(i)(j).Y) += whatAdd
+                Call connectorPos(xx, yy, x, y, obj.connectors(i)(j))
+                connectors(xx, yy) += whatAdd
             Next j
         Next i
     End Sub
     Private Sub connectorPos(ByRef xOut As Integer, ByRef yOut As Integer, ByRef x As Integer, ByRef y As Integer, _
-                             ByRef connectorRelativePos As Point, ByRef obj As Plateau)
+                             ByRef connectorRelativePos As Point)
         xOut = x + connectorRelativePos.X
         yOut = y + connectorRelativePos.Y
         'If connectorRelativePos.X > 0 Then xOut += obj.xSize - 1
@@ -5226,30 +5258,181 @@ Public Class ImpenetrableObjects
         m = tmpm
     End Sub
 
+    Private Sub AddSpells(ByRef m As Map, ByRef settMap As Map.SettingsMap, ByRef settRaceLoc As Map.SettingsLoc, ByRef settCommLoc As Map.SettingsLoc)
+        Dim maxGroupID As Integer = ImpenetrableMeshGen.GetMaxGroupID(m)
+        Dim objList As Dictionary(Of Integer, List(Of Point)) = FindGroupsOfObjects(m, 5)
+        Dim levels As List(Of Integer)
+        Dim r, n As Integer
+        Dim setNewGroup As Boolean
+        For Each g As Integer In objList.Keys
+            If pointLoc(m, objList.Item(g).Item(0)) <= settMap.nRaces Then
+                setNewGroup = False
+                levels = SelectSpellsLevel(settRaceLoc)
+                For Each p As Point In objList.Item(g)
+                    r = m.board(p.X, p.Y).objRace.Item(0)
+                    If setNewGroup Then
+                        maxGroupID += 1
+                        n = maxGroupID
+                        m.board(p.X, p.Y).groupID = maxGroupID
+                    Else
+                        setNewGroup = True
+                        n = g
+                    End If
+                    m.groupStats.Add(n, New RandStack.DesiredStats With {.shopContent = SelectSpells(settRaceLoc, r, levels)})
+                Next p
+            Else
+                levels = SelectSpellsLevel(settCommLoc)
+                m.groupStats.Add(g, New RandStack.DesiredStats With {.shopContent = SelectSpells(settCommLoc, -1, levels)})
+            End If
+        Next g
+    End Sub
+    Private Function SelectSpells(ByRef settLoc As Map.SettingsLoc, ByRef raceID As Integer, ByRef levels As List(Of Integer)) As List(Of String)
+        Dim res As New List(Of String)
+        Dim v, r As String
+        If raceID = -1 Then
+            r = "R"
+        Else
+            r = raceIdToString.Item(raceID)
+        End If
+        For Each L As Integer In levels
+            v = L.ToString & r
+            If settLoc.mageGlobalSpellsEnabled Then
+                v &= "T"
+            Else
+                v &= "F"
+            End If
+            res.Add(v)
+        Next L
+        Return res
+    End Function
+    Private Function SelectSpellsLevel(ByRef settLoc As Map.SettingsLoc) As List(Of Integer)
+        Dim res As New List(Of Integer)
+        For i As Integer = 1 To settLoc.mageSpellsCount Step 1
+            res.Add(RndInt(settLoc.mageSpellsMinLevel, settLoc.mageSpellsMaxLevel))
+        Next i
+        Return res
+    End Function
+    Private Function FindGroupsOfObjects(ByRef m As Map, ByRef objType As Integer) As Dictionary(Of Integer, List(Of Point))
+        Dim res As New Dictionary(Of Integer, List(Of Point))
+        For y As Integer = 0 To m.ySize Step 1
+            For x As Integer = 0 To m.xSize Step 1
+                If m.board(x, y).objectID = objType Then
+                    If Not res.ContainsKey(m.board(x, y).groupID) Then res.Add(m.board(x, y).groupID, New List(Of Point))
+                    res.Item(m.board(x, y).groupID).Add(New Point(x, y))
+                End If
+            Next x
+        Next y
+        Return res
+    End Function
+    Private Function RndInt(ByRef min As Integer, ByRef max As Integer) As Integer
+        Return min - 1 + comm.rndgen.RndPos(max - min + 1, True)
+    End Function
+    Private Function pointLoc(ByRef m As Map, ByRef p As Point) As Integer
+        Return m.board(p.X, p.Y).locID.Item(0)
+    End Function
+
+    Private Sub AddMercenaries(ByRef m As Map, ByRef settMap As Map.SettingsMap, ByRef settRaceLoc As Map.SettingsLoc, ByRef settCommLoc As Map.SettingsLoc)
+        Dim objList As Dictionary(Of Integer, List(Of Point)) = FindGroupsOfObjects(m, 4)
+        For Each g As Integer In objList.Keys
+            If pointLoc(m, objList.Item(g).Item(0)) <= settMap.nRaces Then
+                m.groupStats.Add(g, New RandStack.DesiredStats With {.shopContent = SelectMercenaries(settRaceLoc)})
+            Else
+                m.groupStats.Add(g, New RandStack.DesiredStats With {.shopContent = SelectMercenaries(settCommLoc)})
+            End If
+        Next g
+    End Sub
+    Private Function SelectMercenaries(ByRef settLoc As Map.SettingsLoc) As List(Of String)
+        Dim res As New List(Of String)
+        For i As Integer = 1 To settLoc.mercenariesCount Step 1
+            res.Add(RndInt(settLoc.mercenariesMinExpBar, settLoc.mercenariesMaxExpBar).ToString)
+        Next i
+        Return res
+    End Function
+
+    Private Sub AddMerchantItems(ByRef m As Map, ByRef settMap As Map.SettingsMap, ByRef settRaceLoc As Map.SettingsLoc, ByRef settCommLoc As Map.SettingsLoc)
+        Dim objList As Dictionary(Of Integer, List(Of Point)) = FindGroupsOfObjects(m, 3)
+        For Each g As Integer In objList.Keys
+            If pointLoc(m, objList.Item(g).Item(0)) <= settMap.nRaces Then
+                m.groupStats.Add(g, New RandStack.DesiredStats With {.shopContent = SelectMerchantItems(settRaceLoc)})
+            Else
+                m.groupStats.Add(g, New RandStack.DesiredStats With {.shopContent = SelectMerchantItems(settCommLoc)})
+            End If
+        Next g
+    End Sub
+    Private Function SelectMerchantItems(ByRef settLoc As Map.SettingsLoc) As List(Of String)
+        Dim res As New List(Of String)
+        Dim sum, v As Integer
+        If settLoc.merchMinItemCost + settLoc.merchMaxItemCost = 0 Then Return res
+        Do While sum < settLoc.merchItemsCost
+            v = RndInt(settLoc.merchMinItemCost, settLoc.merchMaxItemCost)
+            If sum + v > settLoc.merchItemsCost Then v = settLoc.merchItemsCost - sum
+            sum += v
+            res.Add(v.ToString)
+        Loop
+        Return res
+    End Function
+
 End Class
 
 Public Class ObjectsContentSet
 
-    Dim comm As New Common
-    Dim manaSourcesTypes() As String = New String() {"G000CR0000GR", "G000CR0000RG", "G000CR0000WH", "G000CR0000RD", "G000CR0000YE"}
+    Private comm As New Common
+    Private manaSourcesTypes() As String = New String() {"G000CR0000GR", "G000CR0000RG", "G000CR0000WH", "G000CR0000RD", "G000CR0000YE"}
 
-    Public Function SetRandomMine() As String
-        Dim r As Integer = comm.rndgen.RndPos(manaSourcesTypes.Length, True) - 1
-        Return manaSourcesTypes(r)
+    Private units As New List(Of RandStack.Unit)
+    Private items As New List(Of RandStack.Item)
+
+    ''' <param name="AllUnitsList">Dсе юниты в игре</param>
+    ''' <param name="AllItemsList">Все предметы в игре</param>
+    ''' <param name="ExcludeLists">Файлы со списками исключенных объектов. Записи в них могут повторяться. 
+    ''' Допускается передача неинициализитрованного массива.
+    ''' Для чтения из дефолтного листа в массив нужно добавить строчку %default% (наличие этого ключевого в файле запустит чтение дефолтного файла)</param>
+    Public Sub New(ByRef AllUnitsList() As RandStack.Unit, ByRef AllItemsList() As RandStack.Item, ByRef ExcludeLists() As String)
+
+        Call comm.ReadExcludedObjectsList(ExcludeLists)
+
+        Dim excludeRaces As New List(Of Integer)
+        excludeRaces.AddRange(New Integer() {1, 2, 3, 4, 14})
+        For i As Integer = 0 To UBound(AllUnitsList) Step 1
+            If AllUnitsList(i).unitBranch < 5 _
+            AndAlso Not comm.excludedObjects.Contains(AllUnitsList(i).unitID.ToUpper) _
+            AndAlso Not excludeRaces.Contains(AllUnitsList(i).race) Then
+                units.Add(AllUnitsList(i))
+            End If
+        Next i
+
+        Dim excludeItems As New List(Of Integer)
+        excludeItems.AddRange(New Integer() {10, 14})
+        For i As Integer = 0 To UBound(AllItemsList) Step 1
+            If Not comm.excludedObjects.Contains(AllItemsList(i).itemID.ToUpper) _
+            AndAlso Not excludeItems.Contains(AllItemsList(i).type) Then
+                items.Add(AllItemsList(i))
+            End If
+        Next i
+    End Sub
+
+    ''' <summary>Определит тип случайной шахты. Если тип уже определен, то этот тип и вернет</summary>
+    ''' <param name="mineObjectName">Название шахты, как его выдал генератор</param>
+    Public Function SetMineType(ByRef mineObjectName As String) As String
+        If mineObjectName.ToUpper = My.Resources.mineTypeRandomMana Then
+            Dim r As Integer = comm.rndgen.RndPos(manaSourcesTypes.Length, True) - 1
+            Return manaSourcesTypes(r)
+        Else
+            Return mineObjectName
+        End If
     End Function
 
-    Private Sub AddSpells()
+    Private Function MakeSpellsList(ByRef d As RandStack.DesiredStats, ByRef spells As Dictionary(Of String, Common.Spell)) As List(Of String)
 
-    End Sub
+    End Function
 
-    Private Sub AddMercenaries()
+    Private Function MakeMercenariesList(ByRef d As RandStack.DesiredStats) As List(Of String)
 
-    End Sub
+    End Function
 
-    Private Sub AddMerchItems()
+    Private Function MakeMerchItemsList(ByRef d As RandStack.DesiredStats) As List(Of String)
 
-    End Sub
-
+    End Function
 
 
 End Class

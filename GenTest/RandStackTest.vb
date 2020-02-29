@@ -93,7 +93,7 @@ Public Class RandStackTest
         For i As Integer = 1 To UBound(s) Step 1
             r = s(i).Split(" ")
             If r.Length = 3 Then
-                ItemsList(i - 1).Type = r(0)
+                ItemsList(i - 1).type = r(0)
                 ItemsList(i - 1).itemID = r(1)
                 ItemsList(i - 1).itemCost = RandStack.Cost.Read(r(2))
             End If
@@ -354,7 +354,7 @@ exittest:
             genitems = target.ItemsGen(cost, False, False)
             sum = 0
             For Each id As String In genitems
-                If target.itemType.Item(target.FindItemStats(id).Type) = "JEWEL" Then
+                If target.itemType.Item(target.FindItemStats(id).type) = "JEWEL" Then
                     sum += target.FindItemStats(id).itemCost.Gold / 2
                 Else
                     sum += target.FindItemStats(id).itemCost.Gold
