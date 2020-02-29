@@ -154,8 +154,8 @@
 
     Private Function GenStacksStats(ByRef settMap As Map.SettingsMap, _
                                     ByRef guards As Dictionary(Of Integer, StackLoc), _
-                                    ByRef LocTotalExp() As Double, ByRef m As Map) As Dictionary(Of Integer, RandStack.DesiredStats)
-        Dim res As New Dictionary(Of Integer, RandStack.DesiredStats)
+                                    ByRef LocTotalExp() As Double, ByRef m As Map) As Dictionary(Of Integer, AllDataStructues.DesiredStats)
+        Dim res As New Dictionary(Of Integer, AllDataStructues.DesiredStats)
         Dim W, WLoot As New Dictionary(Of Integer, Double)
         Dim Wsum(UBound(LocTotalExp)), WLootSum(UBound(LocTotalExp)) As Double
         For Each id As Integer In guards.Keys
@@ -235,7 +235,7 @@
         Next id
         Return res
     End Function
-    Private Function GenDesiredStats(ByRef expKilled As Double, ByRef LootCost As Double, ByRef groupID As Integer) As RandStack.DesiredStats
+    Private Function GenDesiredStats(ByRef expKilled As Double, ByRef LootCost As Double, ByRef groupID As Integer) As AllDataStructues.DesiredStats
         Return StackStatsGen.GenDesiredStats(expKilled, LootCost, rndgen, groupID)
     End Function
 End Class
@@ -255,10 +255,10 @@ Class StackStatsGen
         Return CInt(UnitExpBarToExpKilled(CDbl(value)))
     End Function
 
-    Friend Shared Function GenDesiredStats(ByRef expKilled As Double, ByRef LootCost As Double, ByRef rndGen As RandomStackGenerator.RndValueGen) As RandStack.DesiredStats
+    Friend Shared Function GenDesiredStats(ByRef expKilled As Double, ByRef LootCost As Double, ByRef rndGen As RandomStackGenerator.RndValueGen) As AllDataStructues.DesiredStats
         Return StackStatsGen.GenDesiredStats(expKilled, LootCost, rndGen, -1)
     End Function
-    Friend Shared Function GenDesiredStats(ByRef expKilled As Double, ByRef LootCost As Double, ByRef rndGen As RandomStackGenerator.RndValueGen, ByRef groupID As Integer) As RandStack.DesiredStats
+    Friend Shared Function GenDesiredStats(ByRef expKilled As Double, ByRef LootCost As Double, ByRef rndGen As RandomStackGenerator.RndValueGen, ByRef groupID As Integer) As AllDataStructues.DesiredStats
         Dim eKilled As Double = expKilled
         Dim stackSize As Integer = rndGen.RndPos(6, True)
         Dim meleeCount As Integer = rndGen.RndPos(Math.Min(stackSize, 3), True)
@@ -278,7 +278,7 @@ Class StackStatsGen
         Dim avExpKilled As Double = eKilled / (stackSize - 0.5 * maxGiants)
         Dim eBar As Integer = CInt(UnitExpKilledToExpBar(avExpKilled) * rndGen.PRand(minD, maxD))
 
-        Return New RandStack.DesiredStats With {.ExpStackKilled = CInt(eKilled), _
+        Return New AllDataStructues.DesiredStats With {.ExpStackKilled = CInt(eKilled), _
                                                 .StackSize = stackSize, _
                                                 .MeleeCount = meleeCount, _
                                                 .MaxGiants = maxGiants, _

@@ -61,13 +61,13 @@ Public Class RandStack_CostTest
                              "g0000:r0000:y0000:e0400:w0000:b0000", _
                              "g0000:r0000:y0000:e0000:w0000:b0500"}
 
-    Private testCosts() As RandStack.Cost = New RandStack.Cost() {
-                       New RandStack.Cost With {.Gold = 1500}, _
-                       New RandStack.Cost With {.Blue = 100}, _
-                       New RandStack.Cost With {.Red = 200}, _
-                       New RandStack.Cost With {.White = 300}, _
-                       New RandStack.Cost With {.Black = 400}, _
-                       New RandStack.Cost With {.Green = 500}}
+    Private testCosts() As AllDataStructues.Cost = New AllDataStructues.Cost() {
+                       New AllDataStructues.Cost With {.Gold = 1500}, _
+                       New AllDataStructues.Cost With {.Blue = 100}, _
+                       New AllDataStructues.Cost With {.Red = 200}, _
+                       New AllDataStructues.Cost With {.White = 300}, _
+                       New AllDataStructues.Cost With {.Black = 400}, _
+                       New AllDataStructues.Cost With {.Green = 500}}
 
     '''<summary>
     '''A test for Print
@@ -77,7 +77,7 @@ Public Class RandStack_CostTest
         Dim ok As Boolean = True
         Dim s As String
         For i As Integer = 0 To UBound(testCosts) Step 1
-            s = RandStack_Accessor.Cost.Print(testCosts(i))
+            s = AllDataStructues.Cost.Print(testCosts(i))
             If Not s = testStrings(i) And (Not testStrings(i).Contains("b") _
                                            And Not s = testStrings(i) & ":b0000") Then
                 ok = False
@@ -93,9 +93,9 @@ Public Class RandStack_CostTest
     <TestMethod()> _
     Public Sub ReadTest()
         Dim ok As Boolean = True
-        Dim t As RandStack.Cost
+        Dim t As AllDataStructues.Cost
         For i As Integer = 0 To UBound(testCosts) Step 1
-            t = RandStack_Accessor.Cost.Read(testStrings(i))
+            t = AllDataStructues.Cost.Read(testStrings(i))
             If Not t.Black = testCosts(i).Black _
             Or Not t.Blue = testCosts(i).Blue _
             Or Not t.Gold = testCosts(i).Gold _

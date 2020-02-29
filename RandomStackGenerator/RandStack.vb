@@ -7,247 +7,10 @@ Public Class RandStack
     Private busytransfer() As Integer = New Integer() {1, -1, 3, -1, 5, -1}
     Private firstrow() As Integer = New Integer() {0, 2, 4}
     Private secondrow() As Integer = New Integer() {1, 3, 5}
-    Private itemGenSigma As Double = SigmaMultiplier(New DesiredStats With {.StackSize = 1})
+    Private itemGenSigma As Double = SigmaMultiplier(New AllDataStructues.DesiredStats With {.StackSize = 1})
 
-    Public Structure Stack
-        ''' <summary>ID юнита для каждой позиции</summary>
-        Dim pos() As String
-        ''' <summary>В какой позиции находится лидер</summary>
-        Dim leaderPos As Integer
-        ''' <summary>Предметы отряда. GxxxIGxxxx</summary>
-        Dim items As List(Of String)
-        ''' <summary>Имя отряда</summary>
-        Dim name As String
-    End Structure
-
-    Public Structure Unit
-        ''' <summary>Имя</summary>
-        Dim name As String
-        ''' <summary>Базовый уровень</summary>
-        Dim level As Integer
-        ''' <summary>Номер расы</summary>
-        Dim race As Integer
-        ''' <summary>Опыт за убийство юнита</summary>
-        Dim EXPkilled As Integer
-        ''' <summary>Опыт для апа уровня</summary>
-        Dim EXPnext As Integer
-        ''' <summary>Лидерство от 0 до 6</summary>
-        Dim leadership As Integer
-        ''' <summary>Область атаки. 1 – все цели; 2 – любая цель; 3 – ближайшая цель.</summary>
-        Dim reach As Integer
-        ''' <summary>GxxxUUxxxx</summary>
-        Dim unitID As String
-        ''' <summary>True, если занимает одну клетку</summary>
-        Dim small As Boolean
-        ''' <summary>True, если может находиться только на воде</summary>
-        Dim waterOnly As Boolean
-        ''' <summary>0 - мили, 1 - лучники, 2 - маги, 3 - поддержка, 4 - особые (оборотень, сатир и т.д.), 
-        ''' 5 - обычный лидер, 6 - вор, 7 - саммон</summary>
-        Dim unitBranch As Integer
-        ''' <summary>Цена найма юнита</summary>
-        Dim unitCost As Cost
-
-        Public Shared Function Copy(ByVal v As Unit) As Unit
-            Return New Unit With {.name = v.name, _
-                                  .level = v.level, _
-                                  .race = v.race, _
-                                  .EXPkilled = v.EXPkilled, _
-                                  .EXPnext = v.EXPnext, _
-                                  .leadership = v.leadership, _
-                                  .reach = v.reach, _
-                                  .unitID = v.unitID.ToUpper, _
-                                  .small = v.small, _
-                                  .waterOnly = v.waterOnly, _
-                                  .unitBranch = v.unitBranch, _
-                                  .unitCost = Cost.Copy(v.unitCost)}
-        End Function
-    End Structure
-
-    Public Structure DesiredStats
-        ''' <summary>Примерная планка опыта для маленьких воинов</summary>
-        Dim ExpBarAverage As Integer
-        ''' <summary>Допустимые расы для отряда</summary>
-        Dim Race As List(Of Integer)
-        ''' <summary>Примерный опыт за убийство стэка</summary>
-        Dim ExpStackKilled As Integer
-        ''' <summary>Количество свободных ячеек под отряд. Есть 10% шанс на +1 слот и 10% неа -1 слот</summary>
-        Dim StackSize As Integer
-        ''' <summary>Максимальное количество больших воинов в отряде</summary>
-        Dim MaxGiants As Integer
-        ''' <summary>Сколько ячеек в первом ряду должно быть заполнено</summary>
-        Dim MeleeCount As Integer
-        ''' <summary>Стоимость лута (предметы со стоимостью в золоте, равной нулю, не добавляются). При расчете стоимость драгоценностей уменьшается в два раза</summary>
-        Dim LootCost As Integer
-        ''' <summary> Идентификатор локации, для которой сгенерирован отряд</summary>
-        Dim LocationName As String
-        ''' <summary>Не генерировать зелья, сферы, талисманы и свитки</summary>
-        Dim excludeConsumableItems As Boolean
-        ''' <summary>Не генерировать надеваемые предметы и посохи</summary>
-        Dim excludeNonconsumableItems As Boolean
-
-        ''' <summary>Не nothing только для торговцев предметами и магией, а также лагеря наемников</summary>
-        Dim shopContent As List(Of String)
-
-        Public Shared Function Copy(ByVal v As DesiredStats) As DesiredStats
-            Dim RacesList As New List(Of Integer)
-            For Each Item As Integer In v.Race
-                RacesList.Add(Item)
-            Next Item
-            Dim shopContentList As List(Of String) = Nothing
-            If Not IsNothing(v.shopContent) Then
-                shopContentList = New List(Of String)
-                For Each Item As String In v.shopContent
-                    shopContentList.Add(Item)
-                Next Item
-            End If
-            Return New DesiredStats With {.ExpBarAverage = v.ExpBarAverage, _
-                                          .ExpStackKilled = v.ExpStackKilled, _
-                                          .MaxGiants = v.MaxGiants, _
-                                          .MeleeCount = v.MeleeCount, _
-                                          .Race = RacesList, _
-                                          .StackSize = v.StackSize, _
-                                          .LootCost = v.LootCost, _
-                                          .LocationName = v.LocationName, _
-                                          .excludeConsumableItems = v.excludeConsumableItems, _
-                                          .excludeNonconsumableItems = v.excludeNonconsumableItems, _
-                                          .shopContent = shopContentList}
-        End Function
-        ''' <param name="RaceNumberToRaceChar">Преобразует номер расы в ее текстовый идентификатор. Если передать Nothing, то будут печататься номера рас</param>
-        Public Shared Function Print(ByVal v As DesiredStats, ByRef RaceNumberToRaceChar As Dictionary(Of Integer, String)) As String
-            Dim s As String
-            If IsNothing(v.shopContent) Then
-                Dim races As String = ""
-                For Each Item As Integer In v.Race
-                    If Not races = "" Then races &= "+"
-                    If Not IsNothing(RaceNumberToRaceChar) Then
-                        races &= RaceNumberToRaceChar.Item(Item)
-                    Else
-                        races &= Item
-                    End If
-                Next Item
-                s = "AverageExpBar" & vbTab & v.ExpBarAverage & vbNewLine & _
-                    "ExpStackKilled" & vbTab & v.ExpStackKilled & vbNewLine & _
-                    "Race" & vbTab & races & vbNewLine & _
-                    "StackSize" & vbTab & v.StackSize & vbNewLine & _
-                    "MaxGiants" & vbTab & v.MaxGiants & vbNewLine & _
-                    "MeleeCount" & vbTab & v.MeleeCount & vbNewLine & _
-                    "LootCost" & vbTab & v.LootCost & vbNewLine & _
-                    "CItemsExclude" & vbTab & v.excludeConsumableItems & vbNewLine & _
-                    "NItemsExclude" & vbTab & v.excludeNonconsumableItems & vbNewLine
-            Else
-                Dim goods As String = ""
-                For Each Item As String In v.shopContent
-                    If Not goods = "" Then goods &= "+"
-                    goods &= Item
-                Next Item
-                s = "ShopContent" & vbTab & goods & vbNewLine
-            End If
-            Return "ID" & vbTab & v.LocationName & vbNewLine & s
-        End Function
-    End Structure
-
-    Public Structure Cost
-        ''' <summary>Золото</summary>
-        Dim Gold As Integer
-        ''' <summary>Мана Жизни</summary>
-        Dim Blue As Integer
-        ''' <summary>Мана Преисподней</summary>
-        Dim Red As Integer
-        ''' <summary>Мана Рун</summary>
-        Dim White As Integer
-        ''' <summary>Мана Смерти</summary>
-        Dim Black As Integer
-        ''' <summary>Мана Лесного Эликсира</summary>
-        Dim Green As Integer
-
-        Public Shared Function Copy(ByVal v As Cost) As Cost
-            Return New Cost With {.gold = v.Gold, _
-                                  .Blue = v.Blue, _
-                                  .Red = v.Red, _
-                                  .White = v.White, _
-                                  .Black = v.Black, _
-                                  .Green = v.Green}
-        End Function
-        ''' <summary>Парсит строку стоимости в родном для D2 формате. Игнорирует регистр, пробелы и табы. Пропущенные поля интерпретирует как ноль</summary>
-        ''' <param name="costString">g0000:r0000:y0000:e0000:w0000:b0000</param>
-        Public Shared Function Read(ByVal costString As String) As Cost
-            Dim splited() As String = costString.Replace(" ", "").Replace(vbTab, "").ToLower.Split(CChar(":"))
-            Dim res As New Cost
-            For i As Integer = 0 To UBound(splited) Step 1
-                Dim s1 As String = splited(i).Substring(0, 1)
-                Dim v As String = splited(i).Substring(1)
-                Do While v.Substring(0, 1) = "0" And v.Length > 1
-                    v = v.Substring(1)
-                Loop
-                If Not IsNumeric(v) Then
-                    Throw New Exception("Количество ресурса не является числом: " & costString & " , ресурс: " & s1)
-                    Return Nothing
-                End If
-                If s1 = "g" Then
-                    res.Gold = CInt(v)
-                ElseIf s1 = "r" Then
-                    res.Red = CInt(v)
-                ElseIf s1 = "y" Then
-                    res.Blue = CInt(v)
-                ElseIf s1 = "e" Then
-                    res.Black = CInt(v)
-                ElseIf s1 = "w" Then
-                    res.White = CInt(v)
-                ElseIf s1 = "b" Then
-                    res.Green = CInt(v)
-                Else
-                    Throw New Exception("Неожиданный формат стоимости: " & costString)
-                    Return Nothing
-                End If
-            Next i
-            Return res
-        End Function
-        ''' <summary>Печатает стоимость в понятном для игры формате</summary>
-        ''' <param name="v">цена: золото и мана</param>
-        Public Shared Function Print(ByVal v As Cost) As String
-            Dim ch() As String = New String() {"g", "r", "y", "e", "w", "b"}
-            Dim val() As Integer = New Integer() {v.Gold, v.Red, v.Blue, v.Black, v.White, v.Green}
-            Dim s As String = ""
-            For i As Integer = 0 To UBound(ch) Step 1
-                s &= ch(i)
-                If val(i) > 9999 Then
-                    Throw New Exception("Too great value of " & ch(i) & " : " & val(i))
-                ElseIf val(i) < 1000 Then
-                    If val(i) > 99 Then
-                        s &= "0"
-                    ElseIf val(i) > 9 Then
-                        s &= "00"
-                    Else
-                        s &= "000"
-                    End If
-                End If
-                s &= val(i).ToString
-                If i < UBound(ch) Then s &= ":"
-            Next i
-            Return s
-        End Function
-    End Structure
-
-    Public Structure Item
-        ''' <summary>Название</summary>
-        Dim name As String
-        ''' <summary>GxxxIGxxxx</summary>
-        Dim itemID As String
-        ''' <summary>Описание типов в ./Resources/Items.txt</summary>
-        Dim type As Integer
-        ''' <summary>Цена покупки предмета. При продаже цена в пять раз меньше</summary>
-        Dim itemCost As Cost
-
-        Public Shared Function Copy(ByVal v As Item) As Item
-            Return New Item With {.name = v.name, _
-                                  .itemID = v.itemID, _
-                                  .type = v.type, _
-                                  .itemCost = Cost.Copy(v.itemCost)}
-        End Function
-    End Structure
-
-    Private AllLeaders(), AllFighters(), ExcludedUnits() As Unit
-    Private MagicItem(), ExcludedItems() As Item
+    Private AllLeaders(), AllFighters(), ExcludedUnits() As AllDataStructues.Unit
+    Private MagicItem(), ExcludedItems() As AllDataStructues.Item
     Public serialExecution As Boolean
     Public rndgen As RndValueGen
     Public comm As New Common
@@ -267,7 +30,8 @@ Public Class RandStack
     ''' Допускается передача неинициализитрованного массива.
     ''' Для чтения из дефолтного листа в массив нужно добавить строчку %default% (наличие этого ключевого в файле запустит чтение дефолтного файла)</param>
     ''' <param name="serial">True, если код, использующий генератор выполняется в одном потоке</param>
-    Public Sub New(ByRef AllUnitsList() As Unit, ByRef AllItemsList() As Item, ByRef ExcludeLists() As String, ByRef CustomUnitRace() As String, ByRef serial As Boolean)
+    Public Sub New(ByRef AllUnitsList() As AllDataStructues.Unit, ByRef AllItemsList() As AllDataStructues.Item, _
+                   ByRef ExcludeLists() As String, ByRef CustomUnitRace() As String, ByRef serial As Boolean)
         serialExecution = serial
         rndgen = comm.rndgen
         If IsNothing(AllUnitsList) Or IsNothing(AllItemsList) Then Exit Sub
@@ -301,8 +65,8 @@ Public Class RandStack
         Call MakeAccessoryArrays(AllItemsList, MagicItem, ExcludedItems, ItemGoldCost, multItems)
 
     End Sub
-    Private Sub MakeAccessoryArrays(ByRef allunits() As Unit, ByRef customRace As Dictionary(Of String, String), ByRef units() As Unit, _
-                                    ByRef cat() As Integer, ByRef addcat As Integer, _
+    Private Sub MakeAccessoryArrays(ByRef allunits() As AllDataStructues.Unit, ByRef customRace As Dictionary(Of String, String), _
+                                    ByRef units() As AllDataStructues.Unit, ByRef cat() As Integer, ByRef addcat As Integer, _
                                     ByRef expBar() As Double, ByRef expKuilled() As Double, ByRef mult() As Double)
         Dim n As Integer = -1
         For i As Integer = 0 To UBound(allunits) Step 1
@@ -314,7 +78,7 @@ Public Class RandStack
         For i As Integer = 0 To UBound(allunits) Step 1
             If cat(i) = addcat Then
                 n += 1
-                units(n) = Unit.Copy(allunits(i))
+                units(n) = AllDataStructues.Unit.Copy(allunits(i))
                 If customRace.ContainsKey(units(n).unitID) Then
                     units(n).race = comm.RaceIdentifierToSubrace(customRace.Item(units(n).unitID))
                 Else
@@ -332,7 +96,9 @@ Public Class RandStack
             End If
         Next i
     End Sub
-    Private Sub MakeAccessoryArrays(ByRef allitems() As Item, ByRef items() As Item, ByRef excluded() As Item, _
+    Private Sub MakeAccessoryArrays(ByRef allitems() As AllDataStructues.Item, _
+                                    ByRef items() As AllDataStructues.Item, _
+                                    ByRef excluded() As AllDataStructues.Item, _
                                     ByRef GoldCost() As Double, ByRef mult() As Double)
         Dim n As Integer = -1
         Dim m As Integer = -1
@@ -355,7 +121,7 @@ Public Class RandStack
         For i As Integer = 0 To UBound(allitems) Step 1
             If add(i) Then
                 n += 1
-                items(n) = Item.Copy(allitems(i))
+                items(n) = AllDataStructues.Item.Copy(allitems(i))
                 GoldCost(n) = items(n).itemCost.Gold
                 If itemType.Item(items(n).type) = "JEWEL" Then
                     mult(n) = CDbl(My.Resources.JewelItemsCostMultiplicator)
@@ -367,20 +133,20 @@ Public Class RandStack
                 End If
             Else
                 m += 1
-                excluded(m) = Item.Copy(allitems(i))
+                excluded(m) = AllDataStructues.Item.Copy(allitems(i))
             End If
         Next i
     End Sub
 
     ''' <summary>Найдет статы юнита по ID (нечувствительно к регистру)</summary>
     ''' <param name="ID">GxxxUUxxxx</param>
-    Public Function FindUnitStats(ByRef ID As String) As Unit
+    Public Function FindUnitStats(ByRef ID As String) As AllDataStructues.Unit
         Dim f As String = ID.ToUpper
-        Dim a()() As Unit = New Unit()() {AllFighters, AllLeaders, ExcludedUnits}
+        Dim a()() As AllDataStructues.Unit = New AllDataStructues.Unit()() {AllFighters, AllLeaders, ExcludedUnits}
         For u As Integer = 0 To UBound(a) Step 1
             If Not IsNothing(a(u)) Then
                 For i As Integer = 0 To UBound(a(u)) Step 1
-                    If f = a(u)(i).unitID Then Return Unit.Copy(a(u)(i))
+                    If f = a(u)(i).unitID Then Return AllDataStructues.Unit.Copy(a(u)(i))
                 Next i
             End If
         Next u
@@ -388,13 +154,13 @@ Public Class RandStack
     End Function
     ''' <summary>Найдет статы предмета по ID (нечувствительно к регистру)</summary>
     ''' <param name="ID">GxxxIGxxxx</param>
-    Public Function FindItemStats(ByRef ID As String) As Item
+    Public Function FindItemStats(ByRef ID As String) As AllDataStructues.Item
         Dim f As String = ID.ToUpper
-        Dim a()() As Item = New Item()() {MagicItem, ExcludedItems}
+        Dim a()() As AllDataStructues.Item = New AllDataStructues.Item()() {MagicItem, ExcludedItems}
         For u As Integer = 0 To UBound(a) Step 1
             If Not IsNothing(a(u)) Then
                 For i As Integer = 0 To UBound(a(u)) Step 1
-                    If f = a(u)(i).itemID Then Return Item.Copy(a(u)(i))
+                    If f = a(u)(i).itemID Then Return AllDataStructues.Item.Copy(a(u)(i))
                 Next i
             End If
         Next u
@@ -403,10 +169,10 @@ Public Class RandStack
 
     ''' <summary>Вычисляет параметры отряда по составу</summary>
     ''' <param name="s">ID юнитов и предметов отряда</param>
-    Public Function StackStats(ByRef s As Stack) As DesiredStats
-        Dim result As New DesiredStats With {.Race = New List(Of Integer)}
-        Dim u As Unit
-        Dim m As Item
+    Public Function StackStats(ByRef s As AllDataStructues.Stack) As AllDataStructues.DesiredStats
+        Dim result As New AllDataStructues.DesiredStats With {.Race = New List(Of Integer)}
+        Dim u As AllDataStructues.Unit
+        Dim m As AllDataStructues.Item
         For i As Integer = 0 To UBound(s.pos) Step 1
             If Not s.pos(i).ToUpper = emptyItem Then
                 u = FindUnitStats(s.pos(i))
@@ -494,8 +260,8 @@ Public Class RandStack
     End Function
 
     ''' <summary>Затычка: вернет отряд из двух сквайров и трех лучников. Лидер - паладин. С зельем воскрешения</summary>
-    Public Function GenGag() As Stack
-        Dim result As New Stack
+    Public Function GenGag() As AllDataStructues.Stack
+        Dim result As New AllDataStructues.Stack
         ReDim result.pos(UBound(busytransfer))
         Dim fighter1 As String = "G000UU0001"
         Dim fighter2 As String = "G000UU0006"
@@ -517,9 +283,9 @@ Public Class RandStack
     ''' <param name="StackStats">Желаемые параметры стэка</param>
     ''' <param name="GroundTile">True, если на клетку нельзя ставить водных лидеров. Водной считается клетка с водой, окруженная со всех сторон клетками с водой</param>
     ''' <param name="NoLeader">True, если стэк находится внутри руин или города</param>
-    Public Function Gen(ByRef StackStats As DesiredStats, ByRef GroundTile As Boolean, ByRef NoLeader As Boolean) As Stack
+    Public Function Gen(ByRef StackStats As AllDataStructues.DesiredStats, ByRef GroundTile As Boolean, ByRef NoLeader As Boolean) As AllDataStructues.Stack
 
-        Dim DynStackStats As DesiredStats = DesiredStats.Copy(StackStats)
+        Dim DynStackStats As AllDataStructues.DesiredStats = AllDataStructues.DesiredStats.Copy(StackStats)
         DynStackStats.Race.Clear()
         For Each i As Integer In StackStats.Race
             Dim s As Integer = comm.RaceIdentifierToSubrace(i)
@@ -550,8 +316,8 @@ Public Class RandStack
                     Else
                         Throw New Exception("Что-то не так в выборе возможных лидеров отряда" & vbNewLine & _
                                             "Имя локации: " & StackStats.LocationName & vbNewLine & _
-                                            "StackStats:" & vbNewLine & DesiredStats.Print(StackStats, comm.RaceNumberToRaceChar) & vbNewLine & _
-                                            "DynStackStats:" & vbNewLine & DesiredStats.Print(DynStackStats, comm.RaceNumberToRaceChar))
+                                            "StackStats:" & vbNewLine & AllDataStructues.DesiredStats.Print(StackStats, comm.RaceNumberToRaceChar) & vbNewLine & _
+                                            "DynStackStats:" & vbNewLine & AllDataStructues.DesiredStats.Print(DynStackStats, comm.RaceNumberToRaceChar))
                     End If
                 End If
             Loop
@@ -561,8 +327,8 @@ Public Class RandStack
             If SelectedLeader = -1 Then
                 Throw New Exception("Возможно, бесконечный цикл в случайном выборе из массива возможных лидеров" & vbNewLine & _
                                     "Имя локации: " & StackStats.LocationName & vbNewLine & _
-                                    "StackStats:" & vbNewLine & DesiredStats.Print(StackStats, comm.RaceNumberToRaceChar) & vbNewLine & _
-                                    "DynStackStats:" & vbNewLine & DesiredStats.Print(DynStackStats, comm.RaceNumberToRaceChar))
+                                    "StackStats:" & vbNewLine & AllDataStructues.DesiredStats.Print(StackStats, comm.RaceNumberToRaceChar) & vbNewLine & _
+                                    "DynStackStats:" & vbNewLine & AllDataStructues.DesiredStats.Print(DynStackStats, comm.RaceNumberToRaceChar))
             End If
 
             'теперь нужно добрать воинов в отряд
@@ -602,27 +368,27 @@ Public Class RandStack
             ElseIf fighter = -2 Then
                 Throw New Exception("Возможно, бесконечный цикл в случайном выборе из массива возможных воинов" & vbNewLine & _
                                     "Имя локации: " & StackStats.LocationName & vbNewLine & _
-                                    "StackStats:" & vbNewLine & DesiredStats.Print(StackStats, comm.RaceNumberToRaceChar) & vbNewLine & _
-                                    "DynStackStats:" & vbNewLine & DesiredStats.Print(DynStackStats, comm.RaceNumberToRaceChar))
+                                    "StackStats:" & vbNewLine & AllDataStructues.DesiredStats.Print(StackStats, comm.RaceNumberToRaceChar) & vbNewLine & _
+                                    "DynStackStats:" & vbNewLine & AllDataStructues.DesiredStats.Print(DynStackStats, comm.RaceNumberToRaceChar))
             Else
                 SelectedFighters.Add(fighter)
             End If
         Loop
         'в итоге должны получить лидера и остальной отряд
         'дальше расставляем в зависимости от размера и дальности атаки и пишем в файл карты
-        Dim SelectedUnits() As Unit
+        Dim SelectedUnits() As AllDataStructues.Unit
         If NoLeader Then
             ReDim SelectedUnits(SelectedFighters.Count - 1)
         Else
             ReDim SelectedUnits(SelectedFighters.Count)
         End If
-        Dim result As New Stack With {.leaderPos = -1}
+        Dim result As New AllDataStructues.Stack With {.leaderPos = -1}
         ReDim result.pos(UBound(busytransfer))
         Dim unitIsUsed(UBound(SelectedUnits)) As Boolean
         Dim firstRowSlots As Integer = 3
         Dim secondRowSlots As Integer = 3
 
-        If Not NoLeader Then SelectedUnits(0) = Unit.Copy(AllLeaders(SelectedLeader))
+        If Not NoLeader Then SelectedUnits(0) = AllDataStructues.Unit.Copy(AllLeaders(SelectedLeader))
         Dim n As Integer
         If NoLeader Then
             n = -1
@@ -631,7 +397,7 @@ Public Class RandStack
         End If
         For Each i As Integer In SelectedFighters
             n += 1
-            SelectedUnits(n) = Unit.Copy(AllFighters(i))
+            SelectedUnits(n) = AllDataStructues.Unit.Copy(AllFighters(i))
         Next i
         For i As Integer = 0 To UBound(SelectedUnits) Step 1
             If Not unitIsUsed(i) And Not SelectedUnits(i).small Then
@@ -656,8 +422,8 @@ Public Class RandStack
         For i As Integer = 0 To UBound(unitIsUsed) Step 1
             If Not unitIsUsed(i) Then Throw New Exception("Что-то не так в размещателе юнитов" & vbNewLine & _
                                                           "Имя локации: " & StackStats.LocationName & vbNewLine & _
-                                                          "StackStats:" & vbNewLine & DesiredStats.Print(StackStats, comm.RaceNumberToRaceChar) & vbNewLine & _
-                                                          "DynStackStats:" & vbNewLine & DesiredStats.Print(DynStackStats, comm.RaceNumberToRaceChar))
+                                                          "StackStats:" & vbNewLine & AllDataStructues.DesiredStats.Print(StackStats, comm.RaceNumberToRaceChar) & vbNewLine & _
+                                                          "DynStackStats:" & vbNewLine & AllDataStructues.DesiredStats.Print(DynStackStats, comm.RaceNumberToRaceChar))
         Next i
         For i As Integer = 0 To UBound(result.pos) Step 1
             If result.pos(i) = "" Then result.pos(i) = emptyItem
@@ -674,16 +440,16 @@ Public Class RandStack
     ''' <param name="GroundTile">True, если на клетку нельзя ставить водных лидеров. Водной считается клетка с водой, окруженная со всех сторон клетками с водой</param>
     ''' <param name="NoLeader">True, если стэк находится внутри руин или города</param>
     Public Function Gen(ByRef ExpStackKilled As Integer, ByRef LootCost As Double, ByRef Races As List(Of Integer), _
-                             ByRef excludeConsumableItems As Boolean, ByRef excludeNonconsumableItems As Boolean, _
-                             ByRef GroundTile As Boolean, ByRef NoLeader As Boolean) As Stack
-        Dim StackStat As DesiredStats = StackStatsGen.GenDesiredStats(CDbl(ExpStackKilled), LootCost, rndgen)
+                        ByRef excludeConsumableItems As Boolean, ByRef excludeNonconsumableItems As Boolean, _
+                        ByRef GroundTile As Boolean, ByRef NoLeader As Boolean) As AllDataStructues.Stack
+        Dim StackStat As AllDataStructues.DesiredStats = StackStatsGen.GenDesiredStats(CDbl(ExpStackKilled), LootCost, rndgen)
         StackStat.Race = Races
         StackStat.excludeNonconsumableItems = excludeNonconsumableItems
         StackStat.excludeConsumableItems = excludeConsumableItems
         Return Gen(StackStat, GroundTile, NoLeader)
     End Function
     Private Function SelectPossibleLeader(ByRef leaderID As Integer, ByRef Tolerance As Double, _
-                                          ByRef StackStats As DesiredStats, ByRef GroundTile As Boolean) As Boolean
+                                          ByRef StackStats As AllDataStructues.DesiredStats, ByRef GroundTile As Boolean) As Boolean
         If Not StackStats.Race.Contains(AllLeaders(leaderID).race) Then Return False
         If Not AllLeaders(leaderID).small And StackStats.MaxGiants = 0 Then Return False
         If AllLeaders(leaderID).waterOnly And GroundTile Then Return False
@@ -698,12 +464,12 @@ Public Class RandStack
         If AllLeaders(leaderID).EXPkilled > (1 + Tolerance) * StackStats.ExpStackKilled Then Return False
         Return True
     End Function
-    Private Function SigmaMultiplier(ByRef stat As DesiredStats) As Double
+    Private Function SigmaMultiplier(ByRef stat As AllDataStructues.DesiredStats) As Double
         Return CDbl(My.Resources.defaultSigma) * (CDbl(stat.StackSize) + 0.1 * CDbl(stat.MaxGiants))
     End Function
 
     Private Function SelectFighters(ByRef skipfilter1 As Boolean, ByRef skipfilter2 As Boolean, _
-                                    ByRef DynStackStats As DesiredStats, ByRef FreeMeleeSlots As Integer) As Integer
+                                    ByRef DynStackStats As AllDataStructues.DesiredStats, ByRef FreeMeleeSlots As Integer) As Integer
 
         Dim PossibleFighters As New List(Of Integer)
         Dim TExpStack As Double = DynStackStats.ExpStackKilled / DynStackStats.StackSize
@@ -731,7 +497,7 @@ Public Class RandStack
     Private Function SelectPossibleFighter(ByRef skipMaxGiantsFilter As Boolean, _
                                            ByRef skipRangeFilter As Boolean, _
                                            ByRef fighterID As Integer, _
-                                           ByRef DynStackStats As DesiredStats, _
+                                           ByRef DynStackStats As AllDataStructues.DesiredStats, _
                                            ByRef FreeMeleeSlots As Integer) As Boolean
         If Not DynStackStats.Race.Contains(AllFighters(fighterID).race) Then Return False
         Dim mult As Double
@@ -756,9 +522,9 @@ Public Class RandStack
         Return True
     End Function
 
-    Private Function SetUnitPosition(ByRef i As Integer, ByRef units() As Unit, _
+    Private Function SetUnitPosition(ByRef i As Integer, ByRef units() As AllDataStructues.Unit, _
                                      ByRef FRowSlots As Integer, ByRef SRowSlots As Integer, _
-                                     ByRef AnySlot As Boolean, ByRef result As Stack) As Boolean
+                                     ByRef AnySlot As Boolean, ByRef result As AllDataStructues.Stack) As Boolean
         Dim placed As Boolean = False
         Dim n1 As Integer = rndgen.RndPos(FRowSlots, serialExecution)
         Dim n2 As Integer = rndgen.RndPos(SRowSlots, serialExecution)
@@ -822,8 +588,8 @@ Public Class RandStack
         Return placed
     End Function
 
-    Private Sub ChangeLimit(ByRef List() As Unit, ByRef id As Integer, _
-                            ByRef DynStackStats As DesiredStats,
+    Private Sub ChangeLimit(ByRef List() As AllDataStructues.Unit, ByRef id As Integer, _
+                            ByRef DynStackStats As AllDataStructues.DesiredStats,
                             ByRef FreeMeleeSlots As Integer)
         DynStackStats.ExpStackKilled -= List(id).EXPkilled
         If Not List(id).small Then
@@ -955,7 +721,7 @@ Public Class Common
     ''' <summary>Список исключаемых объектов</summary>
     Public excludedObjects As New List(Of String)
     ''' <summary>Список параметров отрядов с описанием</summary>
-    Public StatFields() As StackStatsField
+    Public StatFields() As AllDataStructues.StackStatsField
     ''' <summary>Расы юнитов, назначаемые независимо от ресурсов игры</summary>
     Public customRace As New Dictionary(Of String, String)
     ''' <summary>Допустимые расы локаций и поверхности, на которых можн ставить объекты</summary>
@@ -966,26 +732,6 @@ Public Class Common
     Public LordsRace As New Dictionary(Of String, Integer)
 
     Friend ConsumableItemsTypes, NonconsumableItemsTypes As New List(Of Integer)
-
-    Public Structure StackStatsField
-        Dim name As String
-        Dim description As String
-    End Structure
-
-    Public Structure Spell
-        ''' <summary>ID заклинания</summary>
-        Dim name As String
-        ''' <summary>Цена изучения для каждого лорда. Ключ - id лорда в верхнем регистре. Список лордов хранится в Common.LordsRace</summary>
-        Dim researchCost As Dictionary(Of String, RandStack.Cost)
-        ''' <summary>Цена применения</summary>
-        Dim castCost As RandStack.Cost
-        ''' <summary>Уровень заклинания</summary>
-        Dim level As Integer
-        ''' <summary>Тип заклинания</summary>
-        Dim category As Integer
-        ''' <summary>Площадь действия заклинания</summary>
-        Dim area As Integer
-    End Structure
 
     Public Sub New()
         Dim splitedRace() As String = TxtSplit(My.Resources.Races)
@@ -1034,24 +780,24 @@ Public Class Common
     ''' <param name="path">Путь к файлу. Не проверяет, существует ли файл.
     ''' Если path=%testfile%, то распарсит теастовый файл.
     ''' Если path=%default%, то вернет значения, устанавливаемые для пропущенных полей.</param>
-    Public Function ParseDesiredStackStatsFile(ByRef path As String) As RandStack.DesiredStats()
+    Public Function ParseDesiredStackStatsFile(ByRef path As String) As AllDataStructues.DesiredStats()
         Dim txt(), s(), r(), fu As String
-        Dim defaultStats As New RandStack.DesiredStats With {.ExpBarAverage = 200, .ExpStackKilled = 75, _
-                                                             .MeleeCount = 2, .Race = New List(Of Integer), .StackSize = 2, _
-                                                             .shopContent = Nothing}
+        Dim defaultStats As New AllDataStructues.DesiredStats With {.ExpBarAverage = 200, .ExpStackKilled = 75, _
+                                                                    .MeleeCount = 2, .Race = New List(Of Integer), .StackSize = 2, _
+                                                                    .shopContent = Nothing}
         defaultStats.Race.Add(1)
         If Not path = My.Resources.testFileKeyword.ToLower Then
             txt = TxtSplit(IO.File.ReadAllText(path).Replace("=", vbTab))
         ElseIf path = My.Resources.readDefaultFileKeyword.ToLower Then
-            Return New RandStack.DesiredStats() {defaultStats}
+            Return New AllDataStructues.DesiredStats() {defaultStats}
         Else
             txt = TxtSplit(My.Resources.TestStackStats.Replace("=", vbTab))
         End If
         Dim addedLabels As New List(Of String)
-        Dim result(UBound(txt)) As RandStack.DesiredStats
+        Dim result(UBound(txt)) As AllDataStructues.DesiredStats
         For i As Integer = 0 To UBound(txt) Step 1
             s = txt(i).Split(CChar(" "))
-            result(i) = RandStack.DesiredStats.Copy(defaultStats)
+            result(i) = AllDataStructues.DesiredStats.Copy(defaultStats)
             For f As Integer = 0 To UBound(s) Step 2
                 fu = s(f).ToUpper
                 For k As Integer = 0 To UBound(StatFields) Step 1
@@ -1108,10 +854,10 @@ Public Class Common
     ''' <summary>Сохраняет в файл параметры генерируемых отрядов</summary>
     ''' <param name="path">Путь к файлу</param>
     ''' <param name="content">Параметры</param>
-    Public Sub WriteDesiredStackStats(ByRef path As String, ByRef content() As RandStack.DesiredStats)
+    Public Sub WriteDesiredStackStats(ByRef path As String, ByRef content() As AllDataStructues.DesiredStats)
         Dim s(UBound(content)) As String
         For i As Integer = 0 To UBound(s) Step 1
-            s(i) = TxtSplit(RandStack.DesiredStats.Print(content(i), RaceNumberToRaceChar).Replace(vbNewLine, vbTab))(0)
+            s(i) = TxtSplit(AllDataStructues.DesiredStats.Print(content(i), RaceNumberToRaceChar).Replace(vbNewLine, vbTab))(0)
         Next i
         If Not path = My.Resources.testFileKeyword Then
             IO.File.WriteAllLines(path, s)
@@ -1452,3 +1198,263 @@ Public Class DecorationPlacingProperties
 
 End Class
 
+Public Class AllDataStructues
+
+    Public Structure DesiredStats
+        ''' <summary>Примерная планка опыта для маленьких воинов</summary>
+        Dim ExpBarAverage As Integer
+        ''' <summary>Допустимые расы для отряда</summary>
+        Dim Race As List(Of Integer)
+        ''' <summary>Примерный опыт за убийство стэка</summary>
+        Dim ExpStackKilled As Integer
+        ''' <summary>Количество свободных ячеек под отряд. Есть 10% шанс на +1 слот и 10% неа -1 слот</summary>
+        Dim StackSize As Integer
+        ''' <summary>Максимальное количество больших воинов в отряде</summary>
+        Dim MaxGiants As Integer
+        ''' <summary>Сколько ячеек в первом ряду должно быть заполнено</summary>
+        Dim MeleeCount As Integer
+        ''' <summary>Стоимость лута (предметы со стоимостью в золоте, равной нулю, не добавляются). При расчете стоимость драгоценностей уменьшается в два раза</summary>
+        Dim LootCost As Integer
+        ''' <summary> Идентификатор локации, для которой сгенерирован отряд</summary>
+        Dim LocationName As String
+        ''' <summary>Не генерировать зелья, сферы, талисманы и свитки</summary>
+        Dim excludeConsumableItems As Boolean
+        ''' <summary>Не генерировать надеваемые предметы и посохи</summary>
+        Dim excludeNonconsumableItems As Boolean
+
+        ''' <summary>Не nothing только для торговцев предметами и магией, а также лагеря наемников</summary>
+        Dim shopContent As List(Of String)
+
+        Public Shared Function Copy(ByVal v As DesiredStats) As DesiredStats
+            Dim RacesList As New List(Of Integer)
+            For Each Item As Integer In v.Race
+                RacesList.Add(Item)
+            Next Item
+            Dim shopContentList As List(Of String) = Nothing
+            If Not IsNothing(v.shopContent) Then
+                shopContentList = New List(Of String)
+                For Each Item As String In v.shopContent
+                    shopContentList.Add(Item)
+                Next Item
+            End If
+            Return New DesiredStats With {.ExpBarAverage = v.ExpBarAverage, _
+                                          .ExpStackKilled = v.ExpStackKilled, _
+                                          .MaxGiants = v.MaxGiants, _
+                                          .MeleeCount = v.MeleeCount, _
+                                          .Race = RacesList, _
+                                          .StackSize = v.StackSize, _
+                                          .LootCost = v.LootCost, _
+                                          .LocationName = v.LocationName, _
+                                          .excludeConsumableItems = v.excludeConsumableItems, _
+                                          .excludeNonconsumableItems = v.excludeNonconsumableItems, _
+                                          .shopContent = shopContentList}
+        End Function
+        ''' <param name="RaceNumberToRaceChar">Преобразует номер расы в ее текстовый идентификатор. Если передать Nothing, то будут печататься номера рас</param>
+        Public Shared Function Print(ByVal v As DesiredStats, ByRef RaceNumberToRaceChar As Dictionary(Of Integer, String)) As String
+            Dim s As String
+            If IsNothing(v.shopContent) Then
+                Dim races As String = ""
+                For Each Item As Integer In v.Race
+                    If Not races = "" Then races &= "+"
+                    If Not IsNothing(RaceNumberToRaceChar) Then
+                        races &= RaceNumberToRaceChar.Item(Item)
+                    Else
+                        races &= Item
+                    End If
+                Next Item
+                s = "AverageExpBar" & vbTab & v.ExpBarAverage & vbNewLine & _
+                    "ExpStackKilled" & vbTab & v.ExpStackKilled & vbNewLine & _
+                    "Race" & vbTab & races & vbNewLine & _
+                    "StackSize" & vbTab & v.StackSize & vbNewLine & _
+                    "MaxGiants" & vbTab & v.MaxGiants & vbNewLine & _
+                    "MeleeCount" & vbTab & v.MeleeCount & vbNewLine & _
+                    "LootCost" & vbTab & v.LootCost & vbNewLine & _
+                    "CItemsExclude" & vbTab & v.excludeConsumableItems & vbNewLine & _
+                    "NItemsExclude" & vbTab & v.excludeNonconsumableItems & vbNewLine
+            Else
+                Dim goods As String = ""
+                For Each Item As String In v.shopContent
+                    If Not goods = "" Then goods &= "+"
+                    goods &= Item
+                Next Item
+                s = "ShopContent" & vbTab & goods & vbNewLine
+            End If
+            Return "ID" & vbTab & v.LocationName & vbNewLine & s
+        End Function
+    End Structure
+
+    Public Structure Stack
+        ''' <summary>ID юнита для каждой позиции</summary>
+        Dim pos() As String
+        ''' <summary>В какой позиции находится лидер</summary>
+        Dim leaderPos As Integer
+        ''' <summary>Предметы отряда. GxxxIGxxxx</summary>
+        Dim items As List(Of String)
+        ''' <summary>Имя отряда</summary>
+        Dim name As String
+    End Structure
+
+    Public Structure Unit
+        ''' <summary>Имя</summary>
+        Dim name As String
+        ''' <summary>Базовый уровень</summary>
+        Dim level As Integer
+        ''' <summary>Номер расы</summary>
+        Dim race As Integer
+        ''' <summary>Опыт за убийство юнита</summary>
+        Dim EXPkilled As Integer
+        ''' <summary>Опыт для апа уровня</summary>
+        Dim EXPnext As Integer
+        ''' <summary>Лидерство от 0 до 6</summary>
+        Dim leadership As Integer
+        ''' <summary>Область атаки. 1 – все цели; 2 – любая цель; 3 – ближайшая цель.</summary>
+        Dim reach As Integer
+        ''' <summary>GxxxUUxxxx</summary>
+        Dim unitID As String
+        ''' <summary>True, если занимает одну клетку</summary>
+        Dim small As Boolean
+        ''' <summary>True, если может находиться только на воде</summary>
+        Dim waterOnly As Boolean
+        ''' <summary>0 - мили, 1 - лучники, 2 - маги, 3 - поддержка, 4 - особые (оборотень, сатир и т.д.), 
+        ''' 5 - обычный лидер, 6 - вор, 7 - саммон</summary>
+        Dim unitBranch As Integer
+        ''' <summary>Цена найма юнита</summary>
+        Dim unitCost As Cost
+
+        Public Shared Function Copy(ByVal v As Unit) As Unit
+            Return New Unit With {.name = v.name, _
+                                  .level = v.level, _
+                                  .race = v.race, _
+                                  .EXPkilled = v.EXPkilled, _
+                                  .EXPnext = v.EXPnext, _
+                                  .leadership = v.leadership, _
+                                  .reach = v.reach, _
+                                  .unitID = v.unitID.ToUpper, _
+                                  .small = v.small, _
+                                  .waterOnly = v.waterOnly, _
+                                  .unitBranch = v.unitBranch, _
+                                  .unitCost = Cost.Copy(v.unitCost)}
+        End Function
+    End Structure
+
+    Public Structure Cost
+        ''' <summary>Золото</summary>
+        Dim Gold As Integer
+        ''' <summary>Мана Жизни</summary>
+        Dim Blue As Integer
+        ''' <summary>Мана Преисподней</summary>
+        Dim Red As Integer
+        ''' <summary>Мана Рун</summary>
+        Dim White As Integer
+        ''' <summary>Мана Смерти</summary>
+        Dim Black As Integer
+        ''' <summary>Мана Лесного Эликсира</summary>
+        Dim Green As Integer
+
+        Public Shared Function Copy(ByVal v As Cost) As Cost
+            Return New Cost With {.gold = v.Gold, _
+                                  .Blue = v.Blue, _
+                                  .Red = v.Red, _
+                                  .White = v.White, _
+                                  .Black = v.Black, _
+                                  .Green = v.Green}
+        End Function
+        ''' <summary>Парсит строку стоимости в родном для D2 формате. Игнорирует регистр, пробелы и табы. Пропущенные поля интерпретирует как ноль</summary>
+        ''' <param name="costString">g0000:r0000:y0000:e0000:w0000:b0000</param>
+        Public Shared Function Read(ByVal costString As String) As Cost
+            Dim splited() As String = costString.Replace(" ", "").Replace(vbTab, "").ToLower.Split(CChar(":"))
+            Dim res As New Cost
+            For i As Integer = 0 To UBound(splited) Step 1
+                Dim s1 As String = splited(i).Substring(0, 1)
+                Dim v As String = splited(i).Substring(1)
+                Do While v.Substring(0, 1) = "0" And v.Length > 1
+                    v = v.Substring(1)
+                Loop
+                If Not IsNumeric(v) Then
+                    Throw New Exception("Количество ресурса не является числом: " & costString & " , ресурс: " & s1)
+                    Return Nothing
+                End If
+                If s1 = "g" Then
+                    res.Gold = CInt(v)
+                ElseIf s1 = "r" Then
+                    res.Red = CInt(v)
+                ElseIf s1 = "y" Then
+                    res.Blue = CInt(v)
+                ElseIf s1 = "e" Then
+                    res.Black = CInt(v)
+                ElseIf s1 = "w" Then
+                    res.White = CInt(v)
+                ElseIf s1 = "b" Then
+                    res.Green = CInt(v)
+                Else
+                    Throw New Exception("Неожиданный формат стоимости: " & costString)
+                    Return Nothing
+                End If
+            Next i
+            Return res
+        End Function
+        ''' <summary>Печатает стоимость в понятном для игры формате</summary>
+        ''' <param name="v">цена: золото и мана</param>
+        Public Shared Function Print(ByVal v As Cost) As String
+            Dim ch() As String = New String() {"g", "r", "y", "e", "w", "b"}
+            Dim val() As Integer = New Integer() {v.Gold, v.Red, v.Blue, v.Black, v.White, v.Green}
+            Dim s As String = ""
+            For i As Integer = 0 To UBound(ch) Step 1
+                s &= ch(i)
+                If val(i) > 9999 Then
+                    Throw New Exception("Too great value of " & ch(i) & " : " & val(i))
+                ElseIf val(i) < 1000 Then
+                    If val(i) > 99 Then
+                        s &= "0"
+                    ElseIf val(i) > 9 Then
+                        s &= "00"
+                    Else
+                        s &= "000"
+                    End If
+                End If
+                s &= val(i).ToString
+                If i < UBound(ch) Then s &= ":"
+            Next i
+            Return s
+        End Function
+    End Structure
+
+    Public Structure Item
+        ''' <summary>Название</summary>
+        Dim name As String
+        ''' <summary>GxxxIGxxxx</summary>
+        Dim itemID As String
+        ''' <summary>Описание типов в ./Resources/Items.txt</summary>
+        Dim type As Integer
+        ''' <summary>Цена покупки предмета. При продаже цена в пять раз меньше</summary>
+        Dim itemCost As Cost
+
+        Public Shared Function Copy(ByVal v As Item) As Item
+            Return New Item With {.name = v.name, _
+                                  .itemID = v.itemID, _
+                                  .type = v.type, _
+                                  .itemCost = Cost.Copy(v.itemCost)}
+        End Function
+    End Structure
+
+    Public Structure StackStatsField
+        Dim name As String
+        Dim description As String
+    End Structure
+
+    Public Structure Spell
+        ''' <summary>ID заклинания</summary>
+        Dim name As String
+        ''' <summary>Цена изучения для каждого лорда. Ключ - id лорда в верхнем регистре. Список лордов хранится в Common.LordsRace</summary>
+        Dim researchCost As Dictionary(Of String, AllDataStructues.Cost)
+        ''' <summary>Цена применения</summary>
+        Dim castCost As AllDataStructues.Cost
+        ''' <summary>Уровень заклинания</summary>
+        Dim level As Integer
+        ''' <summary>Тип заклинания</summary>
+        Dim category As Integer
+        ''' <summary>Площадь действия заклинания</summary>
+        Dim area As Integer
+    End Structure
+
+End Class

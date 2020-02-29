@@ -2914,7 +2914,7 @@ Public Class Map
     ''' <summary>Идентификатор симметрии, применяемой при генерации</summary>
     Public ReadOnly symmID As Integer
     ''' <summary>Желаемые статы для каждой группы стэков. Индексы групп (key) хранятся в board(,).groupID</summary>
-    Public groupStats As Dictionary(Of Integer, RandStack.DesiredStats)
+    Public groupStats As Dictionary(Of Integer, AllDataStructues.DesiredStats)
     ''' <summary>Какие этапы закончены</summary>
     Public complited As ComplitedSteps
 
@@ -4200,7 +4200,7 @@ Public Class ImpenetrableObjects
     Private plateau() As Plateau
     Private maxPlateauSize As Integer
     Private maxChainLen As Integer = 7
-    Private raceSpells As Dictionary(Of String, Common.Spell)
+    Private raceSpells As Dictionary(Of String, AllDataStructues.Spell)
     Private raceIdToString As New Dictionary(Of Integer, String)
 
     Private Structure PlateauPlacingResult
@@ -4221,7 +4221,7 @@ Public Class ImpenetrableObjects
     ''' Для чтения из дефолтного листа в массив нужно добавить строчку %default% (наличие этого ключевого в файле запустит чтение дефолтного файла)</param>
     ''' <param name="spells">Все заклинания в игре. Ключ - id заклинания</param>
     Public Sub New(ByRef ObjectsSize As Dictionary(Of String, Size), ByRef ExcludeLists() As String, ByRef CustomBuildingRace() As String, _
-                   ByRef PlateauConstructionDescription() As String, ByRef spells As Dictionary(Of String, Common.Spell))
+                   ByRef PlateauConstructionDescription() As String, ByRef spells As Dictionary(Of String, AllDataStructues.Spell))
         Call comm.ReadExcludedObjectsList(ExcludeLists)
         Call comm.ReadCustomBuildingRace(CustomBuildingRace)
         Call comm.ReadPlateauConstructionDescription(PlateauConstructionDescription)
@@ -4566,7 +4566,7 @@ Public Class ImpenetrableObjects
             End If
         Next i
         'установить для шахт конкретный вид ресурсов
-        Dim raceMana As Dictionary(Of Integer, RandStack.Cost()) = RacesManaUsing()
+        Dim raceMana As Dictionary(Of Integer, AllDataStructues.Cost()) = RacesManaUsing()
         Dim raceManaTier As Dictionary(Of Integer, String()) = ManaTier(raceMana)
         Dim mines As New Dictionary(Of String, String)
         Dim IDs As New List(Of Integer)
@@ -4729,19 +4729,19 @@ Public Class ImpenetrableObjects
             mineType(p.X, p.Y) = type
         End If
     End Sub
-    Private Function RacesManaUsing() As Dictionary(Of Integer, RandStack.Cost())
+    Private Function RacesManaUsing() As Dictionary(Of Integer, AllDataStructues.Cost())
         Dim r() As String = comm.TxtSplit(My.Resources.Races)
-        Dim res As New Dictionary(Of Integer, RandStack.Cost())
+        Dim res As New Dictionary(Of Integer, AllDataStructues.Cost())
         For i As Integer = 0 To UBound(r) Step 1
             Dim s() As String = r(i).Split(CChar(" "))
-            res.Add(comm.RaceIdentifierToSubrace(s(UBound(s))), New RandStack.Cost() {Nothing, Nothing, Nothing, Nothing, Nothing, Nothing})
+            res.Add(comm.RaceIdentifierToSubrace(s(UBound(s))), New AllDataStructues.Cost() {Nothing, Nothing, Nothing, Nothing, Nothing, Nothing})
         Next i
-        For Each s As Common.Spell In raceSpells.Values
+        For Each s As AllDataStructues.Spell In raceSpells.Values
             If s.researchCost.Count > 0 Then
                 For Each L As String In s.researchCost.Keys
                     Dim LRace As Integer = comm.LordsRace.Item(L)
-                    Dim c1 As RandStack.Cost = s.researchCost.Item(L)
-                    Dim c2 As RandStack.Cost = s.castCost
+                    Dim c1 As AllDataStructues.Cost = s.researchCost.Item(L)
+                    Dim c2 As AllDataStructues.Cost = s.castCost
                     res.Item(LRace)(s.level).Black = c1.Black + c2.Black
                     res.Item(LRace)(s.level).Blue = c1.Blue + c2.Blue
                     res.Item(LRace)(s.level).Gold = c1.Gold + c2.Gold
@@ -4771,7 +4771,7 @@ Public Class ImpenetrableObjects
         Next i
         Return res
     End Function
-    Private Function ManaTier(ByRef raceMana As Dictionary(Of Integer, RandStack.Cost())) As Dictionary(Of Integer, String())
+    Private Function ManaTier(ByRef raceMana As Dictionary(Of Integer, AllDataStructues.Cost())) As Dictionary(Of Integer, String())
         Dim res As New Dictionary(Of Integer, String())
         For Each i As Integer In raceMana.Keys
             res.Add(i, New String() {"", "", "", "", "", ""})
@@ -5278,11 +5278,11 @@ Public Class ImpenetrableObjects
                         setNewGroup = True
                         n = g
                     End If
-                    m.groupStats.Add(n, New RandStack.DesiredStats With {.shopContent = SelectSpells(settRaceLoc, r, levels)})
+                    m.groupStats.Add(n, New AllDataStructues.DesiredStats With {.shopContent = SelectSpells(settRaceLoc, r, levels)})
                 Next p
             Else
                 levels = SelectSpellsLevel(settCommLoc)
-                m.groupStats.Add(g, New RandStack.DesiredStats With {.shopContent = SelectSpells(settCommLoc, -1, levels)})
+                m.groupStats.Add(g, New AllDataStructues.DesiredStats With {.shopContent = SelectSpells(settCommLoc, -1, levels)})
             End If
         Next g
     End Sub
@@ -5335,9 +5335,9 @@ Public Class ImpenetrableObjects
         Dim objList As Dictionary(Of Integer, List(Of Point)) = FindGroupsOfObjects(m, 4)
         For Each g As Integer In objList.Keys
             If pointLoc(m, objList.Item(g).Item(0)) <= settMap.nRaces Then
-                m.groupStats.Add(g, New RandStack.DesiredStats With {.shopContent = SelectMercenaries(settRaceLoc)})
+                m.groupStats.Add(g, New AllDataStructues.DesiredStats With {.shopContent = SelectMercenaries(settRaceLoc)})
             Else
-                m.groupStats.Add(g, New RandStack.DesiredStats With {.shopContent = SelectMercenaries(settCommLoc)})
+                m.groupStats.Add(g, New AllDataStructues.DesiredStats With {.shopContent = SelectMercenaries(settCommLoc)})
             End If
         Next g
     End Sub
@@ -5353,9 +5353,9 @@ Public Class ImpenetrableObjects
         Dim objList As Dictionary(Of Integer, List(Of Point)) = FindGroupsOfObjects(m, 3)
         For Each g As Integer In objList.Keys
             If pointLoc(m, objList.Item(g).Item(0)) <= settMap.nRaces Then
-                m.groupStats.Add(g, New RandStack.DesiredStats With {.shopContent = SelectMerchantItems(settRaceLoc)})
+                m.groupStats.Add(g, New AllDataStructues.DesiredStats With {.shopContent = SelectMerchantItems(settRaceLoc)})
             Else
-                m.groupStats.Add(g, New RandStack.DesiredStats With {.shopContent = SelectMerchantItems(settCommLoc)})
+                m.groupStats.Add(g, New AllDataStructues.DesiredStats With {.shopContent = SelectMerchantItems(settCommLoc)})
             End If
         Next g
     End Sub
@@ -5379,15 +5379,15 @@ Public Class ObjectsContentSet
     Private comm As New Common
     Private manaSourcesTypes() As String = New String() {"G000CR0000GR", "G000CR0000RG", "G000CR0000WH", "G000CR0000RD", "G000CR0000YE"}
 
-    Private units As New List(Of RandStack.Unit)
-    Private items As New List(Of RandStack.Item)
+    Private units As New List(Of AllDataStructues.Unit)
+    Private items As New List(Of AllDataStructues.Item)
 
     ''' <param name="AllUnitsList">Dсе юниты в игре</param>
     ''' <param name="AllItemsList">Все предметы в игре</param>
     ''' <param name="ExcludeLists">Файлы со списками исключенных объектов. Записи в них могут повторяться. 
     ''' Допускается передача неинициализитрованного массива.
     ''' Для чтения из дефолтного листа в массив нужно добавить строчку %default% (наличие этого ключевого в файле запустит чтение дефолтного файла)</param>
-    Public Sub New(ByRef AllUnitsList() As RandStack.Unit, ByRef AllItemsList() As RandStack.Item, ByRef ExcludeLists() As String)
+    Public Sub New(ByRef AllUnitsList() As AllDataStructues.Unit, ByRef AllItemsList() As AllDataStructues.Item, ByRef ExcludeLists() As String)
 
         Call comm.ReadExcludedObjectsList(ExcludeLists)
 
@@ -5422,15 +5422,15 @@ Public Class ObjectsContentSet
         End If
     End Function
 
-    Private Function MakeSpellsList(ByRef d As RandStack.DesiredStats, ByRef spells As Dictionary(Of String, Common.Spell)) As List(Of String)
+    Private Function MakeSpellsList(ByRef d As AllDataStructues.DesiredStats, ByRef spells As Dictionary(Of String, AllDataStructues.Spell)) As List(Of String)
 
     End Function
 
-    Private Function MakeMercenariesList(ByRef d As RandStack.DesiredStats) As List(Of String)
+    Private Function MakeMercenariesList(ByRef d As AllDataStructues.DesiredStats) As List(Of String)
 
     End Function
 
-    Private Function MakeMerchItemsList(ByRef d As RandStack.DesiredStats) As List(Of String)
+    Private Function MakeMerchItemsList(ByRef d As AllDataStructues.DesiredStats) As List(Of String)
 
     End Function
 

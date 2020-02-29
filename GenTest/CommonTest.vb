@@ -63,20 +63,20 @@ Public Class CommonTest
     Public Sub ParseDesiredStackStatsFileTest1()
         Dim target As Common = New Common()
         Dim ok As Boolean = True
-        Dim expected() As RandStack.DesiredStats = New RandStack.DesiredStats() {
-            New RandStack.DesiredStats With {.LocationName = "location1", .ExpBarAverage = 1000, .ExpStackKilled = 200, _
+        Dim expected() As AllDataStructues.DesiredStats = New AllDataStructues.DesiredStats() {
+            New AllDataStructues.DesiredStats With {.LocationName = "location1", .ExpBarAverage = 1000, .ExpStackKilled = 200, _
                .Race = New List(Of Integer), .StackSize = 1, .MaxGiants = 0, .MeleeCount = 2, .LootCost = 0}, _
-            New RandStack.DesiredStats With {.LocationName = "testloc2", .ExpBarAverage = 100, .ExpStackKilled = 200, _
+            New AllDataStructues.DesiredStats With {.LocationName = "testloc2", .ExpBarAverage = 100, .ExpStackKilled = 200, _
                .Race = New List(Of Integer), .StackSize = 3, .MaxGiants = 1, .MeleeCount = 0, .LootCost = 3400}, _
-            New RandStack.DesiredStats With {.LocationName = "loc3", .ExpBarAverage = 1000, .ExpStackKilled = 200, _
+            New AllDataStructues.DesiredStats With {.LocationName = "loc3", .ExpBarAverage = 1000, .ExpStackKilled = 200, _
                .Race = New List(Of Integer), .StackSize = 1, .MaxGiants = 0, .MeleeCount = 2, .LootCost = 0}, _
-            New RandStack.DesiredStats With {.LocationName = "loc54", .ExpBarAverage = 1000, .ExpStackKilled = 200, _
+            New AllDataStructues.DesiredStats With {.LocationName = "loc54", .ExpBarAverage = 1000, .ExpStackKilled = 200, _
                .Race = New List(Of Integer), .StackSize = 1, .MaxGiants = 0, .MeleeCount = 2, .LootCost = 0, _
                .excludeConsumableItems = True}, _
-            New RandStack.DesiredStats With {.LocationName = "l", .ExpBarAverage = 1000, .ExpStackKilled = 200, _
+            New AllDataStructues.DesiredStats With {.LocationName = "l", .ExpBarAverage = 1000, .ExpStackKilled = 200, _
                .Race = New List(Of Integer), .StackSize = 1, .MaxGiants = 0, .MeleeCount = 2, .LootCost = 0, _
                .excludeConsumableItems = True, .excludeNonconsumableItems = True}, _
-            New RandStack.DesiredStats With {.LocationName = "22", .ExpBarAverage = 200, .ExpStackKilled = 75, .MeleeCount = 2, _
+            New AllDataStructues.DesiredStats With {.LocationName = "22", .ExpBarAverage = 200, .ExpStackKilled = 75, .MeleeCount = 2, _
                                              .Race = New List(Of Integer), .StackSize = 2, .shopContent = New List(Of String)}
             }
         expected(0).Race.AddRange(New Integer() {2})
@@ -88,7 +88,7 @@ Public Class CommonTest
 
         expected(5).shopContent.AddRange(New String() {"G000UU9999", "1000", "1000", "500"})
 
-        Dim actual() As RandStack.DesiredStats = target.ParseDesiredStackStatsFile(RandomStackGenerator.My.Resources.testFileKeyword)
+        Dim actual() As AllDataStructues.DesiredStats = target.ParseDesiredStackStatsFile(RandomStackGenerator.My.Resources.testFileKeyword)
 
         If expected.Length = actual.Length Then
             For i As Integer = 0 To UBound(expected) Step 1
@@ -138,7 +138,7 @@ Public Class CommonTest
         "ID loc54 AverageExpBar 1000 ExpStackKilled 200 Race H StackSize 1 MaxGiants 0 MeleeCount 2 LootCost 0 CItemsExclude True NItemsExclude False" & vbNewLine & _
         "ID l AverageExpBar 1000 ExpStackKilled 200 Race H StackSize 1 MaxGiants 0 MeleeCount 2 LootCost 0 CItemsExclude True NItemsExclude True" & vbNewLine & _
         "ID 22 ShopContent G000UU9999+1000+1000+500" & vbNewLine
-        Dim content() As RandStack.DesiredStats = target.ParseDesiredStackStatsFile(path)
+        Dim content() As AllDataStructues.DesiredStats = target.ParseDesiredStackStatsFile(path)
         Call target.WriteDesiredStackStats(path, content)
 
         If Not path = expected Then ok = False

@@ -200,22 +200,22 @@ again:
         PictureBox1.Image = img
     End Sub
 
-    Private Function ReadSpells() As Dictionary(Of String, Common.Spell)
+    Private Function ReadSpells() As Dictionary(Of String, AllDataStructues.Spell)
         Dim spells() As String = comm.TxtSplit(My.Resources.TestSpells)
         Dim rspells() As String = comm.TxtSplit(My.Resources.TestSpellsRace)
-        Dim res As New Dictionary(Of String, Common.Spell)
+        Dim res As New Dictionary(Of String, AllDataStructues.Spell)
         For i As Integer = 1 To UBound(spells) Step 1
             Dim s() As String = spells(i).Split(" ")
-            res.Add(s(0).ToUpper, New Common.Spell With {.area = s(4), _
-                                                         .castCost = RandStack.Cost.Read(s(3)), _
+            res.Add(s(0).ToUpper, New AllDataStructues.Spell With {.area = s(4), _
+                                                         .castCost = AllDataStructues.Cost.Read(s(3)), _
                                                          .category = s(1), _
                                                          .level = s(2), _
                                                          .name = s(0).ToUpper, _
-                                                         .researchCost = New Dictionary(Of String, RandStack.Cost)})
+                                                         .researchCost = New Dictionary(Of String, AllDataStructues.Cost)})
         Next i
         For i As Integer = 1 To UBound(rspells) Step 1
             Dim s() As String = rspells(i).Split(" ")
-            res.Item(s(1).ToUpper).researchCost.Add(s(0).ToUpper, RandStack.Cost.Read(s(2)))
+            res.Item(s(1).ToUpper).researchCost.Add(s(0).ToUpper, AllDataStructues.Cost.Read(s(2)))
         Next i
         Return res
     End Function

@@ -140,7 +140,7 @@
     '''<summary>Присвоит имена всем отрядам в списке</summary>
     ''' <param name="stacks">Уже сгенерированные стэки</param>
     ''' <param name="R">Инициализированный класс</param>
-    Public Sub GenNames(ByRef stacks() As RandStack.Stack, ByRef R As RandStack)
+    Public Sub GenNames(ByRef stacks() As AllDataStructues.Stack, ByRef R As RandStack)
         If IsNothing(stacks) Or IsNothing(R) Then Exit Sub
         Dim IDs As New List(Of Integer)
         If Not IsNothing(name) Then
@@ -159,7 +159,7 @@
         Next i
     End Sub
     Private Function SetName(ByRef leaderID As String, ByRef R As RandStack, ByRef IDs As List(Of Integer)) As String
-        Dim u As RandStack.Unit = R.FindUnitStats(leaderID)
+        Dim u As AllDataStructues.Unit = R.FindUnitStats(leaderID)
         Dim res As String = u.name
         If excludeRace.Contains(u.race) Then Return res
         If exclude.Contains(u.unitID) Then Return res
