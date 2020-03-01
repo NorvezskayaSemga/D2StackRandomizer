@@ -5464,12 +5464,17 @@ Public Class ObjectsContentSet
         Dim tolerance As Integer
         Dim dtolerance As Integer = 100
         Dim dCost As Integer = 0
+        Dim countThreshold As Integer = 2
         For Each v As String In d.shopContent
             Dim bar As Integer = CInt(v)
             selection.Clear()
             cost.Clear()
             tolerance = 0
-            Do While selection.Count < 2 Or tolerance > 10000
+            If d.shopContent.Count = res.Count + 1 Then
+                countThreshold = 1
+                dtolerance = Math.Max(1, CInt(0.1 * dtolerance))
+            End If
+            Do While selection.Count < countThreshold Or tolerance > 10000
                 tolerance += dtolerance
                 For Each u As AllDataStructues.Item In items
                     If Math.Abs(u.itemCost.Gold - bar + CInt(dCost / Math.Max(d.shopContent.Count - res.Count, 1))) <= tolerance Then
