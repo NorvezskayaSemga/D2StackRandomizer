@@ -588,8 +588,8 @@ exittest:
         If IsNothing(ItemsList) Then Call ReadTestItems()
         target = New RandStack_Accessor(UnitsList, ItemsList, excludeList, customRaceList, False)
         Dim s As New AllDataStructues.Stack With {.pos = New String() {"g000uu5117", "g000uu5018", "g000uu5017", _
-                                                                "g000uu5017", "g000uu5018", "G000000000"}, _
-                                           .items = New List(Of String)}
+                                                                       "g000uu5017", "g000uu5018", "G000000000"}, _
+                                                  .items = New List(Of String)}
         Return target.StackStats(s)
     End Function
     Private Function TestGoblinsGen(ByRef target As RandStack_Accessor, ByRef stats As AllDataStructues.DesiredStats, _

@@ -5381,13 +5381,15 @@ Public Class ObjectsContentSet
 
     Private units As New List(Of AllDataStructues.Unit)
     Private items As New List(Of AllDataStructues.Item)
+    Private spells As Dictionary(Of String, AllDataStructues.Spell)
 
     ''' <param name="AllUnitsList">Dсе юниты в игре</param>
     ''' <param name="AllItemsList">Все предметы в игре</param>
     ''' <param name="ExcludeLists">Файлы со списками исключенных объектов. Записи в них могут повторяться. 
     ''' Допускается передача неинициализитрованного массива.
     ''' Для чтения из дефолтного листа в массив нужно добавить строчку %default% (наличие этого ключевого в файле запустит чтение дефолтного файла)</param>
-    Public Sub New(ByRef AllUnitsList() As AllDataStructues.Unit, ByRef AllItemsList() As AllDataStructues.Item, ByRef ExcludeLists() As String)
+    Public Sub New(ByRef AllUnitsList() As AllDataStructues.Unit, ByRef AllItemsList() As AllDataStructues.Item, _
+                   ByRef ExcludeLists() As String, ByRef AllSpells As Dictionary(Of String, AllDataStructues.Spell))
 
         Call comm.ReadExcludedObjectsList(ExcludeLists)
 
@@ -5409,6 +5411,8 @@ Public Class ObjectsContentSet
                 items.Add(AllItemsList(i))
             End If
         Next i
+
+        spells = AllSpells
     End Sub
 
     ''' <summary>Определит тип случайной шахты. Если тип уже определен, то этот тип и вернет</summary>
@@ -5422,17 +5426,64 @@ Public Class ObjectsContentSet
         End If
     End Function
 
-    Private Function MakeSpellsList(ByRef d As AllDataStructues.DesiredStats, ByRef spells As Dictionary(Of String, AllDataStructues.Spell)) As List(Of String)
+    ''' <summary>Создаст список заклинаний</summary>
+    ''' <param name="d">Желаемые параметры доступных заклинаний. Имеет значение только .shopContent</param>
+    ''' <param name="AllManaSources">Список источников маны на карте (Только такие ID: G000CR0000GR, G000CR0000RG, G000CR0000WH, G000CR0000RD, G000CR0000YE)</param>
+    Private Function MakeSpellsList(ByRef d As AllDataStructues.DesiredStats, ByRef AllManaSources As List(Of String)) As List(Of String)
 
     End Function
 
+    ''' <summary>Создаст список наемников</summary>
+    ''' <param name="d">Желаемые параметры доступных наемников. Имеет значение только .shopContent</param>
     Private Function MakeMercenariesList(ByRef d As AllDataStructues.DesiredStats) As List(Of String)
-
+        Dim res, selection As New List(Of String)
+        Dim tolerance As Integer
+        Dim dtolerance As Integer = 100
+        For Each v As String In d.shopContent
+            Dim bar As Integer = CInt(v)
+            selection.Clear()
+            tolerance = 0
+            Do While selection.Count < 2 Or tolerance > 10000
+                tolerance += dtolerance
+                For Each u As AllDataStructues.Unit In units
+                    If Math.Abs(u.EXPnext - bar) <= tolerance Then selection.Add(u.unitID)
+                Next u
+            Loop
+            If selection.Count = 0 Then Throw New Exception("Не могу выбрать юнита в качестве наемника. Планка опыта: " & bar.ToString)
+            Dim r As Integer = comm.rndgen.RndPos(selection.Count, True) - 1
+            res.Add(selection.Item(r))
+        Next v
+        Return res
     End Function
 
+    ''' <summary>Создаст список предметов</summary>
+    ''' <param name="d">Желаемые параметры доступных предметов. Имеет значение только .shopContent</param>
     Private Function MakeMerchItemsList(ByRef d As AllDataStructues.DesiredStats) As List(Of String)
-
+        Dim res, selection As New List(Of String)
+        Dim cost As New Dictionary(Of String, Integer)
+        Dim tolerance As Integer
+        Dim dtolerance As Integer = 100
+        Dim dCost As Integer = 0
+        For Each v As String In d.shopContent
+            Dim bar As Integer = CInt(v)
+            selection.Clear()
+            cost.Clear()
+            tolerance = 0
+            Do While selection.Count < 2 Or tolerance > 10000
+                tolerance += dtolerance
+                For Each u As AllDataStructues.Item In items
+                    If Math.Abs(u.itemCost.Gold - bar + CInt(dCost / Math.Max(d.shopContent.Count - res.Count, 1))) <= tolerance Then
+                        selection.Add(u.itemID)
+                        cost.Add(u.itemID, u.itemCost.Gold)
+                    End If
+                Next u
+            Loop
+            If selection.Count = 0 Then Throw New Exception("Не могу выбрать юнита в качестве наемника. Планка опыта: " & bar.ToString)
+            Dim r As Integer = comm.rndgen.RndPos(selection.Count, True) - 1
+            res.Add(selection.Item(r))
+            dCost += bar - cost.Item(selection.Item(r))
+        Next v
+        Return res
     End Function
-
 
 End Class
