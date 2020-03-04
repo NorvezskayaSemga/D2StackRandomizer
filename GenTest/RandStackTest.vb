@@ -55,13 +55,15 @@ Public Class RandStackTest
     '
 #End Region
 
-    Dim excludeList() As String = New String() {RandomStackGenerator.My.Resources.readDefaultFileKeyword, _
-                                                RandomStackGenerator.My.Resources.readDefaultFileKeyword}
-    Dim customRaceList() As String = New String() {RandomStackGenerator.My.Resources.readDefaultFileKeyword, _
+    Friend excludeList() As String = New String() {RandomStackGenerator.My.Resources.readDefaultFileKeyword, _
                                                    RandomStackGenerator.My.Resources.readDefaultFileKeyword}
-    Dim UnitsList() As AllDataStructues.Unit = Nothing
-    Dim ItemsList() As AllDataStructues.Item = Nothing
-    Private Sub ReadTestUnits()
+    Friend customRaceList() As String = New String() {RandomStackGenerator.My.Resources.readDefaultFileKeyword, _
+                                                      RandomStackGenerator.My.Resources.readDefaultFileKeyword}
+    Friend UnitsList() As AllDataStructues.Unit = Nothing
+    Friend ItemsList() As AllDataStructues.Item = Nothing
+    Friend AllSpells As Dictionary(Of String, AllDataStructues.Spell) = Nothing
+
+    Friend Sub ReadTestUnits()
         Dim comm As New Common
         Dim s() As String = comm.TxtSplit(RandomStackGenerator.My.Resources.TestUnitsTable)
         Dim r() As String
@@ -85,7 +87,7 @@ Public Class RandStackTest
             End If
         Next i
     End Sub
-    Private Sub ReadTestItems()
+    Friend Sub ReadTestItems()
         Dim comm As New Common
         Dim s() As String = comm.TxtSplit(RandomStackGenerator.My.Resources.TestItemsTable)
         Dim r() As String
@@ -98,6 +100,10 @@ Public Class RandStackTest
                 ItemsList(i - 1).itemCost = AllDataStructues.Cost.Read(r(2))
             End If
         Next i
+    End Sub
+    Friend Sub ReadTestSpells()
+        Dim s As New ImpenetrableMeshShow.StartForm_Accessor
+        AllSpells = s.ReadSpells
     End Sub
 
     '''<summary>
@@ -218,47 +224,50 @@ Public Class RandStackTest
         Dim target As RandStack_Accessor = New RandStack_Accessor(UnitsList, ItemsList, excludeList, customRaceList, False)
 
         Dim ok As Boolean = True
+        Dim races() As String = New String() {"H", "U", "L", "C", "E", "N", "G", "D", "S", "W", "B", "A", "AS", "AST", "AW"}
 
-        Dim stats As New AllDataStructues.DesiredStats
-        Dim races() As String = New String() {"H", "U", "L", "C", "E", "N", "G", "D", "S", "W", "B", "A"}
-        Dim rList As New List(Of Integer)
-        Dim GroundTile As Boolean
+        Parallel.For(0, races.Length, _
+         Sub(r As Integer)
+             If Not ok Then Exit Sub
+             Dim rList As New List(Of Integer)
+             rList.Add(target.comm.RaceIdentifierToSubrace(races(r)))
+             Dim stats As New AllDataStructues.DesiredStats
+             For eb As Integer = 0 To 10 Step 1
+                 stats.ExpBarAverage = 100 + 200 * eb
+                 For ek As Integer = 0 To 4 Step 1
+                     stats.ExpStackKilled = 200 + 50 * ek
+                     For mg As Integer = 0 To 3 Step 1
+                         stats.MaxGiants = mg
+                         For mc As Integer = 0 To 3 Step 1
+                             stats.MeleeCount = mc
+                             For s As Integer = 1 To 6 Step 1
+                                 stats.StackSize = s
+                                 stats.Race = rList
 
-        For eb As Integer = 0 To 10 Step 1
-            stats.ExpBarAverage = 100 + 200 * eb
-            For ek As Integer = 0 To 4 Step 1
-                stats.ExpStackKilled = 200 + 50 * ek
-                For mg As Integer = 0 To 3 Step 1
-                    stats.MaxGiants = mg
-                    For mc As Integer = 0 To 3 Step 1
-                        stats.MeleeCount = mc
-                        For s As Integer = 1 To 6 Step 1
-                            stats.StackSize = s
-                            For r As Integer = 0 To UBound(races) Step 1
-                                rList.Clear()
-                                rList.Add(target.comm.RaceIdentifierToSubrace(races(r)))
-                                stats.Race = rList
+                                 Dim GroundTile As Boolean
+                                 For g As Integer = 0 To 1 Step 1
+                                     If g = 0 Then
+                                         GroundTile = False
+                                         If races(r) = "W" Then g = 1
+                                     Else
+                                         GroundTile = True
+                                     End If
 
-                                For g As Integer = 0 To 1 Step 1
-                                    If g = 0 Then
-                                        GroundTile = False
-                                        If races(r) = "W" Then g = 1
-                                    Else
-                                        GroundTile = True
-                                    End If
-
-                                    Dim stack As AllDataStructues.Stack = target.Gen(stats, GroundTile, False)
-                                    ok = TestStack(stack, target)
-                                    If Not ok Then GoTo exittest
-
-                                Next g
-                            Next r
-                        Next s
-                    Next mc
-                Next mg
-            Next ek
-        Next eb
-exittest:
+                                     Dim stack As AllDataStructues.Stack = target.Gen(stats, GroundTile, False)
+                                     ok = TestStack(stack, target)
+                                     If Not ok Then Exit For
+                                 Next g
+                                 If Not ok Then Exit For
+                             Next s
+                             If Not ok Then Exit For
+                         Next mc
+                         If Not ok Then Exit For
+                     Next mg
+                     If Not ok Then Exit For
+                 Next ek
+                 If Not ok Then Exit For
+             Next eb
+         End Sub)
         If Not ok Then Assert.Inconclusive("Verify the correctness of this test method.")
     End Sub
     Private Function TestStack(ByRef stack As AllDataStructues.Stack, ByRef target As RandStack_Accessor, _

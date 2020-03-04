@@ -5418,7 +5418,7 @@ Public Class ObjectsContentSet
     ''' <summary>Определит тип случайной шахты. Если тип уже определен, то этот тип и вернет</summary>
     ''' <param name="mineObjectName">Название шахты, как его выдал генератор</param>
     Public Function SetMineType(ByRef mineObjectName As String) As String
-        If mineObjectName.ToUpper = My.Resources.mineTypeRandomMana Then
+        If mineObjectName.ToUpper = My.Resources.mineTypeRandomMana.ToUpper Then
             Dim r As Integer = comm.rndgen.RndPos(manaSourcesTypes.Length, True) - 1
             Return manaSourcesTypes(r)
         Else
@@ -5429,13 +5429,93 @@ Public Class ObjectsContentSet
     ''' <summary>Создаст список заклинаний</summary>
     ''' <param name="d">Желаемые параметры доступных заклинаний. Имеет значение только .shopContent</param>
     ''' <param name="AllManaSources">Список источников маны на карте (Только такие ID: G000CR0000GR, G000CR0000RG, G000CR0000WH, G000CR0000RD, G000CR0000YE)</param>
-    Private Function MakeSpellsList(ByRef d As AllDataStructues.DesiredStats, ByRef AllManaSources As List(Of String)) As List(Of String)
+    Public Function MakeSpellsList(ByRef d As AllDataStructues.DesiredStats, ByRef AllManaSources As List(Of String)) As List(Of String)
+        Dim availMana As New AllDataStructues.Cost
+        If AllManaSources.Contains("G000CR0000GR") Then availMana.Green = 1
+        If AllManaSources.Contains("G000CR0000RG") Then availMana.Black = 1
+        If AllManaSources.Contains("G000CR0000WH") Then availMana.White = 1
+        If AllManaSources.Contains("G000CR0000RD") Then availMana.Red = 1
+        If AllManaSources.Contains("G000CR0000YE") Then availMana.Blue = 1
+        Dim races() As String = New String() {"H", "C", "L", "U", "E", "R"}
+        Dim level, race As Integer
+        Dim mass, ignoreAvailMana As Boolean
+        Dim slist, res As New List(Of String)
+        Dim rlist() As Integer
+        For Each L As String In d.shopContent
+            L = L.ToUpper
+            If L.Contains("T") Then
+                mass = True
+                L = L.Replace("T", "")
+            Else
+                mass = False
+                L = L.Replace("F", "")
+            End If
+            race = -2
+            For Each r As String In races
+                If L.Contains(r) Then
+                    If r = "R" Then
+                        race = -1
+                    Else
+                        race = comm.RaceIdentifierToSubrace(r)
+                    End If
+                    L = L.Replace(r, "")
+                    Exit For
+                End If
+            Next r
+            level = CInt(L)
+            slist.Clear()
+            ignoreAvailMana = False
+            rlist = New Integer() {race, -1}
+            For rr As Integer = 0 To UBound(rlist) Step 1
+                For p As Integer = 0 To 1 Step 1
+                    For spellLevel As Integer = level To 0 Step -1
+                        For Each s As AllDataStructues.Spell In spells.Values
+                            If AddSpell(spellLevel, rlist(rr), mass, availMana, ignoreAvailMana, s) Then slist.Add(s.name)
+                        Next s
+                        If slist.Count > 0 Then Exit For
+                    Next spellLevel
+                    ignoreAvailMana = Not ignoreAvailMana
+                    If slist.Count > 0 Then Exit For
+                Next p
+                If slist.Count > 0 Then Exit For
+            Next rr
+            If slist.Count > 0 Then
+                Dim selected As Integer = comm.rndgen.RndPos(slist.Count, True) - 1
+                res.Add(slist.Item(selected))
+            End If
+        Next L
+        Return res
+    End Function
+    Private Function AddSpell(ByRef level As Integer, ByRef race As Integer, ByRef mass As Boolean, _
+                              ByRef avail As AllDataStructues.Cost, ByRef ignoreAvail As Boolean, ByRef s As AllDataStructues.Spell) As Boolean
+        If Not mass And s.area > 998 Then Return False
+        If level > 0 And Not s.level = level Then Return False
 
+        If Not ignoreAvail Then
+            If s.castCost.Black > 0 And avail.Black = 0 Then Return False
+            If s.castCost.Blue > 0 And avail.Blue = 0 Then Return False
+            If s.castCost.Green > 0 And avail.Green = 0 Then Return False
+            If s.castCost.Red > 0 And avail.Red = 0 Then Return False
+            If s.castCost.White > 0 And avail.White = 0 Then Return False
+        End If
+
+        If race > -1 Then
+            If IsNothing(s.researchCost) Then Return False
+            Dim ok As Boolean = False
+            For Each lord As String In s.researchCost.Keys
+                If comm.LordsRace(lord) = race Then
+                    ok = True
+                    Exit For
+                End If
+            Next lord
+            If Not ok Then Return False
+        End If
+        Return True
     End Function
 
     ''' <summary>Создаст список наемников</summary>
     ''' <param name="d">Желаемые параметры доступных наемников. Имеет значение только .shopContent</param>
-    Private Function MakeMercenariesList(ByRef d As AllDataStructues.DesiredStats) As List(Of String)
+    Public Function MakeMercenariesList(ByRef d As AllDataStructues.DesiredStats) As List(Of String)
         Dim res, selection As New List(Of String)
         Dim tolerance As Integer
         Dim dtolerance As Integer = 100
@@ -5458,7 +5538,7 @@ Public Class ObjectsContentSet
 
     ''' <summary>Создаст список предметов</summary>
     ''' <param name="d">Желаемые параметры доступных предметов. Имеет значение только .shopContent</param>
-    Private Function MakeMerchItemsList(ByRef d As AllDataStructues.DesiredStats) As List(Of String)
+    Public Function MakeMerchItemsList(ByRef d As AllDataStructues.DesiredStats) As List(Of String)
         Dim res, selection As New List(Of String)
         Dim cost As New Dictionary(Of String, Integer)
         Dim tolerance As Integer

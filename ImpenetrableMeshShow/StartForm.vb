@@ -230,5 +230,4 @@ again:
         Return ObjectsSize
     End Function
 
-
 End Class

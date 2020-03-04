@@ -79,6 +79,7 @@
     <Compile Include="ArrayZoomTest.vb" />
     <Compile Include="CommonTest.vb" />
     <Compile Include="My Project\AssemblyInfo.vb" />
+    <Compile Include="ObjectsContentSetTest.vb" />
     <Compile Include="RandStackTest.vb" />
     <Compile Include="RandStack_CostTest.vb" />
   </ItemGroup>
@@ -86,10 +87,17 @@
     <Shadow Include="Test References\RandomStackGenerator.accessor" />
   </ItemGroup>
   <ItemGroup>
+    <ProjectReference Include="..\ImpenetrableMeshShow\InpenetrableMeshShow.vbproj">
+      <Project>{06CEDBA3-3200-4D4C-B293-38F87FF3BDB3}</Project>
+      <Name>InpenetrableMeshShow</Name>
+    </ProjectReference>
     <ProjectReference Include="..\RandomStackGenerator\RandomStackGenerator.vbproj">
       <Project>{75561DF2-6376-4542-847D-10DEDD5B2B29}</Project>
       <Name>RandomStackGenerator</Name>
     </ProjectReference>
+  </ItemGroup>
+  <ItemGroup>
+    <Shadow Include="Test References\ImpenetrableMeshShow.accessor" />
   </ItemGroup>
   <Import Project="$(MSBuildBinPath)\Microsoft.VisualBasic.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 

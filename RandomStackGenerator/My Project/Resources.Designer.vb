@@ -108,11 +108,7 @@ Namespace My.Resources
         '''g000uu3001
         '''g000uu3002
         '''g000uu3003
-        '''g000uu3004
-        '''g000uu8040
-        '''
-        '''#призыватели
-        '''#учени [rest of string was truncated]&quot;;.
+        '''g000 [rest of string was truncated]&quot;;.
         '''</summary>
         Friend ReadOnly Property ExcludeIDs() As String
             Get
@@ -470,7 +466,7 @@ Namespace My.Resources
         '''  Looks up a localized string similar to #строка, начинающаяся с решетки, игнорируется
         '''Строка без пробелов, табов и знаков равенства. Идентификатор локации (ID). На карте названия локаций для размещения отрядов должны состоять из ID, знака подчеркивания и любого символа(ов). Примеры:$newline$В файле: MyLocId ; На карте (одна локация): MyLocId_A$newline$В файле: Тир2_1 ; На карте (две локации): Тир2_1_A Тир2_1_B$newline$В файле: Kraken ; На карте (три локации): Kraken_LegionLoc Kraken_ClanLoc Kraken_CommonLoc
         '''ID
-        '''Целое число. Юниты с этой планкой оп [rest of string was truncated]&quot;;.
+        '''Целое число. Юниты с этой планкой [rest of string was truncated]&quot;;.
         '''</summary>
         Friend ReadOnly Property StackStatsFields() As String
             Get
@@ -511,11 +507,11 @@ Namespace My.Resources
         '''<summary>
         '''  Looks up a localized string similar to #строка, начинающаяся с решетки, игнорируется
         '''#разделители полей: пробел, таб, знак равенства
-        '''#идущие подрядразделители интерпретируются как один
+        '''#идущие подряд разделители интерпретируются как один
         '''ID location1 AverageExpBar = 1000	ExpStackKilled 200  Race=U StackSize 1 MaxGiants 0		MeleeSlots 2 LootCost 0
         '''AverageExpBar = 100 ID testloc2 StackSize 3 MaxGiants 1		MeleeSlots -1 LootCost 3400 	ExpStackKilled 200  Race=U+d
         '''ID=loc3 AverageExpBar = 1000 Race=HuMans StackSize 1 MeleeSlots 2 LootCost 0	ExpStackKilled 200   MaxGiants 0
-        '''ID=loc54 AverageExpBar = 1000 R [rest of string was truncated]&quot;;.
+        '''ID=loc54 AverageExpBar = [rest of string was truncated]&quot;;.
         '''</summary>
         Friend ReadOnly Property TestStackStats() As String
             Get
