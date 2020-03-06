@@ -2965,6 +2965,10 @@ Public Class Map
         Dim stackRace As List(Of Integer)
         ''' <summary>True, если на клетке вода</summary>
         Dim isWater As Boolean
+        ''' <summary>True, если на клетке дорога</summary>
+        Dim isRoad As Boolean
+        ''' <summary>True, если на клетке лес</summary>
+        Dim isForest As Boolean
     End Structure
 
     Public Structure ComplitedSteps
@@ -2975,7 +2979,8 @@ Public Class Map
         Dim StacksDesiredStatsGen_Done As Boolean
         Dim WaterCreation_Done As Boolean
         Dim StacksRaceGen_Done As Boolean
-        Dim ObjectsPlacing_Done As Boolean
+        Dim ImpenetrableObjectsPlacing_Done As Boolean
+        Dim PenetrableObjectsPlacing_Done As Boolean
     End Structure
 
     Public Structure SettingsLoc
@@ -3061,7 +3066,11 @@ Public Class Map
         ''' <summary>Количество воды на карте. 0 - без воды, 1 - очень много</summary>
         Dim WaterAmount As Double
         '''<summary>Максимальный уровень заклинаний в столице</summary>
-        Dim spellsMaxLevel As Integer
+        Dim SpellsMaxLevel As Integer
+        ''' <summary>Количество дорого на карте. 0 - без дорог, 1 - максимальное количество</summary>
+        Dim RoadsAmount As Double
+        ''' <summary>Количество леса на карте. 0 - без леса, 1 - максимальное количество</summary>
+        Dim ForestAmount As Double
     End Structure
 
     ''' <summary>Вернет True, если все нормально, иначе стоит перегенерировать</summary>
@@ -4371,7 +4380,7 @@ Public Class ImpenetrableObjects
         Dim t1 As Integer = Environment.TickCount
         Console.WriteLine("Objects types definition: " & t1 - t0)
 
-        m.complited.ObjectsPlacing_Done = True
+        m.complited.ImpenetrableObjectsPlacing_Done = True
     End Sub
 
     Private Function makeIDs(ByRef a() As MapObject) As List(Of Integer)

@@ -12,6 +12,7 @@ Friend Class StartForm
     Dim watergenerator As New WaterGen
     Dim comm As New Common
     Dim objplace As ImpenetrableObjects
+    Dim penOnjGen As New PenetrableObjectsGen
     Dim ObjectsSize As New Dictionary(Of String, Size)
 
     Private Sub GenButton_Click() Handles GenButton.Click
@@ -130,8 +131,7 @@ again:
 
         Call objplace.Gen(grid, sM, sR, sC)
 
-        'запоминаем набор точек с наибольшим n
-        'произвед 1/r - стат вес для nearwith = -1
+        Call penOnjGen.Gen(grid, sM)
 
         Call ShowResult(grid)
 
