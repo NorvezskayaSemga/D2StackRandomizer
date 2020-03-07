@@ -43,8 +43,10 @@ Friend Class StartForm
         sM.LocExpRatio = 2
         sM.PassGuardsPowerMultiplicator = 2
         sM.Wealth = 0.8
-        sM.WaterAmount = 0.3
-        sM.spellsMaxLevel = 5
+        sM.WaterAmount = 0
+        sM.SpellsMaxLevel = 5
+        sM.RoadsAmount = 0.3
+        sM.ForestAmount = 0.5
 
         Dim sR As Map.SettingsLoc
         sR.AverageRadius = 20
@@ -160,7 +162,13 @@ again:
                 If grid.board(x, y).isBorder Then
                     t(x, y) = grid.board(x, y).objRace.Item(0)
                 ElseIf grid.board(x, y).isWater Then
-                    t(x, y) += 200
+                    't(x, y) += 200
+                End If
+                If grid.board(x, y).isForest Then
+                    t(x, y) = 135
+                End If
+                If grid.board(x, y).isRoad Then
+                    t(x, y) = 145
                 End If
             Next y
         Next x
