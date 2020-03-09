@@ -545,7 +545,7 @@ Public Class RandStackTest
         Dim ok As Boolean = True
 
         Dim s As New AllDataStructues.Stack With {.pos = New String() {"g000uu5130", "g000uu5030", "G000000000", _
-                                                                "G000000000", "G000000000", "G000000000"}, _
+                                                                       "G000000000", "G000000000", "G000000000"}, _
                                            .items = New List(Of String)}
         Dim stats As AllDataStructues.DesiredStats = target.StackStats(s)
 
@@ -573,7 +573,7 @@ Public Class RandStackTest
     Public Sub GenTest61()
 
         Dim target As RandStack_Accessor = Nothing
-        Dim stats As AllDataStructues.DesiredStats = TestGoblinsGenStats(target)
+        Dim stats As AllDataStructues.DesiredStats = TestGoblinsGenStats(target, False)
 
         Dim ok As Boolean = TestGoblinsGen(target, stats, True)
 
@@ -586,19 +586,39 @@ Public Class RandStackTest
     Public Sub GenTest62()
 
         Dim target As RandStack_Accessor = Nothing
-        Dim stats As AllDataStructues.DesiredStats = TestGoblinsGenStats(target)
+        Dim stats As AllDataStructues.DesiredStats = TestGoblinsGenStats(target, False)
 
         Dim ok As Boolean = TestGoblinsGen(target, stats, False)
 
         If Not ok Then Assert.Inconclusive("Verify the correctness of this test method.")
     End Sub
-    Private Function TestGoblinsGenStats(ByRef target As RandStack_Accessor) As AllDataStructues.DesiredStats
+    '''<summary>
+    '''A test for Gen
+    '''</summary>
+    <TestMethod()> _
+    Public Sub GenTest63()
+
+        Dim target As RandStack_Accessor = Nothing
+        Dim stats As AllDataStructues.DesiredStats = TestGoblinsGenStats(target, True)
+
+        Dim ok As Boolean = TestGoblinsGen(target, stats, False)
+
+        If Not ok Then Assert.Inconclusive("Verify the correctness of this test method.")
+    End Sub
+    Private Function TestGoblinsGenStats(ByRef target As RandStack_Accessor, ByRef twogoblins As Boolean) As AllDataStructues.DesiredStats
         If IsNothing(UnitsList) Then Call ReadTestUnits()
         If IsNothing(ItemsList) Then Call ReadTestItems()
         target = New RandStack_Accessor(UnitsList, ItemsList, excludeList, customRaceList, False)
-        Dim s As New AllDataStructues.Stack With {.pos = New String() {"g000uu5117", "g000uu5018", "g000uu5017", _
-                                                                       "g000uu5017", "g000uu5018", "G000000000"}, _
-                                                  .items = New List(Of String)}
+        Dim s As AllDataStructues.Stack
+        If twogoblins Then
+            s = New AllDataStructues.Stack With {.pos = New String() {"g000uu5117", "g000uu5018", "g000000000", _
+                                                                      "g000000000", "g000000000", "G000000000"}, _
+                                                 .items = New List(Of String)}
+        Else
+            s = New AllDataStructues.Stack With {.pos = New String() {"g000uu5117", "g000uu5018", "g000uu5017", _
+                                                                      "g000uu5017", "g000uu5018", "G000000000"}, _
+                                                 .items = New List(Of String)}
+        End If
         Return target.StackStats(s)
     End Function
     Private Function TestGoblinsGen(ByRef target As RandStack_Accessor, ByRef stats As AllDataStructues.DesiredStats, _
