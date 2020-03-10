@@ -64,42 +64,10 @@ Public Class RandStackTest
     Friend AllSpells As Dictionary(Of String, AllDataStructues.Spell) = Nothing
 
     Friend Sub ReadTestUnits()
-        Dim comm As New Common
-        Dim s() As String = comm.TxtSplit(RandomStackGenerator.My.Resources.TestUnitsTable)
-        Dim r() As String
-        ReDim UnitsList(UBound(s) - 1)
-        For i As Integer = 1 To UBound(s) Step 1
-            r = s(i).Split(" ")
-            If r.Length = 12 Then
-                Do While Not r(0).Substring(0, 1).ToLower = "g" And r(0).Length > 1
-                    r(0) = r(0).Substring(1)
-                Loop
-                UnitsList(i - 1).unitID = r(0)
-                UnitsList(i - 1).level = r(2)
-                UnitsList(i - 1).race = r(3)
-                UnitsList(i - 1).unitBranch = r(4)
-                UnitsList(i - 1).small = r(5)
-                UnitsList(i - 1).EXPkilled = r(7)
-                UnitsList(i - 1).EXPnext = r(8)
-                UnitsList(i - 1).leadership = r(9)
-                UnitsList(i - 1).waterOnly = r(10)
-                UnitsList(i - 1).reach = r(11)
-            End If
-        Next i
+        UnitsList = (New ImpenetrableMeshShow.StartForm_Accessor).ReadTestUnits
     End Sub
     Friend Sub ReadTestItems()
-        Dim comm As New Common
-        Dim s() As String = comm.TxtSplit(RandomStackGenerator.My.Resources.TestItemsTable)
-        Dim r() As String
-        ReDim ItemsList(UBound(s) - 1)
-        For i As Integer = 1 To UBound(s) Step 1
-            r = s(i).Split(" ")
-            If r.Length = 3 Then
-                ItemsList(i - 1).type = r(0)
-                ItemsList(i - 1).itemID = r(1)
-                ItemsList(i - 1).itemCost = AllDataStructues.Cost.Read(r(2))
-            End If
-        Next i
+        ItemsList = (New ImpenetrableMeshShow.StartForm_Accessor).ReadTestItems
     End Sub
     Friend Sub ReadTestSpells()
         Dim s As New ImpenetrableMeshShow.StartForm_Accessor

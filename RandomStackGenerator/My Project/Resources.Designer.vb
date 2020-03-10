@@ -484,27 +484,6 @@ Namespace My.Resources
         End Property
         
         '''<summary>
-        '''  Looks up a localized string similar to ITEM_CAT	ITEM_ID	VALUE
-        '''6	G000IG0001	g0400:r0000:y0000:e0000:w0000
-        '''4	G000IG0002	g0200:r0000:y0000:e0000:w0000
-        '''4	G000IG0003	g0450:r0000:y0000:e0000:w0000
-        '''7	G000IG0004	g1500:r0000:y0000:e0000:w0000
-        '''5	G000IG0005	g0150:r0000:y0000:e0000:w0000
-        '''5	G000IG0006	g0300:r0000:y0000:e0000:w0000
-        '''7	G000IG0007	g1500:r0000:y0000:e0000:w0000
-        '''4	G000IG0008	g0200:r0000:y0000:e0000:w0000
-        '''4	G000IG0009	g0450:r0000:y0000:e0000:w0000
-        '''7	G000IG0010	g1500:r0000:y0000:e0000:w0000
-        '''4	G000IG0011	g0200:r0000:y0000:e0000:w0000
-        '''4	G000IG0012	g04 [rest of string was truncated]&quot;;.
-        '''</summary>
-        Friend ReadOnly Property TestItemsTable() As String
-            Get
-                Return ResourceManager.GetString("TestItemsTable", resourceCulture)
-            End Get
-        End Property
-        
-        '''<summary>
         '''  Looks up a localized string similar to #строка, начинающаяся с решетки, игнорируется
         '''#разделители полей: пробел, таб, знак равенства
         '''#идущие подряд разделители интерпретируются как один
@@ -516,23 +495,6 @@ Namespace My.Resources
         Friend ReadOnly Property TestStackStats() As String
             Get
                 Return ResourceManager.GetString("TestStackStats", resourceCulture)
-            End Get
-        End Property
-        
-        '''<summary>
-        '''  Looks up a localized string similar to UNIT_ID	UNIT_CAT	LEVEL	SUBRACE	BRANCH	SIZE_SMALL	ATTACK_ID	XP_KILLED	XP_NEXT	LEADERSHIP	WATER_ONLY	REACH
-        '''g000uu0001	0	1	1	0	True	g000aa0001	20	80	0	False	3
-        '''g000uu0002	0	2	1	0	True	g000aa0002	60	475	0	False	3
-        '''g000uu0003	0	3	1	0	True	g000aa0003	120	950	0	False	3
-        '''g000uu0004	0	2	1	0	True	g000aa0004	60	475	0	False	3
-        '''g000uu0005	0	3	1	0	True	g000aa0005	115	950	0	False	3
-        '''g000uu0006	0	1	1	1	True	g000aa0006	20	70	0	False	2
-        '''g000uu0007	0	2	1	1	True	g000aa0007	60	500	0	False	2
-        '''g000uu0008	0	1	1	2	True	g000aa0008	15	75	0	 [rest of string was truncated]&quot;;.
-        '''</summary>
-        Friend ReadOnly Property TestUnitsTable() As String
-            Get
-                Return ResourceManager.GetString("TestUnitsTable", resourceCulture)
             End Get
         End Property
         

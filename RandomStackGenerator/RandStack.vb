@@ -300,6 +300,8 @@ Public Class RandStack
     ''' <param name="NoLeader">True, если стэк находится внутри руин или города</param>
     Public Function Gen(ByRef StackStats As AllDataStructues.DesiredStats, ByRef GroundTile As Boolean, ByRef NoLeader As Boolean) As AllDataStructues.Stack
 
+        If Not IsNothing(StackStats.shopContent) Then Return Nothing
+
         Dim DynStackStats As AllDataStructues.DesiredStats = AllDataStructues.DesiredStats.Copy(StackStats)
         DynStackStats.Race.Clear()
         For Each i As Integer In StackStats.Race
@@ -1245,10 +1247,13 @@ Public Class AllDataStructues
         Dim shopContent As List(Of String)
 
         Public Shared Function Copy(ByVal v As DesiredStats) As DesiredStats
-            Dim RacesList As New List(Of Integer)
-            For Each Item As Integer In v.Race
-                RacesList.Add(Item)
-            Next Item
+            Dim RacesList As List(Of Integer) = Nothing
+            If Not IsNothing(v.Race) Then
+                RacesList = New List(Of Integer)
+                For Each Item As Integer In v.Race
+                    RacesList.Add(Item)
+                Next Item
+            End If
             Dim shopContentList As List(Of String) = Nothing
             If Not IsNothing(v.shopContent) Then
                 shopContentList = New List(Of String)

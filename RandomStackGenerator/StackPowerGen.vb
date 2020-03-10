@@ -259,7 +259,6 @@ Class StackStatsGen
         Return StackStatsGen.GenDesiredStats(expKilled, LootCost, rndGen, -1)
     End Function
     Friend Shared Function GenDesiredStats(ByRef expKilled As Double, ByRef LootCost As Double, ByRef rndGen As RandomStackGenerator.RndValueGen, ByRef groupID As Integer) As AllDataStructues.DesiredStats
-        Dim eKilled As Double = expKilled
         Dim stackSize As Integer = rndGen.RndPos(6, True)
         Dim meleeCount As Integer = rndGen.RndPos(Math.Min(stackSize, 3), True)
         Dim maxGiants As Integer
@@ -275,19 +274,19 @@ Class StackStatsGen
 
         Dim maxD As Double = Math.Sqrt(CDbl(My.Resources.expBarDispersion))
         Dim minD As Double = 1 / maxD
-        Dim avExpKilled As Double = eKilled / (stackSize - 0.5 * maxGiants)
+        Dim avExpKilled As Double = expKilled / (stackSize - 0.5 * maxGiants)
         Dim eBar As Integer = CInt(UnitExpKilledToExpBar(avExpKilled) * rndGen.PRand(minD, maxD))
 
-        Return New AllDataStructues.DesiredStats With {.ExpStackKilled = CInt(eKilled), _
-                                                .StackSize = stackSize, _
-                                                .MeleeCount = meleeCount, _
-                                                .MaxGiants = maxGiants, _
-                                                .Race = New List(Of Integer), _
-                                                .LootCost = CInt(LootCost), _
-                                                .LocationName = "Loc_" & groupID, _
-                                                .ExpBarAverage = eBar, _
-                                                .excludeNonconsumableItems = False, _
-                                                .excludeConsumableItems = False}
+        Return New AllDataStructues.DesiredStats With {.ExpStackKilled = Math.Max(CInt(expKilled), 5), _
+                                                       .StackSize = stackSize, _
+                                                       .MeleeCount = meleeCount, _
+                                                       .MaxGiants = maxGiants, _
+                                                       .Race = New List(Of Integer), _
+                                                       .LootCost = CInt(LootCost), _
+                                                       .LocationName = "Loc_" & groupID, _
+                                                       .ExpBarAverage = Math.Max(eBar, 50), _
+                                                       .excludeNonconsumableItems = False, _
+                                                       .excludeConsumableItems = False}
     End Function
 
 End Class

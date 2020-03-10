@@ -135,6 +135,18 @@ again:
 
         Call penOnjGen.Gen(grid, sM)
 
+        Dim randstack As New RandStack(ReadTestUnits, ReadTestItems, {"%default%"}, {"%default%"}, True)
+        Dim stacks(grid.groupStats.Count - 1) As AllDataStructues.Stack
+        Dim n As Integer = -1
+        For Each v As AllDataStructues.DesiredStats In grid.groupStats.Values
+            n += 1
+            stacks(n) = randstack.Gen(v, False, False)
+        Next v
+        Call names.GenNames(stacks, randstack)
+        For i As Integer = 0 To UBound(stacks) Step 1
+            Console.WriteLine(stacks(i).name)
+        Next i
+
         Call ShowResult(grid)
 
     End Sub
@@ -238,4 +250,46 @@ again:
         Return ObjectsSize
     End Function
 
+    Private Function ReadTestUnits() As AllDataStructues.Unit()
+        Dim comm As New Common
+        Dim s() As String = comm.TxtSplit(My.Resources.TestUnitsTable)
+        Dim r() As String
+        Dim UnitsList(UBound(s) - 1) As AllDataStructues.Unit
+        For i As Integer = 1 To UBound(s) Step 1
+            r = s(i).Split(" ")
+            If r.Length = 12 Then
+                Do While Not r(0).Substring(0, 1).ToLower = "g" And r(0).Length > 1
+                    r(0) = r(0).Substring(1)
+                Loop
+                UnitsList(i - 1).unitID = r(0)
+                UnitsList(i - 1).level = r(2)
+                UnitsList(i - 1).race = r(3)
+                UnitsList(i - 1).unitBranch = r(4)
+                UnitsList(i - 1).small = r(5)
+                UnitsList(i - 1).EXPkilled = r(7)
+                UnitsList(i - 1).EXPnext = r(8)
+                UnitsList(i - 1).leadership = r(9)
+                UnitsList(i - 1).waterOnly = r(10)
+                UnitsList(i - 1).reach = r(11)
+                UnitsList(i - 1).name = UnitsList(i - 1).unitID & "_test"
+            End If
+        Next i
+        Return UnitsList
+    End Function
+
+    Private Function ReadTestItems() As AllDataStructues.Item()
+        Dim comm As New Common
+        Dim s() As String = comm.TxtSplit(My.Resources.TestItemsTable)
+        Dim r() As String
+        Dim ItemsList(UBound(s) - 1) As AllDataStructues.Item
+        For i As Integer = 1 To UBound(s) Step 1
+            r = s(i).Split(" ")
+            If r.Length = 3 Then
+                ItemsList(i - 1).type = r(0)
+                ItemsList(i - 1).itemID = r(1)
+                ItemsList(i - 1).itemCost = AllDataStructues.Cost.Read(r(2))
+            End If
+        Next i
+        Return ItemsList
+    End Function
 End Class

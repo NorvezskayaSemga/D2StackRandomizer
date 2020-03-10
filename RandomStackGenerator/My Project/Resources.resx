@@ -205,13 +205,7 @@
   <data name="Lords" type="System.Resources.ResXFileRef, System.Windows.Forms">
     <value>..\Resources\Lords.txt;System.String, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089;windows-1251</value>
   </data>
-  <data name="TestItemsTable" type="System.Resources.ResXFileRef, System.Windows.Forms">
-    <value>..\resources\testitemstable.txt;System.String, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089;windows-1251</value>
-  </data>
   <data name="TestStackStats" type="System.Resources.ResXFileRef, System.Windows.Forms">
     <value>..\resources\teststackstats.txt;System.String, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089;windows-1251</value>
-  </data>
-  <data name="TestUnitsTable" type="System.Resources.ResXFileRef, System.Windows.Forms">
-    <value>..\resources\testunitstable.txt;System.String, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089;windows-1251</value>
   </data>
 </root>
