@@ -168,29 +168,42 @@ Public Class RandStack
     End Function
 
     ''' <summary>Вычисляет параметры отряда по составу</summary>
-    ''' <param name="s">ID юнитов и предметов отряда</param>
-    Public Function StackStats(ByRef s As AllDataStructues.Stack) As AllDataStructues.DesiredStats
+    ''' <param name="stack">ID юнитов и предметов отряда</param>
+    Public Function StackStats(ByRef stack As AllDataStructues.Stack) As AllDataStructues.DesiredStats
         Dim result As New AllDataStructues.DesiredStats With {.Race = New List(Of Integer)}
-        Dim u As AllDataStructues.Unit
+        Dim unit As AllDataStructues.Unit
         Dim m As AllDataStructues.Item
-        For i As Integer = 0 To UBound(s.pos) Step 1
-            If Not s.pos(i).ToUpper = emptyItem Then
-                u = FindUnitStats(s.pos(i))
-                If u.unitID = "" Then Throw New Exception("Неизвестный id юнита: " & s.pos(i))
-                If Not result.Race.Contains(u.race) Then result.Race.Add(u.race)
-                result.ExpStackKilled += u.EXPkilled
-                result.ExpBarAverage += u.EXPnext
-                If u.small Then
+        For i As Integer = 0 To UBound(stack.pos) Step 1
+            If Not stack.pos(i).ToUpper = emptyItem Then
+                unit = FindUnitStats(stack.pos(i))
+                If unit.unitID = "" Then Throw New Exception("Неизвестный id юнита: " & stack.pos(i))
+                If Not result.Race.Contains(unit.race) Then result.Race.Add(unit.race)
+                result.ExpStackKilled += unit.EXPkilled
+                result.ExpBarAverage += unit.EXPnext
+                If unit.small Then
                     result.StackSize += 1
                 Else
                     result.StackSize += 2
                     result.MaxGiants += 1
                 End If
-                If Not u.small Or u.reach = 3 Then result.MeleeCount += 1
+                If Not unit.small Or unit.reach = 3 Then result.MeleeCount += 1
+                If unit.level < stack.level(i) Then
+                    Dim d As Integer = stack.level(i) - unit.level
+                    If d < unit.dynUpgradeLevel Then
+                        result.ExpStackKilled += unit.dynUpgrade1.EXPkilled * d
+                        result.ExpBarAverage += unit.dynUpgrade1.EXPnext * d
+                    Else
+                        result.ExpStackKilled += unit.dynUpgrade1.EXPkilled * (unit.dynUpgradeLevel - 1)
+                        result.ExpBarAverage += unit.dynUpgrade1.EXPnext * (unit.dynUpgradeLevel - 1)
+                        d -= unit.dynUpgradeLevel - 1
+                        result.ExpStackKilled += unit.dynUpgrade2.EXPkilled * d
+                        result.ExpBarAverage += unit.dynUpgrade2.EXPnext * d
+                    End If
+                End If
             End If
         Next i
         result.ExpBarAverage = CInt(result.ExpBarAverage / result.StackSize)
-        For Each Item As String In s.items
+        For Each Item As String In stack.items
             m = FindItemStats(Item)
             If m.itemID = "" Then Throw New Exception("Неизвестный id предмета: " & Item)
             If itemType.Item(m.type) = "JEWEL" Then
@@ -262,15 +275,17 @@ Public Class RandStack
     ''' <summary>Затычка: вернет отряд из двух сквайров и трех лучников. Лидер - паладин. С зельем воскрешения</summary>
     Public Function GenGag() As AllDataStructues.Stack
         Dim result As New AllDataStructues.Stack
-        ReDim result.pos(UBound(busytransfer))
+        ReDim result.pos(UBound(busytransfer)), result.level(UBound(busytransfer))
         Dim fighter1 As String = "G000UU0001"
         Dim fighter2 As String = "G000UU0006"
         Dim leader As String = "G000UU5356"
         For i As Integer = 0 To UBound(firstrow) Step 1
             result.pos(firstrow(i)) = fighter1
+            result.level(firstrow(i)) = 1
         Next i
         For i As Integer = 0 To UBound(secondrow) Step 1
             result.pos(secondrow(i)) = fighter2
+            result.level(secondrow(i)) = 1
         Next i
         result.pos(firstrow(2)) = leader
         result.leaderPos = firstrow(2)
@@ -383,7 +398,7 @@ Public Class RandStack
             ReDim SelectedUnits(SelectedFighters.Count)
         End If
         Dim result As New AllDataStructues.Stack With {.leaderPos = -1}
-        ReDim result.pos(UBound(busytransfer))
+        ReDim result.pos(UBound(busytransfer)), result.level(UBound(busytransfer))
         Dim unitIsUsed(UBound(SelectedUnits)) As Boolean
         Dim firstRowSlots As Integer = 3
         Dim secondRowSlots As Integer = 3
@@ -536,7 +551,7 @@ Public Class RandStack
                 If result.pos(firstrow(k)) = "" Then
                     m += 1
                     If m = n1 Then
-                        result.pos(firstrow(k)) = units(i).unitID
+                        Call SetUnitPos(result, firstrow(k), units(i))
                         FRowSlots -= 1
                         If Not units(i).small Then
                             result.pos(busytransfer(firstrow(k))) = emptyItem
@@ -553,7 +568,7 @@ Public Class RandStack
                     If result.pos(t) = "" Then
                         m += 1
                         If m = n1 + n2 Then
-                            result.pos(t) = units(i).unitID
+                            Call SetUnitPos(result, t, units(i))
                             For r As Integer = 0 To UBound(firstrow) Step 1
                                 If t = firstrow(r) Then
                                     FRowSlots -= 1
@@ -576,7 +591,7 @@ Public Class RandStack
                 If result.pos(secondrow(k)) = "" Then
                     m += 1
                     If m = n2 Then
-                        result.pos(secondrow(k)) = units(i).unitID
+                        Call SetUnitPos(result, secondrow(k), units(i))
                         SRowSlots -= 1
                         If i = 0 Then result.leaderPos = secondrow(k)
                         placed = True
@@ -587,6 +602,10 @@ Public Class RandStack
         Next k
         Return placed
     End Function
+    Private Sub SetUnitPos(ByRef result As AllDataStructues.Stack, ByRef pos As Integer, ByRef unit As AllDataStructues.Unit)
+        result.pos(pos) = unit.unitID
+        result.level(pos) = unit.level
+    End Sub
 
     Private Sub ChangeLimit(ByRef List() As AllDataStructues.Unit, ByRef id As Integer, _
                             ByRef DynStackStats As AllDataStructues.DesiredStats,
@@ -1286,6 +1305,8 @@ Public Class AllDataStructues
     Public Structure Stack
         ''' <summary>ID юнита для каждой позиции</summary>
         Dim pos() As String
+        ''' <summary>Уровень юнита для каждой позиции</summary>
+        Dim level() As Integer
         ''' <summary>В какой позиции находится лидер</summary>
         Dim leaderPos As Integer
         ''' <summary>Предметы отряда. GxxxIGxxxx</summary>
@@ -1320,6 +1341,12 @@ Public Class AllDataStructues
         Dim unitBranch As Integer
         ''' <summary>Цена найма юнита</summary>
         Dim unitCost As Cost
+        ''' <summary>Уровень, до которого статы растут согласно dynUpgr1</summary>
+        Dim dynUpgradeLevel As Integer
+        ''' <summary>Рост статов до dynUpgradeLevel</summary>
+        Dim dynUpgrade1 As DynUpgrade
+        ''' <summary>Рост статов после dynUpgradeLevel</summary>
+        Dim dynUpgrade2 As DynUpgrade
 
         Public Shared Function Copy(ByVal v As Unit) As Unit
             Return New Unit With {.name = v.name, _
@@ -1333,7 +1360,25 @@ Public Class AllDataStructues
                                   .small = v.small, _
                                   .waterOnly = v.waterOnly, _
                                   .unitBranch = v.unitBranch, _
-                                  .unitCost = Cost.Copy(v.unitCost)}
+                                  .unitCost = Cost.Copy(v.unitCost), _
+                                  .dynUpgradeLevel = v.dynUpgradeLevel, _
+                                  .dynUpgrade1 = DynUpgrade.Copy(v.dynUpgrade1), _
+                                  .dynUpgrade2 = DynUpgrade.Copy(v.dynUpgrade2)}
+        End Function
+    End Structure
+
+    Public Structure DynUpgrade
+        ''' <summary>Опыт за убийство юнита</summary>
+        Dim EXPkilled As Integer
+        ''' <summary>Опыт для апа уровня</summary>
+        Dim EXPnext As Integer
+        ''' <summary>Цена найма юнита</summary>
+        Dim unitCost As Cost
+
+        Public Shared Function Copy(ByVal v As DynUpgrade) As DynUpgrade
+            Return New DynUpgrade With {.EXPkilled = v.EXPkilled, _
+                                        .EXPnext = v.EXPnext, _
+                                        .unitCost = Cost.Copy(v.unitCost)}
         End Function
     End Structure
 
