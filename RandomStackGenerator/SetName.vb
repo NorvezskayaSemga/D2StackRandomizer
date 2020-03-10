@@ -161,19 +161,19 @@
     Private Function SetName(ByRef leaderID As String, ByRef R As RandStack, ByRef IDs As List(Of Integer)) As String
         Dim u As AllDataStructues.Unit = R.FindUnitStats(leaderID)
         Dim res As String = u.name
-        If excludeRace.Contains(u.race) Then Return res & " race_excluded"
-        If exclude.Contains(u.unitID) Then Return res & " unit_excluded"
+        If excludeRace.Contains(u.race) Then Return res '& " race_excluded"
+        If exclude.Contains(u.unitID) Then Return res '& " unit_excluded"
         If IDs.Count > 0 AndAlso rndgen.PRand(0, 1) > 0.9 Then
             Dim i As Integer = comm.RandomSelection(IDs, weight, True)
             IDs.Remove(i)
             res &= " " & name(i)
             If res.Length > maxLen Then res = res.Substring(0, maxLen)
-        Else
-            If IDs.Count = 0 Then
-                Return res & " no_names"
-            Else
-                Return res & " random_value<0.9"
-            End If
+            'Else
+            '    If IDs.Count = 0 Then
+            '        Return res & " no_names"
+            '    Else
+            '        Return res & " random_value<0.9"
+            '    End If
         End If
         Return res
     End Function
