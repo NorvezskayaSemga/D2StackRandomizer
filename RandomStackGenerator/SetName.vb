@@ -137,28 +137,27 @@
         Next i
     End Sub
 
+    Private IDs As New List(Of Integer)
+
     '''<summary>Присвоит имена всем отрядам в списке</summary>
-    ''' <param name="stacks">Уже сгенерированные стэки</param>
+    ''' <param name="stack">Уже сгенерированные стэки</param>
     ''' <param name="R">Инициализированный класс</param>
-    Public Sub GenNames(ByRef stacks() As AllDataStructues.Stack, ByRef R As RandStack)
-        If IsNothing(stacks) Or IsNothing(R) Then Exit Sub
-        Dim IDs As New List(Of Integer)
-        If Not IsNothing(name) Then
+    ''' <param name="newMapGen">True, если это первый вызов этой функции при генерации новой карты</param>
+    Public Sub GenName(ByRef stack As AllDataStructues.Stack, ByRef R As RandStack, ByRef newMapGen As Boolean)
+        If IsNothing(stack) Or IsNothing(R) Then Exit Sub
+        If Not IsNothing(name) And newMapGen Then
+            IDs.Clear()
             For i As Integer = 0 To UBound(name) Step 1
                 IDs.Add(i)
             Next i
         End If
-        For i As Integer = 0 To UBound(stacks) Step 1
-            If Not IsNothing(stacks(i)) Then
-                If stacks(i).leaderPos > -1 AndAlso Not IsNothing(stacks(i).pos) Then
-                    stacks(i).name = SetName(stacks(i).pos(stacks(i).leaderPos).ToUpper, R, IDs)
-                Else
-                    stacks(i).name = ""
-                End If
-            End If
-        Next i
+        If stack.leaderPos > -1 AndAlso Not IsNothing(stack.pos) Then
+            stack.name = SetName(stack.pos(stack.leaderPos).ToUpper, R)
+        Else
+            stack.name = ""
+        End If
     End Sub
-    Private Function SetName(ByRef leaderID As String, ByRef R As RandStack, ByRef IDs As List(Of Integer)) As String
+    Private Function SetName(ByRef leaderID As String, ByRef R As RandStack) As String
         Dim u As AllDataStructues.Unit = R.FindUnitStats(leaderID)
         Dim res As String = u.name
         If excludeRace.Contains(u.race) Then Return res '& " race_excluded"

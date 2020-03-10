@@ -142,8 +142,10 @@ again:
             n += 1
             stacks(n) = randstack.Gen(v, False, False)
         Next v
-        Call names.GenNames(stacks, randstack)
+        Dim isnew As Boolean = True
         For i As Integer = 0 To UBound(stacks) Step 1
+            Call names.GenName(stacks(i), randstack, isnew)
+            isnew = False
             Console.WriteLine(stacks(i).name)
         Next i
 
