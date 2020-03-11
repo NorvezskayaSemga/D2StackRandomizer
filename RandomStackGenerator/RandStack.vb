@@ -140,7 +140,7 @@ Public Class RandStack
 
     ''' <summary>Найдет статы юнита по ID (нечувствительно к регистру)</summary>
     ''' <param name="ID">GxxxUUxxxx</param>
-    Public Function FindUnitStats(ByRef ID As String) As AllDataStructues.Unit
+    Public Function FindUnitStats(ByVal ID As String) As AllDataStructues.Unit
         Dim f As String = ID.ToUpper
         Dim a()() As AllDataStructues.Unit = New AllDataStructues.Unit()() {AllFighters, AllLeaders, ExcludedUnits}
         For u As Integer = 0 To UBound(a) Step 1
@@ -154,7 +154,7 @@ Public Class RandStack
     End Function
     ''' <summary>Найдет статы предмета по ID (нечувствительно к регистру)</summary>
     ''' <param name="ID">GxxxIGxxxx</param>
-    Public Function FindItemStats(ByRef ID As String) As AllDataStructues.Item
+    Public Function FindItemStats(ByVal ID As String) As AllDataStructues.Item
         Dim f As String = ID.ToUpper
         Dim a()() As AllDataStructues.Item = New AllDataStructues.Item()() {MagicItem, ExcludedItems}
         For u As Integer = 0 To UBound(a) Step 1
@@ -219,9 +219,9 @@ Public Class RandStack
     ''' <param name="GoldCost">Максимальная стоимость набора в золоте. Драгоценности считаются дешевле в два раза</param>
     ''' <param name="excludeConsumableItems">Не генерировать зелья, сферы, талисманы и свитки</param>
     ''' <param name="excludeNonconsumableItems">Не генерировать надеваемые предметы и посохи</param>
-    Public Function ItemsGen(ByRef GoldCost As Integer, _
-                             ByRef excludeConsumableItems As Boolean, _
-                             ByRef excludeNonconsumableItems As Boolean) As List(Of String)
+    Public Function ItemsGen(ByVal GoldCost As Integer, _
+                             ByVal excludeConsumableItems As Boolean, _
+                             ByVal excludeNonconsumableItems As Boolean) As List(Of String)
         Dim costBar, maxCost, selected As Integer
         Dim DynCost As Integer = GoldCost
         Dim IDs As New List(Of Integer)
@@ -249,9 +249,9 @@ Public Class RandStack
     ''' <param name="GoldCost">Максимальная стоимость предмета в золоте. Драгоценности считаются дешевле в два раза</param>
     ''' <param name="excludeConsumableItems">Не генерировать зелья, сферы, талисманы и свитки</param>
     ''' <param name="excludeNonconsumableItems">Не генерировать надеваемые предметы и посохи</param>
-    Public Function ThingGen(ByRef GoldCost As Integer, _
-                             ByRef excludeConsumableItems As Boolean, _
-                             ByRef excludeNonconsumableItems As Boolean) As String
+    Public Function ThingGen(ByVal GoldCost As Integer, _
+                             ByVal excludeConsumableItems As Boolean, _
+                             ByVal excludeNonconsumableItems As Boolean) As String
         Dim selected As Integer
         Dim IDs As New List(Of Integer)
         Dim result As String = ""
@@ -298,7 +298,7 @@ Public Class RandStack
     ''' <param name="StackStats">Желаемые параметры стэка</param>
     ''' <param name="GroundTile">True, если на клетку нельзя ставить водных лидеров. Водной считается клетка с водой, окруженная со всех сторон клетками с водой</param>
     ''' <param name="NoLeader">True, если стэк находится внутри руин или города</param>
-    Public Function Gen(ByRef StackStats As AllDataStructues.DesiredStats, ByRef GroundTile As Boolean, ByRef NoLeader As Boolean) As AllDataStructues.Stack
+    Public Function Gen(ByRef StackStats As AllDataStructues.DesiredStats, ByVal GroundTile As Boolean, ByVal NoLeader As Boolean) As AllDataStructues.Stack
 
         If Not IsNothing(StackStats.shopContent) Then Return Nothing
 
@@ -456,9 +456,9 @@ Public Class RandStack
     ''' <param name="excludeNonconsumableItems">Не генерировать надеваемые предметы и посохи</param>
     ''' <param name="GroundTile">True, если на клетку нельзя ставить водных лидеров. Водной считается клетка с водой, окруженная со всех сторон клетками с водой</param>
     ''' <param name="NoLeader">True, если стэк находится внутри руин или города</param>
-    Public Function Gen(ByRef ExpStackKilled As Integer, ByRef LootCost As Double, ByRef Races As List(Of Integer), _
-                        ByRef excludeConsumableItems As Boolean, ByRef excludeNonconsumableItems As Boolean, _
-                        ByRef GroundTile As Boolean, ByRef NoLeader As Boolean) As AllDataStructues.Stack
+    Public Function Gen(ByVal ExpStackKilled As Integer, ByVal LootCost As Double, ByRef Races As List(Of Integer), _
+                        ByVal excludeConsumableItems As Boolean, ByVal excludeNonconsumableItems As Boolean, _
+                        ByVal GroundTile As Boolean, ByVal NoLeader As Boolean) As AllDataStructues.Stack
         Dim StackStat As AllDataStructues.DesiredStats = StackStatsGen.GenDesiredStats(CDbl(ExpStackKilled), LootCost, rndgen)
         StackStat.Race = Races
         StackStat.excludeNonconsumableItems = excludeNonconsumableItems
@@ -690,14 +690,14 @@ Public Class RndValueGen
     '''<summary>Returns random value with uniform distribution.</summary>
     '''<param name="lower">Minimum value.</param>
     '''<param name="upper">Maximum value.</param>
-    Public Function Rand(ByRef lower As Double, ByRef upper As Double) As Double
+    Public Function Rand(ByVal lower As Double, ByVal upper As Double) As Double
         Dim r As Double = RndDbl()
         Return lower + r * (upper - lower)
     End Function
     '''<summary>Returns random value with uniform distribution. Use this to obtain more uniform distribution in the case of serial code.</summary>
     '''<param name="lower">Minimum value.</param>
     '''<param name="upper">Maximum value.</param>
-    Public Function PRand(ByRef lower As Double, ByRef upper As Double) As Double
+    Public Function PRand(ByVal lower As Double, ByVal upper As Double) As Double
         Dim value(Environment.ProcessorCount - 1), l, u As Double
         Dim n As Integer = CInt(Math.Round(Rand(0, Environment.ProcessorCount - 1), 0))
         l = lower : u = upper
@@ -892,7 +892,7 @@ Public Class Common
 
     ''' <summary>Возвращает ID расы, соответствующее файлам игры</summary>
     ''' <param name="ID">Идентификатор расы (файл races.txt)</param>
-    Public Function RaceIdentifierToSubrace(ByRef ID As String) As Integer
+    Public Function RaceIdentifierToSubrace(ByVal ID As String) As Integer
         Dim uID As String = ID.ToUpper
         If Races.ContainsKey(uID) Then
             Return Races.Item(uID)
@@ -903,13 +903,13 @@ Public Class Common
     End Function
     ''' <summary>Возвращает ID расы, соответствующее файлам игры</summary>
     ''' <param name="ID">Идентификатор расы (файл races.txt)</param>
-    Public Function RaceIdentifierToSubrace(ByRef ID As Integer) As Integer
+    Public Function RaceIdentifierToSubrace(ByVal ID As Integer) As Integer
         Return RaceIdentifierToSubrace(ID.ToString)
     End Function
 
     ''' <summary>Разбивает на строки текст по разделителям Chr(10) и Chr(13). Заменяет все табы на пробелы, удаляет повторяющиеся подряд пробелы, удаляет пробелы в начале и конце строки. Не добавляет в выходной массив строки, начинающиеся с #</summary>
     ''' <param name="TXT">Какой-нибудь текст</param>
-    Public Function TxtSplit(ByRef TXT As String) As String()
+    Public Function TxtSplit(ByVal TXT As String) As String()
         Dim splited() As String = TXT.Replace(Chr(10), Chr(13)).Replace(vbTab, " ").Split(Chr(13))
         Dim parseString(UBound(splited)) As Boolean
         Dim nStrings As Integer = -1
@@ -956,7 +956,7 @@ Public Class Common
     ''' <param name="serial">True, if use in serial code</param>
     Public Function RandomSelection(ByRef IDs As List(Of Integer), ByRef Stats()() As Double, _
                                     ByRef DesiredStats() As Double, ByRef mult() As Double, _
-                                    ByRef BaseSmearing As Double, ByRef serial As Boolean) As Integer
+                                    ByVal BaseSmearing As Double, ByVal serial As Boolean) As Integer
         Dim noValue As Boolean = False
         If IsNothing(Stats) And IsNothing(DesiredStats) Then
             noValue = True
@@ -1025,15 +1025,15 @@ Public Class Common
     ''' <param name="BaseSmearing">Множитель для Сигмы в распределении Гаусса. Сигма=Множитель*Желаемое_значение</param>
     ''' <param name="serial">True, if use in serial code</param>
     Public Function RandomSelection(ByRef IDs As List(Of Integer), ByRef Stats()() As Double, _
-                                    ByRef DesiredStats() As Double, ByRef BaseSmearing As Double, _
-                                    ByRef serial As Boolean) As Integer
+                                    ByRef DesiredStats() As Double, ByVal BaseSmearing As Double, _
+                                    ByVal serial As Boolean) As Integer
         Return RandomSelection(IDs, Stats, DesiredStats, Nothing, BaseSmearing, serial)
     End Function
     ''' <summary>Dыбирает случайным образом запись из списка, считая, что у всех записей будет одинаковый стат. вес</summary>
     ''' <param name="IDs">Список намеров записей, из которых делается выбор</param>
     ''' <param name="serial">True, if use in serial code</param>
     Public Function RandomSelection(ByRef IDs As List(Of Integer), _
-                                    ByRef serial As Boolean) As Integer
+                                    ByVal serial As Boolean) As Integer
         Return RandomSelection(IDs, Nothing, Nothing, 0, serial)
     End Function
     ''' <summary>Dыбирает случайным образом запись из списка</summary>
@@ -1042,7 +1042,7 @@ Public Class Common
     ''' <param name="Weight">Вероятность выбрать запись прямо пропорциональна величине стат. веса. Сумма весов может быть не равна единице</param>
     ''' <param name="serial">True, if use in serial code</param>
     Public Function RandomSelection(ByRef IDs As List(Of Integer), ByRef Weight() As Double, _
-                                    ByRef serial As Boolean) As Integer
+                                    ByVal serial As Boolean) As Integer
         Dim tWeight() As Double
         If IsNothing(Weight) Then
             ReDim tWeight(IDs.Max)
@@ -1071,7 +1071,7 @@ Public Class Common
         Return SelectedItem
     End Function
     ''' <summary>e^(-0.5 * ((X - avX) / (sigma * avX)) ^ 2)</summary>
-    Public Function Gauss(ByRef X As Double, ByRef avX As Double, ByRef sigma As Double) As Double
+    Public Function Gauss(ByVal X As Double, ByVal avX As Double, ByVal sigma As Double) As Double
         Return Math.Exp(-0.5 * ((X - avX) / (sigma * avX)) ^ 2)
     End Function
 

@@ -2545,7 +2545,7 @@ Public Class Location
     ''' <param name="b">Половина высоты</param>
     ''' <param name="angle">Угол наклона</param>
     ''' <param name="i">Номер локации, больше ноля</param>
-    Public Sub New(ByRef p As Point, ByRef a As Double, ByRef b As Double, ByRef angle As Double, ByRef i As Integer, Optional ByRef symmetred As Boolean = False)
+    Public Sub New(ByRef p As Point, ByVal a As Double, ByVal b As Double, ByVal angle As Double, ByVal i As Integer, Optional ByVal symmetred As Boolean = False)
         pos = New Point(p.X, p.Y)
         invSigmaA = Math.Sqrt(0.5) * 0.5 / a
         invSigmaB = Math.Sqrt(0.5) * 0.5 / b
@@ -2853,10 +2853,10 @@ Class TerminationCondition
     Dim startTime As Long
     Public ExitFromLoops As Boolean
 
-    Public Sub New(ByRef maxT As Integer)
+    Public Sub New(ByVal maxT As Integer)
         Call init(CLng(maxT))
     End Sub
-    Public Sub New(ByRef maxT As Long)
+    Public Sub New(ByVal maxT As Long)
         Call init(maxT)
     End Sub
     Private Sub init(ByRef maxT As Long)
@@ -2895,8 +2895,8 @@ Public Class AttendedObject
     ''' <summary>Положение объекта по X и Y относительно положения области, выделенной под него</summary>
     Friend ReadOnly dxy As Integer
 
-    Public Sub New(ByRef objName As String, ByRef objSize As Integer, ByRef objTypeID As Integer, _
-                   Optional ByRef objHasExternalGuard As Boolean = False)
+    Public Sub New(ByVal objName As String, ByVal objSize As Integer, ByVal objTypeID As Integer, _
+                   Optional ByVal objHasExternalGuard As Boolean = False)
         Name = objName
         Size = objSize
         TypeID = objTypeID
@@ -2927,7 +2927,7 @@ Public Class Map
     ''' <param name="xDim">Правая граница карты (например, если генерируем карту 24x48, то сюда пишем 23)</param>
     ''' <param name="yDim">Верхняя граница карты (например, если генерируем карту 24x48, то сюда пишем 47)</param>
     ''' <param name="SymmApplied">Идентификатор симметрии, применяемой при генерации</param>
-    Public Sub New(ByRef xDim As Integer, ByRef yDim As Integer, ByRef SymmApplied As Integer)
+    Public Sub New(ByVal xDim As Integer, ByVal yDim As Integer, ByVal SymmApplied As Integer)
         xSize = xDim
         ySize = yDim
         symmID = SymmApplied
@@ -3927,7 +3927,7 @@ Public Class Point
     Public Y As Integer
     ''' <param name="x">Координата по X</param>
     ''' <param name="y">Координата по Y</param>
-    Public Sub New(ByRef X As Integer, ByRef Y As Integer)
+    Public Sub New(ByVal X As Integer, ByVal Y As Integer)
         Me.X = X
         Me.Y = Y
     End Sub

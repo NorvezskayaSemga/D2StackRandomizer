@@ -143,7 +143,7 @@
     ''' <param name="stack">Уже сгенерированные стэки</param>
     ''' <param name="R">Инициализированный класс</param>
     ''' <param name="newMapGen">True, если это первый вызов этой функции при генерации новой карты</param>
-    Public Sub GenName(ByRef stack As AllDataStructues.Stack, ByRef R As RandStack, ByRef newMapGen As Boolean)
+    Public Sub GenName(ByRef stack As AllDataStructues.Stack, ByRef R As RandStack, ByVal newMapGen As Boolean)
         If IsNothing(stack) Or IsNothing(R) Then Exit Sub
         If Not IsNothing(name) And newMapGen Then
             IDs.Clear()
