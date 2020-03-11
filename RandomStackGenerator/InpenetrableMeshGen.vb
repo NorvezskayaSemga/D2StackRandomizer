@@ -2657,6 +2657,9 @@ Public Class Location
     Friend Shared Function GenLocSize(ByRef sett As Map.SettingsLoc, ByRef id As Integer, _
                                       ByRef rndgen As RndValueGen, ByRef minLocationRadiusAtAll As Double) As Location
         Dim r, e, a As Double
+        If sett.maxRadiusDispersion >= 1 Or sett.maxRadiusDispersion < 0 Then Throw New Exception("Invalid radius dispersion: " & sett.maxRadiusDispersion & "(>=1 or <0)")
+        If sett.maxEccentricityDispersion >= 1 Or sett.maxEccentricityDispersion < 0 Then Throw New Exception("Invalid eccentricity dispersion: " & sett.maxEccentricityDispersion & "(>=1 or <0)")
+
         r = rndgen.PRand(1 - sett.maxRadiusDispersion, 1 + sett.maxRadiusDispersion) * sett.AverageRadius
         e = rndgen.PRand(1 - sett.maxEccentricityDispersion, 1 + sett.maxEccentricityDispersion)
         a = rndgen.PRand(0, Math.PI)

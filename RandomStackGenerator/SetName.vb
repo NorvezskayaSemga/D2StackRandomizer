@@ -9,6 +9,7 @@
     Private exclude As New List(Of String)
     Private excludeRace As New List(Of Integer)
     Private maxLen As Integer = 30
+    Private IDs As New List(Of Integer)
 
     Public Sub New()
         Dim t As Date = ReadNames()
@@ -137,7 +138,6 @@
         Next i
     End Sub
 
-    Private IDs As New List(Of Integer)
 
     '''<summary>Присвоит имена всем отрядам в списке</summary>
     ''' <param name="stack">Уже сгенерированные стэки</param>

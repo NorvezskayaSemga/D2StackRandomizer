@@ -140,8 +140,8 @@
         Next i
         Dim m1, m2 As Double
         If Wmax > Wmin Then
-            m1 = 1 / Math.Sqrt(settMap.LocExpRatio)
-            m2 = (Math.Sqrt(settMap.LocExpRatio) - m1) / (Wmax - Wmin)
+            m1 = Common.ValueLowerBound(settMap.LocExpRatio, 1)
+            m2 = (Common.ValueUpperBound(settMap.LocExpRatio, 1) - m1) / (Wmax - Wmin)
         Else
             m1 = 1
             m2 = 0
@@ -168,8 +168,8 @@
             End If
         Next id
 
-        Dim minD As Double = settMap.Wealth * Math.Sqrt(2) / Math.Sqrt(CDbl(My.Resources.lootCostDispersion))
-        Dim maxD As Double = settMap.Wealth * Math.Sqrt(2) * Math.Sqrt(CDbl(My.Resources.lootCostDispersion))
+        Dim minD As Double = Common.ValueLowerBound(CDbl(My.Resources.lootCostDispersion), settMap.Wealth)
+        Dim maxD As Double = Common.ValueUpperBound(CDbl(My.Resources.lootCostDispersion), settMap.Wealth)
 
         Dim expKilled, LootCost As New Dictionary(Of Integer, Double)
         For Each id As Integer In guards.Keys
@@ -272,10 +272,10 @@ Class StackStatsGen
             maxGiants = rndGen.RndPos(4, True) - 1
         End If
 
-        Dim maxD As Double = Math.Sqrt(CDbl(My.Resources.expBarDispersion))
-        Dim minD As Double = 1 / maxD
-        Dim avExpKilled As Double = expKilled / (stackSize - 0.5 * maxGiants)
-        Dim eBar As Integer = CInt(UnitExpKilledToExpBar(avExpKilled) * rndGen.PRand(minD, maxD))
+        Dim averageExpBar As Double = UnitExpKilledToExpBar(expKilled / (stackSize - 0.5 * maxGiants))
+        Dim minExpBar As Double = Common.ValueLowerBound(CDbl(My.Resources.expBarDispersion), averageExpBar)
+        Dim maxExpBar As Double = Common.ValueUpperBound(CDbl(My.Resources.expBarDispersion), averageExpBar)
+        Dim eBar As Integer = CInt(rndGen.PRand(minExpBar, maxExpBar))
 
         Return New AllDataStructues.DesiredStats With {.ExpStackKilled = Math.Max(CInt(expKilled), 5), _
                                                        .StackSize = stackSize, _

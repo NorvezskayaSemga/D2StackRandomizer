@@ -1177,6 +1177,22 @@ Public Class Common
             End If
         Next j
     End Sub
+
+    ''' <summary>Вернет нижнюю границу сучайного числа</summary>
+    ''' <param name="ratio">Отношение значения верхней границы к значению нижней</param>
+    ''' <param name="average">Среднее значение</param>
+    Friend Shared Function ValueLowerBound(ByRef ratio As Double, ByRef average As Double) As Double
+        If ratio < 1 Then Throw New Exception("Invalid ratio between max and min value: " & ratio & "(<1)")
+        'max=ratio*min
+        'max+min=2*average
+        Return 2 * average / (ratio + 1)
+    End Function
+    ''' <summary>Вернет верхнюю границу сучайного числа</summary>
+    ''' <param name="ratio">Отношение значения верхней границы к значению нижней</param>
+    ''' <param name="average">Среднее значение</param>
+    Friend Shared Function ValueUpperBound(ByRef ratio As Double, ByRef average As Double) As Double
+        Return Common.ValueLowerBound(ratio, average) * ratio
+    End Function
 End Class
 
 Public MustInherit Class DecorationPlacingPropertiesFields
