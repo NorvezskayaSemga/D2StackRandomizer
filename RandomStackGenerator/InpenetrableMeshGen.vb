@@ -90,8 +90,11 @@ Public Class ImpenetrableMeshGen
     Private Function CommonGen(ByRef settMap As Map.SettingsMap, ByRef settRaceLoc As Map.SettingsLoc, _
                                ByRef settCommLoc As Map.SettingsLoc, ByRef maxGenTime As Integer, _
                                ByRef symmId As Integer) As Map
-        settRaceLoc.minStackToStackDist = Math.Max(settRaceLoc.minStackToStackDist, 1)
-        settCommLoc.minStackToStackDist = Math.Max(settCommLoc.minStackToStackDist, 1)
+
+        If Not settMap.isChecked Then Throw New Exception("Check parameters via settMap.Check()")
+        If Not settRaceLoc.isChecked Then Throw New Exception("Check parameters via settRaceLoc.Check()")
+        If Not settCommLoc.isChecked Then Throw New Exception("Check parameters via settCommLoc.Check()")
+
         Dim AObj()(,) As Map.Cell = ActiveObjectsSet(settMap, symmId)
         Dim term As New TerminationCondition(maxGenTime)
         Dim AttemptsN = 0
@@ -3040,6 +3043,74 @@ Public Class Map
         Dim merchMinItemCost As Integer
         '''<summary>Полная стоимость лута у торговца</summary>
         Dim merchItemsCost As Integer
+
+        Private Checked As Boolean
+        ''' <summary>Проверит корректность параметров. Вернет пустое сообщение, если все нормально</summary>
+        Public Function Check() As String
+
+            Dim fields As New Dictionary(Of String, String)
+
+            fields.Add("AverageRadius", AverageRadius.ToString)
+            fields.Add("maxEccentricityDispersion", maxEccentricityDispersion.ToString)
+            fields.Add("maxRadiusDispersion", maxRadiusDispersion.ToString)
+            fields.Add("maxGoldMines", maxGoldMines.ToString)
+            fields.Add("maxManaSources", maxManaSources.ToString)
+            fields.Add("maxCities", maxCities.ToString)
+            fields.Add("maxVendors", maxVendors.ToString)
+            fields.Add("maxMercenaries", maxMercenaries.ToString)
+            fields.Add("maxMages", maxMages.ToString)
+            fields.Add("maxTrainers", maxTrainers.ToString)
+            fields.Add("maxRuins", maxRuins.ToString)
+            fields.Add("minStackToStackDist", minStackToStackDist.ToString)
+            fields.Add("expAmount", expAmount.ToString)
+            fields.Add("mageSpellsMaxLevel", mageSpellsMaxLevel.ToString)
+            fields.Add("mageSpellsMinLevel", mageSpellsMinLevel.ToString)
+            fields.Add("mageSpellsCount", mageSpellsCount.ToString)
+            'fields.Add("mageGlobalSpellsEnabled", mageGlobalSpellsEnabled.ToString)
+            fields.Add("mercenariesMaxExpBar", mercenariesMaxExpBar.ToString)
+            fields.Add("mercenariesMinExpBar", mercenariesMinExpBar.ToString)
+            fields.Add("mercenariesCount", mercenariesCount.ToString)
+            fields.Add("merchMaxItemCost", merchMaxItemCost.ToString)
+            fields.Add("merchMinItemCost", merchMinItemCost.ToString)
+            fields.Add("merchItemsCost", merchItemsCost.ToString)
+
+            Dim msg As String = ""
+            Dim less0 As New List(Of String)
+            Dim equal0 As New List(Of String)
+            Dim less1 As New List(Of String)
+            Dim equal1 As New List(Of String)
+            Dim greater1 As New List(Of String)
+
+            For Each k As String In fields.Keys
+                less0.Add(k)
+            Next k
+            equal0.AddRange({"AverageRadius", "expAmount"})
+            If maxMages > 0 Then
+                If mageSpellsMaxLevel < mageSpellsMinLevel Then msg &= vbNewLine & "mageSpellsMaxLevel < mageSpellsMinLevel"
+                equal0.AddRange({"mageSpellsMaxLevel", "mageSpellsMinLevel", "mageSpellsCount"})
+            End If
+            If maxMercenaries > 0 Then
+                If mercenariesMaxExpBar < mercenariesMinExpBar Then msg &= vbNewLine & "mercenariesMaxExpBar < mercenariesMinExpBar"
+                equal0.AddRange({"mercenariesMaxExpBar", "mercenariesMinExpBar", "mercenariesCount"})
+            End If
+            If maxVendors > 0 Then
+                If merchMaxItemCost < merchMinItemCost Then msg &= vbNewLine & "merchMaxItemCost < merchMinItemCost"
+                equal0.AddRange({"merchMaxItemCost", "merchMinItemCost", "merchItemsCost"})
+            End If
+            less1.AddRange({"minStackToStackDist"})
+            equal1.AddRange({"maxEccentricityDispersion", "maxRadiusDispersion"})
+            greater1.AddRange({"maxEccentricityDispersion", "maxRadiusDispersion"})
+
+            msg &= Map.CheckGenParameters(fields, less0, equal0, less1, equal1, greater1)
+            If msg.Length > 0 Then msg = msg.Substring(1)
+            Checked = True
+            Return msg
+        End Function
+        ''' <summary>True, если проверка параметров запускалась</summary>
+        Public Function isChecked() As Boolean
+            Return Checked
+        End Function
+
     End Structure
     Public Structure SettingsMap
         ''' <summary>Правая граница карты (например, если генерируем карту 24x48, то сюда пишем 23)</summary>
@@ -3074,7 +3145,76 @@ Public Class Map
         Dim RoadsAmount As Double
         ''' <summary>Количество леса на карте. 0 - без леса, 1 - максимальное количество</summary>
         Dim ForestAmount As Double
+
+        Private Checked As Boolean
+        ''' <summary>Проверит корректность параметров. Вернет пустое сообщение, если все нормально</summary>
+        Public Function Check() As String
+
+            Dim fields As New Dictionary(Of String, String)
+
+            fields.Add("xSize", xSize.ToString)
+            fields.Add("ySize", ySize.ToString)
+            fields.Add("minPassDist", minPassDist.ToString)
+            fields.Add("minPassWidth", minPassWidth.ToString)
+            fields.Add("nRaces", nRaces.ToString)
+            fields.Add("RaceLocsDistTolerance", RaceLocsDistTolerance.ToString)
+            'fields.Add("AddGuardsBetweenLocations", AddGuardsBetweenLocations.ToString)
+            fields.Add("PassGuardsPowerMultiplicator", PassGuardsPowerMultiplicator.ToString)
+            fields.Add("ObjectGuardsPowerMultiplicator", ObjectGuardsPowerMultiplicator.ToString)
+            fields.Add("LocExpRatio", LocExpRatio.ToString)
+            fields.Add("Wealth", Wealth.ToString)
+            fields.Add("WaterAmount", WaterAmount.ToString)
+            fields.Add("SpellsMaxLevel", SpellsMaxLevel.ToString)
+            fields.Add("RoadsAmount", RoadsAmount.ToString)
+            fields.Add("ForestAmount", ForestAmount.ToString)
+
+            Dim msg As String = ""
+            Dim less0 As New List(Of String)
+            Dim equal0 As New List(Of String)
+            Dim less1 As New List(Of String)
+            Dim equal1 As New List(Of String)
+            Dim greater1 As New List(Of String)
+
+            For Each k As String In fields.Keys
+                less0.Add(k)
+            Next k
+            equal0.AddRange({"SpellsMaxLevel", "ObjectGuardsPowerMultiplicator"})
+            If AddGuardsBetweenLocations Then equal0.AddRange({"PassGuardsPowerMultiplicator"})
+            less1.AddRange({"xSize", "ySize", "minPassDist", "minPassWidth", "nRaces", "LocExpRatio"})
+            equal1.AddRange({"nRaces"})
+            greater1.AddRange({"WaterAmount", "RoadsAmount", "ForestAmount"})
+
+            msg &= Map.CheckGenParameters(fields, less0, equal0, less1, equal1, greater1)
+            If msg.Length > 0 Then msg = msg.Substring(1)
+            Checked = True
+            Return msg
+        End Function
+        ''' <summary>True, если проверка параметров запускалась</summary>
+        Public Function isChecked() As Boolean
+            Return Checked
+        End Function
+
     End Structure
+    Private Shared Function CheckGenParameters(ByRef fields As Dictionary(Of String, String), ByRef less0 As List(Of String), ByRef equal0 As List(Of String), _
+                                               ByRef less1 As List(Of String), ByRef equal1 As List(Of String), ByRef greater1 As List(Of String)) As String
+        Dim result As String = ""
+        For Each k As String In less0
+            If CDbl(fields.Item(k)) < 0 Then result &= vbNewLine & k & " < 0"
+        Next k
+        For Each k As String In equal0
+            If CDbl(fields.Item(k)) = 0 Then result &= vbNewLine & k & " = 0"
+        Next k
+        For Each k As String In less1
+            If CDbl(fields.Item(k)) < 1 Then result &= vbNewLine & k & " < 1"
+        Next k
+        For Each k As String In equal1
+            If CDbl(fields.Item(k)) = 1 Then result &= vbNewLine & k & " = 1"
+        Next k
+        For Each k As String In greater1
+            If CDbl(fields.Item(k)) > 1 Then result &= vbNewLine & k & " > 1"
+        Next k
+        Return result
+    End Function
 
     ''' <summary>Вернет True, если все нормально, иначе стоит перегенерировать</summary>
     Public Function TestMap() As String
@@ -3157,6 +3297,10 @@ Public Class StackLocationsGen
                         ByVal settRaceLoc As Map.SettingsLoc, _
                         ByVal settCommLoc As Map.SettingsLoc, _
                         ByRef maxGenTime As Integer) As Boolean
+
+        If Not settMap.isChecked Then Throw New Exception("Check parameters via settMap.Check()")
+        If Not settRaceLoc.isChecked Then Throw New Exception("Check parameters via settRaceLoc.Check()")
+        If Not settCommLoc.isChecked Then Throw New Exception("Check parameters via settCommLoc.Check()")
 
         If Not m.complited.LoationsCreation_Done Or Not m.complited.MeshTestI_Done Then
             Throw New Exception("Сначала нужно выполнить ImpenetrableMeshGen.SymmGen или " & _
@@ -3846,6 +3990,8 @@ Public Class WaterGen
     ''' <param name="settMap">Общие настройки для карты</param>
     Public Sub Gen(ByRef m As Map, ByRef settMap As Map.SettingsMap)
 
+        If Not settMap.isChecked Then Throw New Exception("Check parameters via settMap.Check()")
+        
         If Not m.complited.StacksDesiredStatsGen_Done Then
             Throw New Exception("Сначала нужно выполнить StackPowerGen.Gen")
         End If
@@ -4357,6 +4503,11 @@ Public Class ImpenetrableObjects
     ''' Значение количества объектов для каждой локации будет умножаться на отношение площади локации к площади средней локации (Pi*AverageRadius^2).
     ''' Дробная часть определяет шанс округления в большую сторону</param>
     Public Sub Gen(ByRef m As Map, ByRef settMap As Map.SettingsMap, ByRef settRaceLoc As Map.SettingsLoc, ByRef settCommLoc As Map.SettingsLoc)
+
+        If Not settMap.isChecked Then Throw New Exception("Check parameters via settMap.Check()")
+        If Not settRaceLoc.isChecked Then Throw New Exception("Check parameters via settRaceLoc.Check()")
+        If Not settCommLoc.isChecked Then Throw New Exception("Check parameters via settCommLoc.Check()")
+
         If Not m.complited.StacksRaceGen_Done Then
             Throw New Exception("Сначала нужно выполнить RaceGen.Gen")
         End If

@@ -24,13 +24,16 @@
                    ByRef settRaceLoc As Map.SettingsLoc, _
                    ByRef settCommLoc As Map.SettingsLoc)
 
+        If Not settMap.isChecked Then Throw New Exception("Check parameters via settMap.Check()")
+        If Not settRaceLoc.isChecked Then Throw New Exception("Check parameters via settRaceLoc.Check()")
+        If Not settCommLoc.isChecked Then Throw New Exception("Check parameters via settCommLoc.Check()")
+
         If Not m.complited.StacksPlacing_Done Or Not m.complited.MeshTestII_Done Then
             Throw New Exception("Сначала нужно выполнить StackLocations.Gen " & _
                                 "и протестировать результат с помощью m.TestMap")
         End If
 
         Dim t0 As Integer = Environment.TickCount
-        If settMap.LocExpRatio < 1 Then settMap.LocExpRatio = 1 / settMap.LocExpRatio
         Dim guards As Dictionary(Of Integer, StackLoc) = MakeGuardsList(m)
         Dim LocTotalExp() As Double = MakeLocationsList(m, settMap, settRaceLoc, settCommLoc)
         m.groupStats = GenStacksStats(settMap, guards, LocTotalExp, m)

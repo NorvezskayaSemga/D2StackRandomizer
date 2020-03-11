@@ -42,6 +42,7 @@ Friend Class StartForm
         sM.AddGuardsBetweenLocations = True
         sM.LocExpRatio = 2
         sM.PassGuardsPowerMultiplicator = 2
+        sM.ObjectGuardsPowerMultiplicator = 1.2
         sM.Wealth = 0.8
         sM.WaterAmount = 0
         sM.SpellsMaxLevel = 5
@@ -69,7 +70,7 @@ Friend Class StartForm
         sR.mageSpellsMinLevel = 1
         sR.merchItemsCost = 2000
         sR.merchMaxItemCost = 1000
-        sR.merchMinItemCost = 0
+        sR.merchMinItemCost = 10
         sR.mercenariesCount = 3
         sR.mercenariesMaxExpBar = 900
         sR.mercenariesMinExpBar = 200
@@ -101,6 +102,14 @@ Friend Class StartForm
         sC.mercenariesCount = 5
         sC.mercenariesMaxExpBar = 1700
         sC.mercenariesMinExpBar = 1000
+
+        Dim checkResult As String
+        checkResult = sM.Check
+        If checkResult.Length > 0 Then Console.WriteLine(checkResult)
+        checkResult = sR.Check
+        If checkResult.Length > 0 Then Console.WriteLine(checkResult)
+        checkResult = sC.Check
+        If checkResult.Length > 0 Then Console.WriteLine(checkResult)
 
         Dim gt As Integer = 10000
 again:
@@ -135,19 +144,14 @@ again:
 
         Call penOnjGen.Gen(grid, sM)
 
-        Dim randstack As New RandStack(ReadTestUnits, ReadTestItems, {"%default%"}, {"%default%"}, True)
-        Dim stacks(grid.groupStats.Count - 1) As AllDataStructues.Stack
-        Dim n As Integer = -1
-        For Each v As AllDataStructues.DesiredStats In grid.groupStats.Values
-            n += 1
-            stacks(n) = randstack.Gen(v, False, False)
-        Next v
-        Dim isnew As Boolean = True
-        For i As Integer = 0 To UBound(stacks) Step 1
-            Call names.GenName(stacks(i), randstack, isnew)
-            isnew = False
-            Console.WriteLine(stacks(i).name)
-        Next i
+        'Dim randstack As New RandStack(ReadTestUnits, ReadTestItems, {"%default%"}, {"%default%"}, True)
+        'Dim isnew As Boolean = True
+        'For Each v As AllDataStructues.DesiredStats In grid.groupStats.Values
+        '    Dim stack As AllDataStructues.Stack = randstack.Gen(v, False, False)
+        '    Call names.GenName(stack, randstack, isnew)
+        '    isnew = False
+        '    Console.WriteLine(stack.name)
+        'Next v
 
         Call ShowResult(grid)
 
