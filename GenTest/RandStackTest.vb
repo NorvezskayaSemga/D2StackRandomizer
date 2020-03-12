@@ -194,48 +194,50 @@ Public Class RandStackTest
         Dim ok As Boolean = True
         Dim races() As String = New String() {"H", "U", "L", "C", "E", "N", "G", "D", "S", "W", "B", "A", "AS", "AST", "AW"}
 
-        Parallel.For(0, races.Length, _
-         Sub(r As Integer)
+        Dim statsList As New List(Of AllDataStructues.DesiredStats)
+
+        For r As Integer = 0 To UBound(races) Step 1
+            For eb As Integer = 0 To 10 Step 1
+                Dim ExpBarAverage As Integer = 100 + 200 * eb
+                For ek As Integer = 0 To 4 Step 1
+                    Dim ExpStackKilled As Integer = 200 + 50 * ek
+                    For mg As Integer = 0 To 3 Step 1
+                        Dim MaxGiants As Integer = mg
+                        For mc As Integer = 0 To 3 Step 1
+                            Dim MeleeCount As Integer = mc
+                            For s As Integer = 1 To 6 Step 1
+                                Dim StackSize As Integer = s
+                                statsList.Add(New AllDataStructues.DesiredStats With { _
+                                                  .ExpBarAverage = ExpBarAverage, .ExpStackKilled = ExpStackKilled, _
+                                                  .MaxGiants = MaxGiants, .MeleeCount = MeleeCount, _
+                                                  .Race = New List(Of Integer), .StackSize = StackSize})
+                                statsList.Item(statsList.Count - 1).Race.Add(target.comm.RaceIdentifierToSubrace(races(r)))
+                            Next s
+                        Next mc
+                    Next mg
+                Next ek
+            Next eb
+        Next r
+
+        Parallel.ForEach(statsList, _
+         Sub(item As AllDataStructues.DesiredStats)
              If Not ok Then Exit Sub
-             Dim rList As New List(Of Integer)
-             rList.Add(target.comm.RaceIdentifierToSubrace(races(r)))
-             Dim stats As New AllDataStructues.DesiredStats
-             For eb As Integer = 0 To 10 Step 1
-                 stats.ExpBarAverage = 100 + 200 * eb
-                 For ek As Integer = 0 To 4 Step 1
-                     stats.ExpStackKilled = 200 + 50 * ek
-                     For mg As Integer = 0 To 3 Step 1
-                         stats.MaxGiants = mg
-                         For mc As Integer = 0 To 3 Step 1
-                             stats.MeleeCount = mc
-                             For s As Integer = 1 To 6 Step 1
-                                 stats.StackSize = s
-                                 stats.Race = rList
-
-                                 Dim GroundTile As Boolean
-                                 For g As Integer = 0 To 1 Step 1
-                                     If g = 0 Then
-                                         GroundTile = False
-                                         If races(r) = "W" Then g = 1
-                                     Else
-                                         GroundTile = True
-                                     End If
-
-                                     Dim stack As AllDataStructues.Stack = target.Gen(stats, GroundTile, False)
-                                     ok = TestStack(stack, target)
-                                     If Not ok Then Exit For
-                                 Next g
-                                 If Not ok Then Exit For
-                             Next s
-                             If Not ok Then Exit For
-                         Next mc
-                         If Not ok Then Exit For
-                     Next mg
-                     If Not ok Then Exit For
-                 Next ek
-                 If Not ok Then Exit For
-             Next eb
+             Dim GroundTile As Boolean
+             Dim locOk As Boolean = True
+             For g As Integer = 0 To 1 Step 1
+                 If g = 0 Then
+                     GroundTile = False
+                     If item.Race.Item(0) = target.comm.RaceIdentifierToSubrace("W") Then g = 1
+                 Else
+                     GroundTile = True
+                 End If
+                 Dim stack As AllDataStructues.Stack = target.Gen(item, GroundTile, False)
+                 locOk = TestStack(stack, target)
+                 If Not locOk Then Exit For
+             Next g
+             If Not locOk Then ok = False
          End Sub)
+
         If Not ok Then Assert.Inconclusive("Verify the correctness of this test method.")
     End Sub
     Private Function TestStack(ByRef stack As AllDataStructues.Stack, ByRef target As RandStack_Accessor, _

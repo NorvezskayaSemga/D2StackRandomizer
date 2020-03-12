@@ -15,6 +15,14 @@ Friend Class StartForm
     Dim penOnjGen As New PenetrableObjectsGen
     Dim ObjectsSize As New Dictionary(Of String, Size)
 
+    Private Sub GenMany_click() Handles GenManyButton.Click
+        For i As Integer = 1 To 300 Step 1
+            GenButton.PerformClick()
+            Me.Refresh()
+        Next i
+        MsgBox("Done")
+    End Sub
+
     Private Sub GenButton_Click() Handles GenButton.Click
 
         Call comm.ReadExcludedObjectsList({"%default%"})
@@ -54,13 +62,13 @@ Friend Class StartForm
         sR.maxEccentricityDispersion = 0.15
         sR.maxRadiusDispersion = 0
         sR.maxGoldMines = 1
-        sR.maxManaSources = 2
+        sR.maxManaSources = 1
         sR.maxCities = 0
         sR.maxMages = 1
-        sR.maxMercenaries = 1
+        sR.maxMercenaries = 0
         sR.maxRuins = 0
         sR.maxTrainers = 0
-        sR.maxVendors = 1
+        sR.maxVendors = 0
         sR.minStackToStackDist = 4
         sR.expAmount = 6000
 
@@ -80,14 +88,14 @@ Friend Class StartForm
         sC.maxEccentricityDispersion = 0.4
         sC.maxRadiusDispersion = 0.3
 
-        sC.maxGoldMines = 0
+        sC.maxGoldMines = 1
         sC.maxManaSources = 1
         sC.maxCities = 0
-        sC.maxMages = 1
-        sC.maxMercenaries = 1
-        sC.maxRuins = 0
+        sC.maxMages = 0
+        sC.maxMercenaries = 0
+        sC.maxRuins = 1
         sC.maxTrainers = 0
-        sC.maxVendors = 1
+        sC.maxVendors = 0
 
         sC.minStackToStackDist = 5
         sC.expAmount = 15000
@@ -298,4 +306,8 @@ again:
         Next i
         Return ItemsList
     End Function
+
+    Private Sub GenButton_Click(sender As System.Object, e As System.EventArgs) Handles GenButton.Click
+
+    End Sub
 End Class

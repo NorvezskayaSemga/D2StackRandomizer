@@ -182,28 +182,38 @@
     Private Function FunctionMakeMustBeFree(ByRef m As Map, ByRef settMap As Map.SettingsMap) As Boolean(,)
         Dim mustBeFree(m.xSize, m.ySize) As Boolean
         Dim pos As New List(Of Point)
+        Dim skip As Boolean
         For y As Integer = 0 To m.ySize Step 1
             For x As Integer = 0 To m.xSize Step 1
                 If Not m.Loc(m.board(x, y).locID.Item(0) - 1).IsObtainedBySymmery And m.board(x, y).objectID = 8 Then
+                    skip = False
                     pos.Clear()
                     Dim b As Location.Borders = ImpenetrableMeshGen.NearestXY(x, y, m.xSize, m.ySize, 1)
                     For j As Integer = b.minY To b.maxY Step 1
                         For i As Integer = b.minX To b.maxX Step 1
-                            If isPossiblePos(m, i, j, mustBeFree) Then pos.Add(New Point(i, j))
+                            If mustBeFree(i, j) Then
+                                skip = True
+                                i = b.maxX
+                                j = b.maxY
+                            Else
+                                If isPossiblePos(m, i, j, mustBeFree) Then pos.Add(New Point(i, j))
+                            End If
                         Next i
                     Next j
-                    If pos.Count > 0 Then
-                        Dim selected As Point = pos.Item(rndgen.RndPos(pos.Count, True) - 1)
-                        If m.symmID > -1 Then
-                            Dim p() As Point = symm.ApplySymm(selected, settMap.nRaces, m, 1)
-                            For i As Integer = 0 To UBound(p) Step 1
-                                mustBeFree(p(i).X, p(i).Y) = True
-                            Next i
+                    If Not skip Then
+                        If pos.Count > 0 Then
+                            Dim selected As Point = pos.Item(rndgen.RndPos(pos.Count, True) - 1)
+                            If m.symmID > -1 Then
+                                Dim p() As Point = symm.ApplySymm(selected, settMap.nRaces, m, 1)
+                                For i As Integer = 0 To UBound(p) Step 1
+                                    mustBeFree(p(i).X, p(i).Y) = True
+                                Next i
+                            Else
+                                mustBeFree(selected.X, selected.Y) = True
+                            End If
                         Else
-                            mustBeFree(selected.X, selected.Y) = True
+                            Throw New Exception("Возле шахты в точке (" & x & "; " & y & ") невозможно поставить жезл")
                         End If
-                    Else
-                        Throw New Exception("Возле шахты в точке (" & x & "; " & y & ") невозможно поставить жезл")
                     End If
                 End If
             Next x

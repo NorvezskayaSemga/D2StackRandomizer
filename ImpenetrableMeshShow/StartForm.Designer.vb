@@ -29,6 +29,7 @@ Partial Class StartForm
         Me.sel2 = New System.Windows.Forms.RadioButton()
         Me.sel1 = New System.Windows.Forms.RadioButton()
         Me.SymmCheckBox = New System.Windows.Forms.CheckBox()
+        Me.GenManyButton = New System.Windows.Forms.Button()
         CType(Me.PictureBox1, System.ComponentModel.ISupportInitialize).BeginInit()
         Me.Panel1.SuspendLayout()
         Me.SuspendLayout()
@@ -104,11 +105,21 @@ Partial Class StartForm
         Me.SymmCheckBox.Text = "Apply symmetry"
         Me.SymmCheckBox.UseVisualStyleBackColor = True
         '
+        'GenManyButton
+        '
+        Me.GenManyButton.Location = New System.Drawing.Point(612, 242)
+        Me.GenManyButton.Name = "GenManyButton"
+        Me.GenManyButton.Size = New System.Drawing.Size(124, 46)
+        Me.GenManyButton.TabIndex = 4
+        Me.GenManyButton.Text = "Generate many"
+        Me.GenManyButton.UseVisualStyleBackColor = True
+        '
         'StartForm
         '
         Me.AutoScaleDimensions = New System.Drawing.SizeF(6.0!, 13.0!)
         Me.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font
         Me.ClientSize = New System.Drawing.Size(773, 606)
+        Me.Controls.Add(Me.GenManyButton)
         Me.Controls.Add(Me.SymmCheckBox)
         Me.Controls.Add(Me.Panel1)
         Me.Controls.Add(Me.GenButton)
@@ -129,5 +140,6 @@ Partial Class StartForm
     Friend WithEvents sel2 As System.Windows.Forms.RadioButton
     Friend WithEvents sel1 As System.Windows.Forms.RadioButton
     Friend WithEvents SymmCheckBox As System.Windows.Forms.CheckBox
+    Friend WithEvents GenManyButton As System.Windows.Forms.Button
 
 End Class

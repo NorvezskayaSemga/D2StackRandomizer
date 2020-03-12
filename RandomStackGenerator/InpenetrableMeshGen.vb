@@ -115,7 +115,7 @@ Public Class ImpenetrableMeshGen
                 Dim t5 As Integer = Environment.TickCount
                 Call MakeLabyrinth(m, settMap, term)
                 Dim t6 As Integer = Environment.TickCount
-                Console.WriteLine("RLocs: " & t1 - t0 & vbTab & "CLocs: " & t2 - t1 & vbTab & "IDset: " & t3 - t2 & vbTab & "BordSet: " & t4 - t3 & vbTab & "PlaceActive: " & t5 - t4 & vbTab & "MakeMaze: " & t6 - t5)
+                Console.WriteLine("ReaceLocs: " & t1 - t0 & vbTab & "CommonLocs: " & t2 - t1 & vbTab & "IDset: " & t3 - t2 & vbTab & "BordSet: " & t4 - t3 & vbTab & "PlaceActiveObjects: " & t5 - t4 & vbTab & "MakeMaze: " & t6 - t5)
                 AttemptsN += 1
                 If Not term.ExitFromLoops Then
                     m.complited.LoationsCreation_Done = True
@@ -126,7 +126,7 @@ Public Class ImpenetrableMeshGen
                 If nTry > 1 Then
                     Throw ex
                 Else
-                    Console.WriteLine("Some error occured: " & vbNewLine & ex.Message)
+                    Console.WriteLine("Some error occured in ImpenetrableMeshGen: " & vbNewLine & ex.Message)
                     nTry += 1
                 End If
             End Try
@@ -1440,18 +1440,23 @@ Public Class ImpenetrableMeshGen
                     Dim id As Integer = tmpm.board(x, y).objectID
                     Dim gid As Integer = tmpm.board(x, y).groupID
                     Dim d As Integer = ActiveObjects(id).dxy
-
                     For j As Integer = 0 To UBound(ObjectBlank(id), 2) Step 1
+                        Dim dy As Integer = y + j
                         For i As Integer = 0 To UBound(ObjectBlank(id), 1) Step 1
-                            tmpm.board(x + i, y + j).groupID = ObjectBlank(id)(i, j).groupID
-                            tmpm.board(x + i, y + j).GuardLoc = ObjectBlank(id)(i, j).GuardLoc
-                            If tmpm.board(x + i, y + j).GuardLoc Then tmpm.board(x + i, y + j).isObjectGuard = True
-                            tmpm.board(x + i, y + j).isAttended = ObjectBlank(id)(i, j).isAttended
-                            tmpm.board(x + i, y + j).isBorder = ObjectBlank(id)(i, j).isBorder
-                            tmpm.board(x + i, y + j).Penetrable = ObjectBlank(id)(i, j).Penetrable
-                            tmpm.board(x + i, y + j).objectID = ObjectBlank(id)(i, j).objectID
-                            If ObjectBlank(id)(i, j).isAttended Or ObjectBlank(id)(i, j).isBorder Then
-                                tmpm.board(x + i, y + j).isPass = False
+                            Dim dx As Integer = x + i
+                            If dx <= tmpm.xSize And dy <= tmpm.ySize Then
+                                tmpm.board(dx, dy).groupID = ObjectBlank(id)(i, j).groupID
+                                tmpm.board(dx, dy).GuardLoc = ObjectBlank(id)(i, j).GuardLoc
+                                If tmpm.board(dx, dy).GuardLoc Then tmpm.board(dx, dy).isObjectGuard = True
+                                tmpm.board(dx, dy).isAttended = ObjectBlank(id)(i, j).isAttended
+                                tmpm.board(dx, dy).isBorder = ObjectBlank(id)(i, j).isBorder
+                                tmpm.board(dx, dy).Penetrable = ObjectBlank(id)(i, j).Penetrable
+                                tmpm.board(dx, dy).objectID = ObjectBlank(id)(i, j).objectID
+                                If ObjectBlank(id)(i, j).isAttended Or ObjectBlank(id)(i, j).isBorder Then
+                                    tmpm.board(dx, dy).isPass = False
+                                End If
+                            ElseIf ObjectBlank(id)(i, j).GuardLoc Or ObjectBlank(id)(i, j).isAttended Or ObjectBlank(id)(i, j).isBorder Or ObjectBlank(id)(i, j).objectID > 0 Then
+                                Throw New Exception("Неправильно поставлен объект: objectID = " & id & " position = " & x & "; " & y)
                             End If
                         Next i
                     Next j
@@ -3733,7 +3738,7 @@ Public Class StackLocationsGen
             term.CheckTime()
             If term.ExitFromLoops Then Return Nothing
             ReDim output(k)
-            Call PlaceGuardLoc(-1, pointsList, IDs, -1, 4, opened, NConnClosed, output, m)
+            Call PlaceGuardLoc(-1, pointsList, IDs, -1, 4, opened, NConnClosed, output, m, term)
             If Not IsNothing(output(0)) Then Exit For
         Next k
         If IsNothing(output(0)) Then
@@ -3741,7 +3746,7 @@ Public Class StackLocationsGen
                 term.CheckTime()
                 If term.ExitFromLoops Then Return Nothing
                 ReDim output(k)
-                Call PlaceGuardLoc(-1, pointsList, IDs, -1, 0, opened, NConnClosed, output, m)
+                Call PlaceGuardLoc(-1, pointsList, IDs, -1, 0, opened, NConnClosed, output, m, term)
                 If Not IsNothing(output(0)) Then Exit For
             Next k
         End If
@@ -3765,7 +3770,14 @@ Public Class StackLocationsGen
     End Function
     Private Sub PlaceGuardLoc(ByRef n As Integer, ByRef pointsList() As Point, ByRef IDs As List(Of Integer), _
                               ByRef selected As Integer, ByRef minSqDist As Integer, ByRef opened(,) As Boolean, _
-                              ByRef NConnClosed As Integer, ByRef output() As Point, ByRef m As Map)
+                              ByRef NConnClosed As Integer, ByRef output() As Point, ByRef m As Map, _
+                              ByRef term As TerminationCondition)
+        term.CheckTime()
+        If term.ExitFromLoops Then
+            output(n) = Nothing
+            Exit Sub
+        End If
+
         If n > -1 Then output(n) = pointsList(selected)
         If n < UBound(output) Then
             Dim idsBak As New List(Of Integer)
@@ -3778,7 +3790,7 @@ Public Class StackLocationsGen
             Next i
             Do While idsBak.Count > 0
                 Dim sel As Integer = comm.RandomSelection(idsBak, False)
-                Call PlaceGuardLoc(n + 1, pointsList, idsBak, sel, minSqDist, opened, NConnClosed, output, m)
+                Call PlaceGuardLoc(n + 1, pointsList, idsBak, sel, minSqDist, opened, NConnClosed, output, m, term)
                 If IsNothing(output(n + 1)) Then
                     idsBak.Remove(sel)
                 Else
@@ -4564,7 +4576,6 @@ Public Class ImpenetrableObjects
     End Function
     Private Function MayPlace(ByRef m As Map, ByRef x As Integer, ByRef y As Integer, _
                               ByRef free(,) As Boolean, ByRef obj As Plateau, ByRef Connector(,) As Integer) As Boolean
-        Dim t As Boolean
         If Not IsNothing(obj.border) Then
             If obj.border.X = 0 Then
                 If x > 0 Then Return False
@@ -4578,18 +4589,26 @@ Public Class ImpenetrableObjects
         End If
         Dim xx, yy As Integer
         For i As Integer = 0 To UBound(obj.connectors) Step 1
-            t = True
             For j As Integer = 0 To UBound(obj.connectors(i)) Step 1
                 Call connectorPos(xx, yy, x, y, obj.connectors(i)(j))
                 If xx < 0 Or yy < 0 Or xx > m.xSize Or yy > m.ySize Then Return False
-                If Not IsNothing(Connector) AndAlso Not Connector(xx, yy) = 1 Then
-                    t = False
-                    Exit For
-                End If
             Next j
-            If t Then Exit For
         Next i
-        If Not t Then Return False
+        If Not IsNothing(Connector) Then
+            Dim t As Boolean
+            For i As Integer = 0 To UBound(obj.connectors) Step 1
+                t = True
+                For j As Integer = 0 To UBound(obj.connectors(i)) Step 1
+                    Call connectorPos(xx, yy, x, y, obj.connectors(i)(j))
+                    If Not Connector(xx, yy) = 1 Then
+                        t = False
+                        Exit For
+                    End If
+                Next j
+                If t Then Exit For
+            Next i
+            If Not t Then Return False
+        End If
         Return MayPlace(m, x, y, free, obj.xSize, obj.ySize, obj.ground, obj.water, obj.race)
     End Function
     Private Function MayPlace(ByRef m As Map, ByRef x As Integer, ByRef y As Integer, ByRef free(,) As Boolean, _
@@ -5017,8 +5036,8 @@ Public Class ImpenetrableObjects
         Call PlaceObject(free, x, y, obj.xSize, obj.ySize, False)
     End Sub
     Private Sub PlaceObject(ByRef free(,) As Boolean, ByRef x As Integer, ByRef y As Integer, ByRef obj As Plateau, ByRef connectors(,) As Integer)
-        Call PlaceObject(free, x, y, obj.xSize, obj.ySize, False)
         Call PlaceObject(free, x, y, obj, connectors, 1)
+        Call PlaceObject(free, x, y, obj.xSize, obj.ySize, False)
     End Sub
     Private Sub RemoveObject(ByRef free(,) As Boolean, ByRef x As Integer, ByRef y As Integer, ByRef obj As MapObject)
         Call PlaceObject(free, x, y, obj.xSize, obj.ySize, True)
@@ -5094,13 +5113,9 @@ Public Class ImpenetrableObjects
         Do While IDs.Count > 0
             id = comm.rndgen.RndPos(IDs.Count, True) - 1
             nx = -1
-            Dim p As Plateau = plateau(id)
             For j As Integer = y1 To y2 Step 1
                 For i As Integer = x1 To x2 Step 1
-                    If j = 5 And i = 82 Then
-                        j = j
-                    End If
-                    If MayPlace(m, i, j, free, p, connectors) Then
+                    If MayPlace(m, i, j, free, plateau(id), connectors) Then
                         nx = i
                         ny = j
                         i = x2
@@ -5130,6 +5145,7 @@ Public Class ImpenetrableObjects
         Dim Tmp(,) As Integer
         Dim sizeslist, IDs As New List(Of Integer)
         Dim pos As New List(Of Point)
+        Dim tmpPos() As List(Of Point)
         For Each obj As MapObject In mountains
             If Not sizeslist.Contains(obj.xSize) Then sizeslist.Add(obj.xSize)
         Next obj
@@ -5149,6 +5165,10 @@ Public Class ImpenetrableObjects
                 Dim n As Integer = Math.Max(1, CInt(0.5 * UBound(m.Loc))) * Math.Max(1, 6 - basicSize(s))
                 For attempt As Integer = 0 To n Step 1
                     ReDim Tmp(2 * (m.xSize + 1), 2 * (m.ySize + 1))
+                    ReDim tmpPos(UBound(Tmp, 2))
+                    For y As Integer = 0 To UBound(Tmp, 2) Step 1
+                        tmpPos(y) = New List(Of Point)
+                    Next y
                     Call PlaceTmpMountain(basicSize(s), m.xSize, m.ySize, Tmp)
                     Dim minX, maxX, minY, maxY As Integer
                     minX = m.xSize : minY = m.ySize
@@ -5162,16 +5182,22 @@ Public Class ImpenetrableObjects
                     Dim k As Integer = 0
                     Do While k < 7
                         k += 1
-                        pos.Clear()
                         Dim r As Integer = comm.RandomSelection(IDs, weight, True) 'comm.rndgen.RndPos(maxR, True) - 1
                         Parallel.For(0, UBound(Tmp, 2) + 1, _
                          Sub(y As Integer)
+                             tmpPos(y).Clear()
                              For x As Integer = 0 To UBound(Tmp, 1) Step 1
                                  If MayPlaceMountainBlock(basicSize(r), x, y, Tmp, minX, maxX, minY, maxY) Then
-                                     pos.Add(New Point(x, y))
+                                     tmpPos(y).Add(New Point(x, y))
                                  End If
                              Next x
                          End Sub)
+                        pos.Clear()
+                        For y As Integer = 0 To UBound(Tmp, 2) Step 1
+                            For Each p As Point In tmpPos(y)
+                                pos.Add(p)
+                            Next p
+                        Next y
                         If pos.Count > 0 Then
                             Dim selected As Integer = comm.rndgen.RndPos(pos.Count, True) - 1
                             Call PlaceTmpMountain(basicSize(r), pos.Item(selected).X, pos.Item(selected).Y, Tmp)
@@ -5392,10 +5418,14 @@ Public Class ImpenetrableObjects
                         Parallel.For(0, objects.Length, _
                          Sub(n As Integer)
                              If MayPlace(tmpm, xx, yy, f, objects(n)) Then
-                                 IDs.Add(n)
                                  weight(n) = ObjectWeight(tmpm, objects(n), xx, yy)
+                             Else
+                                 weight(n) = -1
                              End If
                          End Sub)
+                        For n As Integer = 0 To UBound(objects) Step 1
+                            If weight(n) >= 0 Then IDs.Add(n)
+                        Next n
                         If IDs.Count > 0 Then
                             Dim selected As Integer = comm.RandomSelection(IDs, weight, True)
                             tmpm.board(x, y).objectName = objects(selected).name

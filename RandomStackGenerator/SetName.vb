@@ -89,7 +89,7 @@
                 Next i
             End If
         Catch ex As Exception
-            Console.WriteLine(ex.Message)
+            Console.WriteLine("Names downloader: " & ex.Message)
         End Try
         If Not IsNothing(Tn) And Not IsNothing(Tw) Then
             Dim added As New Dictionary(Of String, Integer)
