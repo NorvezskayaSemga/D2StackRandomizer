@@ -28,7 +28,7 @@
     End Sub
 
     Private Sub DownloadList()
-        Dim w As New System.Net.WebClient
+        Dim w As New System.Net.WebClient With {.Proxy = Nothing}
         Dim Tn() As String = Nothing
         Dim Tw() As Double = Nothing
         Try
