@@ -864,6 +864,10 @@ Public Class Common
                             For n As Integer = 0 To UBound(r) Step 1
                                 result(i).shopContent.Add(r(n).ToUpper)
                             Next n
+                        ElseIf k = 11 Then
+                            Dim b As Boolean = False
+                            If s(f + 1).ToUpper = "T" Or s(f + 1).ToUpper = "True" Or s(f + 1).ToUpper = "1" Then b = True
+                            result(i).isInternalCityGuard = b 'IsInternalCityGuard
                         End If
                     End If
                 Next k
@@ -1262,6 +1266,9 @@ Public Class AllDataStructues
         ''' <summary>Не nothing только для торговцев предметами и магией, а также лагеря наемников</summary>
         Dim shopContent As List(Of String)
 
+        ''' <summary>True, если отряд является внутренней охраной города</summary>
+        Dim isInternalCityGuard As Boolean
+
         Public Shared Function Copy(ByVal v As DesiredStats) As DesiredStats
             Dim RacesList As List(Of Integer) = Nothing
             If Not IsNothing(v.Race) Then
@@ -1287,7 +1294,8 @@ Public Class AllDataStructues
                                           .LocationName = v.LocationName, _
                                           .excludeConsumableItems = v.excludeConsumableItems, _
                                           .excludeNonconsumableItems = v.excludeNonconsumableItems, _
-                                          .shopContent = shopContentList}
+                                          .shopContent = shopContentList, _
+                                          .isInternalCityGuard = v.isInternalCityGuard}
         End Function
         ''' <param name="RaceNumberToRaceChar">Преобразует номер расы в ее текстовый идентификатор. Если передать Nothing, то будут печататься номера рас</param>
         Public Shared Function Print(ByVal v As DesiredStats, ByRef RaceNumberToRaceChar As Dictionary(Of Integer, String)) As String
@@ -1309,6 +1317,7 @@ Public Class AllDataStructues
                     "MaxGiants" & vbTab & v.MaxGiants & vbNewLine & _
                     "MeleeCount" & vbTab & v.MeleeCount & vbNewLine & _
                     "LootCost" & vbTab & v.LootCost & vbNewLine & _
+                    "IsInternalCityGuard" & vbTab & v.isInternalCityGuard & vbNewLine & _
                     "CItemsExclude" & vbTab & v.excludeConsumableItems & vbNewLine & _
                     "NItemsExclude" & vbTab & v.excludeNonconsumableItems & vbNewLine
             Else

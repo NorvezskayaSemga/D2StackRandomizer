@@ -63,7 +63,7 @@ Friend Class StartForm
         sR.maxRadiusDispersion = 0
         sR.maxGoldMines = 1
         sR.maxManaSources = 1
-        sR.maxCities = 0
+        sR.maxCities = 1
         sR.maxMages = 1
         sR.maxMercenaries = 0
         sR.maxRuins = 0
@@ -84,16 +84,16 @@ Friend Class StartForm
         sR.mercenariesMinExpBar = 200
 
         Dim sC As Map.SettingsLoc
-        sC.AverageRadius = 15
+        sC.AverageRadius = 17
         sC.maxEccentricityDispersion = 0.4
         sC.maxRadiusDispersion = 0.3
 
         sC.maxGoldMines = 1
         sC.maxManaSources = 1
-        sC.maxCities = 0
+        sC.maxCities = 1
         sC.maxMages = 0
         sC.maxMercenaries = 0
-        sC.maxRuins = 1
+        sC.maxRuins = 0
         sC.maxTrainers = 0
         sC.maxVendors = 0
 

@@ -34,15 +34,15 @@
         End If
 
         Dim t0 As Integer = Environment.TickCount
-        Dim guards As Dictionary(Of Integer, StackLoc) = MakeGuardsList(m)
+        Dim guards As Dictionary(Of Integer, StackLoc) = MakeGuardsList(m, settMap)
         Dim LocTotalExp() As Double = MakeLocationsList(m, settMap, settRaceLoc, settCommLoc)
-        m.groupStats = GenStacksStats(settMap, guards, LocTotalExp, m)
+        m.groupStats = GenStacksStats(settMap, guards, LocTotalExp)
         m.complited.StacksDesiredStatsGen_Done = True
 
         Console.WriteLine("Stacks stats gen " & Environment.TickCount - t0)
     End Sub
 
-    Private Function MakeGuardsList(ByRef m As Map) As Dictionary(Of Integer, StackLoc)
+    Private Function MakeGuardsList(ByRef m As Map, ByRef settMap As Map.SettingsMap) As Dictionary(Of Integer, StackLoc)
         Dim locs As New Dictionary(Of Integer, StackLoc)
         Dim CapPos As New List(Of Point)
         Dim centerX, centerY As Double
@@ -64,12 +64,17 @@
                     For Each p As Point In CapPos
                         CapDist = Math.Min(CapDist, p.Dist(x, y))
                     Next p
-                    locs.Add(m.board(x, y).groupID, New StackLoc With {.CapDist = CapDist, _
-                                                                       .CenDist = CenDist, _
-                                                                       .isPassGuard = m.board(x, y).PassGuardLoc, _
-                                                                       .isObjectGuard = m.board(x, y).isObjectGuard, _
-                                                                       .pos = New Point(x, y), _
-                                                                       .LocID = m.board(x, y).locID.Item(0)})
+                    Dim g As Integer = m.board(x, y).groupID
+                    locs.Add(g, New StackLoc With {.CapDist = CapDist, _
+                                                   .CenDist = CenDist, _
+                                                   .isPassGuard = m.board(x, y).PassGuardLoc, _
+                                                   .isObjectGuard = m.board(x, y).isObjectGuard, _
+                                                   .pos = New Point(x, y), _
+                                                   .LocID = m.board(x, y).locID.Item(0)})
+                    If m.board(x, y).objectID = 2 And m.board(x, y).locID.Item(0) > settMap.nRaces Then
+                        If g = 0 Then Throw New Exception("Unexpected group ID of city guards")
+                        locs.Add(-g, locs.Item(g))
+                    End If
                 End If
             Next x
         Next y
@@ -157,7 +162,7 @@
 
     Private Function GenStacksStats(ByRef settMap As Map.SettingsMap, _
                                     ByRef guards As Dictionary(Of Integer, StackLoc), _
-                                    ByRef LocTotalExp() As Double, ByRef m As Map) As Dictionary(Of Integer, AllDataStructues.DesiredStats)
+                                    ByRef LocTotalExp() As Double) As Dictionary(Of Integer, AllDataStructues.DesiredStats)
         Dim res As New Dictionary(Of Integer, AllDataStructues.DesiredStats)
         Dim W, WLoot As New Dictionary(Of Integer, Double)
         Dim Wsum(UBound(LocTotalExp)), WLootSum(UBound(LocTotalExp)) As Double
@@ -387,6 +392,11 @@ Public Class RaceGen
                         For Each r As Integer In m.board(x, y).stackRace
                             m.groupStats.Item(group).Race.Add(r)
                         Next r
+                        If m.groupStats.ContainsKey(-group) Then
+                            For Each r As Integer In m.board(x, y).stackRace
+                                m.groupStats.Item(-group).Race.Add(r)
+                            Next r
+                        End If
                     End If
                 End If
             Next x

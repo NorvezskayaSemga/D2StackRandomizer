@@ -2924,7 +2924,7 @@ Public Class Map
     Public ReadOnly ySize As Integer
     ''' <summary>Идентификатор симметрии, применяемой при генерации</summary>
     Public ReadOnly symmID As Integer
-    ''' <summary>Желаемые статы для каждой группы стэков. Индексы групп (key) хранятся в board(,).groupID</summary>
+    ''' <summary>Желаемые статы для каждой группы стэков. Индексы групп (key) хранятся в board(,).groupID. В этом словаре могут присутствовать и отрицательные ключи - для внутренней охраны городов. Положительный ключ - внешняя охрана, отрицательный, но равный по модулю - внутренняя охрана того же города, при этом внутренняя охрана не всегда может присутствовать</summary>
     Public groupStats As Dictionary(Of Integer, AllDataStructues.DesiredStats)
     ''' <summary>Какие этапы закончены</summary>
     Public complited As ComplitedSteps
@@ -4534,6 +4534,7 @@ Public Class ImpenetrableObjects
         Next y
 
         Call PlaceCities(m, settMap)
+        Call CorrectTownGuardsDesiredStats(m)
         Call PlaceAttendedObjects(m)
         Call PlaceMines(m, settMap, settRaceLoc, settCommLoc)
         Call PlacePlateau(m, free)
@@ -4692,7 +4693,7 @@ Public Class ImpenetrableObjects
         Next y
     End Sub
     Private Sub PlaceCities(ByRef m As Map, ByRef settMap As Map.SettingsMap)
-        Dim cityGroup As New Dictionary(Of Integer, List(Of Point))
+        Dim cityGroup As Dictionary(Of Integer, List(Of Point)) = MakeCityGroupsList(m)
         For y As Integer = 0 To m.ySize Step 1
             For x As Integer = 0 To m.xSize Step 1
                 If m.board(x, y).objectID = 1 Then
@@ -4707,10 +4708,6 @@ Public Class ImpenetrableObjects
                     ElseIf m.board(x, y).objRace.Item(0) = comm.RaceIdentifierToSubrace("E") Then
                         m.board(x, y).objectName = "G000FT0000EL0"
                     End If
-                ElseIf m.board(x, y).objectID = 2 Then
-                    Dim g As Integer = m.board(x, y).groupID
-                    If Not cityGroup.ContainsKey(g) Then cityGroup.Add(g, New List(Of Point))
-                    cityGroup.Item(g).Add(New Point(x, y))
                 End If
             Next x
         Next y
@@ -4734,6 +4731,48 @@ Public Class ImpenetrableObjects
                 Next p
             Next L
         End If
+    End Sub
+    Private Function MakeCityGroupsList(ByRef m As Map) As Dictionary(Of Integer, List(Of Point))
+        Dim cityGroup As New Dictionary(Of Integer, List(Of Point))
+        For y As Integer = 0 To m.ySize Step 1
+            For x As Integer = 0 To m.xSize Step 1
+                If m.board(x, y).objectID = 2 Then
+                    Dim g As Integer = m.board(x, y).groupID
+                    If Not cityGroup.ContainsKey(g) Then cityGroup.Add(g, New List(Of Point))
+                    cityGroup.Item(g).Add(New Point(x, y))
+                End If
+            Next x
+        Next y
+        Return cityGroup
+    End Function
+    Private Sub CorrectTownGuardsDesiredStats(ByRef m As Map)
+        Dim cityGroup As Dictionary(Of Integer, List(Of Point)) = MakeCityGroupsList(m)
+        Dim s As AllDataStructues.DesiredStats
+        Dim citySize As Integer
+        Dim cityName As String
+        For Each g As Integer In cityGroup.Keys
+            If m.groupStats.ContainsKey(-g) Then
+                s = AllDataStructues.DesiredStats.Copy(m.groupStats.Item(-g))
+                cityName = m.board(cityGroup.Item(g).Item(0).X, cityGroup.Item(g).Item(0).Y).objectName
+                citySize = CInt(cityName.Substring(cityName.Length - 1))
+                If s.StackSize > citySize Then
+                    s.ExpBarAverage = CInt((s.ExpBarAverage * s.StackSize) / citySize)
+                    s.StackSize = citySize
+                    If s.StackSize < 2 Then
+                        s.MaxGiants = 0
+                    ElseIf s.StackSize < 4 Then
+                        s.MaxGiants = Math.Min(s.MaxGiants, 1)
+                    ElseIf s.StackSize < 6 Then
+                        s.MaxGiants = Math.Min(s.MaxGiants, 2)
+                    Else
+                        s.MaxGiants = Math.Min(s.MaxGiants, 3)
+                    End If
+                End If
+                s.isInternalCityGuard = True
+                m.groupStats.Remove(-g)
+                m.groupStats.Add(-g, AllDataStructues.DesiredStats.Copy(s))
+            End If
+        Next g
     End Sub
     Private Sub PlaceMines(ByRef m As Map, ByRef settMap As Map.SettingsMap, _
                            ByRef settRaceLoc As Map.SettingsLoc, ByRef settCommLoc As Map.SettingsLoc)
