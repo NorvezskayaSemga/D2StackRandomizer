@@ -8,6 +8,7 @@ Public Class RandStack
     Private firstrow() As Integer = New Integer() {0, 2, 4}
     Private secondrow() As Integer = New Integer() {1, 3, 5}
     Private itemGenSigma As Double = SigmaMultiplier(New AllDataStructues.DesiredStats With {.StackSize = 1})
+    Private multiItemGenSigmaMultiplier As Double = 2
 
     Private AllLeaders(), AllFighters(), ExcludedUnits() As AllDataStructues.Unit
     Private MagicItem(), ExcludedItems() As AllDataStructues.Item
@@ -124,13 +125,16 @@ Public Class RandStack
                 items(n) = AllDataStructues.Item.Copy(allitems(i))
                 GoldCost(n) = items(n).itemCost.Gold
                 If itemType.Item(items(n).type) = "JEWEL" Then
-                    mult(n) = CDbl(My.Resources.JewelItemsCostMultiplicator)
+                    GoldCost(n) /= CDbl(My.Resources.JewelItemsCostMultiplicator)
                 Else
-                    mult(n) = CDbl(My.Resources.nonJewelItemsCostMultiplicator)
+                    GoldCost(n) /= CDbl(My.Resources.nonJewelItemsCostMultiplicator)
                 End If
-                If minItemGoldCost * mult(n) > items(n).itemCost.Gold Then
-                    minItemGoldCost = CInt(items(n).itemCost.Gold / mult(n))
+                If itemType.Item(items(n).type) = "TALISMAN" Then
+                    mult(n) = CDbl(My.Resources.TalismanWeightMultiplicator)
+                Else
+                    mult(n) = 1
                 End If
+                minItemGoldCost = Math.Min(minItemGoldCost, CInt(items(n).itemCost.Gold))
             Else
                 m += 1
                 excluded(m) = AllDataStructues.Item.Copy(allitems(i))
@@ -233,15 +237,16 @@ Public Class RandStack
             IDs.Clear()
             For i As Integer = 0 To UBound(MagicItem) Step 1
                 add = False
-                If MagicItem(i).itemCost.Gold <= maxCost * multItems(i) Then add = True
+                If ItemGoldCost(i) <= maxCost Then add = True
                 If excludeConsumableItems And comm.ConsumableItemsTypes.Contains(MagicItem(i).type) Then add = False
                 If excludeNonconsumableItems And comm.NonconsumableItemsTypes.Contains(MagicItem(i).type) Then add = False
                 If add Then IDs.Add(i)
             Next i
             If IDs.Count = 0 Then Exit Do
-            selected = comm.RandomSelection(IDs, New Double()() {ItemGoldCost}, New Double() {costBar}, multItems, itemGenSigma, serialExecution)
+            selected = comm.RandomSelection(IDs, New Double()() {ItemGoldCost}, New Double() {costBar}, _
+                                            multItems, multiItemGenSigmaMultiplier * itemGenSigma, serialExecution)
             result.Add(MagicItem(selected).itemID)
-            DynCost = CInt(DynCost - MagicItem(selected).itemCost.Gold / multItems(selected))
+            DynCost = CInt(DynCost - ItemGoldCost(selected))
         Loop
         Return result
     End Function
@@ -260,7 +265,7 @@ Public Class RandStack
         IDs.Clear()
         For i As Integer = 0 To UBound(MagicItem) Step 1
             add = False
-            If MagicItem(i).itemCost.Gold <= GoldCost * multItems(i) Then add = True
+            If ItemGoldCost(i) <= GoldCost Then add = True
             If excludeConsumableItems And comm.ConsumableItemsTypes.Contains(MagicItem(i).type) Then add = False
             If excludeNonconsumableItems And comm.NonconsumableItemsTypes.Contains(MagicItem(i).type) Then add = False
             If add Then IDs.Add(i)
