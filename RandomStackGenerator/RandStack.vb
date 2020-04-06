@@ -116,6 +116,12 @@ Public Class RandStack
         Next i
         ReDim items(n), GoldCost(n), multItems(n), excluded(m)
 
+        Dim weight As New Dictionary(Of String, String)
+        For Each s As String In My.Resources.WeightMultiplicator.Split(CChar(";"))
+            Dim i As Integer = s.IndexOf("=")
+            weight.Add(s.Substring(0, i).ToUpper, s.Substring(i + 1).ToUpper)
+        Next s
+
         minItemGoldCost = Integer.MaxValue
         n = -1
         m = -1
@@ -129,18 +135,53 @@ Public Class RandStack
                 Else
                     GoldCost(n) /= CDbl(My.Resources.nonJewelItemsCostMultiplicator)
                 End If
-                If itemType.Item(items(n).type) = "TALISMAN" Then
-                    mult(n) = CDbl(My.Resources.TalismanWeightMultiplicator)
-                Else
-                    mult(n) = 1
-                End If
+                mult(n) = ItemTypeWeight(weight, itemType.Item(items(n).type), GoldCost(n))
                 minItemGoldCost = Math.Min(minItemGoldCost, CInt(items(n).itemCost.Gold))
             Else
-                m += 1
-                excluded(m) = AllDataStructues.Item.Copy(allitems(i))
+            m += 1
+            excluded(m) = AllDataStructues.Item.Copy(allitems(i))
             End If
         Next i
     End Sub
+    Private Function ItemTypeWeight(ByRef wList As Dictionary(Of String, String), ByRef itemType As String, ByRef cost As Double) As Double
+        If Not wList.ContainsKey(itemType) Then Return 1
+        Dim s() As String = wList.Item(itemType).Split(CChar("#"))
+        Dim w1 As Double = CDbl(s(0))
+        If s.Length > 1 Then
+            Dim d2 As String = "ELSE"
+            If s(1).Contains(">") Then
+                Dim d1 As Char = CChar(">")
+                Dim v As Double = CDbl(s(1).Split(d1)(1).Split(New String() {d2}, StringSplitOptions.RemoveEmptyEntries)(0))
+                Dim w2 As Double = CDbl(s(1).Split(d1)(1).Split(New String() {d2}, StringSplitOptions.RemoveEmptyEntries)(1))
+                If cost > v Then
+                    Return w1
+                Else
+                    Return w2
+                End If
+            ElseIf s(1).Contains("<") Then
+                Dim d1 As Char = CChar("<")
+                Dim v As Double = CDbl(s(1).Split(d1)(1).Split(New String() {d2}, StringSplitOptions.RemoveEmptyEntries)(0))
+                Dim w2 As Double = CDbl(s(1).Split(d1)(1).Split(New String() {d2}, StringSplitOptions.RemoveEmptyEntries)(1))
+                If cost < v Then
+                    Return w1
+                Else
+                    Return w2
+                End If
+            ElseIf s(1).Contains("=") Then
+                Dim d1 As Char = CChar("=")
+                Dim v As Double = CDbl(s(1).Split(d1)(1).Split(New String() {d2}, StringSplitOptions.RemoveEmptyEntries)(0))
+                Dim w2 As Double = CDbl(s(1).Split(d1)(1).Split(New String() {d2}, StringSplitOptions.RemoveEmptyEntries)(1))
+                If cost = v Then
+                    Return w1
+                Else
+                    Return w2
+                End If
+            Else
+                Throw New Exception("Invalid compare action")
+            End If
+        End If
+        Return w1
+    End Function
 
     ''' <summary>Найдет статы юнита по ID (нечувствительно к регистру)</summary>
     ''' <param name="ID">GxxxUUxxxx</param>
@@ -232,7 +273,7 @@ Public Class RandStack
         Dim result As New List(Of String)
         Dim add As Boolean
         Do While DynCost >= minItemGoldCost
-            costBar = CInt(rndgen.Rand(CDbl(minItemGoldCost), CDbl(DynCost), serialExecution))
+            costBar = CostBarGen(minItemGoldCost, DynCost)
             maxCost = Math.Min(2 * costBar, DynCost)
             IDs.Clear()
             For i As Integer = 0 To UBound(MagicItem) Step 1
@@ -249,6 +290,18 @@ Public Class RandStack
             DynCost = CInt(DynCost - ItemGoldCost(selected))
         Loop
         Return result
+    End Function
+    Private Function CostBarGen(ByRef minBar As Integer, ByRef maxBar As Integer) As Integer
+        'Return CInt(rndgen.Rand(CDbl(minBar), CDbl(maxBar), serialExecution))
+        Dim R As Double = rndgen.Rand(0, 1, serialExecution)
+        Dim G As Double = 1.5
+        Dim D As Double = -0.1
+        Dim S As Double = 5
+        Dim E As Double = 1 / (1 + Math.Exp(S * D))
+        Dim V As Double = (1 - G * E) / (1 - E)
+        Dim m As Double = V + (G - V) / (1 + Math.Exp(S * (D - R)))
+        Dim bar As Double = 1 - (1 - R) / m
+        Return minBar + CInt(bar * CDbl(maxBar - minBar))
     End Function
     ''' <summary>Генерирует один предмет. Если не получится выбрать подходящий предмет, вернет пустую строку</summary>
     ''' <param name="GoldCost">Максимальная стоимость предмета в золоте. Драгоценности считаются дешевле в два раза</param>

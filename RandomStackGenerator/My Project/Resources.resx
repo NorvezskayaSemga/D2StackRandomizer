@@ -208,7 +208,7 @@
   <data name="TestStackStats" type="System.Resources.ResXFileRef, System.Windows.Forms">
     <value>..\resources\teststackstats.txt;System.String, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089;windows-1251</value>
   </data>
-  <data name="TalismanWeightMultiplicator" xml:space="preserve">
-    <value>0.1</value>
+  <data name="WeightMultiplicator" xml:space="preserve">
+    <value>Talisman=0.1;scroll=0.5;stuff=0.75;healing_elixir=3#cost&gt;100else1;ressurection_elixir=3</value>
   </data>
 </root>

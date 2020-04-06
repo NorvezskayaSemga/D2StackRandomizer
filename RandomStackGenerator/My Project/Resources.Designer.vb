@@ -475,15 +475,6 @@ Namespace My.Resources
         End Property
         
         '''<summary>
-        '''  Looks up a localized string similar to 0.1.
-        '''</summary>
-        Friend ReadOnly Property TalismanWeightMultiplicator() As String
-            Get
-                Return ResourceManager.GetString("TalismanWeightMultiplicator", resourceCulture)
-            End Get
-        End Property
-        
-        '''<summary>
         '''  Looks up a localized string similar to %testfile%.
         '''</summary>
         Friend ReadOnly Property testFileKeyword() As String
@@ -531,6 +522,15 @@ Namespace My.Resources
         Friend ReadOnly Property UnitRace() As String
             Get
                 Return ResourceManager.GetString("UnitRace", resourceCulture)
+            End Get
+        End Property
+        
+        '''<summary>
+        '''  Looks up a localized string similar to Talisman=0.1;scroll=0.5;stuff=0.75;healing_elixir=3#cost&gt;100else1;ressurection_elixir=3.
+        '''</summary>
+        Friend ReadOnly Property WeightMultiplicator() As String
+            Get
+                Return ResourceManager.GetString("WeightMultiplicator", resourceCulture)
             End Get
         End Property
     End Module
