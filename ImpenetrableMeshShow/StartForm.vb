@@ -25,6 +25,14 @@ Friend Class StartForm
 
     Private Sub GenButton_Click() Handles GenButton.Click
 
+        'For Each r As Integer In {1, 2, 3, 4, 14}
+        '    Console.WriteLine("------------ " & r)
+        '    Console.WriteLine(names.LordName(r, True))
+        '    For i As Integer = 0 To 2 Step 1
+        '        Console.WriteLine(names.LordName(r, False))
+        '    Next
+        'Next
+
         Call comm.ReadExcludedObjectsList({"%default%"})
         Call ReadObjSize()
 

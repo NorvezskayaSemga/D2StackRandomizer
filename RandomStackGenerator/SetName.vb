@@ -8,10 +8,22 @@
     Private rndgen As New RndValueGen
     Private exclude As New List(Of String)
     Private excludeRace As New List(Of Integer)
-    Private maxLen As Integer = 30
-    Private IDs As New List(Of Integer)
+    Private StackNameMaxLen As Integer = 30
+    Private LordNameMaxLen As Integer = 15
+    Private commonIDs, lordIDs As New List(Of Integer)
+    Private defailtLords As New Dictionary(Of Integer, List(Of Integer))
+    Private LordMinWeight As Double
+    Private defaultLordNames(14)() As String
+    Private lordDonationThreshold As Double = 999
 
     Public Sub New()
+
+        defaultLordNames(1) = New String() {"Алексис", "Лотай", "Келли", "Моар"}
+        defaultLordNames(2) = New String() {"Заориш", "Сагот", "Абрааль", "Интар"}
+        defaultLordNames(3) = New String() {"Дхагот", "Ишангхти", "Абрааль", "Сагорат"}
+        defaultLordNames(4) = New String() {"Магнерик", "Дагарик", "Атаульф", "Бродульф"}
+        defaultLordNames(14) = New String() {"Лемваер", "Име'ель", "Рха'ане", "Гиндель"}
+
         Dim t As Date = ReadNames()
         Dim download As Boolean = False
         If IsNothing(name) Then
@@ -87,6 +99,7 @@
                 For i As Integer = 0 To UBound(Tn) Step 1
                     Tw(i) /= wsum
                 Next i
+                LordMinWeight = lordDonationThreshold / wsum
             End If
         Catch ex As Exception
             Console.WriteLine("Names downloader: " & ex.Message)
@@ -109,9 +122,9 @@
 
     Private Sub PrintNames()
         If IsNothing(name) Then Exit Sub
-        Dim str As String = ""
+        Dim str As String = LordMinWeight.ToString
         For i As Integer = 0 To UBound(name) Step 1
-            str &= name(i) & vbTab & weight(i) & vbNewLine
+            str &= vbNewLine & name(i) & vbTab & weight(i)
         Next i
         IO.File.WriteAllText(path, str)
     End Sub
@@ -120,6 +133,12 @@
         Dim str() As String = comm.TxtSplit(IO.File.ReadAllText(path))
         ReDim name(UBound(str)), weight(UBound(str))
         Dim s() As String
+        Dim i0 As Integer
+        If IsNumeric(str(0)) Then
+            i0 = 1
+        Else
+            i0 = 0
+        End If
         For i As Integer = 0 To UBound(name) Step 1
             s = str(i).Split(CChar(" "))
             For j As Integer = 0 To UBound(s) - 1 Step 1
@@ -128,6 +147,11 @@
             Next j
             weight(i) = CDbl(s(UBound(s)))
         Next i
+        If IsNumeric(str(0)) Then
+            LordMinWeight = CDbl(str(0))
+        Else
+            LordMinWeight = 0.49 * weight.Max
+        End If
         Return IO.File.GetCreationTime(path)
     End Function
     Private Sub ReadExclusions()
@@ -138,17 +162,16 @@
         Next i
     End Sub
 
-
-    '''<summary>Присвоит имена всем отрядам в списке</summary>
+    '''<summary>Присвоит имя отряду</summary>
     ''' <param name="stack">Уже сгенерированные стэки</param>
     ''' <param name="R">Инициализированный класс</param>
     ''' <param name="newMapGen">True, если это первый вызов этой функции при генерации новой карты</param>
     Public Sub GenName(ByRef stack As AllDataStructues.Stack, ByRef R As RandStack, ByVal newMapGen As Boolean)
         If IsNothing(stack) Or IsNothing(R) Then Exit Sub
         If Not IsNothing(name) And newMapGen Then
-            IDs.Clear()
+            commonIDs.Clear()
             For i As Integer = 0 To UBound(name) Step 1
-                IDs.Add(i)
+                commonIDs.Add(i)
             Next i
         End If
         If stack.leaderPos > -1 AndAlso Not IsNothing(stack.pos) Then
@@ -162,11 +185,11 @@
         Dim res As String = u.name
         If excludeRace.Contains(u.race) Then Return res '& " race_excluded"
         If exclude.Contains(u.unitID) Then Return res '& " unit_excluded"
-        If IDs.Count > 0 AndAlso rndgen.PRand(0, 1) > 0.9 Then
-            Dim i As Integer = comm.RandomSelection(IDs, weight, True)
-            IDs.Remove(i)
+        If commonIDs.Count > 0 AndAlso rndgen.PRand(0, 1) > 0.9 Then
+            Dim i As Integer = comm.RandomSelection(commonIDs, weight, True)
+            commonIDs.Remove(i)
             res &= " " & name(i)
-            If res.Length > maxLen Then res = res.Substring(0, maxLen)
+            res = NameCut(res, StackNameMaxLen)
             'Else
             '    If IDs.Count = 0 Then
             '        Return res & " no_names"
@@ -176,4 +199,47 @@
         End If
         Return res
     End Function
+    Private Function NameCut(ByRef input As String, ByRef maxLen As Integer) As String
+        If input.Length > maxLen Then
+            Return input.Substring(0, maxLen)
+        Else
+            Return input
+        End If
+    End Function
+
+    '''<summary>Присвоит имя лорду</summary>
+    ''' <param name="RaceID">ID расы лорда</param>
+    ''' <param name="newMapGen">True, если это первый вызов этой функции при генерации новой карты</param>
+    Public Function LordName(ByRef RaceID As Integer, ByVal newMapGen As Boolean) As String
+        If Not IsNothing(name) And newMapGen Then
+            lordIDs.Clear()
+            For i As Integer = 0 To UBound(name) Step 1
+                If weight(i) > LordMinWeight Then lordIDs.Add(i)
+            Next i
+        End If
+        If newMapGen Then
+            defailtLords.Clear()
+            For i As Integer = 0 To UBound(defaultLordNames) Step 1
+                If Not IsNothing(defaultLordNames(i)) Then
+                    defailtLords.Add(i, New List(Of Integer))
+                    For j As Integer = 0 To UBound(defaultLordNames(i)) Step 1
+                        defailtLords.Item(i).Add(j)
+                    Next j
+                End If
+            Next i
+        End If
+        Dim result As String
+        If lordIDs.Count > 0 AndAlso rndgen.PRand(0, 1) > 0.5 Then
+            Dim i As Integer = comm.RandomSelection(lordIDs, weight, True)
+            lordIDs.Remove(i)
+            result = name(i)
+        Else
+            If defailtLords.Item(RaceID).Count = 0 Then Throw New Exception("Lords names list is empty. Race ID: " & RaceID)
+            Dim i As Integer = comm.RandomSelection(defailtLords.Item(RaceID), True)
+            defailtLords.Item(RaceID).Remove(i)
+            result = defaultLordNames(RaceID)(i)
+        End If
+        Return NameCut(result, LordNameMaxLen)
+    End Function
+
 End Class
