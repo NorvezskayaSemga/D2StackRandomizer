@@ -209,6 +209,6 @@
     <value>..\resources\teststackstats.txt;System.String, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089;windows-1251</value>
   </data>
   <data name="WeightMultiplicator" xml:space="preserve">
-    <value>Talisman=0.1;scroll=0.5;stuff=0.75;healing_elixir=3#cost&gt;100else1;ressurection_elixir=3</value>
+    <value>Talisman=0.1;scroll=0.5;stuff=0.75;healing_elixir=3#cost&gt;100else1;ressurection_elixir=3;permanent_elixir=0.6;elixir=0.75#cost&gt;400else1.15</value>
   </data>
 </root>

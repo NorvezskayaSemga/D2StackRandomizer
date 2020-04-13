@@ -526,7 +526,7 @@ Namespace My.Resources
         End Property
         
         '''<summary>
-        '''  Looks up a localized string similar to Talisman=0.1;scroll=0.5;stuff=0.75;healing_elixir=3#cost&gt;100else1;ressurection_elixir=3.
+        '''  Looks up a localized string similar to Talisman=0.1;scroll=0.5;stuff=0.75;healing_elixir=3#cost&gt;100else1;ressurection_elixir=3;permanent_elixir=0.6;elixir=0.75#cost&gt;400else1.15.
         '''</summary>
         Friend ReadOnly Property WeightMultiplicator() As String
             Get
