@@ -222,6 +222,23 @@ Namespace My.Resources
         End Property
         
         '''<summary>
+        '''  Looks up a localized string similar to #строка, начинающаяся с решетки, игнорируется
+        '''#Идентификаторы предметов и множители шанса появления предмета.
+        '''#Сфера помрачения
+        '''G001IG0176	0.2
+        '''#Сфера последнего часа
+        '''G001IG0177	0.2
+        '''#Сфера пепла
+        '''G001IG0178	0.2
+        '''.
+        '''</summary>
+        Friend ReadOnly Property LootItemChanceMultiplier() As String
+            Get
+                Return ResourceManager.GetString("LootItemChanceMultiplier", resourceCulture)
+            End Get
+        End Property
+        
+        '''<summary>
         '''  Looks up a localized string similar to g000LR0001	H
         '''g000LR0002	H
         '''g000LR0003	H

@@ -27,18 +27,24 @@ Public Class RandStack
     ''' <param name="ExcludeLists">Файлы со списками исключенных объектов. Записи в них могут повторяться. 
     ''' Допускается передача неинициализитрованного массива.
     ''' Для чтения из дефолтного листа в массив нужно добавить строчку %default% (наличие этого ключевого в файле запустит чтение дефолтного файла)</param>
+    ''' <summary>Читает множители шанса выпадения для отдельных предметов</summary>
+    ''' <param name="LootChanceMultiplierLists">Файлы с множителями шанса появления определенных предметов.
+    ''' Допускается передача неинициализитрованного массива.
+    ''' Для чтения из дефолтного листа в массив нужно добавить строчку %default% (наличие этого ключевого в файле запустит чтение дефолтного файла)</param>
     ''' <param name="CustomUnitRace">Файлы со списками рас юнитов. Записи в них могут повторяться, но записи с повторяющимся ID будут перезаписываться. 
     ''' Допускается передача неинициализитрованного массива.
     ''' Для чтения из дефолтного листа в массив нужно добавить строчку %default% (наличие этого ключевого в файле запустит чтение дефолтного файла)</param>
     ''' <param name="serial">True, если код, использующий генератор выполняется в одном потоке</param>
     Public Sub New(ByRef AllUnitsList() As AllDataStructues.Unit, ByRef AllItemsList() As AllDataStructues.Item, _
-                   ByRef ExcludeLists() As String, ByRef CustomUnitRace() As String, ByRef serial As Boolean)
+                   ByRef ExcludeLists() As String, ByRef LootChanceMultiplierLists() As String, ByRef CustomUnitRace() As String, _
+                   ByRef serial As Boolean)
         serialExecution = serial
         rndgen = comm.rndgen
         If IsNothing(AllUnitsList) Or IsNothing(AllItemsList) Then Exit Sub
 
         Call comm.ReadExcludedObjectsList(ExcludeLists)
         Call comm.ReadCustomUnitRace(CustomUnitRace)
+        Call comm.ReadLootItemChanceMultiplier(LootChanceMultiplierLists)
 
         Dim cat(UBound(AllUnitsList)) As Integer
         For i As Integer = 0 To UBound(AllUnitsList) Step 1
@@ -136,6 +142,9 @@ Public Class RandStack
                     GoldCost(n) /= CDbl(My.Resources.nonJewelItemsCostMultiplicator)
                 End If
                 mult(n) = ItemTypeWeight(weight, itemType.Item(items(n).type), GoldCost(n))
+                If comm.LootItemChanceMultiplier.ContainsKey(items(n).itemID.ToUpper) Then
+                    mult(n) *= comm.LootItemChanceMultiplier.Item(items(n).itemID.ToUpper)
+                End If
                 minItemGoldCost = Math.Min(minItemGoldCost, CInt(items(n).itemCost.Gold))
             Else
             m += 1
@@ -809,6 +818,8 @@ Public Class Common
     Public PlateauConstruction As New Dictionary(Of String, String)
     ''' <summary>Расы лордов</summary>
     Public LordsRace As New Dictionary(Of String, Integer)
+    ''' <summary>Множитель шанса появления предмета</summary>
+    Public LootItemChanceMultiplier As New Dictionary(Of String, Double)
 
     Friend ConsumableItemsTypes, NonconsumableItemsTypes As New List(Of Integer)
 
@@ -1150,6 +1161,18 @@ Public Class Common
             Call ReadFile(1, s, ExcludeLists(i), AddressOf ReadExcludedObjectsList)
         Next i
     End Sub
+    ''' <summary>Читает множители шанса выпадения для отдельных предметов</summary>
+    ''' <param name="MultipliersList">Файлы с множителями шанса появления определенных предметов.
+    ''' Допускается передача неинициализитрованного массива.
+    ''' Для чтения из дефолтного листа в массив нужно добавить строчку %default% (наличие этого ключевого в файле запустит чтение дефолтного файла)</param>
+    Public Sub ReadLootItemChanceMultiplier(ByRef MultipliersList() As String)
+        If IsNothing(MultipliersList) Then Exit Sub
+        Dim s() As String
+        For i As Integer = 0 To UBound(MultipliersList) Step 1
+            s = prepareToFileRead(MultipliersList(i), My.Resources.LootItemChanceMultiplier)
+            Call ReadFile(5, s, MultipliersList(i), AddressOf ReadPlateauConstructionDescription)
+        Next i
+    End Sub
     ''' <summary>Читает список, переопределяющий расы нужных юнитов</summary>
     ''' <param name="CustomUnitRace">Файлы со списками рас юнитов. Записи в них могут повторяться, но записи с повторяющимся ID будут перезаписываться. 
     ''' Допускается передача неинициализитрованного массива.
@@ -1232,6 +1255,11 @@ Public Class Common
                             r &= srow(i)
                         Next i
                         PlateauConstruction.Add(srow(0).ToUpper, r.ToUpper)
+                    End If
+                ElseIf mode = 5 Then
+                    If srow.Length > 1 Then
+                        If LootItemChanceMultiplier.ContainsKey(srow(0).ToUpper) Then LootItemChanceMultiplier.Remove(srow(0).ToUpper)
+                        LootItemChanceMultiplier.Add(srow(0).ToUpper, CDbl(srow(1)))
                     End If
                 Else
                     Throw New Exception("Invalid read mode: " & mode)
