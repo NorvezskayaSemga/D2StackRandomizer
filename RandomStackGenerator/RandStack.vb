@@ -300,6 +300,17 @@ Public Class RandStack
         Loop
         Return result
     End Function
+    ''' <summary>Генерирует набор предметов. В принципе может вернуть пустой список</summary>
+    ''' <param name="GoldCost">Максимальная стоимость набора в золоте. Драгоценности считаются дешевле в два раза</param>
+    ''' <param name="excludeConsumableItems">Не генерировать зелья, сферы, талисманы и свитки</param>
+    ''' <param name="excludeNonconsumableItems">Не генерировать надеваемые предметы и посохи</param>
+    ''' <param name="LootCostMultiplier">Множитель стоимости предметов</param>
+    Public Function ItemsGen(ByVal GoldCost As Integer, _
+                             ByVal excludeConsumableItems As Boolean, _
+                             ByVal excludeNonconsumableItems As Boolean, _
+                             ByVal LootCostMultiplier As Double) As List(Of String)
+        Return ItemsGen(CInt(GoldCost * LootCostMultiplier), excludeConsumableItems, excludeNonconsumableItems)
+    End Function
     Private Function CostBarGen(ByRef minBar As Integer, ByRef maxBar As Integer) As Integer
         'Return CInt(rndgen.Rand(CDbl(minBar), CDbl(maxBar), serialExecution))
         Dim R As Double = rndgen.Rand(0, 1, serialExecution)
@@ -337,6 +348,17 @@ Public Class RandStack
             result = MagicItem(selected).itemID
         End If
         Return result
+    End Function
+    ''' <summary>Генерирует один предмет. Если не получится выбрать подходящий предмет, вернет пустую строку</summary>
+    ''' <param name="GoldCost">Максимальная стоимость предмета в золоте. Драгоценности считаются дешевле в два раза</param>
+    ''' <param name="excludeConsumableItems">Не генерировать зелья, сферы, талисманы и свитки</param>
+    ''' <param name="excludeNonconsumableItems">Не генерировать надеваемые предметы и посохи</param>
+    ''' <param name="LootCostMultiplier">Множитель стоимости предметов</param>
+    Public Function ThingGen(ByVal GoldCost As Integer, _
+                             ByVal excludeConsumableItems As Boolean, _
+                             ByVal excludeNonconsumableItems As Boolean, _
+                             ByVal LootCostMultiplier As Double) As String
+        Return ThingGen(CInt(GoldCost * LootCostMultiplier), excludeConsumableItems, excludeNonconsumableItems)
     End Function
 
     ''' <summary>Затычка: вернет отряд из двух сквайров и трех лучников. Лидер - паладин. С зельем воскрешения</summary>
@@ -531,6 +553,38 @@ Public Class RandStack
         StackStat.excludeNonconsumableItems = excludeNonconsumableItems
         StackStat.excludeConsumableItems = excludeConsumableItems
         Return Gen(StackStat, GroundTile, NoLeader)
+    End Function
+    ''' <summary>Создаст отряд  в соответствие с желаемыми параметрами. Не нужно пытаться создать отряд водных жителей на земле</summary>
+    ''' <param name="StackStats">Желаемые параметры стэка</param>
+    ''' <param name="GroundTile">True, если на клетку нельзя ставить водных лидеров. Водной считается клетка с водой, окруженная со всех сторон клетками с водой</param>
+    ''' <param name="NoLeader">True, если стэк находится внутри руин или города</param>
+    ''' <param name="StackStrengthMultiplier">Множитель силы отряда: изменяем опыт за убийство и среднюю планку опыта</param>
+    ''' <param name="LootCostMultiplier">Множитель стоимости предметов</param>
+    Public Function Gen(ByRef StackStats As AllDataStructues.DesiredStats, ByVal GroundTile As Boolean, ByVal NoLeader As Boolean, _
+                        ByVal StackStrengthMultiplier As Double, ByVal LootCostMultiplier As Double) As AllDataStructues.Stack
+        Dim s As AllDataStructues.DesiredStats = AllDataStructues.DesiredStats.Copy(StackStats)
+        s.ExpStackKilled = CInt(s.ExpStackKilled * StackStrengthMultiplier)
+        s.ExpBarAverage = CInt(s.ExpBarAverage * StackStrengthMultiplier)
+        s.LootCost = CInt(s.LootCost * LootCostMultiplier)
+        Return Gen(s, GroundTile, NoLeader)
+    End Function
+    ''' <summary>Создаст отряд  в соответствие с желаемыми параметрами. Не нужно пытаться создать отряд водных жителей на земле</summary>
+    ''' <param name="ExpStackKilled">Примерный опыт за убийство стэка</param>
+    ''' <param name="LootCost">Стоимость лута (предметы со стоимостью в золоте, равной нулю, не добавляются). При расчете стоимость драгоценностей уменьшается в два раза</param>
+    ''' <param name="Races">Допустимые расы юнитов в отряде</param>
+    ''' <param name="excludeConsumableItems">Не генерировать зелья, сферы, талисманы и свитки</param>
+    ''' <param name="excludeNonconsumableItems">Не генерировать надеваемые предметы и посохи</param>
+    ''' <param name="GroundTile">True, если на клетку нельзя ставить водных лидеров. Водной считается клетка с водой, окруженная со всех сторон клетками с водой</param>
+    ''' <param name="NoLeader">True, если стэк находится внутри руин или города</param>
+    ''' <param name="StackStrengthMultiplier">Множитель силы отряда: изменяем опыт за убийство и среднюю планку опыта</param>
+    ''' <param name="LootCostMultiplier">Множитель стоимости предметов</param>
+    Public Function Gen(ByVal ExpStackKilled As Integer, ByVal LootCost As Double, ByRef Races As List(Of Integer), _
+                        ByVal excludeConsumableItems As Boolean, ByVal excludeNonconsumableItems As Boolean, _
+                        ByVal GroundTile As Boolean, ByVal NoLeader As Boolean, _
+                        ByVal StackStrengthMultiplier As Double, ByVal LootCostMultiplier As Double) As AllDataStructues.Stack
+        Dim esk As Integer = CInt(ExpStackKilled * StackStrengthMultiplier)
+        Dim lc As Double = LootCost * LootCostMultiplier
+        Return Gen(esk, lc, Races, excludeConsumableItems, excludeNonconsumableItems, GroundTile, NoLeader)
     End Function
     Private Function SelectPossibleLeader(ByRef leaderID As Integer, ByRef Tolerance As Double, _
                                           ByRef StackStats As AllDataStructues.DesiredStats, ByRef GroundTile As Boolean) As Boolean
