@@ -256,7 +256,7 @@ Public Class RandStack
                 End If
             End If
         Next i
-        result.ExpBarAverage = CInt(result.ExpBarAverage / result.StackSize)
+        If result.StackSize > 0 Then result.ExpBarAverage = CInt(result.ExpBarAverage / result.StackSize)
         For Each Item As String In stack.items
             m = FindItemStats(Item)
             If m.itemID = "" Then Throw New Exception("Неизвестный id предмета: " & Item)
