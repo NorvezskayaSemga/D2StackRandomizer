@@ -4961,26 +4961,14 @@ Public Class ImpenetrableObjects
             If s.researchCost.Count > 0 Then
                 For Each L As String In s.researchCost.Keys
                     Dim LRace As Integer = comm.LordsRace.Item(L)
-                    Dim c1 As AllDataStructues.Cost = s.researchCost.Item(L)
-                    Dim c2 As AllDataStructues.Cost = s.castCost
-                    res.Item(LRace)(s.level).Black = c1.Black + c2.Black
-                    res.Item(LRace)(s.level).Blue = c1.Blue + c2.Blue
-                    res.Item(LRace)(s.level).Gold = c1.Gold + c2.Gold
-                    res.Item(LRace)(s.level).Green = c1.Green + c2.Green
-                    res.Item(LRace)(s.level).Red = c1.Red + c2.Red
-                    res.Item(LRace)(s.level).White = c1.White + c2.White
+                    res.Item(LRace)(s.level) = s.researchCost.Item(L) + s.castCost
                 Next L
             End If
         Next s
         Dim remove As New List(Of Integer)
         For Each i As Integer In res.Keys
             For j As Integer = 1 To 5 Step 1
-                res.Item(i)(0).Black += res.Item(i)(j).Black
-                res.Item(i)(0).Blue += res.Item(i)(j).Blue
-                res.Item(i)(0).Gold += res.Item(i)(j).Gold
-                res.Item(i)(0).Green += res.Item(i)(j).Green
-                res.Item(i)(0).Red += res.Item(i)(j).Red
-                res.Item(i)(0).White += res.Item(i)(j).White
+                res.Item(i)(0) += res.Item(i)(j)
             Next j
             If res.Item(i)(0).Black = 0 And res.Item(i)(0).Blue = 0 And res.Item(i)(0).Gold = 0 _
             And res.Item(i)(0).Green = 0 And res.Item(i)(0).Red = 0 And res.Item(i)(0).White = 0 Then

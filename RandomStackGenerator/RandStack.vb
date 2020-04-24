@@ -135,12 +135,7 @@ Public Class RandStack
             If add(i) Then
                 n += 1
                 items(n) = AllDataStructues.Item.Copy(allitems(i))
-                GoldCost(n) = items(n).itemCost.Gold
-                If itemType.Item(items(n).type) = "JEWEL" Then
-                    GoldCost(n) /= CDbl(My.Resources.JewelItemsCostMultiplicator)
-                Else
-                    GoldCost(n) /= CDbl(My.Resources.nonJewelItemsCostMultiplicator)
-                End If
+                GoldCost(n) = LootCost(items(n)).Gold
                 mult(n) = ItemTypeWeight(weight, itemType.Item(items(n).type), GoldCost(n))
                 If comm.LootItemChanceMultiplier.ContainsKey(items(n).itemID.ToUpper) Then
                     mult(n) *= comm.LootItemChanceMultiplier.Item(items(n).itemID.ToUpper)
@@ -257,16 +252,21 @@ Public Class RandStack
             End If
         Next i
         If result.StackSize > 0 Then result.ExpBarAverage = CInt(result.ExpBarAverage / result.StackSize)
-        For Each Item As String In stack.items
-            m = FindItemStats(Item)
-            If m.itemID = "" Then Throw New Exception("Неизвестный id предмета: " & Item)
-            If itemType.Item(m.type) = "JEWEL" Then
-                result.LootCost = CInt(result.LootCost + m.itemCost.Gold / CDbl(My.Resources.JewelItemsCostMultiplicator))
-            Else
-                result.LootCost = CInt(result.LootCost + m.itemCost.Gold / CDbl(My.Resources.nonJewelItemsCostMultiplicator))
-            End If
-        Next Item
+        result.LootCost = LootCost(stack.items).Gold
         Return result
+    End Function
+    Private Function ItemTypeCostModify(ByRef item As AllDataStructues.Item) As AllDataStructues.Cost
+        If itemType.Item(item.type) = "JEWEL" Then
+            Return item.itemCost / CDbl(My.Resources.JewelItemsCostMultiplicator)
+        Else
+            Return item.itemCost / CDbl(My.Resources.nonJewelItemsCostMultiplicator)
+        End If
+    End Function
+    Public Function LootCost(ByRef items As List(Of String)) As AllDataStructues.Cost
+
+    End Function
+    Public Function LootCost(ByRef item As String) As AllDataStructues.Cost
+
     End Function
 
     ''' <summary>Генерирует набор предметов. В принципе может вернуть пустой список</summary>
@@ -563,8 +563,8 @@ Public Class RandStack
     Public Function Gen(ByRef StackStats As AllDataStructues.DesiredStats, ByVal GroundTile As Boolean, ByVal NoLeader As Boolean, _
                         ByVal StackStrengthMultiplier As Double, ByVal LootCostMultiplier As Double) As AllDataStructues.Stack
         Dim s As AllDataStructues.DesiredStats = AllDataStructues.DesiredStats.Copy(StackStats)
-        s.ExpStackKilled = CInt(s.ExpStackKilled * StackStrengthMultiplier)
-        s.ExpBarAverage = CInt(s.ExpBarAverage * StackStrengthMultiplier)
+        s.ExpStackKilled = Math.Max(CInt(s.ExpStackKilled * StackStrengthMultiplier), 5)
+        s.ExpBarAverage = Math.Max(CInt(s.ExpBarAverage * StackStrengthMultiplier), 25)
         s.LootCost = CInt(s.LootCost * LootCostMultiplier)
         Return Gen(s, GroundTile, NoLeader)
     End Function
@@ -582,7 +582,7 @@ Public Class RandStack
                         ByVal excludeConsumableItems As Boolean, ByVal excludeNonconsumableItems As Boolean, _
                         ByVal GroundTile As Boolean, ByVal NoLeader As Boolean, _
                         ByVal StackStrengthMultiplier As Double, ByVal LootCostMultiplier As Double) As AllDataStructues.Stack
-        Dim esk As Integer = CInt(ExpStackKilled * StackStrengthMultiplier)
+        Dim esk As Integer = Math.Max(CInt(ExpStackKilled * StackStrengthMultiplier), 5)
         Dim lc As Double = LootCost * LootCostMultiplier
         Return Gen(esk, lc, Races, excludeConsumableItems, excludeNonconsumableItems, GroundTile, NoLeader)
     End Function
@@ -1632,6 +1632,35 @@ Public Class AllDataStructues
             Next i
             Return s
         End Function
+
+        Public Shared Operator *(ByVal v As Cost, ByVal n As Double) As Cost
+            Return New Cost With {.Black = CInt(v.Black * n), _
+                                  .Blue = CInt(v.Blue * n), _
+                                  .Gold = CInt(v.Gold * n), _
+                                  .Green = CInt(v.Green * n), _
+                                  .Red = CInt(v.Red * n), _
+                                  .White = CInt(v.White * n)}
+        End Operator
+        Public Shared Operator *(ByVal n As Double, ByVal v As Cost) As Cost
+            Return v * n
+        End Operator
+        Public Shared Operator /(ByVal v As Cost, ByVal n As Double) As Cost
+            Return New Cost With {.Black = CInt(v.Black / n), _
+                                  .Blue = CInt(v.Blue / n), _
+                                  .Gold = CInt(v.Gold / n), _
+                                  .Green = CInt(v.Green / n), _
+                                  .Red = CInt(v.Red / n), _
+                                  .White = CInt(v.White / n)}
+        End Operator
+        Public Shared Operator +(ByVal v1 As Cost, ByVal v2 As Cost) As Cost
+            Return New Cost With {.Black = v1.Black + v2.Black, _
+                                  .Blue = v1.Blue + v2.Blue, _
+                                  .Gold = v1.Gold + v2.Gold, _
+                                  .Green = v1.Green + v2.Green, _
+                                  .Red = v1.Red + v2.Red, _
+                                  .White = v1.White + v2.White}
+        End Operator
+
     End Structure
 
     Public Structure Item

@@ -334,14 +334,7 @@ Public Class RandStackTest
         For i As Integer = 0 To 100 Step 1
             cost = target.minItemGoldCost + i * 125
             genitems = target.ItemsGen(cost, False, False)
-            sum = 0
-            For Each id As String In genitems
-                If target.itemType.Item(target.FindItemStats(id).type) = "JEWEL" Then
-                    sum += target.FindItemStats(id).itemCost.Gold / 2
-                Else
-                    sum += target.FindItemStats(id).itemCost.Gold
-                End If
-            Next id
+            sum = target.LootCost(genitems).Gold
             If sum > cost Then ok = False
             If Math.Abs(cost - sum) >= target.minItemGoldCost Then ok = False
             If Not ok Then Exit For
@@ -361,7 +354,7 @@ Public Class RandStackTest
         Dim ok As Boolean = True
 
         Dim stats As New AllDataStructues.DesiredStats With {.ExpBarAverage = 1450, .ExpStackKilled = 1000, .Race = New List(Of Integer), _
-                                                      .StackSize = 3, .MaxGiants = 1, .MeleeCount = 3, .LootCost = 1200}
+                                                             .StackSize = 3, .MaxGiants = 1, .MeleeCount = 3, .LootCost = 1200}
         Dim races() As Integer = New Integer() {1, 2}
         Dim raceokL(UBound(races)), raceokF(UBound(races)) As Boolean
         stats.Race.AddRange(races)
@@ -684,5 +677,39 @@ Public Class RandStackTest
         Next i
 
         If Not ok Then Assert.Inconclusive("Verify the correctness of this test method.")
+    End Sub
+
+    '''<summary>
+    '''A test for ThingGen
+    '''</summary>
+    <TestMethod()> _
+    Public Sub ThingGenTest()
+        Dim AllUnitsList() As AllDataStructues.Unit = Nothing ' TODO: Initialize to an appropriate value
+        Dim AllUnitsListExpected() As AllDataStructues.Unit = Nothing ' TODO: Initialize to an appropriate value
+        Dim AllItemsList() As AllDataStructues.Item = Nothing ' TODO: Initialize to an appropriate value
+        Dim AllItemsListExpected() As AllDataStructues.Item = Nothing ' TODO: Initialize to an appropriate value
+        Dim ExcludeLists() As String = Nothing ' TODO: Initialize to an appropriate value
+        Dim ExcludeListsExpected() As String = Nothing ' TODO: Initialize to an appropriate value
+        Dim LootChanceMultiplierLists() As String = Nothing ' TODO: Initialize to an appropriate value
+        Dim LootChanceMultiplierListsExpected() As String = Nothing ' TODO: Initialize to an appropriate value
+        Dim CustomUnitRace() As String = Nothing ' TODO: Initialize to an appropriate value
+        Dim CustomUnitRaceExpected() As String = Nothing ' TODO: Initialize to an appropriate value
+        Dim serial As Boolean = False ' TODO: Initialize to an appropriate value
+        Dim serialExpected As Boolean = False ' TODO: Initialize to an appropriate value
+        Dim target As RandStack = New RandStack(AllUnitsList, AllItemsList, ExcludeLists, LootChanceMultiplierLists, CustomUnitRace, serial) ' TODO: Initialize to an appropriate value
+        Dim GoldCost As Integer = 0 ' TODO: Initialize to an appropriate value
+        Dim excludeConsumableItems As Boolean = False ' TODO: Initialize to an appropriate value
+        Dim excludeNonconsumableItems As Boolean = False ' TODO: Initialize to an appropriate value
+        Dim expected As String = String.Empty ' TODO: Initialize to an appropriate value
+        Dim actual As String
+        actual = target.ThingGen(GoldCost, excludeConsumableItems, excludeNonconsumableItems)
+        Assert.AreEqual(AllUnitsListExpected, AllUnitsList)
+        Assert.AreEqual(AllItemsListExpected, AllItemsList)
+        Assert.AreEqual(ExcludeListsExpected, ExcludeLists)
+        Assert.AreEqual(LootChanceMultiplierListsExpected, LootChanceMultiplierLists)
+        Assert.AreEqual(CustomUnitRaceExpected, CustomUnitRace)
+        Assert.AreEqual(serialExpected, serial)
+        Assert.AreEqual(expected, actual)
+        Assert.Inconclusive("Verify the correctness of this test method.")
     End Sub
 End Class
