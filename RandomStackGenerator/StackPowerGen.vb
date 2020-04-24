@@ -294,7 +294,8 @@ Class StackStatsGen
                                                        .LocationName = "Loc_" & groupID, _
                                                        .ExpBarAverage = Math.Max(eBar, 50), _
                                                        .excludeNonconsumableItems = False, _
-                                                       .excludeConsumableItems = False}
+                                                       .excludeConsumableItems = False, _
+                                                       .excludeJewelItems = False}
     End Function
 
 End Class

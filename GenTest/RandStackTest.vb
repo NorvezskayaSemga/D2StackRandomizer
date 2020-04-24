@@ -333,7 +333,7 @@ Public Class RandStackTest
         Dim genitems As List(Of String)
         For i As Integer = 0 To 100 Step 1
             cost = target.minItemGoldCost + i * 125
-            genitems = target.ItemsGen(cost, False, False)
+            genitems = target.ItemsGen(cost, False, False, False)
             sum = target.LootCost(genitems).Gold
             If sum > cost Then ok = False
             If Math.Abs(cost - sum) >= target.minItemGoldCost Then ok = False
@@ -617,7 +617,7 @@ Public Class RandStackTest
                 If TestOverload1 Then
                     stack = target.Gen(stats, True, noLeader)
                 Else
-                    stack = target.Gen(stats.ExpStackKilled, stats.LootCost, stats.Race, stats.excludeConsumableItems, stats.excludeNonconsumableItems, True, False)
+                    stack = target.Gen(stats.ExpStackKilled, stats.LootCost, stats.Race, stats.excludeConsumableItems, stats.excludeNonconsumableItems, stats.excludeJewelItems, True, False)
                 End If
                 For Each item As String In stack.pos
                     If Not expected.Contains(item.ToLower) Then ok = False
@@ -679,37 +679,4 @@ Public Class RandStackTest
         If Not ok Then Assert.Inconclusive("Verify the correctness of this test method.")
     End Sub
 
-    '''<summary>
-    '''A test for ThingGen
-    '''</summary>
-    <TestMethod()> _
-    Public Sub ThingGenTest()
-        Dim AllUnitsList() As AllDataStructues.Unit = Nothing ' TODO: Initialize to an appropriate value
-        Dim AllUnitsListExpected() As AllDataStructues.Unit = Nothing ' TODO: Initialize to an appropriate value
-        Dim AllItemsList() As AllDataStructues.Item = Nothing ' TODO: Initialize to an appropriate value
-        Dim AllItemsListExpected() As AllDataStructues.Item = Nothing ' TODO: Initialize to an appropriate value
-        Dim ExcludeLists() As String = Nothing ' TODO: Initialize to an appropriate value
-        Dim ExcludeListsExpected() As String = Nothing ' TODO: Initialize to an appropriate value
-        Dim LootChanceMultiplierLists() As String = Nothing ' TODO: Initialize to an appropriate value
-        Dim LootChanceMultiplierListsExpected() As String = Nothing ' TODO: Initialize to an appropriate value
-        Dim CustomUnitRace() As String = Nothing ' TODO: Initialize to an appropriate value
-        Dim CustomUnitRaceExpected() As String = Nothing ' TODO: Initialize to an appropriate value
-        Dim serial As Boolean = False ' TODO: Initialize to an appropriate value
-        Dim serialExpected As Boolean = False ' TODO: Initialize to an appropriate value
-        Dim target As RandStack = New RandStack(AllUnitsList, AllItemsList, ExcludeLists, LootChanceMultiplierLists, CustomUnitRace, serial) ' TODO: Initialize to an appropriate value
-        Dim GoldCost As Integer = 0 ' TODO: Initialize to an appropriate value
-        Dim excludeConsumableItems As Boolean = False ' TODO: Initialize to an appropriate value
-        Dim excludeNonconsumableItems As Boolean = False ' TODO: Initialize to an appropriate value
-        Dim expected As String = String.Empty ' TODO: Initialize to an appropriate value
-        Dim actual As String
-        actual = target.ThingGen(GoldCost, excludeConsumableItems, excludeNonconsumableItems)
-        Assert.AreEqual(AllUnitsListExpected, AllUnitsList)
-        Assert.AreEqual(AllItemsListExpected, AllItemsList)
-        Assert.AreEqual(ExcludeListsExpected, ExcludeLists)
-        Assert.AreEqual(LootChanceMultiplierListsExpected, LootChanceMultiplierLists)
-        Assert.AreEqual(CustomUnitRaceExpected, CustomUnitRace)
-        Assert.AreEqual(serialExpected, serial)
-        Assert.AreEqual(expected, actual)
-        Assert.Inconclusive("Verify the correctness of this test method.")
-    End Sub
 End Class

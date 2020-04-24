@@ -7,3 +7,4 @@ ID=loc3 AverageExpBar = 1000 Race=HuMans StackSize 1 MeleeSlots 2 LootCost 0	Exp
 ID=loc54 AverageExpBar = 1000 Race=HuMans StackSize 1 MeleeSlots 2 LootCost 0	ExpStackKilled 200   MaxGiants 0 CItemsExclude t
 ID l AverageExpBar = 1000 Race=HuMans StackSize 1 MeleeSlots 2 LootCost 0	ExpStackKilled 200   MaxGiants 0 CItemsExclude t NItemsExclude 1 IsInternalCityGuard 1
 ID	 22 ShopContent = g000uu9999+1000+1000+500
+ID=loc53 AverageExpBar = 1000 Race=HuMans StackSize 1 MeleeSlots 2 LootCost 0	ExpStackKilled 200   MaxGiants 0 CItemsExclude t JItemsExclude t
