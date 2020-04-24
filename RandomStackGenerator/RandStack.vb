@@ -255,6 +255,7 @@ Public Class RandStack
         result.LootCost = LootCost(stack.items).Gold
         Return result
     End Function
+
     Private Function ItemTypeCostModify(ByRef item As AllDataStructues.Item) As AllDataStructues.Cost
         If itemType.Item(item.type) = "JEWEL" Then
             Return item.itemCost / CDbl(My.Resources.JewelItemsCostMultiplicator)
@@ -262,11 +263,53 @@ Public Class RandStack
             Return item.itemCost / CDbl(My.Resources.nonJewelItemsCostMultiplicator)
         End If
     End Function
-    Public Function LootCost(ByRef items As List(Of String)) As AllDataStructues.Cost
-
+    ''' <summary>Определяет суммарную ценность предметов</summary>
+    ''' <param name="items">Список предметов</param>
+    Public Function LootCost(ByRef items As List(Of AllDataStructues.Item)) As AllDataStructues.Cost
+        Dim result As AllDataStructues.Cost
+        For Each Item As AllDataStructues.Item In items
+            result += LootCost(Item)
+        Next Item
+        Return result
     End Function
+    ''' <summary>Определяет суммарную ценность предметов</summary>
+    ''' <param name="items">Список предметов</param>
+    Public Function LootCost(ByRef items() As AllDataStructues.Item) As AllDataStructues.Cost
+        Dim result As AllDataStructues.Cost
+        For Each Item As AllDataStructues.Item In items
+            result += LootCost(Item)
+        Next Item
+        Return result
+    End Function
+    ''' <summary>Определяет суммарную ценность предметов</summary>
+    ''' <param name="items">Список предметов</param>
+    Public Function LootCost(ByRef items As List(Of String)) As AllDataStructues.Cost
+        Dim result As AllDataStructues.Cost
+        For Each Item As String In items
+            result += LootCost(Item)
+        Next Item
+        Return result
+    End Function
+    ''' <summary>Определяет суммарную ценность предметов</summary>
+    ''' <param name="items">Список предметов</param>
+    Public Function LootCost(ByRef items() As String) As AllDataStructues.Cost
+        Dim result As AllDataStructues.Cost
+        For Each Item As String In items
+            result += LootCost(Item)
+        Next Item
+        Return result
+    End Function
+    ''' <summary>Определяет ценность предмета</summary>
+    ''' <param name="item">Предмет</param>
+    Public Function LootCost(ByRef item As AllDataStructues.Item) As AllDataStructues.Cost
+        Return ItemTypeCostModify(item)
+    End Function
+    ''' <summary>Определяет ценность предмета</summary>
+    ''' <param name="item">Предмет</param>
     Public Function LootCost(ByRef item As String) As AllDataStructues.Cost
-
+        Dim m As AllDataStructues.Item = FindItemStats(item)
+        If m.itemID = "" Then Throw New Exception("Неизвестный id предмета: " & item)
+        Return LootCost(m)
     End Function
 
     ''' <summary>Генерирует набор предметов. В принципе может вернуть пустой список</summary>
