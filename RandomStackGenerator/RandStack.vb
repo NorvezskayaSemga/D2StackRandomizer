@@ -311,6 +311,40 @@ Public Class RandStack
         Return LootCost(m)
     End Function
 
+    ''' <summary>Может быть преобразует часть золота в ману. Результат будет кратен 50</summary>
+    ''' <param name="input">Начальные ресурсы. При конвертации начальная мана не пропадет</param>
+    ''' <param name="conversionChance">Шанс сконвертировать (от 0 до 1)</param>
+    ''' <param name="conversionAmount">Какую часть золота сконвертировать (от 0 до 1)</param>
+    ''' <param name="outputMana">1 - black, 2 - blue, 3 - green, 4 - red, 5 - white</param>
+    Public Function GoldToMana(ByRef input As AllDataStructues.Cost, ByVal conversionChance As Double, _
+                               ByVal conversionAmount As Double, ByRef outputMana As List(Of Integer)) As AllDataStructues.Cost
+        Dim output As AllDataStructues.Cost = AllDataStructues.Cost.Copy(input)
+        If conversionChance > 0 AndAlso outputMana.Count > 0 AndAlso rndgen.Rand(0, 1, serialExecution) <= conversionChance Then
+            Dim dAmount As Integer = 50
+            Dim amount As Integer = 0
+            Do While (amount + dAmount) * outputMana.Count <= Math.Floor(input.Gold * Math.Min(conversionAmount, 1))
+                amount += dAmount
+            Loop
+            output.Gold -= amount * outputMana.Count
+            For Each manaID As Integer In outputMana
+                If manaID = 1 Then
+                    output.Black += amount
+                ElseIf manaID = 2 Then
+                    output.Blue += amount
+                ElseIf manaID = 3 Then
+                    output.Green += amount
+                ElseIf manaID = 4 Then
+                    output.Red += amount
+                ElseIf manaID = 5 Then
+                    output.White += amount
+                Else
+                    Throw New Exception("Unknown mana ID: " & manaID)
+                End If
+            Next manaID
+        End If
+        Return output
+    End Function
+
     ''' <summary>Генерирует набор предметов. В принципе может вернуть пустой список</summary>
     ''' <param name="GoldCost">Максимальная стоимость набора в золоте. Драгоценности считаются дешевле в два раза</param>
     ''' <param name="excludeConsumableItems">Не генерировать зелья, сферы, талисманы и свитки</param>
@@ -1723,6 +1757,14 @@ Public Class AllDataStructues
                                   .Green = v1.Green + v2.Green, _
                                   .Red = v1.Red + v2.Red, _
                                   .White = v1.White + v2.White}
+        End Operator
+        Public Shared Operator -(ByVal v1 As Cost, ByVal v2 As Cost) As Cost
+            Return New Cost With {.Black = v1.Black - v2.Black, _
+                                  .Blue = v1.Blue - v2.Blue, _
+                                  .Gold = v1.Gold - v2.Gold, _
+                                  .Green = v1.Green - v2.Green, _
+                                  .Red = v1.Red - v2.Red, _
+                                  .White = v1.White - v2.White}
         End Operator
 
     End Structure

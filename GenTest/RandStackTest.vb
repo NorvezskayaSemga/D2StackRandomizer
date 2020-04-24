@@ -679,4 +679,54 @@ Public Class RandStackTest
         If Not ok Then Assert.Inconclusive("Verify the correctness of this test method.")
     End Sub
 
+
+    '''<summary>
+    '''A test for GoldToMana
+    '''</summary>
+    <TestMethod()> _
+    Public Sub GoldToManaTest()
+        
+        If IsNothing(UnitsList) Then Call ReadTestUnits()
+        If IsNothing(ItemsList) Then Call ReadTestItems()
+        Dim target As RandStack_Accessor = New RandStack_Accessor(UnitsList, ItemsList, excludeList, customLootChanceList, customRaceList, True)
+
+        Dim ok As Boolean = True
+        Dim input, result As AllDataStructues.Cost
+        Dim mana As New List(Of Integer)
+        Dim s1, s2 As Integer
+
+        For m1 As Integer = 0 To 1 Step 1
+            For m2 As Integer = 0 To 1 Step 1
+                For m3 As Integer = 0 To 1 Step 1
+                    For m4 As Integer = 0 To 1 Step 1
+                        For m5 As Integer = 0 To 1 Step 1
+                            mana.Clear()
+                            If m1 > 0 Then mana.Add(1)
+                            If m2 > 0 Then mana.Add(2)
+                            If m3 > 0 Then mana.Add(3)
+                            If m4 > 0 Then mana.Add(4)
+                            If m5 > 0 Then mana.Add(5)
+                            For j As Integer = 0 To 11 Step 1
+                                For i As Integer = 0 To 10000 Step 1
+                                    input = New AllDataStructues.Cost With {.Gold = i, _
+                                                                            .Black = target.rndgen.RndPos(1001, True) - 1, _
+                                                                            .Blue = target.rndgen.RndPos(1001, True) - 1, _
+                                                                            .Green = target.rndgen.RndPos(1001, True) - 1, _
+                                                                            .Red = target.rndgen.RndPos(1001, True) - 1, _
+                                                                            .White = target.rndgen.RndPos(1001, True) - 1}
+                                    result = target.GoldToMana(input, 1, 0.1 * CDbl(j), mana)
+                                    s1 = input.Black + input.Blue + input.Gold + input.Green + input.Red + input.White
+                                    s2 = result.Black + result.Blue + result.Gold + result.Green + result.Red + result.White
+                                    If result.Gold < 0 Then ok = False
+                                    If Not s1 = s2 Then ok = False
+                                Next i
+                            Next j
+                        Next m5
+                    Next m4
+                Next m3
+            Next m2
+        Next m1
+
+        If Not ok Then Assert.Inconclusive("Verify the correctness of this test method.")
+    End Sub
 End Class
