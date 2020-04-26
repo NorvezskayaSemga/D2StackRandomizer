@@ -61,6 +61,8 @@ Public Class RandStackTest
                                                       RandomStackGenerator.My.Resources.readDefaultFileKeyword}
     Friend customLootChanceList() As String = New String() {RandomStackGenerator.My.Resources.readDefaultFileKeyword, _
                                                             RandomStackGenerator.My.Resources.readDefaultFileKeyword}
+    Friend soleUnitsList() As String = New String() {RandomStackGenerator.My.Resources.readDefaultFileKeyword, _
+                                                     RandomStackGenerator.My.Resources.readDefaultFileKeyword}
     Friend UnitsList() As AllDataStructues.Unit = Nothing
     Friend ItemsList() As AllDataStructues.Item = Nothing
     Friend AllSpells As Dictionary(Of String, AllDataStructues.Spell) = Nothing
@@ -84,7 +86,7 @@ Public Class RandStackTest
     Public Sub RndPosTest()
         If IsNothing(UnitsList) Then Call ReadTestUnits()
         If IsNothing(ItemsList) Then Call ReadTestItems()
-        Dim target As RandStack_Accessor = New RandStack_Accessor(UnitsList, ItemsList, excludeList, customLootChanceList, customRaceList, False)
+        Dim target As RandStack_Accessor = New RandStack_Accessor(UnitsList, ItemsList, excludeList, customLootChanceList, customRaceList, soleUnitsList, False)
 
         Dim serial_ok, parallel_ok As Boolean
         serial_ok = True
@@ -191,7 +193,7 @@ Public Class RandStackTest
     Public Sub GenTest1()
         If IsNothing(UnitsList) Then Call ReadTestUnits()
         If IsNothing(ItemsList) Then Call ReadTestItems()
-        Dim target As RandStack_Accessor = New RandStack_Accessor(UnitsList, ItemsList, excludeList, customLootChanceList, customRaceList, False)
+        Dim target As RandStack_Accessor = New RandStack_Accessor(UnitsList, ItemsList, excludeList, customLootChanceList, customRaceList, soleUnitsList, False)
 
         Dim ok As Boolean = True
         Dim races() As String = New String() {"H", "U", "L", "C", "E", "N", "G", "D", "S", "W", "B", "A", "AS", "AST", "AW"}
@@ -287,7 +289,7 @@ Public Class RandStackTest
     Public Sub StackStatsTest1()
         If IsNothing(UnitsList) Then Call ReadTestUnits()
         If IsNothing(ItemsList) Then Call ReadTestItems()
-        Dim target As RandStack_Accessor = New RandStack_Accessor(UnitsList, ItemsList, excludeList, customLootChanceList, customRaceList, False)
+        Dim target As RandStack_Accessor = New RandStack_Accessor(UnitsList, ItemsList, excludeList, customLootChanceList, customRaceList, soleUnitsList, False)
         Dim s As New AllDataStructues.Stack With {.pos = New String() {"G000UU5356", "G000UU0174", "G005UU6111", _
                                                                        "G000000000", "G000UU0162", "G000UU0162"}, _
                                                   .level = New Integer() {1, 1, 1, 0, 1, 1}, _
@@ -327,7 +329,7 @@ Public Class RandStackTest
     Public Sub ItemsGenTest()
         If IsNothing(UnitsList) Then Call ReadTestUnits()
         If IsNothing(ItemsList) Then Call ReadTestItems()
-        Dim target As RandStack_Accessor = New RandStack_Accessor(UnitsList, ItemsList, excludeList, customLootChanceList, customRaceList, False)
+        Dim target As RandStack_Accessor = New RandStack_Accessor(UnitsList, ItemsList, excludeList, customLootChanceList, customRaceList, soleUnitsList, False)
         Dim ok As Boolean = True
         Dim cost, sum As Integer
         Dim genitems As List(Of String)
@@ -349,7 +351,7 @@ Public Class RandStackTest
     Public Sub GenTest2()
         If IsNothing(UnitsList) Then Call ReadTestUnits()
         If IsNothing(ItemsList) Then Call ReadTestItems()
-        Dim target As RandStack_Accessor = New RandStack_Accessor(UnitsList, ItemsList, excludeList, customLootChanceList, customRaceList, False)
+        Dim target As RandStack_Accessor = New RandStack_Accessor(UnitsList, ItemsList, excludeList, customLootChanceList, customRaceList, soleUnitsList, False)
 
         Dim ok As Boolean = True
 
@@ -378,7 +380,7 @@ Public Class RandStackTest
     Public Sub GenGagTest()
         If IsNothing(UnitsList) Then Call ReadTestUnits()
         If IsNothing(ItemsList) Then Call ReadTestItems()
-        Dim target As RandStack_Accessor = New RandStack_Accessor(UnitsList, ItemsList, excludeList, customLootChanceList, customRaceList, False)
+        Dim target As RandStack_Accessor = New RandStack_Accessor(UnitsList, ItemsList, excludeList, customLootChanceList, customRaceList, soleUnitsList, False)
 
         Dim ok As Boolean = True
         Dim UnapropriateStacks() As AllDataStructues.Stack = New AllDataStructues.Stack() { _
@@ -420,7 +422,7 @@ Public Class RandStackTest
         If IsNothing(UnitsList) Then Call ReadTestUnits()
         If IsNothing(ItemsList) Then Call ReadTestItems()
 
-        Dim target As RandStack_Accessor = New RandStack_Accessor(UnitsList, ItemsList, excludeList, customLootChanceList, customRaceList, False)
+        Dim target As RandStack_Accessor = New RandStack_Accessor(UnitsList, ItemsList, excludeList, customLootChanceList, customRaceList, soleUnitsList, False)
         Dim s As New AllDataStructues.Stack With {.pos = New String() {"g000uu5130", "G000000000", "G000000000", _
                                                                        "G000000000", "G000000000", "g000uu5130"}, _
                                                   .level = New Integer() {1, 0, 0, 0, 0, 1}, _
@@ -443,7 +445,7 @@ Public Class RandStackTest
     Public Sub GenTest3()
         If IsNothing(UnitsList) Then Call ReadTestUnits()
         If IsNothing(ItemsList) Then Call ReadTestItems()
-        Dim target As RandStack_Accessor = New RandStack_Accessor(UnitsList, ItemsList, excludeList, customLootChanceList, customRaceList, False)
+        Dim target As RandStack_Accessor = New RandStack_Accessor(UnitsList, ItemsList, excludeList, customLootChanceList, customRaceList, soleUnitsList, False)
 
         Dim ok As Boolean = True
 
@@ -488,7 +490,7 @@ Public Class RandStackTest
     Public Sub GenTest4()
         If IsNothing(UnitsList) Then Call ReadTestUnits()
         If IsNothing(ItemsList) Then Call ReadTestItems()
-        Dim target As RandStack_Accessor = New RandStack_Accessor(UnitsList, ItemsList, excludeList, customLootChanceList, customRaceList, False)
+        Dim target As RandStack_Accessor = New RandStack_Accessor(UnitsList, ItemsList, excludeList, customLootChanceList, customRaceList, soleUnitsList, False)
 
         Dim ok As Boolean = True
 
@@ -518,7 +520,7 @@ Public Class RandStackTest
     Public Sub GenTest5()
         If IsNothing(UnitsList) Then Call ReadTestUnits()
         If IsNothing(ItemsList) Then Call ReadTestItems()
-        Dim target As RandStack_Accessor = New RandStack_Accessor(UnitsList, ItemsList, excludeList, customLootChanceList, customRaceList, False)
+        Dim target As RandStack_Accessor = New RandStack_Accessor(UnitsList, ItemsList, excludeList, customLootChanceList, customRaceList, soleUnitsList, False)
 
         Dim ok As Boolean = True
 
@@ -587,7 +589,7 @@ Public Class RandStackTest
     Private Function TestGoblinsGenStats(ByRef target As RandStack_Accessor, ByRef twogoblins As Boolean) As AllDataStructues.DesiredStats
         If IsNothing(UnitsList) Then Call ReadTestUnits()
         If IsNothing(ItemsList) Then Call ReadTestItems()
-        target = New RandStack_Accessor(UnitsList, ItemsList, excludeList, customLootChanceList, customRaceList, False)
+        target = New RandStack_Accessor(UnitsList, ItemsList, excludeList, customLootChanceList, customRaceList, soleUnitsList, False)
         Dim s As AllDataStructues.Stack
         If twogoblins Then
             s = New AllDataStructues.Stack With {.pos = New String() {"g000uu5117", "g000uu5018", "g000000000", _
@@ -657,7 +659,7 @@ Public Class RandStackTest
         Dim CustomLootChance() As String = New String() {"%defailt%"}
         Dim serial As Boolean = True
 
-        Dim target As RandStack = New RandStack(AllUnitsList, ItemsList, ExcludeLists, CustomLootChance, CustomUnitRace, serial)
+        Dim target As RandStack = New RandStack(AllUnitsList, ItemsList, ExcludeLists, CustomLootChance, CustomUnitRace, soleUnitsList, serial)
         Dim ok As Boolean = True
         Dim expectedEkill() As Integer = New Integer() {10, 20, 30, 40, 50, 60, 70, 80, 90, 100, 101, 102, 103, 104, 105, 106, 107, 108, 109, 110}
         Dim expectedEbar() As Integer = New Integer() {100, 200, 300, 400, 500, 600, 700, 800, 900, 1000, 1010, 1020, 1030, 1040, 1050, 1060, 1070, 1080, 1090, 1100}
@@ -688,7 +690,7 @@ Public Class RandStackTest
         
         If IsNothing(UnitsList) Then Call ReadTestUnits()
         If IsNothing(ItemsList) Then Call ReadTestItems()
-        Dim target As RandStack_Accessor = New RandStack_Accessor(UnitsList, ItemsList, excludeList, customLootChanceList, customRaceList, True)
+        Dim target As RandStack_Accessor = New RandStack_Accessor(UnitsList, ItemsList, excludeList, customLootChanceList, customRaceList, soleUnitsList, True)
 
         Dim ok As Boolean = True
         Dim input, result As AllDataStructues.Cost

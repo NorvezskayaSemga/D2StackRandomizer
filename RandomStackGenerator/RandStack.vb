@@ -33,10 +33,13 @@ Public Class RandStack
     ''' <param name="CustomUnitRace">Файлы со списками рас юнитов. Записи в них могут повторяться, но записи с повторяющимся ID будут перезаписываться. 
     ''' Допускается передача неинициализитрованного массива.
     ''' Для чтения из дефолтного листа в массив нужно добавить строчку %default% (наличие этого ключевого в файле запустит чтение дефолтного файла)</param>
+    ''' <param name="SoleUnitsList">Файлы со списками юнитов, которые должны находиться в отряде в единственном экземпляре. Записи в них могут повторяться, но записи с повторяющимся ID будут перезаписываться. 
+    ''' Допускается передача неинициализитрованного массива.
+    ''' Для чтения из дефолтного листа в массив нужно добавить строчку %default% (наличие этого ключевого в файле запустит чтение дефолтного файла)</param>
     ''' <param name="serial">True, если код, использующий генератор выполняется в одном потоке</param>
     Public Sub New(ByRef AllUnitsList() As AllDataStructues.Unit, ByRef AllItemsList() As AllDataStructues.Item, _
                    ByRef ExcludeLists() As String, ByRef LootChanceMultiplierLists() As String, ByRef CustomUnitRace() As String, _
-                   ByRef serial As Boolean)
+                   ByRef SoleUnitsList() As String, ByRef serial As Boolean)
         serialExecution = serial
         rndgen = comm.rndgen
         If IsNothing(AllUnitsList) Or IsNothing(AllItemsList) Then Exit Sub
@@ -44,6 +47,7 @@ Public Class RandStack
         Call comm.ReadExcludedObjectsList(ExcludeLists)
         Call comm.ReadCustomUnitRace(CustomUnitRace)
         Call comm.ReadLootItemChanceMultiplier(LootChanceMultiplierLists)
+        Call comm.ReadSoleUnits(SoleUnitsList)
 
         Dim cat(UBound(AllUnitsList)) As Integer
         For i As Integer = 0 To UBound(AllUnitsList) Step 1
@@ -546,10 +550,10 @@ Public Class RandStack
         Dim fighter As Integer
         Do While DynStackStats.StackSize > 0
             'создаем список воинов, которых можно использовать
-            fighter = SelectFighters(False, False, DynStackStats, FreeMeleeSlots)
+            fighter = SelectFighters(False, False, DynStackStats, FreeMeleeSlots, SelectedLeader, SelectedFighters)
             If fighter = -1 Then
-                fighter = SelectFighters(True, False, DynStackStats, FreeMeleeSlots)
-                If fighter = -1 Then fighter = SelectFighters(True, True, DynStackStats, FreeMeleeSlots)
+                fighter = SelectFighters(True, False, DynStackStats, FreeMeleeSlots, SelectedLeader, SelectedFighters)
+                If fighter = -1 Then fighter = SelectFighters(True, True, DynStackStats, FreeMeleeSlots, SelectedLeader, SelectedFighters)
             End If
             If fighter = -1 Then
                 If DynStackStats.MeleeCount > 0 Then
@@ -696,7 +700,8 @@ Public Class RandStack
     End Function
 
     Private Function SelectFighters(ByRef skipfilter1 As Boolean, ByRef skipfilter2 As Boolean, _
-                                    ByRef DynStackStats As AllDataStructues.DesiredStats, ByRef FreeMeleeSlots As Integer) As Integer
+                                    ByRef DynStackStats As AllDataStructues.DesiredStats, ByRef FreeMeleeSlots As Integer, _
+                                    ByRef SelectedLeader As Integer, ByRef SelectedFighters As List(Of Integer)) As Integer
 
         Dim PossibleFighters As New List(Of Integer)
         Dim TExpStack As Double = DynStackStats.ExpStackKilled / DynStackStats.StackSize
@@ -704,7 +709,8 @@ Public Class RandStack
         Dim nloops As Integer = 0
         Do While PossibleFighters.Count = 0 And TExpStack < 1.1 * DynStackStats.ExpStackKilled
             For j As Integer = 0 To UBound(AllFighters) Step 1
-                If SelectPossibleFighter(skipfilter1, skipfilter2, j, DynStackStats, FreeMeleeSlots) Then PossibleFighters.Add(j)
+                If SelectPossibleFighter(skipfilter1, skipfilter2, j, DynStackStats, _
+                                         FreeMeleeSlots, SelectedLeader, SelectedFighters) Then PossibleFighters.Add(j)
             Next j
             TExpStack += 0.1 * DynStackStats.ExpStackKilled / DynStackStats.StackSize
             nloops += 1
@@ -725,7 +731,16 @@ Public Class RandStack
                                            ByRef skipRangeFilter As Boolean, _
                                            ByRef fighterID As Integer, _
                                            ByRef DynStackStats As AllDataStructues.DesiredStats, _
-                                           ByRef FreeMeleeSlots As Integer) As Boolean
+                                           ByRef FreeMeleeSlots As Integer, _
+                                           ByRef SelectedLeader As Integer, _
+                                           ByRef SelectedFighters As List(Of Integer)) As Boolean
+        If comm.SoleUnits.ContainsKey(AllFighters(fighterID).unitID) Then
+            Dim sole As List(Of String) = comm.SoleUnits.Item(AllFighters(fighterID).unitID)
+            If SelectedLeader > -1 AndAlso sole.Contains(AllLeaders(SelectedLeader).unitID) Then Return False
+            For Each id As Integer In SelectedFighters
+                If sole.Contains(AllFighters(id).unitID) Then Return False
+            Next id
+        End If
         If Not DynStackStats.Race.Contains(AllFighters(fighterID).race) Then Return False
         Dim mult As Double
         If AllFighters(fighterID).small Then
@@ -963,6 +978,8 @@ Public Class Common
     Public LordsRace As New Dictionary(Of String, Integer)
     ''' <summary>Множитель шанса появления предмета</summary>
     Public LootItemChanceMultiplier As New Dictionary(Of String, Double)
+    ''' <summary>Ключ - ID юнита, значение - ID юнитов, с которыми он не должен быть в одном отряде</summary>
+    Public SoleUnits As New Dictionary(Of String, List(Of String))
 
     Friend ConsumableItemsTypes, NonconsumableItemsTypes, JewelItemsTypes As New List(Of Integer)
 
@@ -1318,7 +1335,7 @@ Public Class Common
         Dim s() As String
         For i As Integer = 0 To UBound(MultipliersList) Step 1
             s = prepareToFileRead(MultipliersList(i), My.Resources.LootItemChanceMultiplier)
-            Call ReadFile(5, s, MultipliersList(i), AddressOf ReadPlateauConstructionDescription)
+            Call ReadFile(5, s, MultipliersList(i), AddressOf ReadLootItemChanceMultiplier)
         Next i
     End Sub
     ''' <summary>Читает список, переопределяющий расы нужных юнитов</summary>
@@ -1331,6 +1348,18 @@ Public Class Common
         For i As Integer = 0 To UBound(CustomUnitRace) Step 1
             s = prepareToFileRead(CustomUnitRace(i), My.Resources.UnitRace)
             Call ReadFile(2, s, CustomUnitRace(i), AddressOf ReadCustomUnitRace)
+        Next i
+    End Sub
+    ''' <summary>Читает список юнитов, которые должны находиться в отряде в единственном экземпляре</summary>
+    ''' <param name="SoleUnitsList">Файлы со списками юнитов. Записи в них могут повторяться, но записи с повторяющимся ID будут перезаписываться. 
+    ''' Допускается передача неинициализитрованного массива.
+    ''' Для чтения из дефолтного листа в массив нужно добавить строчку %default% (наличие этого ключевого в файле запустит чтение дефолтного файла)</param>
+    Public Sub ReadSoleUnits(ByRef SoleUnitsList() As String)
+        If IsNothing(SoleUnitsList) Then Exit Sub
+        Dim s() As String
+        For i As Integer = 0 To UBound(SoleUnitsList) Step 1
+            s = prepareToFileRead(SoleUnitsList(i), My.Resources.SingleUnits)
+            Call ReadFile(6, s, SoleUnitsList(i), AddressOf ReadSoleUnits)
         Next i
     End Sub
     ''' <summary>Читает список, определяющий принадлежность непроходимых объектов</summary>
@@ -1409,6 +1438,14 @@ Public Class Common
                         If LootItemChanceMultiplier.ContainsKey(srow(0).ToUpper) Then LootItemChanceMultiplier.Remove(srow(0).ToUpper)
                         LootItemChanceMultiplier.Add(srow(0).ToUpper, CDbl(srow(1)))
                     End If
+                ElseIf mode = 6 Then
+                    For i As Integer = 0 To UBound(srow) Step 1
+                        If SoleUnits.ContainsKey(srow(i).ToUpper) Then SoleUnits.Remove(srow(i).ToUpper)
+                        SoleUnits.Add(srow(i).ToUpper, New List(Of String))
+                        For k As Integer = 0 To UBound(srow) Step 1
+                            SoleUnits.Item(srow(i).ToUpper).Add(srow(k).ToUpper)
+                        Next k
+                    Next i
                 Else
                     Throw New Exception("Invalid read mode: " & mode)
                 End If

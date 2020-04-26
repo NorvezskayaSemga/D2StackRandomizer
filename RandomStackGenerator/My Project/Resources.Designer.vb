@@ -151,6 +151,9 @@ Namespace My.Resources
         '''#толстый бес
         '''g000uu6004
         '''g000uu6104
+        '''#Ведьмино отродье
+        '''g000uu8300
+        '''g004uu6120
         '''.
         '''</summary>
         Friend ReadOnly Property ExcludeIDsForNames() As String
@@ -467,6 +470,30 @@ Namespace My.Resources
         Friend ReadOnly Property readDefaultFileKeyword() As String
             Get
                 Return ResourceManager.GetString("readDefaultFileKeyword", resourceCulture)
+            End Get
+        End Property
+        
+        '''<summary>
+        '''  Looks up a localized string similar to #строка, начинающаяся с решетки, игнорируется
+        '''#ID юнитов, которых в отряде должно быть по одному.
+        '''#Во второй колонке тоже может быть ID, если у юнита есть копия в виде лидера
+        '''#волхв
+        '''#друид
+        '''#архидруид
+        '''#исса
+        '''#хэйсса
+        '''#верховный вампир
+        '''#длань мортис
+        '''#проповедник
+        '''#ламия
+        '''#элементаль воды
+        '''#йети
+        '''#снежный волк
+        '''#карманница.
+        '''</summary>
+        Friend ReadOnly Property SingleUnits() As String
+            Get
+                Return ResourceManager.GetString("SingleUnits", resourceCulture)
             End Get
         End Property
         
