@@ -6,7 +6,7 @@ Public Class ImpenetrableMeshGen
 
     Public ReadOnly minLocationRadiusAtAll As Double
     Public Sub New()
-        minLocationRadiusAtAll = CDbl(My.Resources.minLocationRadiusAtAll)
+        minLocationRadiusAtAll = (New ValueConverter).minLocationRadiusAtAll
     End Sub
 
     Private Structure PrepareToRaceLocGenResult

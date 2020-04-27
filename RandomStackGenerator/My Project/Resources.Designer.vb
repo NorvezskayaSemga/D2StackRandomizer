@@ -61,15 +61,6 @@ Namespace My.Resources
         End Property
         
         '''<summary>
-        '''  Looks up a localized string similar to 0.1.
-        '''</summary>
-        Friend ReadOnly Property defaultSigma() As String
-            Get
-                Return ResourceManager.GetString("defaultSigma", resourceCulture)
-            End Get
-        End Property
-        
-        '''<summary>
         '''  Looks up a localized string similar to #строка, начинающаяся с решетки, игнорируется
         '''#ID юнитов
         '''#лидеры империи
@@ -145,13 +136,13 @@ Namespace My.Resources
         '''#разбойник
         '''g000uu5030
         '''g000uu5130
-        '''#крестьяник
+        '''#крестьянин
         '''g000uu5001
         '''g000uu5101
         '''#толстый бес
         '''g000uu6004
         '''g000uu6104
-        '''#Ведьмино отродье
+        '''#ведьмино отродье
         '''g000uu8300
         '''g004uu6120
         '''.
@@ -159,24 +150,6 @@ Namespace My.Resources
         Friend ReadOnly Property ExcludeIDsForNames() As String
             Get
                 Return ResourceManager.GetString("ExcludeIDsForNames", resourceCulture)
-            End Get
-        End Property
-        
-        '''<summary>
-        '''  Looks up a localized string similar to 1.3.
-        '''</summary>
-        Friend ReadOnly Property expBarDispersion() As String
-            Get
-                Return ResourceManager.GetString("expBarDispersion", resourceCulture)
-            End Get
-        End Property
-        
-        '''<summary>
-        '''  Looks up a localized string similar to 2.
-        '''</summary>
-        Friend ReadOnly Property giantUnitsExpMultiplicator() As String
-            Get
-                Return ResourceManager.GetString("giantUnitsExpMultiplicator", resourceCulture)
             End Get
         End Property
         
@@ -203,24 +176,6 @@ Namespace My.Resources
         Friend ReadOnly Property Items() As String
             Get
                 Return ResourceManager.GetString("Items", resourceCulture)
-            End Get
-        End Property
-        
-        '''<summary>
-        '''  Looks up a localized string similar to 2.
-        '''</summary>
-        Friend ReadOnly Property JewelItemsCostMultiplicator() As String
-            Get
-                Return ResourceManager.GetString("JewelItemsCostMultiplicator", resourceCulture)
-            End Get
-        End Property
-        
-        '''<summary>
-        '''  Looks up a localized string similar to 2.
-        '''</summary>
-        Friend ReadOnly Property lootCostDispersion() As String
-            Get
-                Return ResourceManager.GetString("lootCostDispersion", resourceCulture)
             End Get
         End Property
         
@@ -326,24 +281,6 @@ Namespace My.Resources
         Friend ReadOnly Property mineTypeT3Mana() As String
             Get
                 Return ResourceManager.GetString("mineTypeT3Mana", resourceCulture)
-            End Get
-        End Property
-        
-        '''<summary>
-        '''  Looks up a localized string similar to 7.
-        '''</summary>
-        Friend ReadOnly Property minLocationRadiusAtAll() As String
-            Get
-                Return ResourceManager.GetString("minLocationRadiusAtAll", resourceCulture)
-            End Get
-        End Property
-        
-        '''<summary>
-        '''  Looks up a localized string similar to 1.
-        '''</summary>
-        Friend ReadOnly Property nonJewelItemsCostMultiplicator() As String
-            Get
-                Return ResourceManager.GetString("nonJewelItemsCostMultiplicator", resourceCulture)
             End Get
         End Property
         
@@ -476,33 +413,27 @@ Namespace My.Resources
         '''<summary>
         '''  Looks up a localized string similar to #строка, начинающаяся с решетки, игнорируется
         '''#ID юнитов, которых в отряде должно быть по одному.
-        '''#Во второй колонке тоже может быть ID, если у юнита есть копия в виде лидера
-        '''#волхв
-        '''#друид
-        '''#архидруид
-        '''#исса
-        '''#хэйсса
-        '''#верховный вампир
+        '''#В каждой строке список юнитов, которые не должны появляться в одном отряде
+        '''#волхв друид архидруид исса хэйсса ламия
+        '''g000uu8218 g000uu8222 g000uu0035 g000uu0160 g000uu7558 g000uu7559 g000uu2022
+        '''#верховный некромант
+        '''g000uu8219 g000uu8223
         '''#длань мортис
+        '''g000uu2008
         '''#проповедник
-        '''#ламия
+        '''g000uu2021
         '''#элементаль воды
+        '''g000uu7536 g002uu5026
         '''#йети
+        '''g000uu0043
         '''#снежный волк
-        '''#карманница.
+        '''g000uu8296 g004uu5039
+        '''#карманница
+        '''g000uu [rest of string was truncated]&quot;;.
         '''</summary>
         Friend ReadOnly Property SingleUnits() As String
             Get
                 Return ResourceManager.GetString("SingleUnits", resourceCulture)
-            End Get
-        End Property
-        
-        '''<summary>
-        '''  Looks up a localized string similar to 1.
-        '''</summary>
-        Friend ReadOnly Property smallUnitsExpMultiplicator() As String
-            Get
-                Return ResourceManager.GetString("smallUnitsExpMultiplicator", resourceCulture)
             End Get
         End Property
         
@@ -566,15 +497,6 @@ Namespace My.Resources
         Friend ReadOnly Property UnitRace() As String
             Get
                 Return ResourceManager.GetString("UnitRace", resourceCulture)
-            End Get
-        End Property
-        
-        '''<summary>
-        '''  Looks up a localized string similar to Talisman=0.1;scroll=0.5;stuff=0.75;healing_elixir=3#cost&gt;100else1;ressurection_elixir=3;permanent_elixir=0.6;elixir=0.75#cost&gt;400else1.15.
-        '''</summary>
-        Friend ReadOnly Property WeightMultiplicator() As String
-            Get
-                Return ResourceManager.GetString("WeightMultiplicator", resourceCulture)
             End Get
         End Property
     End Module

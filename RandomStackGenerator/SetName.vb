@@ -83,7 +83,7 @@
                         If n = m Then
                             Tn(n) = str(i)
                         Else
-                            Tw(n) = CDbl(str(i))
+                            Tw(n) = ValueConverter.StrToDbl(str(i))
                         End If
                         If n >= m Then
                             m += 1
@@ -145,10 +145,10 @@
                 name(i) &= s(j)
                 If j < UBound(s) - 1 Then name(i) &= " "
             Next j
-            weight(i) = CDbl(s(UBound(s)))
+            weight(i) = ValueConverter.StrToDbl(s(UBound(s)))
         Next i
         If IsNumeric(str(0)) Then
-            LordMinWeight = CDbl(str(0))
+            LordMinWeight = ValueConverter.StrToDbl(str(0))
         Else
             LordMinWeight = 0.49 * weight.Max
         End If

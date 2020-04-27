@@ -230,6 +230,7 @@ Public Class CommonTest
     '''</summary>
     <TestMethod()> _
     Public Sub RandomSelectionTest3()
+        Dim valConv As New ValueConverter
         Dim target As Common = New Common()
         Dim IDs As New List(Of Integer)
         IDs.AddRange(idArray)
@@ -249,13 +250,27 @@ Public Class CommonTest
                 actual(i) = False
             Next i
             For i As Integer = 0 To 10 * expected.Length Step 1
-                actual(target.RandomSelection(IDs, {fullStatsArray}, {av}, RandomStackGenerator.My.Resources.defaultSigma, serial)) = True
+                actual(target.RandomSelection(IDs, {fullStatsArray}, {av}, valConv.defaultSigma, serial)) = True
             Next i
             For i As Integer = 0 To UBound(expected) Step 1
                 If Not actual(i) = expected(i) Then ok = False
             Next i
             If Not ok Then Exit For
         Next p
+        If Not ok Then Assert.Inconclusive("Verify the correctness of this test method.")
+    End Sub
+
+    '''<summary>
+    '''A test for ReadIntField
+    '''</summary>
+    <TestMethod(), _
+     DeploymentItem("RandomStackGenerator.dll")> _
+    Public Sub ReadIntFieldTest()
+        Dim target As Common_Accessor = New Common_Accessor()
+        Dim ok As Boolean = True
+        For i As Integer = 0 To 1000 Step 1
+            If Not i = target.ReadIntField(i.ToString, "", "") Then ok = False
+        Next i
         If Not ok Then Assert.Inconclusive("Verify the correctness of this test method.")
     End Sub
 End Class

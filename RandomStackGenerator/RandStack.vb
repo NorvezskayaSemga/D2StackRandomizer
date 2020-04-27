@@ -7,7 +7,7 @@ Public Class RandStack
     Private busytransfer() As Integer = New Integer() {1, -1, 3, -1, 5, -1}
     Private firstrow() As Integer = New Integer() {0, 2, 4}
     Private secondrow() As Integer = New Integer() {1, 3, 5}
-    Private itemGenSigma As Double = SigmaMultiplier(New AllDataStructues.DesiredStats With {.StackSize = 1})
+    Private itemGenSigma As Double = 0.1
     Private multiItemGenSigmaMultiplier As Double = 2
 
     Private AllLeaders(), AllFighters(), ExcludedUnits() As AllDataStructues.Unit
@@ -15,6 +15,7 @@ Public Class RandStack
     Public serialExecution As Boolean
     Public rndgen As RndValueGen
     Public comm As New Common
+    Private valConv As New ValueConverter
 
     Private ExpBarLeaders(), ExpBarFighters(), ExpKilledLeaders(), ExpKilledFighters(), multLeaders(), multFighters() As Double
     Private ItemGoldCost(), multItems() As Double
@@ -40,6 +41,7 @@ Public Class RandStack
     Public Sub New(ByRef AllUnitsList() As AllDataStructues.Unit, ByRef AllItemsList() As AllDataStructues.Item, _
                    ByRef ExcludeLists() As String, ByRef LootChanceMultiplierLists() As String, ByRef CustomUnitRace() As String, _
                    ByRef SoleUnitsList() As String, ByRef serial As Boolean)
+        itemGenSigma = SigmaMultiplier(New AllDataStructues.DesiredStats With {.StackSize = 1})
         serialExecution = serial
         rndgen = comm.rndgen
         If IsNothing(AllUnitsList) Or IsNothing(AllItemsList) Then Exit Sub
@@ -98,9 +100,9 @@ Public Class RandStack
                 If Not IsNothing(expKuilled) Then expKuilled(n) = units(n).EXPkilled
                 If Not IsNothing(mult) Then
                     If units(n).small Then
-                        mult(n) = CDbl(My.Resources.smallUnitsExpMultiplicator)
+                        mult(n) = valConv.smallUnitsExpMultiplicator
                     Else
-                        mult(n) = CDbl(My.Resources.giantUnitsExpMultiplicator)
+                        mult(n) = valConv.giantUnitsExpMultiplicator
                     End If
                 End If
             End If
@@ -126,7 +128,7 @@ Public Class RandStack
         ReDim items(n), GoldCost(n), multItems(n), excluded(m)
 
         Dim weight As New Dictionary(Of String, String)
-        For Each s As String In My.Resources.WeightMultiplicator.Split(CChar(";"))
+        For Each s As String In valConv.WeightMultiplicator.Split(CChar(";"))
             Dim i As Integer = s.IndexOf("=")
             weight.Add(s.Substring(0, i).ToUpper, s.Substring(i + 1).ToUpper)
         Next s
@@ -261,9 +263,9 @@ Public Class RandStack
 
     Private Function ItemTypeCostModify(ByRef item As AllDataStructues.Item) As AllDataStructues.Cost
         If itemType.Item(item.type) = "JEWEL" Then
-            Return item.itemCost / CDbl(My.Resources.JewelItemsCostMultiplicator)
+            Return item.itemCost / valConv.JewelItemsCostDevider
         Else
-            Return item.itemCost / CDbl(My.Resources.nonJewelItemsCostMultiplicator)
+            Return item.itemCost / valConv.nonJewelItemsCostDevider
         End If
     End Function
     ''' <summary>Определяет суммарную ценность предметов</summary>
@@ -639,7 +641,7 @@ Public Class RandStack
     Public Function Gen(ByVal ExpStackKilled As Integer, ByVal LootCost As Double, ByRef Races As List(Of Integer), _
                         ByVal excludeConsumableItems As Boolean, ByVal excludeNonconsumableItems As Boolean, ByVal excludeJewelItems As Boolean, _
                         ByVal GroundTile As Boolean, ByVal NoLeader As Boolean) As AllDataStructues.Stack
-        Dim StackStat As AllDataStructues.DesiredStats = StackStatsGen.GenDesiredStats(CDbl(ExpStackKilled), LootCost, rndgen)
+        Dim StackStat As AllDataStructues.DesiredStats = StackStatsGen.GenDesiredStats(CDbl(ExpStackKilled), LootCost, rndgen, valConv)
         StackStat.Race = Races
         StackStat.excludeConsumableItems = excludeConsumableItems
         StackStat.excludeNonconsumableItems = excludeNonconsumableItems
@@ -696,7 +698,7 @@ Public Class RandStack
         Return True
     End Function
     Private Function SigmaMultiplier(ByRef stat As AllDataStructues.DesiredStats) As Double
-        Return CDbl(My.Resources.defaultSigma) * (CDbl(stat.StackSize) + 0.1 * CDbl(stat.MaxGiants))
+        Return valConv.defaultSigma * (CDbl(stat.StackSize) + 0.1 * CDbl(stat.MaxGiants))
     End Function
 
     Private Function SelectFighters(ByRef skipfilter1 As Boolean, ByRef skipfilter2 As Boolean, _
@@ -1003,13 +1005,14 @@ Public Class Common
                 racesList &= splitedRace(i) & vbNewLine
             End If
         Next i
+        Dim valConv As New ValueConverter
         Dim k As Integer
         For i As Integer = 0 To UBound(splitedFields) Step 2
             k = CInt(i / 2)
             StatFields(k).description = splitedFields(i)
             StatFields(k).name = splitedFields(i + 1)
-            StatFields(k).description = StatFields(k).description.Replace("$jm$", My.Resources.JewelItemsCostMultiplicator)
-            StatFields(k).description = StatFields(k).description.Replace("$gm$", My.Resources.giantUnitsExpMultiplicator)
+            StatFields(k).description = StatFields(k).description.Replace("$jm$", valConv.JewelItemsCostDevider.ToString)
+            StatFields(k).description = StatFields(k).description.Replace("$gm$", valConv.giantUnitsExpMultiplicator.ToString)
             StatFields(k).description = StatFields(k).description.Replace("$ri$", racesList)
             StatFields(k).description = StatFields(k).description.Replace("$newline$", vbNewLine)
         Next i
@@ -1061,9 +1064,9 @@ Public Class Common
                                 Throw New Exception("В файле с параметрами отрядов есть повторяющееся имя локации: " & result(i).LocationName)
                             End If
                         ElseIf k = 1 Then
-                            result(i).ExpBarAverage = Math.Max(CInt(s(f + 1)), 1) 'AverageExpBar
+                            result(i).ExpBarAverage = Math.Max(ReadIntField(s(f + 1), txt(i), s(f)), 10) 'AverageExpBar
                         ElseIf k = 2 Then
-                            result(i).ExpStackKilled = Math.Max(CInt(s(f + 1)), 1) 'ExpStackKilled
+                            result(i).ExpStackKilled = Math.Max(ReadIntField(s(f + 1), txt(i), s(f)), 5) 'ExpStackKilled
                         ElseIf k = 3 Then
                             Dim rid As Integer
                             r = s(f + 1).Split(CChar("+")) 'Race
@@ -1073,13 +1076,13 @@ Public Class Common
                                 If Not result(i).Race.Contains(rid) Then result(i).Race.Add(rid)
                             Next n
                         ElseIf k = 4 Then
-                            result(i).StackSize = Math.Max(CInt(s(f + 1)), 1) 'StackSize
+                            result(i).StackSize = Math.Max(ReadIntField(s(f + 1), txt(i), s(f)), 1) 'StackSize
                         ElseIf k = 5 Then
-                            result(i).MaxGiants = Math.Max(CInt(s(f + 1)), 0) 'MaxGiants
+                            result(i).MaxGiants = Math.Max(ReadIntField(s(f + 1), txt(i), s(f)), 0) 'MaxGiants
                         ElseIf k = 6 Then
-                            result(i).MeleeCount = Math.Max(CInt(s(f + 1)), 0) 'MeleeSlots
+                            result(i).MeleeCount = Math.Max(ReadIntField(s(f + 1), txt(i), s(f)), 0) 'MeleeSlots
                         ElseIf k = 7 Then
-                            result(i).LootCost = Math.Max(CInt(s(f + 1)), 0) 'LootCost
+                            result(i).LootCost = Math.Max(ReadIntField(s(f + 1), txt(i), s(f)), 0) 'LootCost
                         ElseIf k = 8 Then
                             result(i).excludeConsumableItems = ReadBoolField(s(f + 1)) 'CItemsExclude
                         ElseIf k = 9 Then
@@ -1100,6 +1103,14 @@ Public Class Common
             Next f
         Next i
         Return result
+    End Function
+    Private Function ReadIntField(ByRef v As String, ByRef fullLine As String, ByRef fieldName As String) As Integer
+        Try
+            Return CInt(v)
+        Catch ex As Exception
+            Throw New Exception(ex.Message & vbNewLine & fullLine & vbNewLine & "Field: " & fieldName)
+            Return 1
+        End Try
     End Function
     Private Function ReadBoolField(ByRef v As String) As Boolean
         Dim f As String = v.ToUpper
@@ -1436,7 +1447,7 @@ Public Class Common
                 ElseIf mode = 5 Then
                     If srow.Length > 1 Then
                         If LootItemChanceMultiplier.ContainsKey(srow(0).ToUpper) Then LootItemChanceMultiplier.Remove(srow(0).ToUpper)
-                        LootItemChanceMultiplier.Add(srow(0).ToUpper, CDbl(srow(1)))
+                        LootItemChanceMultiplier.Add(srow(0).ToUpper, ValueConverter.StrToDbl(srow(1)))
                     End If
                 ElseIf mode = 6 Then
                     For i As Integer = 0 To UBound(srow) Step 1
@@ -1845,3 +1856,59 @@ Public Class AllDataStructues
     End Structure
 
 End Class
+
+Friend Class ValueConverter
+
+    Private WeightMultiplicatorReplaced As String = ""
+
+    Friend Shared Function StrToDbl(ByRef s As String) As Double
+        Return CDbl(s.Replace(",", ".").Replace(".", System.Globalization.CultureInfo.CurrentCulture.NumberFormat.NumberDecimalSeparator))
+        'Return Convert.ToDouble(s, Globalization.NumberFormatInfo.InvariantInfo)
+    End Function
+
+    Friend Function defaultSigma() As Double
+        Return 0.1
+    End Function
+
+    'units
+    Friend Function expBarDispersion() As Double
+        Return 1.3
+    End Function
+    Friend Function giantUnitsExpMultiplicator() As Double
+        Return 2
+    End Function
+    Friend Function smallUnitsExpMultiplicator() As Double
+        Return 1
+    End Function
+
+    'loot
+    Friend Function WeightMultiplicator() As String
+        If WeightMultiplicatorReplaced = "" Then
+            WeightMultiplicatorReplaced = "talisman=0.1;" & _
+                                          "scroll=0.5;" & _
+                                          "stuff=0.75;" & _
+                                          "healing_elixir=3#cost>100else1;" & _
+                                          "ressurection_elixir=3;" & _
+                                          "permanent_elixir=0.6;" & _
+                                          "elixir=0.75#cost>400else1.15"
+            WeightMultiplicatorReplaced = WeightMultiplicatorReplaced.Replace(",", ".").Replace(".", System.Globalization.CultureInfo.CurrentCulture.NumberFormat.NumberDecimalSeparator)
+        End If
+        Return WeightMultiplicatorReplaced
+    End Function
+    Friend Function JewelItemsCostDevider() As Double
+        Return 2
+    End Function
+    Friend Function nonJewelItemsCostDevider() As Double
+        Return 1
+    End Function
+    Friend Function lootCostDispersion() As Double
+        Return 2
+    End Function
+
+    'map
+    Friend Function minLocationRadiusAtAll() As Double
+        Return 7
+    End Function
+
+End Class
+

@@ -121,38 +121,17 @@
   <data name="ExcludeIDs" type="System.Resources.ResXFileRef, System.Windows.Forms">
     <value>..\Resources\ExcludeIDs.txt;System.String, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089;windows-1251</value>
   </data>
-  <data name="giantUnitsExpMultiplicator" xml:space="preserve">
-    <value>2</value>
-  </data>
   <data name="Items" type="System.Resources.ResXFileRef, System.Windows.Forms">
     <value>..\Resources\Items.txt;System.String, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089;windows-1251</value>
   </data>
-  <data name="JewelItemsCostMultiplicator" xml:space="preserve">
-    <value>2</value>
-  </data>
-  <data name="nonJewelItemsCostMultiplicator" xml:space="preserve">
-    <value>1</value>
-  </data>
   <data name="Races" type="System.Resources.ResXFileRef, System.Windows.Forms">
     <value>..\Resources\Races.txt;System.String, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089;windows-1251</value>
-  </data>
-  <data name="smallUnitsExpMultiplicator" xml:space="preserve">
-    <value>1</value>
   </data>
   <data name="StackStatsFields" type="System.Resources.ResXFileRef, System.Windows.Forms">
     <value>..\Resources\StackStatsFields.txt;System.String, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089;windows-1251</value>
   </data>
   <data name="UnitRace" type="System.Resources.ResXFileRef, System.Windows.Forms">
     <value>..\Resources\UnitRace.txt;System.String, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089;windows-1251</value>
-  </data>
-  <data name="expBarDispersion" xml:space="preserve">
-    <value>1.3</value>
-  </data>
-  <data name="lootCostDispersion" xml:space="preserve">
-    <value>2</value>
-  </data>
-  <data name="defaultSigma" xml:space="preserve">
-    <value>0.1</value>
   </data>
   <data name="readDefaultFileKeyword" xml:space="preserve">
     <value>%default%</value>
@@ -165,9 +144,6 @@
   </data>
   <data name="MapObjectRace" type="System.Resources.ResXFileRef, System.Windows.Forms">
     <value>..\Resources\MapObjectRace.txt;System.String, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089;windows-1251</value>
-  </data>
-  <data name="minLocationRadiusAtAll" xml:space="preserve">
-    <value>7</value>
   </data>
   <data name="PlateauConstructor" type="System.Resources.ResXFileRef, System.Windows.Forms">
     <value>..\Resources\PlateauConstructor.txt;System.String, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089;windows-1251</value>
@@ -207,9 +183,6 @@
   </data>
   <data name="TestStackStats" type="System.Resources.ResXFileRef, System.Windows.Forms">
     <value>..\resources\teststackstats.txt;System.String, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089;windows-1251</value>
-  </data>
-  <data name="WeightMultiplicator" xml:space="preserve">
-    <value>Talisman=0.1;scroll=0.5;stuff=0.75;healing_elixir=3#cost&gt;100else1;ressurection_elixir=3;permanent_elixir=0.6;elixir=0.75#cost&gt;400else1.15</value>
   </data>
   <data name="LootItemChanceMultiplier" type="System.Resources.ResXFileRef, System.Windows.Forms">
     <value>..\Resources\LootItemChanceMultiplier.txt;System.String, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089;windows-1251</value>
