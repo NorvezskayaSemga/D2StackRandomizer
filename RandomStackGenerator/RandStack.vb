@@ -851,13 +851,11 @@ Public Class RandStack
                             ByRef FreeMeleeSlots As Integer)
         DynStackStats.ExpStackKilled -= List(id).EXPkilled
 
-        Dim dSlots As Integer
         If List(id).small And DynStackStats.StackSize > 1 Then
-            dSlots = 1
+            DynStackStats.ExpBarAverage = Math.Max(CInt((DynStackStats.StackSize * DynStackStats.ExpBarAverage - List(id).EXPnext) / CDbl(DynStackStats.StackSize - 1)), 10)
         ElseIf Not List(id).small And DynStackStats.StackSize > 2 Then
-            dSlots = 2
+            DynStackStats.ExpBarAverage = Math.Max(CInt((DynStackStats.StackSize * DynStackStats.ExpBarAverage - List(id).EXPnext) / CDbl(DynStackStats.StackSize - 2)), 10)
         End If
-        DynStackStats.ExpBarAverage = Math.Max(CInt((DynStackStats.StackSize * DynStackStats.ExpBarAverage - List(id).EXPnext) / CDbl(DynStackStats.StackSize - dSlots)), 10)
 
         If Not List(id).small Then
             DynStackStats.MaxGiants -= 1
