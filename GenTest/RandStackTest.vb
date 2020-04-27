@@ -709,7 +709,7 @@ Public Class RandStackTest
                             If m4 > 0 Then mana.Add(4)
                             If m5 > 0 Then mana.Add(5)
                             For j As Integer = 0 To 11 Step 1
-                                For i As Integer = 0 To 10000 Step 1
+                                For i As Integer = 0 To 10000 Step 10
                                     input = New AllDataStructues.Cost With {.Gold = i, _
                                                                             .Black = target.rndgen.RndPos(1001, True) - 1, _
                                                                             .Blue = target.rndgen.RndPos(1001, True) - 1, _

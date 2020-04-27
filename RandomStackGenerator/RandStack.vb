@@ -401,9 +401,9 @@ Public Class RandStack
     Private Function CostBarGen(ByRef minBar As Integer, ByRef maxBar As Integer) As Integer
         'Return CInt(rndgen.Rand(CDbl(minBar), CDbl(maxBar), serialExecution))
         Dim R As Double = rndgen.Rand(0, 1, serialExecution)
-        Dim G As Double = 1.5
-        Dim D As Double = -0.1
-        Dim S As Double = 5
+        Dim G As Double = 5
+        Dim D As Double = 0.1
+        Dim S As Double = 10
         Dim E As Double = 1 / (1 + Math.Exp(S * D))
         Dim V As Double = (1 - G * E) / (1 - E)
         Dim m As Double = V + (G - V) / (1 + Math.Exp(S * (D - R)))
@@ -494,6 +494,17 @@ Public Class RandStack
         Dim SelectedLeader As Integer = -1
 
         If Not NoLeader Then
+
+            If ((DynStackStats.StackSize = 1 And DynStackStats.MaxGiants = 0) Or _
+                (DynStackStats.StackSize = 2 And DynStackStats.MaxGiants = 1)) _
+               AndAlso rndgen.Rand(0, 1, serialExecution) > 0.5 Then
+                If DynStackStats.StackSize = 1 Then
+                    DynStackStats.StackSize += 1
+                    DynStackStats.MaxGiants += 1
+                Else
+                    DynStackStats.StackSize += 1
+                End If
+            End If
 
             Dim maxExpBar As Double = Math.Max(10000, 2 * DynStackStats.ExpBarAverage)
             Dim maxExpStrackKilled As Double = Math.Max(10000, 2 * DynStackStats.ExpStackKilled)
