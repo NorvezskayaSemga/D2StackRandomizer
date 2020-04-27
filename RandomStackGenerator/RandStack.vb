@@ -7,8 +7,8 @@ Public Class RandStack
     Private busytransfer() As Integer = New Integer() {1, -1, 3, -1, 5, -1}
     Private firstrow() As Integer = New Integer() {0, 2, 4}
     Private secondrow() As Integer = New Integer() {1, 3, 5}
-    Private itemGenSigma As Double = 0.1
-    Private multiItemGenSigmaMultiplier As Double = 2
+    Private itemGenSigma As Double = 0.5
+    Private multiItemGenSigmaMultiplier As Double = 1.5
 
     Private AllLeaders(), AllFighters(), ExcludedUnits() As AllDataStructues.Unit
     Private MagicItem(), ExcludedItems() As AllDataStructues.Item
@@ -41,7 +41,6 @@ Public Class RandStack
     Public Sub New(ByRef AllUnitsList() As AllDataStructues.Unit, ByRef AllItemsList() As AllDataStructues.Item, _
                    ByRef ExcludeLists() As String, ByRef LootChanceMultiplierLists() As String, ByRef CustomUnitRace() As String, _
                    ByRef SoleUnitsList() As String, ByRef serial As Boolean)
-        itemGenSigma = SigmaMultiplier(New AllDataStructues.DesiredStats With {.StackSize = 1})
         serialExecution = serial
         rndgen = comm.rndgen
         If IsNothing(AllUnitsList) Or IsNothing(AllItemsList) Then Exit Sub
@@ -401,9 +400,9 @@ Public Class RandStack
     Private Function CostBarGen(ByRef minBar As Integer, ByRef maxBar As Integer) As Integer
         'Return CInt(rndgen.Rand(CDbl(minBar), CDbl(maxBar), serialExecution))
         Dim R As Double = rndgen.Rand(0, 1, serialExecution)
-        Dim G As Double = 5
-        Dim D As Double = 0.1
-        Dim S As Double = 10
+        Dim G As Double = 3
+        Dim D As Double = 0.15
+        Dim S As Double = 5
         Dim E As Double = 1 / (1 + Math.Exp(S * D))
         Dim V As Double = (1 - G * E) / (1 - E)
         Dim m As Double = V + (G - V) / (1 + Math.Exp(S * (D - R)))
@@ -851,6 +850,15 @@ Public Class RandStack
                             ByRef DynStackStats As AllDataStructues.DesiredStats,
                             ByRef FreeMeleeSlots As Integer)
         DynStackStats.ExpStackKilled -= List(id).EXPkilled
+
+        Dim dSlots As Integer
+        If List(id).small And DynStackStats.StackSize > 1 Then
+            dSlots = 1
+        ElseIf Not List(id).small And DynStackStats.StackSize > 2 Then
+            dSlots = 2
+        End If
+        DynStackStats.ExpBarAverage = Math.Max(CInt((DynStackStats.StackSize * DynStackStats.ExpBarAverage - List(id).EXPnext) / CDbl(DynStackStats.StackSize - dSlots)), 10)
+
         If Not List(id).small Then
             DynStackStats.MaxGiants -= 1
             DynStackStats.StackSize -= 2
