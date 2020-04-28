@@ -225,22 +225,22 @@ Public Class RandStackTest
 
         Parallel.ForEach(statsList, _
          Sub(item As AllDataStructues.DesiredStats)
-             If Not ok Then Exit Sub
-             Dim GroundTile As Boolean
-             Dim locOk As Boolean = True
-             For g As Integer = 0 To 1 Step 1
-                 If g = 0 Then
-                     GroundTile = False
-                     If item.Race.Item(0) = target.comm.RaceIdentifierToSubrace("W") Then g = 1
-                 Else
-                     GroundTile = True
-                 End If
-                 Dim stack As AllDataStructues.Stack = target.Gen(item, 0, GroundTile, False)
-                 locOk = TestStack(stack, target)
-                 If Not locOk Then Exit For
-             Next g
-             If Not locOk Then ok = False
-         End Sub)
+            If Not ok Then Exit Sub
+            Dim GroundTile As Boolean
+            Dim locOk As Boolean = True
+            For g As Integer = 0 To 1 Step 1
+                If g = 0 Then
+                    GroundTile = False
+                    If item.Race.Item(0) = target.comm.RaceIdentifierToSubrace("W") Then g = 1
+                Else
+                    GroundTile = True
+                End If
+                Dim stack As AllDataStructues.Stack = target.Gen(item, 0, GroundTile, False)
+                locOk = TestStack(stack, target)
+                If Not locOk Then Exit For
+            Next g
+            If Not locOk Then ok = False
+        End Sub)
 
         If Not ok Then Assert.Inconclusive("Verify the correctness of this test method.")
     End Sub
@@ -609,8 +609,7 @@ Public Class RandStackTest
         Dim ok As Boolean = True
         Dim expected As New List(Of String)
         expected.AddRange(New String() {"g000000000", "g000uu5117", "g000uu5017", "g000uu5018", "g000uu8196"})
-
-        If Not TestOverload1 Then expected.AddRange(New String() {"g000uu7539", "g001uu7539"})
+        expected.AddRange(New String() {"g000uu7539", "g001uu7539"})
 
         Dim noLeader As Boolean = False
         For p As Integer = 0 To 1 Step 1
@@ -687,7 +686,7 @@ Public Class RandStackTest
     '''</summary>
     <TestMethod()> _
     Public Sub GoldToManaTest()
-        
+
         If IsNothing(UnitsList) Then Call ReadTestUnits()
         If IsNothing(ItemsList) Then Call ReadTestItems()
         Dim target As RandStack_Accessor = New RandStack_Accessor(UnitsList, ItemsList, excludeList, customLootChanceList, customRaceList, soleUnitsList, True)

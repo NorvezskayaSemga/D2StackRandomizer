@@ -517,8 +517,8 @@ Public Class RandStack
         Next i
 
         Call log.Add("----Stack creation started----")
-        Call log.Add("DeltaLeadership: " & deltaLeadership & "GroundTile: " & GroundTile & "NoLeader: " & NoLeader)
-        Call log.Add(AddressOf AllDataStructues.DesiredStats.Print, DynStackStats)
+        Call log.Add("DeltaLeadership: " & deltaLeadership & " GroundTile: " & GroundTile & " NoLeader: " & NoLeader)
+        Call log.Add(AddressOf AllDataStructues.DesiredStats.Print, DynStackStats, False)
 
         Dim PossibleLeaders, SelectedFighters As New List(Of Integer)
         Dim FreeMeleeSlots As Integer = 3
@@ -585,9 +585,15 @@ Public Class RandStack
                 DynStackStats.StackSize += 1
                 If DynStackStats.StackSize - DynStackStats.MeleeCount < secondrow.Length Then DynStackStats.MeleeCount += 1
             End If
+            If AllLeaders(SelectedLeader).small Then
+                DynStackStats.StackSize = Math.Max(DynStackStats.StackSize, 1)
+            Else
+                DynStackStats.StackSize = Math.Max(DynStackStats.StackSize, 2)
+            End If
             DynStackStats.StackSize = Math.Min(DynStackStats.StackSize, leadershipCap)
             DynStackStats.MeleeCount = Math.Min(DynStackStats.MeleeCount, 3)
             DynStackStats.MaxGiants = Math.Min(DynStackStats.MaxGiants, 3)
+            DynStackStats.ExpBarAverage = CInt((DynStackStats.ExpBarAverage * StackStats.StackSize) / DynStackStats.StackSize)
 
             Call ChangeLimit(AllLeaders, SelectedLeader, DynStackStats, FreeMeleeSlots)
         End If
@@ -750,7 +756,7 @@ Public Class RandStack
         Return True
     End Function
     Private Function SigmaMultiplier(ByRef stat As AllDataStructues.DesiredStats) As Double
-        Return valConv.defaultSigma * (CDbl(stat.StackSize) + 0.1 * CDbl(stat.MaxGiants))
+        Return valConv.defaultSigma * (CDbl(stat.StackSize) + 1.25 * CDbl(stat.StackSize * stat.StackSize - 1) + 0.2 * CDbl(stat.MaxGiants))
     End Function
 
     Private Function SelectFighters(ByRef skipfilter1 As Boolean, ByRef skipfilter2 As Boolean, _
@@ -758,18 +764,18 @@ Public Class RandStack
                                     ByRef SelectedLeader As Integer, ByRef SelectedFighters As List(Of Integer)) As Integer
 
         Dim PossibleFighters As New List(Of Integer)
-        Dim TExpStack As Double = DynStackStats.ExpStackKilled / DynStackStats.StackSize
+        'Dim TExpStack As Double = DynStackStats.ExpStackKilled / DynStackStats.StackSize
         Dim SelectedFighter As Integer
-        Dim nloops As Integer = 0
-        Do While PossibleFighters.Count = 0 And TExpStack < 1.1 * DynStackStats.ExpStackKilled
-            For j As Integer = 0 To UBound(AllFighters) Step 1
-                If SelectPossibleFighter(skipfilter1, skipfilter2, j, DynStackStats, _
-                                         FreeMeleeSlots, SelectedLeader, SelectedFighters) Then PossibleFighters.Add(j)
-            Next j
-            TExpStack += 0.1 * DynStackStats.ExpStackKilled / DynStackStats.StackSize
-            nloops += 1
-            If nloops > 10 Then Exit Do
-        Loop
+        'Dim nloops As Integer = 0
+        'Do While PossibleFighters.Count = 0 'And TExpStack < 1.1 * DynStackStats.ExpStackKilled
+        For j As Integer = 0 To UBound(AllFighters) Step 1
+            If SelectPossibleFighter(skipfilter1, skipfilter2, j, DynStackStats, _
+                                     FreeMeleeSlots, SelectedLeader, SelectedFighters) Then PossibleFighters.Add(j)
+        Next j
+        '    TExpStack += 0.1 * DynStackStats.ExpStackKilled / DynStackStats.StackSize
+        '    nloops += 1
+        '    If nloops > 10 Then Exit Do
+        'Loop
         If PossibleFighters.Count > 0 Then
             SelectedFighter = comm.RandomSelection(PossibleFighters, {ExpBarFighters, ExpKilledFighters}, _
                  {DynStackStats.ExpBarAverage, CDbl(DynStackStats.ExpStackKilled) / CDbl(DynStackStats.StackSize)}, _
@@ -796,13 +802,15 @@ Public Class RandStack
             Next id
         End If
         If Not DynStackStats.Race.Contains(AllFighters(fighterID).race) Then Return False
-        Dim mult As Double
-        If AllFighters(fighterID).small Then
-            mult = 1
-        Else
-            mult = 2
-        End If
-        If AllFighters(fighterID).EXPkilled > mult * DynStackStats.ExpStackKilled / DynStackStats.StackSize Then Return False
+        'Dim mult As Double
+        'If AllFighters(fighterID).small Then
+        '    mult = 1
+        'Else
+        '    mult = 2
+        'End If
+        'If AllFighters(fighterID).EXPkilled > mult * DynStackStats.ExpStackKilled / DynStackStats.StackSize Then Return False
+        If DynStackStats.ExpStackKilled = 0 Then Return False
+        If AllFighters(fighterID).EXPkilled > 1.1 * DynStackStats.ExpStackKilled + 10 Then Return False
         If Not AllFighters(fighterID).small Then
             If DynStackStats.MaxGiants = 0 And Not skipMaxGiantsFilter Then Return False
             If DynStackStats.StackSize < 2 Then Return False
@@ -913,7 +921,7 @@ Public Class RandStack
         DynStackStats.MeleeCount = Math.Min(DynStackStats.MeleeCount, FreeMeleeSlots)
 
         Call log.Add("Unit added: " & List(id).name & " id: " & List(id).unitID)
-        Call log.Add(AddressOf AllDataStructues.DesiredStats.Print, DynStackStats)
+        Call log.Add(AddressOf AllDataStructues.DesiredStats.Print, DynStackStats, True)
     End Sub
 
 End Class
@@ -1668,29 +1676,36 @@ Public Class AllDataStructues
                                           .isInternalCityGuard = v.isInternalCityGuard}
         End Function
         ''' <param name="RaceNumberToRaceChar">Преобразует номер расы в ее текстовый идентификатор. Если передать Nothing, то будут печататься номера рас</param>
-        Public Shared Function Print(ByVal v As DesiredStats, ByRef RaceNumberToRaceChar As Dictionary(Of Integer, String)) As String
+        Public Shared Function Print(ByVal v As DesiredStats, ByRef RaceNumberToRaceChar As Dictionary(Of Integer, String), Optional ByVal shortOut As Boolean = False) As String
             Dim s As String
             If IsNothing(v.shopContent) Then
                 Dim races As String = ""
-                For Each Item As Integer In v.Race
-                    If Not races = "" Then races &= "+"
-                    If Not IsNothing(RaceNumberToRaceChar) Then
-                        races &= RaceNumberToRaceChar.Item(Item)
-                    Else
-                        races &= Item
-                    End If
-                Next Item
+                If Not shortOut Then
+                    For Each Item As Integer In v.Race
+                        If Not races = "" Then races &= "+"
+                        If Not IsNothing(RaceNumberToRaceChar) Then
+                            races &= RaceNumberToRaceChar.Item(Item)
+                        Else
+                            races &= Item
+                        End If
+                    Next Item
+                End If
                 s = "AverageExpBar" & vbTab & v.ExpBarAverage & vbNewLine & _
-                    "ExpStackKilled" & vbTab & v.ExpStackKilled & vbNewLine & _
-                    "Race" & vbTab & races & vbNewLine & _
-                    "StackSize" & vbTab & v.StackSize & vbNewLine & _
-                    "MaxGiants" & vbTab & v.MaxGiants & vbNewLine & _
-                    "MeleeCount" & vbTab & v.MeleeCount & vbNewLine & _
-                    "LootCost" & vbTab & v.LootCost & vbNewLine & _
-                    "IsInternalCityGuard" & vbTab & v.isInternalCityGuard & vbNewLine & _
-                    "CItemsExclude" & vbTab & v.excludeConsumableItems & vbNewLine & _
-                    "NItemsExclude" & vbTab & v.excludeNonconsumableItems & vbNewLine & _
-                    "JItemsExclude" & vbTab & v.excludeJewelItems & vbNewLine
+                    "ExpStackKilled" & vbTab & v.ExpStackKilled & vbNewLine
+
+                If Not shortOut Then
+                    s &= "Race" & vbTab & races & vbNewLine
+                End If
+                s &= "StackSize" & vbTab & v.StackSize & vbNewLine & _
+                     "MaxGiants" & vbTab & v.MaxGiants & vbNewLine & _
+                     "MeleeCount" & vbTab & v.MeleeCount & vbNewLine
+                If Not shortOut Then
+                    s &= "LootCost" & vbTab & v.LootCost & vbNewLine & _
+                         "IsInternalCityGuard" & vbTab & v.isInternalCityGuard & vbNewLine & _
+                         "CItemsExclude" & vbTab & v.excludeConsumableItems & vbNewLine & _
+                         "NItemsExclude" & vbTab & v.excludeNonconsumableItems & vbNewLine & _
+                         "JItemsExclude" & vbTab & v.excludeJewelItems & vbNewLine
+                End If
             Else
                 Dim goods As String = ""
                 For Each Item As String In v.shopContent
@@ -2006,7 +2021,7 @@ Public Class Log
     Private comm As Common
 
     Delegate Function printWithNoInput() As String
-    Delegate Function printDesiredStats(ByVal v As AllDataStructues.DesiredStats, ByRef RaceNumberToRaceChar As Dictionary(Of Integer, String)) As String
+    Delegate Function printDesiredStats(ByVal v As AllDataStructues.DesiredStats, ByRef RaceNumberToRaceChar As Dictionary(Of Integer, String), ByVal shortOut As Boolean) As String
     Delegate Function printCost(ByVal v As AllDataStructues.Cost) As String
 
     Public Sub New(ByRef c As Common)
@@ -2065,9 +2080,9 @@ Public Class Log
     End Sub
     ''' <summary>Добавить запись в лог, если логирование включено</summary>
     ''' <param name="contString">Будет добавлен результат выполнения этой функции</param>
-    Public Sub Add(ByRef contString As printDesiredStats, ByVal v As AllDataStructues.DesiredStats)
+    Public Sub Add(ByRef contString As printDesiredStats, ByVal v As AllDataStructues.DesiredStats, ByVal shortOut As Boolean)
         If Not Enabled Then Exit Sub
-        Content.Add(contString(v, comm.RaceNumberToRaceChar))
+        Content.Add(contString(v, comm.RaceNumberToRaceChar, shortOut))
     End Sub
     ''' <summary>Добавить запись в лог, если логирование включено</summary>
     ''' <param name="contString">Будет добавлен результат выполнения этой функции</param>
