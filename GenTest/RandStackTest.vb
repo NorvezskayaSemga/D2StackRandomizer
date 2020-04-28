@@ -235,7 +235,7 @@ Public Class RandStackTest
                  Else
                      GroundTile = True
                  End If
-                 Dim stack As AllDataStructues.Stack = target.Gen(item, GroundTile, False)
+                 Dim stack As AllDataStructues.Stack = target.Gen(item, 0, GroundTile, False)
                  locOk = TestStack(stack, target)
                  If Not locOk Then Exit For
              Next g
@@ -362,7 +362,7 @@ Public Class RandStackTest
         stats.Race.AddRange(races)
 
         For i As Integer = 0 To 10000 Step 1
-            Dim stack As AllDataStructues.Stack = target.Gen(stats, True, False)
+            Dim stack As AllDataStructues.Stack = target.Gen(stats, 0, True, False)
             ok = TestStack(stack, target, races, raceokL, raceokF)
             If Not ok Then Exit For
         Next i
@@ -472,7 +472,7 @@ Public Class RandStackTest
             stats.Race.AddRange(races)
 
             For i As Integer = 0 To 10000 Step 1
-                Dim stack As AllDataStructues.Stack = target.Gen(stats, True, False)
+                Dim stack As AllDataStructues.Stack = target.Gen(stats, 0, True, False)
                 ok = TestStack(stack, target, races, raceokL, raceokF)
                 If Not ok Then Exit For
             Next i
@@ -502,7 +502,7 @@ Public Class RandStackTest
 
         Dim c As Integer
         For i As Integer = 0 To 10000 Step 1
-            Dim stack As AllDataStructues.Stack = target.Gen(stats, True, False)
+            Dim stack As AllDataStructues.Stack = target.Gen(stats, 0, True, False)
             c = 0
             For Each item As String In stack.pos
                 If Not item = "G000000000" Then c += 1
@@ -532,7 +532,7 @@ Public Class RandStackTest
 
         Dim c As Integer
         For i As Integer = 0 To 10000 Step 1
-            Dim stack As AllDataStructues.Stack = target.Gen(stats, True, True)
+            Dim stack As AllDataStructues.Stack = target.Gen(stats, 0, True, True)
             c = 0
             For Each item As String In stack.pos
                 If Not item = "G000000000" Then
@@ -617,9 +617,9 @@ Public Class RandStackTest
             For i As Integer = 0 To 10000 Step 1
                 Dim stack As AllDataStructues.Stack
                 If TestOverload1 Then
-                    stack = target.Gen(stats, True, noLeader)
+                    stack = target.Gen(stats, 0, True, noLeader)
                 Else
-                    stack = target.Gen(stats.ExpStackKilled, stats.LootCost, stats.Race, stats.excludeConsumableItems, stats.excludeNonconsumableItems, stats.excludeJewelItems, True, False)
+                    stack = target.Gen(stats.ExpStackKilled, stats.LootCost, stats.Race, stats.excludeConsumableItems, stats.excludeNonconsumableItems, stats.excludeJewelItems, 0, True, False)
                 End If
                 For Each item As String In stack.pos
                     If Not expected.Contains(item.ToLower) Then ok = False

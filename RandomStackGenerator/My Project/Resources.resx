@@ -190,4 +190,16 @@
   <data name="SingleUnits" type="System.Resources.ResXFileRef, System.Windows.Forms">
     <value>..\Resources\SingleUnits.txt;System.String, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089;windows-1251</value>
   </data>
+  <data name="ExcludeIDs_ModLore" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\Resources\ExcludeIDs_ModLore.txt;System.String, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089;windows-1251</value>
+  </data>
+  <data name="ExcludeIDs_VanillaLore" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\Resources\ExcludeIDs_VanillaLore.txt;System.String, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089;windows-1251</value>
+  </data>
+  <data name="readMLoreFileKeyword" xml:space="preserve">
+    <value>%nomodlore%</value>
+  </data>
+  <data name="readVLoreFileKeyword" xml:space="preserve">
+    <value>%novanillalore%</value>
+  </data>
 </root>

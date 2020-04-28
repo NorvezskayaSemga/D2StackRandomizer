@@ -108,6 +108,67 @@ Namespace My.Resources
         End Property
         
         '''<summary>
+        '''  Looks up a localized string similar to #строка, начинающаяся с решетки, игнорируется
+        '''#ID юнитов
+        '''последователь
+        '''уста богов
+        '''божественная длань
+        '''избранник богов
+        '''каратель.
+        '''</summary>
+        Friend ReadOnly Property ExcludeIDs_ModLore() As String
+            Get
+                Return ResourceManager.GetString("ExcludeIDs_ModLore", resourceCulture)
+            End Get
+        End Property
+        
+        '''<summary>
+        '''  Looks up a localized string similar to #строка, начинающаяся с решетки, игнорируется
+        '''#ID юнитов
+        '''#дрега зул
+        '''g000uu6021
+        '''g000uu6121
+        '''#принцесса яата&apos;халли
+        '''g000uu6006
+        '''g000uu6106
+        '''#юбер де лали
+        '''g000uu6008
+        '''g000uu6108
+        '''#эрхог темная
+        '''g000uu6009
+        '''g000uu6109
+        '''#утер
+        '''g000uu6020
+        '''g000uu6120
+        '''#темный эльф лиф
+        '''g000uu6007
+        '''g000uu6107
+        '''#утер второй
+        '''g000uu6001
+        '''g000uu6101
+        '''#некромант эрхог
+        '''g000uu6019
+        '''g000uu6119
+        '''#нидхегг
+        '''g000uu6010
+        '''g000uu6110
+        '''#маг хугин
+        '''g000uu6005
+        '''g000uu6105
+        '''#демон утер
+        '''g000uu6002
+        '''g000uu6102
+        '''#астарот
+        '''g000uu6011
+        '''g000uu6111 [rest of string was truncated]&quot;;.
+        '''</summary>
+        Friend ReadOnly Property ExcludeIDs_VanillaLore() As String
+            Get
+                Return ResourceManager.GetString("ExcludeIDs_VanillaLore", resourceCulture)
+            End Get
+        End Property
+        
+        '''<summary>
         '''  Looks up a localized string similar to #волк
         '''g000uu5039
         '''g000uu5139
@@ -407,6 +468,24 @@ Namespace My.Resources
         Friend ReadOnly Property readDefaultFileKeyword() As String
             Get
                 Return ResourceManager.GetString("readDefaultFileKeyword", resourceCulture)
+            End Get
+        End Property
+        
+        '''<summary>
+        '''  Looks up a localized string similar to %nomodlore%.
+        '''</summary>
+        Friend ReadOnly Property readMLoreFileKeyword() As String
+            Get
+                Return ResourceManager.GetString("readMLoreFileKeyword", resourceCulture)
+            End Get
+        End Property
+        
+        '''<summary>
+        '''  Looks up a localized string similar to %novanillalore%.
+        '''</summary>
+        Friend ReadOnly Property readVLoreFileKeyword() As String
+            Get
+                Return ResourceManager.GetString("readVLoreFileKeyword", resourceCulture)
             End Get
         End Property
         

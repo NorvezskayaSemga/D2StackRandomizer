@@ -476,9 +476,10 @@ Public Class RandStack
 
     ''' <summary>Создаст отряд  в соответствие с желаемыми параметрами. Не нужно пытаться создать отряд водных жителей на земле</summary>
     ''' <param name="StackStats">Желаемые параметры стэка</param>
+    ''' <param name="deltaLeadership">Изменение лидерства за счет модификаторов</param>
     ''' <param name="GroundTile">True, если на клетку нельзя ставить водных лидеров. Водной считается клетка с водой, окруженная со всех сторон клетками с водой</param>
     ''' <param name="NoLeader">True, если стэк находится внутри руин или города</param>
-    Public Function Gen(ByRef StackStats As AllDataStructues.DesiredStats, ByVal GroundTile As Boolean, ByVal NoLeader As Boolean) As AllDataStructues.Stack
+    Public Function Gen(ByRef StackStats As AllDataStructues.DesiredStats, ByVal deltaLeadership As Integer, ByVal GroundTile As Boolean, ByVal NoLeader As Boolean) As AllDataStructues.Stack
 
         If Not IsNothing(StackStats.shopContent) Then Return Nothing
 
@@ -541,18 +542,19 @@ Public Class RandStack
 
             'теперь нужно добрать воинов в отряд
             Dim R As Double = rndgen.Rand(0, 1, serialExecution)
+            Dim leadershipCap As Integer = Math.Min(AllLeaders(SelectedLeader).leadership + deltaLeadership, 6)
+            If AllLeaders(SelectedLeader).small Then
+                leadershipCap = Math.Max(leadershipCap, 1)
+            Else
+                leadershipCap = Math.Max(leadershipCap, 2)
+            End If
             If R < 0.1 Then
                 DynStackStats.StackSize -= 1
             ElseIf R > 0.9 Then
                 DynStackStats.StackSize += 1
                 If DynStackStats.StackSize - DynStackStats.MeleeCount < secondrow.Length Then DynStackStats.MeleeCount += 1
             End If
-            DynStackStats.StackSize = Math.Min(Math.Min(DynStackStats.StackSize, AllLeaders(SelectedLeader).leadership), 6)
-            If AllLeaders(SelectedLeader).small Then
-                DynStackStats.StackSize = Math.Max(DynStackStats.StackSize, 1)
-            Else
-                DynStackStats.StackSize = Math.Max(DynStackStats.StackSize, 2)
-            End If
+            DynStackStats.StackSize = Math.Min(DynStackStats.StackSize, leadershipCap)
             DynStackStats.MeleeCount = Math.Min(DynStackStats.MeleeCount, 3)
             DynStackStats.MaxGiants = Math.Min(DynStackStats.MaxGiants, 3)
 
@@ -646,31 +648,35 @@ Public Class RandStack
     ''' <param name="excludeConsumableItems">Не генерировать зелья, сферы, талисманы и свитки</param>
     ''' <param name="excludeNonconsumableItems">Не генерировать надеваемые предметы и посохи</param>
     ''' <param name="excludeJewelItems">Не генерировать драгоценности</param>
+    ''' <param name="deltaLeadership">Изменение лидерства за счет модификаторов</param>
     ''' <param name="GroundTile">True, если на клетку нельзя ставить водных лидеров. Водной считается клетка с водой, окруженная со всех сторон клетками с водой</param>
     ''' <param name="NoLeader">True, если стэк находится внутри руин или города</param>
     Public Function Gen(ByVal ExpStackKilled As Integer, ByVal LootCost As Double, ByRef Races As List(Of Integer), _
-                        ByVal excludeConsumableItems As Boolean, ByVal excludeNonconsumableItems As Boolean, ByVal excludeJewelItems As Boolean, _
+                        ByVal excludeConsumableItems As Boolean, ByVal excludeNonconsumableItems As Boolean, _
+                        ByVal excludeJewelItems As Boolean, ByVal deltaLeadership As Integer, _
                         ByVal GroundTile As Boolean, ByVal NoLeader As Boolean) As AllDataStructues.Stack
         Dim StackStat As AllDataStructues.DesiredStats = StackStatsGen.GenDesiredStats(CDbl(ExpStackKilled), LootCost, rndgen, valConv)
         StackStat.Race = Races
         StackStat.excludeConsumableItems = excludeConsumableItems
         StackStat.excludeNonconsumableItems = excludeNonconsumableItems
         StackStat.excludeJewelItems = excludeJewelItems
-        Return Gen(StackStat, GroundTile, NoLeader)
+        Return Gen(StackStat, deltaLeadership, GroundTile, NoLeader)
     End Function
     ''' <summary>Создаст отряд  в соответствие с желаемыми параметрами. Не нужно пытаться создать отряд водных жителей на земле</summary>
     ''' <param name="StackStats">Желаемые параметры стэка</param>
+    ''' <param name="deltaLeadership">Изменение лидерства за счет модификаторов</param>
     ''' <param name="GroundTile">True, если на клетку нельзя ставить водных лидеров. Водной считается клетка с водой, окруженная со всех сторон клетками с водой</param>
     ''' <param name="NoLeader">True, если стэк находится внутри руин или города</param>
     ''' <param name="StackStrengthMultiplier">Множитель силы отряда: изменяем опыт за убийство и среднюю планку опыта</param>
     ''' <param name="LootCostMultiplier">Множитель стоимости предметов</param>
-    Public Function Gen(ByRef StackStats As AllDataStructues.DesiredStats, ByVal GroundTile As Boolean, ByVal NoLeader As Boolean, _
+    Public Function Gen(ByRef StackStats As AllDataStructues.DesiredStats, ByVal deltaLeadership As Integer, _
+                        ByVal GroundTile As Boolean, ByVal NoLeader As Boolean, _
                         ByVal StackStrengthMultiplier As Double, ByVal LootCostMultiplier As Double) As AllDataStructues.Stack
         Dim s As AllDataStructues.DesiredStats = AllDataStructues.DesiredStats.Copy(StackStats)
         s.ExpStackKilled = Math.Max(CInt(s.ExpStackKilled * StackStrengthMultiplier), 5)
         s.ExpBarAverage = Math.Max(CInt(s.ExpBarAverage * StackStrengthMultiplier), 25)
         s.LootCost = CInt(s.LootCost * LootCostMultiplier)
-        Return Gen(s, GroundTile, NoLeader)
+        Return Gen(s, deltaLeadership, GroundTile, NoLeader)
     End Function
     ''' <summary>Создаст отряд  в соответствие с желаемыми параметрами. Не нужно пытаться создать отряд водных жителей на земле</summary>
     ''' <param name="ExpStackKilled">Примерный опыт за убийство стэка</param>
@@ -679,17 +685,19 @@ Public Class RandStack
     ''' <param name="excludeConsumableItems">Не генерировать зелья, сферы, талисманы и свитки</param>
     ''' <param name="excludeNonconsumableItems">Не генерировать надеваемые предметы и посохи</param>
     ''' <param name="excludeJewelItems">Не генерировать драгоценности</param>
+    ''' <param name="deltaLeadership">Изменение лидерства за счет модификаторов</param>
     ''' <param name="GroundTile">True, если на клетку нельзя ставить водных лидеров. Водной считается клетка с водой, окруженная со всех сторон клетками с водой</param>
     ''' <param name="NoLeader">True, если стэк находится внутри руин или города</param>
     ''' <param name="StackStrengthMultiplier">Множитель силы отряда: изменяем опыт за убийство и среднюю планку опыта</param>
     ''' <param name="LootCostMultiplier">Множитель стоимости предметов</param>
     Public Function Gen(ByVal ExpStackKilled As Integer, ByVal LootCost As Double, ByRef Races As List(Of Integer), _
-                        ByVal excludeConsumableItems As Boolean, ByVal excludeNonconsumableItems As Boolean, ByVal excludeJewelItems As Boolean, _
+                        ByVal excludeConsumableItems As Boolean, ByVal excludeNonconsumableItems As Boolean, _
+                        ByVal excludeJewelItems As Boolean, ByVal deltaLeadership As Integer, _
                         ByVal GroundTile As Boolean, ByVal NoLeader As Boolean, _
                         ByVal StackStrengthMultiplier As Double, ByVal LootCostMultiplier As Double) As AllDataStructues.Stack
         Dim esk As Integer = Math.Max(CInt(ExpStackKilled * StackStrengthMultiplier), 5)
         Dim lc As Double = LootCost * LootCostMultiplier
-        Return Gen(esk, lc, Races, excludeConsumableItems, excludeNonconsumableItems, excludeJewelItems, GroundTile, NoLeader)
+        Return Gen(esk, lc, Races, excludeConsumableItems, excludeNonconsumableItems, excludeJewelItems, deltaLeadership, GroundTile, NoLeader)
     End Function
     Private Function SelectPossibleLeader(ByRef leaderID As Integer, ByRef Tolerance As Double, _
                                           ByRef StackStats As AllDataStructues.DesiredStats, ByRef GroundTile As Boolean) As Boolean
@@ -1345,13 +1353,17 @@ Public Class Common
     ''' <summary>Читает список юнитов и предметов, которые не должен использовать генератор</summary>
     ''' <param name="ExcludeLists">Файлы со списками исключенных объектов. Записи в них могут повторяться. 
     ''' Допускается передача неинициализитрованного массива.
-    ''' Для чтения из дефолтного листа в массив нужно добавить строчку %default% (наличие этого ключевого в файле запустит чтение дефолтного файла)</param>
+    ''' Для чтения из дефолтного листа в массив нужно добавить строчку %default% (наличие этого ключевого в файле запустит чтение дефолтного файла).
+    ''' Для чтения из листа сюжетных юнитов из Ванили в массив нужно добавить строчку %novanillalore% (наличие этого ключевого в файле запустит чтение дефолтного файла).
+    ''' Для чтения из листа сюжетных юнитов из Мода в массив нужно добавить строчку %nomodlore% (наличие этого ключевого в файле запустит чтение дефолтного файла).</param>
     Public Sub ReadExcludedObjectsList(ByRef ExcludeLists() As String)
         If IsNothing(ExcludeLists) Then Exit Sub
         Dim s() As String
+        Dim defaultKeys() As String = New String() {My.Resources.readDefaultFileKeyword, My.Resources.readMLoreFileKeyword, My.Resources.readVLoreFileKeyword}
+        Dim defaultVals() As String = New String() {My.Resources.ExcludeIDs, My.Resources.ExcludeIDs_ModLore, My.Resources.ExcludeIDs_VanillaLore}
         For i As Integer = 0 To UBound(ExcludeLists) Step 1
-            s = prepareToFileRead(ExcludeLists(i), My.Resources.ExcludeIDs)
-            Call ReadFile(1, s, ExcludeLists(i), AddressOf ReadExcludedObjectsList)
+            s = prepareToFileRead(ExcludeLists(i), defaultKeys, defaultVals)
+            Call ReadFile(1, s, ExcludeLists(i), AddressOf ReadExcludedObjectsList, defaultKeys)
         Next i
     End Sub
     ''' <summary>Читает множители шанса выпадения для отдельных предметов</summary>
@@ -1361,9 +1373,11 @@ Public Class Common
     Public Sub ReadLootItemChanceMultiplier(ByRef MultipliersList() As String)
         If IsNothing(MultipliersList) Then Exit Sub
         Dim s() As String
+        Dim defaultKeys() As String = New String() {My.Resources.readDefaultFileKeyword}
+        Dim defaultVals() As String = New String() {My.Resources.LootItemChanceMultiplier}
         For i As Integer = 0 To UBound(MultipliersList) Step 1
-            s = prepareToFileRead(MultipliersList(i), My.Resources.LootItemChanceMultiplier)
-            Call ReadFile(5, s, MultipliersList(i), AddressOf ReadLootItemChanceMultiplier)
+            s = prepareToFileRead(MultipliersList(i), defaultKeys, defaultVals)
+            Call ReadFile(5, s, MultipliersList(i), AddressOf ReadLootItemChanceMultiplier, defaultKeys)
         Next i
     End Sub
     ''' <summary>Читает список, переопределяющий расы нужных юнитов</summary>
@@ -1373,9 +1387,11 @@ Public Class Common
     Public Sub ReadCustomUnitRace(ByRef CustomUnitRace() As String)
         If IsNothing(CustomUnitRace) Then Exit Sub
         Dim s() As String
+        Dim defaultKeys() As String = New String() {My.Resources.readDefaultFileKeyword}
+        Dim defaultVals() As String = New String() {My.Resources.UnitRace}
         For i As Integer = 0 To UBound(CustomUnitRace) Step 1
-            s = prepareToFileRead(CustomUnitRace(i), My.Resources.UnitRace)
-            Call ReadFile(2, s, CustomUnitRace(i), AddressOf ReadCustomUnitRace)
+            s = prepareToFileRead(CustomUnitRace(i), defaultKeys, defaultVals)
+            Call ReadFile(2, s, CustomUnitRace(i), AddressOf ReadCustomUnitRace, defaultKeys)
         Next i
     End Sub
     ''' <summary>Читает список юнитов, которые должны находиться в отряде в единственном экземпляре</summary>
@@ -1385,9 +1401,11 @@ Public Class Common
     Public Sub ReadSoleUnits(ByRef SoleUnitsList() As String)
         If IsNothing(SoleUnitsList) Then Exit Sub
         Dim s() As String
+        Dim defaultKeys() As String = New String() {My.Resources.readDefaultFileKeyword}
+        Dim defaultVals() As String = New String() {My.Resources.SingleUnits}
         For i As Integer = 0 To UBound(SoleUnitsList) Step 1
-            s = prepareToFileRead(SoleUnitsList(i), My.Resources.SingleUnits)
-            Call ReadFile(6, s, SoleUnitsList(i), AddressOf ReadSoleUnits)
+            s = prepareToFileRead(SoleUnitsList(i), defaultKeys, defaultVals)
+            Call ReadFile(6, s, SoleUnitsList(i), AddressOf ReadSoleUnits, defaultKeys)
         Next i
     End Sub
     ''' <summary>Читает список, определяющий принадлежность непроходимых объектов</summary>
@@ -1400,9 +1418,11 @@ Public Class Common
             Exit Sub
         End If
         Dim s() As String
+        Dim defaultKeys() As String = New String() {My.Resources.readDefaultFileKeyword}
+        Dim defaultVals() As String = New String() {My.Resources.MapObjectRace}
         For i As Integer = 0 To UBound(CustomBuildingRace) Step 1
-            s = prepareToFileRead(CustomBuildingRace(i), My.Resources.MapObjectRace)
-            Call ReadFile(3, s, CustomBuildingRace(i), AddressOf ReadCustomBuildingRace)
+            s = prepareToFileRead(CustomBuildingRace(i), defaultKeys, defaultVals)
+            Call ReadFile(3, s, CustomBuildingRace(i), AddressOf ReadCustomBuildingRace, defaultKeys)
         Next i
     End Sub
     ''' <summary>Читает описание того, как цеплять друг к другу "Плато" и "Водопады"</summary>
@@ -1415,30 +1435,41 @@ Public Class Common
             Exit Sub
         End If
         Dim s() As String
+        Dim defaultKeys() As String = New String() {My.Resources.readDefaultFileKeyword}
+        Dim defaultVals() As String = New String() {My.Resources.PlateauConstructor}
         For i As Integer = 0 To UBound(PlateauConstructionDescription) Step 1
-            s = prepareToFileRead(PlateauConstructionDescription(i), My.Resources.PlateauConstructor)
-            Call ReadFile(4, s, PlateauConstructionDescription(i), AddressOf ReadPlateauConstructionDescription)
+            s = prepareToFileRead(PlateauConstructionDescription(i), defaultKeys, defaultVals)
+            Call ReadFile(4, s, PlateauConstructionDescription(i), AddressOf ReadPlateauConstructionDescription, defaultKeys)
         Next i
     End Sub
-    Private Function prepareToFileRead(ByRef filePath As String, ByRef defaultValues As String) As String()
-        If Not filePath.ToLower = My.Resources.readDefaultFileKeyword.ToLower Then
-            If IO.File.Exists(filePath) Then
-                Return TxtSplit(IO.File.ReadAllText(filePath))
-            Else
-                Return Nothing
-            End If
+    Private Function prepareToFileRead(ByRef filePath As String, ByRef defaultKeywords() As String, ByRef defaultValues() As String) As String()
+        If Not IsNothing(defaultKeywords) Then
+            For i As Integer = 0 To UBound(defaultKeywords) Step 1
+                If filePath.ToLower = defaultKeywords(i).ToLower Then Return TxtSplit(defaultValues(i))
+            Next i
+        End If
+        If IO.File.Exists(filePath) Then
+            Return TxtSplit(IO.File.ReadAllText(filePath))
         Else
-            Return TxtSplit(defaultValues)
+            Return Nothing
         End If
     End Function
-    Private Sub ReadFile(ByRef mode As Integer, ByRef s() As String, ByRef filepath As String, ByRef f As readFunction)
+    Private Sub ReadFile(ByRef mode As Integer, ByRef s() As String, ByRef filepath As String, _
+                         ByRef f As readFunction, ByRef defaultKeys() As String)
         If IsNothing(s) Then Exit Sub
         Dim srow(), r As String
+        Dim isKey As Boolean
         For j As Integer = 0 To UBound(s) Step 1
             srow = s(j).Split(CChar(" "))
-            If srow(0).ToLower = My.Resources.readDefaultFileKeyword.ToUpper And Not filepath.ToLower = My.Resources.readDefaultFileKeyword.ToLower Then
-                Call f(New String() {My.Resources.readDefaultFileKeyword.ToLower})
-            Else
+            isKey = False
+            For Each key As String In defaultKeys
+                If srow(0).ToLower = key.ToLower And Not filepath.ToLower = key.ToLower Then
+                    Call f(New String() {key.ToLower})
+                    isKey = True
+                    Exit For
+                End If
+            Next key
+            If Not isKey Then
                 If mode = 1 Then
                     If Not excludedObjects.Contains(srow(0).ToUpper) Then excludedObjects.Add(srow(0).ToUpper)
                 ElseIf mode = 2 Then
