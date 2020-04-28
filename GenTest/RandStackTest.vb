@@ -731,4 +731,33 @@ Public Class RandStackTest
 
         If Not ok Then Assert.Inconclusive("Verify the correctness of this test method.")
     End Sub
+
+    '''<summary>
+    '''A test for Log
+    '''</summary>
+    <TestMethod()> _
+    Public Sub LoggingTest()
+
+        If IsNothing(UnitsList) Then Call ReadTestUnits()
+        If IsNothing(ItemsList) Then Call ReadTestItems()
+        Dim target As RandStack_Accessor = New RandStack_Accessor(UnitsList, ItemsList, excludeList, customLootChanceList, customRaceList, soleUnitsList, False)
+
+        Dim ok As Boolean = True
+
+        Dim s As New AllDataStructues.Stack With {.pos = New String() {"g000uu5017", "g000uu5117", "g000uu5018", _
+                                                                       "g000uu5013", "G000000000", "g000uu5018"}, _
+                                                  .level = New Integer() {1, 1, 0, 0, 0, 0}, _
+                                                  .items = New List(Of String)}
+        Dim stats As AllDataStructues.DesiredStats = target.StackStats(s)
+        stats.LootCost = 2000
+
+        target.log.Enable()
+        For i As Integer = 1 To 20 Step 1
+            Call target.Gen(stats, 0, True, False)
+        Next i
+        Dim log As String = target.log.PrintAll
+        If log = "" Then ok = False
+
+        If Not ok Then Assert.Inconclusive("Verify the correctness of this test method.")
+    End Sub
 End Class

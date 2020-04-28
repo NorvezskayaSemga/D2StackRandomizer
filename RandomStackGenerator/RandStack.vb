@@ -22,6 +22,8 @@ Public Class RandStack
     Private minItemGoldCost As Integer
     Private itemType As New Dictionary(Of Integer, String)
 
+    Public log As Log
+
     ''' <param name="AllUnitsList">Dсе юниты в игре</param>
     ''' <param name="AllItemsList">Все предметы в игре</param>
     ''' <param name="ExcludeLists">Файлы со списками исключенных объектов. Записи в них могут повторяться. 
@@ -43,12 +45,14 @@ Public Class RandStack
                    ByRef SoleUnitsList() As String, ByRef serial As Boolean)
         serialExecution = serial
         rndgen = comm.rndgen
+        log = New Log(comm)
         If IsNothing(AllUnitsList) Or IsNothing(AllItemsList) Then Exit Sub
 
         Call comm.ReadExcludedObjectsList(ExcludeLists)
         Call comm.ReadCustomUnitRace(CustomUnitRace)
         Call comm.ReadLootItemChanceMultiplier(LootChanceMultiplierLists)
         Call comm.ReadSoleUnits(SoleUnitsList)
+
 
         Dim cat(UBound(AllUnitsList)) As Integer
         For i As Integer = 0 To UBound(AllUnitsList) Step 1
@@ -359,6 +363,12 @@ Public Class RandStack
                              ByVal excludeConsumableItems As Boolean, _
                              ByVal excludeNonconsumableItems As Boolean, _
                              ByVal excludeJewelItems As Boolean) As List(Of String)
+        Call log.Add("----Loot creation started----")
+        Call log.Add("Gold sum: " & GoldCost & _
+                     " exCons: " & excludeConsumableItems & _
+                     " exNoncons: " & excludeNonconsumableItems & _
+                     " exJewels: " & excludeJewelItems)
+
         Dim costBar, maxCost, selected As Integer
         Dim DynCost As Integer = GoldCost
         Dim IDs As New List(Of Integer)
@@ -367,6 +377,7 @@ Public Class RandStack
         Do While DynCost >= minItemGoldCost
             costBar = CostBarGen(minItemGoldCost, DynCost)
             maxCost = Math.Min(2 * costBar, DynCost)
+            Call log.Add("Max cost bar:" & DynCost & " Selected cost bar:" & costBar & " max item cost:" & maxCost)
             IDs.Clear()
             For i As Integer = 0 To UBound(MagicItem) Step 1
                 add = False
@@ -379,9 +390,13 @@ Public Class RandStack
             If IDs.Count = 0 Then Exit Do
             selected = comm.RandomSelection(IDs, New Double()() {ItemGoldCost}, New Double() {costBar}, _
                                             multItems, multiItemGenSigmaMultiplier * itemGenSigma, serialExecution)
+            Call log.Add("Selected item:" & MagicItem(selected).name & " id:" & MagicItem(selected).itemID & " gold cost:" & ItemGoldCost(selected))
             result.Add(MagicItem(selected).itemID)
             DynCost = CInt(DynCost - ItemGoldCost(selected))
         Loop
+
+        Call log.Add("----Loot creation ended----")
+
         Return result
     End Function
     ''' <summary>Генерирует набор предметов. В принципе может вернуть пустой список</summary>
@@ -418,6 +433,13 @@ Public Class RandStack
                              ByVal excludeConsumableItems As Boolean, _
                              ByVal excludeNonconsumableItems As Boolean, _
                              ByVal excludeJewelItems As Boolean) As String
+
+        Call log.Add("----Single item creation started----")
+        Call log.Add("Max cost: " & GoldCost & _
+                     " exCons: " & excludeConsumableItems & _
+                     " exNoncons: " & excludeNonconsumableItems & _
+                     " exJewels: " & excludeJewelItems)
+
         Dim selected As Integer
         Dim IDs As New List(Of Integer)
         Dim result As String = ""
@@ -434,8 +456,12 @@ Public Class RandStack
         Next i
         If IDs.Count > 0 Then
             selected = comm.RandomSelection(IDs, New Double()() {ItemGoldCost}, New Double() {GoldCost}, multItems, itemGenSigma, serialExecution)
+            Call log.Add("Selected item:" & MagicItem(selected).name & " id:" & MagicItem(selected).itemID & " gold cost:" & ItemGoldCost(selected))
             result = MagicItem(selected).itemID
         End If
+
+        Call log.Add("----Single item creation ended----")
+
         Return result
     End Function
     ''' <summary>Генерирует один предмет. Если не получится выбрать подходящий предмет, вернет пустую строку</summary>
@@ -489,6 +515,11 @@ Public Class RandStack
             Dim s As Integer = comm.RaceIdentifierToSubrace(i)
             If Not DynStackStats.Race.Contains(s) Then DynStackStats.Race.Add(s)
         Next i
+
+        Call log.Add("----Stack creation started----")
+        Call log.Add("DeltaLeadership: " & deltaLeadership & "GroundTile: " & GroundTile & "NoLeader: " & NoLeader)
+        Call log.Add(AddressOf AllDataStructues.DesiredStats.Print, DynStackStats)
+
         Dim PossibleLeaders, SelectedFighters As New List(Of Integer)
         Dim FreeMeleeSlots As Integer = 3
         Dim SelectedLeader As Integer = -1
@@ -639,6 +670,9 @@ Public Class RandStack
             If result.pos(i) = "" Then result.pos(i) = emptyItem
         Next i
         result.items = ItemsGen(DynStackStats.LootCost, DynStackStats.excludeConsumableItems, DynStackStats.excludeNonconsumableItems, DynStackStats.excludeJewelItems)
+
+        Call log.Add("----Stack creation ended----")
+
         Return result
     End Function
     ''' <summary>Создаст отряд  в соответствие с желаемыми параметрами. Не нужно пытаться создать отряд водных жителей на земле</summary>
@@ -877,6 +911,9 @@ Public Class RandStack
             DynStackStats.StackSize -= 1
         End If
         DynStackStats.MeleeCount = Math.Min(DynStackStats.MeleeCount, FreeMeleeSlots)
+
+        Call log.Add("Unit added: " & List(id).name & " id: " & List(id).unitID)
+        Call log.Add(AddressOf AllDataStructues.DesiredStats.Print, DynStackStats)
     End Sub
 
 End Class
@@ -1960,3 +1997,82 @@ Friend Class ValueConverter
 
 End Class
 
+
+Public Class Log
+
+    Private Enabled As Boolean
+    Private Content As New List(Of String)
+
+    Private comm As Common
+
+    Delegate Function printWithNoInput() As String
+    Delegate Function printDesiredStats(ByVal v As AllDataStructues.DesiredStats, ByRef RaceNumberToRaceChar As Dictionary(Of Integer, String)) As String
+    Delegate Function printCost(ByVal v As AllDataStructues.Cost) As String
+
+    Public Sub New(ByRef c As Common)
+        If IsNothing(c) Then Throw New Exception("В класс Log нужно передавать инициализированный класс Common")
+        comm = c
+    End Sub
+
+    ''' <summary>Включить логирование</summary>
+    Public Sub Enable()
+        Enabled = True
+    End Sub
+    ''' <summary>Выключить логирование</summary>
+    Public Sub Disable()
+        Enabled = False
+    End Sub
+    ''' <summary>Узнать, включено ли логирование</summary>
+    Public Function IsEnabled() As Boolean
+        Return Enabled
+    End Function
+
+    ''' <summary>Очистить лог</summary>
+    Public Sub Clear()
+        Content.Clear()
+    End Sub
+    ''' <summary>Вернет количество записей в логе</summary>
+    Public Function Size() As Integer
+        Return Content.Count
+    End Function
+    ''' <summary>Вернет запись с указанным номером (от 0 до Size-1)</summary>
+    Public Function PrintItem(ByVal id As Integer) As String
+        Return Content.Item(id)
+    End Function
+    ''' <summary>Вернет все записи</summary>
+    Public Function PrintAll() As String
+        Dim result As String = ""
+        Dim len As Integer = Size() - 1
+        If len = -1 Then Return result
+        result = PrintItem(0)
+        For i As Integer = 1 To len Step 1
+            result &= vbNewLine & PrintItem(i)
+        Next i
+        Return result
+    End Function
+
+    ''' <summary>Добавить запись в лог, если логирование включено</summary>
+    ''' <param name="contString">Строка с записью</param>
+    Public Sub Add(ByVal contString As String)
+        If Not Enabled Then Exit Sub
+        Content.Add(contString)
+    End Sub
+    ''' <summary>Добавить запись в лог, если логирование включено</summary>
+    ''' <param name="contString">Будет добавлен результат выполнения этой функции</param>
+    Public Sub Add(ByRef contString As printWithNoInput)
+        If Not Enabled Then Exit Sub
+        Content.Add(contString())
+    End Sub
+    ''' <summary>Добавить запись в лог, если логирование включено</summary>
+    ''' <param name="contString">Будет добавлен результат выполнения этой функции</param>
+    Public Sub Add(ByRef contString As printDesiredStats, ByVal v As AllDataStructues.DesiredStats)
+        If Not Enabled Then Exit Sub
+        Content.Add(contString(v, comm.RaceNumberToRaceChar))
+    End Sub
+    ''' <summary>Добавить запись в лог, если логирование включено</summary>
+    ''' <param name="contString">Будет добавлен результат выполнения этой функции</param>
+    Public Sub Add(ByRef contString As printCost, ByVal v As AllDataStructues.Cost)
+        If Not Enabled Then Exit Sub
+        Content.Add(contString(v))
+    End Sub
+End Class
