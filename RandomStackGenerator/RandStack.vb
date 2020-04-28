@@ -541,19 +541,21 @@ Public Class RandStack
             Dim maxExpStrackKilled As Double = Math.Max(10000, 2 * DynStackStats.ExpStackKilled)
 
             'создаем список лидеров, которых вообще можем использовать
-            PossibleLeaders.Clear()
-            Dim Tolerance As Double = 0
-            Do While PossibleLeaders.Count = 0
-                Tolerance += 0.1
+            Dim Tolerance As Double = 0.02 * (DynStackStats.StackSize - 1)
+            Do While PossibleLeaders.Count < 3
+                PossibleLeaders.Clear()
+                Tolerance += 0.2
                 For i As Integer = 0 To UBound(AllLeaders) Step 1
                     If SelectPossibleLeader(i, Tolerance, DynStackStats, GroundTile) Then PossibleLeaders.Add(i)
                 Next i
+                If Tolerance > 2 And PossibleLeaders.Count > 0 Then Exit Do
 
                 If Tolerance * DynStackStats.ExpBarAverage > maxExpBar And Tolerance * DynStackStats.ExpStackKilled > maxExpStrackKilled Then
                     If DynStackStats.MaxGiants < 1 Then
                         DynStackStats.MaxGiants = 1
-                        Tolerance = 0
+                        Tolerance = 0.02 * (DynStackStats.StackSize - 1)
                     Else
+                        If PossibleLeaders.Count > 0 Then Exit Do
                         Throw New Exception("Что-то не так в выборе возможных лидеров отряда" & vbNewLine & _
                                             "Имя локации: " & StackStats.LocationName & vbNewLine & _
                                             "StackStats:" & vbNewLine & AllDataStructues.DesiredStats.Print(StackStats, comm.RaceNumberToRaceChar) & vbNewLine & _
@@ -562,6 +564,7 @@ Public Class RandStack
                 End If
             Loop
 
+            Call log.Add(AddressOf PrintSelectionList, AllLeaders, PossibleLeaders)
             SelectedLeader = comm.RandomSelection(PossibleLeaders, {ExpBarLeaders}, {DynStackStats.ExpBarAverage}, multLeaders, SigmaMultiplier(DynStackStats), serialExecution)
 
             If SelectedLeader = -1 Then
@@ -777,6 +780,7 @@ Public Class RandStack
         '    If nloops > 10 Then Exit Do
         'Loop
         If PossibleFighters.Count > 0 Then
+            Call log.Add(AddressOf PrintSelectionList, AllFighters, PossibleFighters)
             SelectedFighter = comm.RandomSelection(PossibleFighters, {ExpBarFighters, ExpKilledFighters}, _
                  {DynStackStats.ExpBarAverage, CDbl(DynStackStats.ExpStackKilled) / CDbl(DynStackStats.StackSize)}, _
                  multFighters, SigmaMultiplier(DynStackStats), serialExecution)
@@ -809,7 +813,7 @@ Public Class RandStack
         '    mult = 2
         'End If
         'If AllFighters(fighterID).EXPkilled > mult * DynStackStats.ExpStackKilled / DynStackStats.StackSize Then Return False
-        If DynStackStats.ExpStackKilled = 0 Then Return False
+        If DynStackStats.ExpStackKilled <= 0 Then Return False
         If AllFighters(fighterID).EXPkilled > 1.1 * DynStackStats.ExpStackKilled + 10 Then Return False
         If Not AllFighters(fighterID).small Then
             If DynStackStats.MaxGiants = 0 And Not skipMaxGiantsFilter Then Return False
@@ -824,6 +828,14 @@ Public Class RandStack
             If Not skipRangeFilter And DynStackStats.MeleeCount > 0 Then Return False
         End If
         Return True
+    End Function
+    Private Function PrintSelectionList(ByRef units() As AllDataStructues.Unit, ByRef possible As List(Of Integer)) As String
+        Dim result As String = ""
+        For Each id As Integer In possible
+            If Not result = "" Then result &= " "
+            result &= units(id).name
+        Next id
+        Return "Selection pool:" & vbNewLine & result
     End Function
 
     Private Function SetUnitPosition(ByRef i As Integer, ByRef units() As AllDataStructues.Unit, _
@@ -2012,7 +2024,6 @@ Friend Class ValueConverter
 
 End Class
 
-
 Public Class Log
 
     Private Enabled As Boolean
@@ -2023,6 +2034,7 @@ Public Class Log
     Delegate Function printWithNoInput() As String
     Delegate Function printDesiredStats(ByVal v As AllDataStructues.DesiredStats, ByRef RaceNumberToRaceChar As Dictionary(Of Integer, String), ByVal shortOut As Boolean) As String
     Delegate Function printCost(ByVal v As AllDataStructues.Cost) As String
+    Delegate Function printSelectionList(ByRef units() As AllDataStructues.Unit, ByRef possible As List(Of Integer)) As String
 
     Public Sub New(ByRef c As Common)
         If IsNothing(c) Then Throw New Exception("В класс Log нужно передавать инициализированный класс Common")
@@ -2089,5 +2101,11 @@ Public Class Log
     Public Sub Add(ByRef contString As printCost, ByVal v As AllDataStructues.Cost)
         If Not Enabled Then Exit Sub
         Content.Add(contString(v))
+    End Sub
+    ''' <summary>Добавить запись в лог, если логирование включено</summary>
+    ''' <param name="contString">Будет добавлен результат выполнения этой функции</param>
+    Public Sub Add(ByRef contString As printSelectionList, ByVal v() As AllDataStructues.Unit, ByRef i As List(Of Integer))
+        If Not Enabled Then Exit Sub
+        Content.Add(contString(v, i))
     End Sub
 End Class

@@ -608,8 +608,9 @@ Public Class RandStackTest
                                     ByRef TestOverload1 As Boolean) As Boolean
         Dim ok As Boolean = True
         Dim expected As New List(Of String)
-        expected.AddRange(New String() {"g000000000", "g000uu5117", "g000uu5017", "g000uu5018", "g000uu8196"})
-        expected.AddRange(New String() {"g000uu7539", "g001uu7539"})
+        expected.AddRange(New String() {"g000000000", "g000uu5117", "g000uu5017", "g000uu5018", "g000uu8196", _
+                                        "g000uu7539", "g001uu7539", "g000uu8285", "g000uu5113", "g000uu5013", _
+                                        "g003uu5013"})
 
         Dim noLeader As Boolean = False
         For p As Integer = 0 To 1 Step 1
