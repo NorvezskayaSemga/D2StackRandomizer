@@ -72,16 +72,16 @@ Public Class CommonTest
                .Race = New List(Of Integer), .StackSize = 1, .MaxGiants = 0, .MeleeCount = 2, .LootCost = 0}, _
             New AllDataStructues.DesiredStats With {.LocationName = "loc54", .ExpBarAverage = 1000, .ExpStackKilled = 200, _
                .Race = New List(Of Integer), .StackSize = 1, .MaxGiants = 0, .MeleeCount = 2, .LootCost = 0, _
-               .IGen = New AllDataStructues.ItemGenSettings With {.excludeConsumableItems = True}}, _
+               .IGen = New AllDataStructues.LootGenSettings With {.excludeConsumableItems = True}}, _
             New AllDataStructues.DesiredStats With {.LocationName = "l", .ExpBarAverage = 1000, .ExpStackKilled = 200, _
                .Race = New List(Of Integer), .StackSize = 1, .MaxGiants = 0, .MeleeCount = 2, .LootCost = 0, _
-               .IGen = New AllDataStructues.ItemGenSettings With {.excludeConsumableItems = True, .excludeNonconsumableItems = True}, _
+               .IGen = New AllDataStructues.LootGenSettings With {.excludeConsumableItems = True, .excludeNonconsumableItems = True}, _
                .isInternalCityGuard = True}, _
             New AllDataStructues.DesiredStats With {.LocationName = "22", .ExpBarAverage = 200, .ExpStackKilled = 75, .MeleeCount = 2, _
                                              .Race = New List(Of Integer), .StackSize = 2, .shopContent = New List(Of String)}, _
             New AllDataStructues.DesiredStats With {.LocationName = "loc53", .ExpBarAverage = 1000, .ExpStackKilled = 200, _
                .Race = New List(Of Integer), .StackSize = 1, .MaxGiants = 0, .MeleeCount = 2, .LootCost = 0, _
-               .IGen = New AllDataStructues.ItemGenSettings With {.excludeConsumableItems = True, .excludeJewelItems = True}}
+               .IGen = New AllDataStructues.LootGenSettings With {.excludeConsumableItems = True, .excludeJewelItems = True}}
             }
         expected(0).Race.AddRange(New Integer() {2})
         expected(1).Race.AddRange(New Integer() {2, 9})

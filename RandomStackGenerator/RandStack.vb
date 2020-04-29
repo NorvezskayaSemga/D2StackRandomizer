@@ -266,8 +266,8 @@ Public Class RandStack
     End Function
     ''' <summary>Определит настройки генерации новых предметов</summary>
     ''' <param name="items">Список предметов объекта</param>
-    Public Function GetItemsGenSettings(ByRef items As List(Of String)) As AllDataStructues.ItemGenSettings
-        Dim result As New AllDataStructues.ItemGenSettings With { _
+    Public Function GetItemsGenSettings(ByRef items As List(Of String)) As AllDataStructues.LootGenSettings
+        Dim result As New AllDataStructues.LootGenSettings With { _
             .excludeConsumableItems = True, _
             .excludeJewelItems = True, _
             .excludeNonconsumableItems = True}
@@ -282,6 +282,7 @@ Public Class RandStack
                 result.excludeJewelItems = False
             End If
         Next item
+        Return result
     End Function
 
     Private Function ItemTypeCostModify(ByRef item As AllDataStructues.Item) As AllDataStructues.Cost
@@ -378,7 +379,7 @@ Public Class RandStack
     ''' <param name="GoldCost">Максимальная стоимость набора в золоте. Драгоценности считаются дешевле в два раза</param>
     ''' <param name="IGen">Настройки генерации предметов</param>
     Public Function ItemsGen(ByVal GoldCost As Integer, _
-                             ByVal IGen As AllDataStructues.ItemGenSettings) As List(Of String)
+                             ByVal IGen As AllDataStructues.LootGenSettings) As List(Of String)
         Call log.Add("----Loot creation started----")
         Call log.Add("Gold sum: " & GoldCost & _
                      " exCons: " & IGen.excludeConsumableItems & _
@@ -420,7 +421,7 @@ Public Class RandStack
     ''' <param name="IGen">Настройки генерации предметов</param>
     ''' <param name="LootCostMultiplier">Множитель стоимости предметов</param>
     Public Function ItemsGen(ByVal GoldCost As Integer, _
-                             ByRef IGen As AllDataStructues.ItemGenSettings, _
+                             ByRef IGen As AllDataStructues.LootGenSettings, _
                              ByVal LootCostMultiplier As Double) As List(Of String)
         Return ItemsGen(CInt(GoldCost * LootCostMultiplier), igen)
     End Function
@@ -440,7 +441,7 @@ Public Class RandStack
     ''' <param name="GoldCost">Максимальная стоимость предмета в золоте. Драгоценности считаются дешевле в два раза</param>
     ''' <param name="IGen">Настройки генерации предметов</param>
     Public Function ThingGen(ByVal GoldCost As Integer, _
-                             ByRef IGen As AllDataStructues.ItemGenSettings) As String
+                             ByRef IGen As AllDataStructues.LootGenSettings) As String
 
         Call log.Add("----Single item creation started----")
         Call log.Add("Max cost: " & GoldCost & _
@@ -477,7 +478,7 @@ Public Class RandStack
     ''' <param name="IGen">Настройки генерации предметов</param>
     ''' <param name="LootCostMultiplier">Множитель стоимости предметов</param>
     Public Function ThingGen(ByVal GoldCost As Integer, _
-                             ByRef IGen As AllDataStructues.ItemGenSettings, _
+                             ByRef IGen As AllDataStructues.LootGenSettings, _
                              ByVal LootCostMultiplier As Double) As String
         Return ThingGen(CInt(GoldCost * LootCostMultiplier), IGen)
     End Function
@@ -697,7 +698,7 @@ Public Class RandStack
     ''' <param name="GroundTile">True, если на клетку нельзя ставить водных лидеров. Водной считается клетка с водой, окруженная со всех сторон клетками с водой</param>
     ''' <param name="NoLeader">True, если стэк находится внутри руин или города</param>
     Public Function Gen(ByVal ExpStackKilled As Integer, ByVal LootCost As Double, ByRef Races As List(Of Integer), _
-                        ByRef IGen As AllDataStructues.ItemGenSettings, ByVal deltaLeadership As Integer, _
+                        ByRef IGen As AllDataStructues.LootGenSettings, ByVal deltaLeadership As Integer, _
                         ByVal GroundTile As Boolean, ByVal NoLeader As Boolean) As AllDataStructues.Stack
         Dim StackStat As AllDataStructues.DesiredStats = StackStatsGen.GenDesiredStats(CDbl(ExpStackKilled), LootCost, rndgen, valConv)
         StackStat.Race = Races
@@ -731,7 +732,7 @@ Public Class RandStack
     ''' <param name="StackStrengthMultiplier">Множитель силы отряда: изменяем опыт за убийство и среднюю планку опыта</param>
     ''' <param name="LootCostMultiplier">Множитель стоимости предметов</param>
     Public Function Gen(ByVal ExpStackKilled As Integer, ByVal LootCost As Double, ByRef Races As List(Of Integer), _
-                        ByRef IGen As AllDataStructues.ItemGenSettings, ByVal deltaLeadership As Integer, _
+                        ByRef IGen As AllDataStructues.LootGenSettings, ByVal deltaLeadership As Integer, _
                         ByVal GroundTile As Boolean, ByVal NoLeader As Boolean, _
                         ByVal StackStrengthMultiplier As Double, ByVal LootCostMultiplier As Double) As AllDataStructues.Stack
         Dim esk As Integer = Math.Max(CInt(ExpStackKilled * StackStrengthMultiplier), 5)
@@ -1127,6 +1128,7 @@ Public Class Common
             name = rStack.FindUnitStats(item).name
             If name = "" Then name = rStack.FindItemStats(item).name
             If name = "" AndAlso rStack.itemType.ContainsValue(item.ToUpper) Then name = "item type"
+            If name = "" Then name = "I don't know what is that"
             result &= vbNewLine & item & " - " & name
         Next item
         Call log.Add(result)
@@ -1134,19 +1136,22 @@ Public Class Common
         result = vbNewLine & "----Custom units races list----"
         For Each item As String In customRace.Keys
             name = rStack.FindUnitStats(item).name
+            If name = "" Then name = "I don't know what is that"
             result &= vbNewLine & item & " - " & Races.Item(customRace.Item(item).ToUpper) & " - " & name
         Next item
         Call log.Add(result)
 
         result = vbNewLine & "----Custom objects races list----"
         For Each item As String In objectRace.Keys
-            result &= vbNewLine & item & " - " & Races.Item(customRace.Item(item).ToUpper) '& " - " & name
+            name = "Map object"
+            result &= vbNewLine & item & " - " & Races.Item(customRace.Item(item).ToUpper) & " - " & name
         Next item
         Call log.Add(result)
 
         result = vbNewLine & "----Loot item chance multipliers list----"
         For Each item As String In LootItemChanceMultiplier.Keys
             name = rStack.FindItemStats(item).name
+            If name = "" Then name = "I don't know what is that"
             result &= vbNewLine & item & " - " & LootItemChanceMultiplier.Item(item) & " - " & name
         Next item
         Call log.Add(result)
@@ -1154,10 +1159,12 @@ Public Class Common
         result = vbNewLine & "----Sole units list----"
         For Each item As String In SoleUnits.Keys
             name = rStack.FindUnitStats(item).name
+            If name = "" Then name = "???"
             result &= vbNewLine & item & " - " & name & " // "
             Dim s As String = ""
             For Each u As String In SoleUnits.Item(item)
                 name = rStack.FindUnitStats(u).name
+                If name = "" Then name = "???"
                 If Not s = "" Then s &= " # "
                 s &= u & " - " & name
             Next u
@@ -1702,7 +1709,7 @@ Public Class AllDataStructues
         ''' <summary>Идентификатор локации, для которой сгенерирован отряд</summary>
         Dim LocationName As String
         ''' <summary>Настройки генерации предметов</summary>
-        Dim IGen As ItemGenSettings
+        Dim IGen As LootGenSettings
 
         ''' <summary>Не nothing только для торговцев предметами и магией, а также лагеря наемников</summary>
         Dim shopContent As List(Of String)
@@ -1733,7 +1740,7 @@ Public Class AllDataStructues
                                           .StackSize = v.StackSize, _
                                           .LootCost = v.LootCost, _
                                           .LocationName = v.LocationName, _
-                                          .IGen = AllDataStructues.ItemGenSettings.copy(v.IGen), _
+                                          .IGen = AllDataStructues.LootGenSettings.copy(v.IGen), _
                                           .shopContent = shopContentList, _
                                           .isInternalCityGuard = v.isInternalCityGuard}
         End Function
@@ -1764,7 +1771,7 @@ Public Class AllDataStructues
                 If Not shortOut Then
                     s &= "LootCost" & vbTab & v.LootCost & vbNewLine & _
                          "IsInternalCityGuard" & vbTab & v.isInternalCityGuard & vbNewLine & _
-                         AllDataStructues.ItemGenSettings.print(v.IGen) & vbNewLine
+                         AllDataStructues.LootGenSettings.print(v.IGen) & vbNewLine
                     s = "ID" & vbTab & v.LocationName & vbNewLine & s
                 End If
             Else
@@ -2017,7 +2024,7 @@ Public Class AllDataStructues
         Dim area As Integer
     End Structure
 
-    Public Structure ItemGenSettings
+    Public Structure LootGenSettings
         ''' <summary>Не генерировать зелья, сферы, талисманы и свитки</summary>
         Dim excludeConsumableItems As Boolean
         ''' <summary>Не генерировать надеваемые предметы и посохи</summary>
@@ -2025,15 +2032,40 @@ Public Class AllDataStructues
         ''' <summary>Не генерировать драгоценности</summary>
         Dim excludeJewelItems As Boolean
 
-        Public Shared Function Copy(ByVal v As ItemGenSettings) As ItemGenSettings
-            Return New ItemGenSettings With {.excludeConsumableItems = v.excludeConsumableItems, _
+        Public Shared Function Copy(ByVal v As LootGenSettings) As LootGenSettings
+            Return New LootGenSettings With {.excludeConsumableItems = v.excludeConsumableItems, _
                                              .excludeNonconsumableItems = v.excludeNonconsumableItems, _
                                              .excludeJewelItems = v.excludeJewelItems}
         End Function
-        Public Shared Function Print(ByVal v As ItemGenSettings) As String
+        Public Shared Function Print(ByVal v As LootGenSettings) As String
             Return "CItemsExclude" & vbTab & v.excludeConsumableItems & vbNewLine & _
                    "NItemsExclude" & vbTab & v.excludeNonconsumableItems & vbNewLine & _
                    "JItemsExclude" & vbTab & v.excludeJewelItems
+        End Function
+    End Structure
+
+    Public Structure ItemGenSettings
+        ''' <summary>Не генерировать</summary>
+        Dim exclude As Boolean
+        ''' <summary>Примерное количество. Игнорируется, если меньше 1</summary>
+        Dim amount As Integer
+        ''' <summary>Доля от общей стоимости лута. Игнорируется, если равно 0</summary>
+        Dim costPart As Double
+
+        Public Shared Function Copy(ByVal v As ItemGenSettings) As ItemGenSettings
+            Return New ItemGenSettings With {.exclude = v.exclude, _
+                                             .amount = v.amount, _
+                                             .costPart = v.costPart}
+        End Function
+
+        Public Shared Function Print(ByVal v As ItemGenSettings) As String
+            Return v.exclude.ToString & "#" & v.amount.ToString & "#" & v.costPart.ToString
+        End Function
+        Public Shared Function Read(ByVal v As String) As ItemGenSettings
+            Dim s() As String = v.Replace(" ", "").Replace(vbTab, "").Split(CChar("#"))
+            Dim n As Integer = 3
+            If Not s.Length = n Then Throw New Exception("ItemGenSettings.Read expects " & n & " values")
+            Return New ItemGenSettings With {.exclude = CBool(s(0)), .amount = CInt(s(1)), .costPart = CDbl(s(2))}
         End Function
     End Structure
 
