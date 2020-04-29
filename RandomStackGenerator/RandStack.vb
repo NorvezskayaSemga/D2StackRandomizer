@@ -1717,6 +1717,7 @@ Public Class AllDataStructues
                          "CItemsExclude" & vbTab & v.excludeConsumableItems & vbNewLine & _
                          "NItemsExclude" & vbTab & v.excludeNonconsumableItems & vbNewLine & _
                          "JItemsExclude" & vbTab & v.excludeJewelItems & vbNewLine
+                    s = "ID" & vbTab & v.LocationName & vbNewLine & s
                 End If
             Else
                 Dim goods As String = ""
@@ -1725,8 +1726,9 @@ Public Class AllDataStructues
                     goods &= Item
                 Next Item
                 s = "ShopContent" & vbTab & goods & vbNewLine
+                s = "ID" & vbTab & v.LocationName & vbNewLine & s
             End If
-            Return "ID" & vbTab & v.LocationName & vbNewLine & s
+            Return s
         End Function
     End Structure
 
