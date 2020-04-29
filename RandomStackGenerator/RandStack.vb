@@ -20,7 +20,7 @@ Public Class RandStack
     Private ExpBarLeaders(), ExpBarFighters(), ExpKilledLeaders(), ExpKilledFighters(), multLeaders(), multFighters() As Double
     Private ItemGoldCost(), multItems() As Double
     Private minItemGoldCost As Integer
-    Private itemType As New Dictionary(Of Integer, String)
+    Protected Friend itemType As New Dictionary(Of Integer, String)
 
     Public log As Log
 
@@ -516,7 +516,7 @@ Public Class RandStack
             If Not DynStackStats.Race.Contains(s) Then DynStackStats.Race.Add(s)
         Next i
 
-        Call log.Add("----Stack creation started----")
+        Call log.Add(vbNewLine & "----Stack creation started----")
         Call log.Add("DeltaLeadership: " & deltaLeadership & " GroundTile: " & GroundTile & " NoLeader: " & NoLeader)
         Call log.Add(AddressOf AllDataStructues.DesiredStats.Print, DynStackStats, False)
 
@@ -1108,6 +1108,64 @@ Public Class Common
         ConsumableItemsTypes.AddRange(New Integer() {4, 5, 6, 7, 8, 11, 12})
         NonconsumableItemsTypes.AddRange(New Integer() {0, 1, 2, 3, 9, 13})
         JewelItemsTypes.AddRange(New Integer() {10})
+    End Sub
+
+    ''' <summary>Передаст в лог содержимое excludedObjects, customRace, objectRace, LootItemChanceMultiplier, SoleUnits</summary>
+    Public Sub PrintResourcesToLog(ByRef log As Log, ByRef rStack As RandStack)
+        If Not log.IsEnabled Then Exit Sub
+
+        Dim Races As New Dictionary(Of String, String)
+        Dim t() As String = TxtSplit(My.Resources.Races)
+        For Each s As String In t
+            Dim r() As String = s.Split(CChar(" "))
+            For i As Integer = 0 To UBound(r) Step 1
+                Races.Add(r(i).ToUpper, r(0))
+            Next i
+        Next s
+
+        Dim result, name As String
+        result = vbNewLine & "----Excluded objects list----"
+        For Each item As String In excludedObjects
+            name = rStack.FindUnitStats(item).name
+            If name = "" Then name = rStack.FindItemStats(item).name
+            If name = "" AndAlso rStack.itemType.ContainsValue(item.ToUpper) Then name = "item type"
+            result &= vbNewLine & item & " - " & name
+        Next item
+        Call log.Add(result)
+
+        result = vbNewLine & "----Custom units races list----"
+        For Each item As String In customRace.Keys
+            name = rStack.FindUnitStats(item).name
+            result &= vbNewLine & item & " - " & Races.Item(customRace.Item(item).ToUpper) & " - " & name
+        Next item
+        Call log.Add(result)
+
+        result = vbNewLine & "----Custom objects races list----"
+        For Each item As String In objectRace.Keys
+            result &= vbNewLine & item & " - " & Races.Item(customRace.Item(item).ToUpper) '& " - " & name
+        Next item
+        Call log.Add(result)
+
+        result = vbNewLine & "----Loot item chance multipliers list----"
+        For Each item As String In LootItemChanceMultiplier.Keys
+            name = rStack.FindItemStats(item).name
+            result &= vbNewLine & item & " - " & LootItemChanceMultiplier.Item(item) & " - " & name
+        Next item
+        Call log.Add(result)
+
+        result = vbNewLine & "----Sole units list----"
+        For Each item As String In SoleUnits.Keys
+            name = rStack.FindUnitStats(item).name
+            result &= vbNewLine & item & " - " & name & " // "
+            Dim s As String = ""
+            For Each u As String In SoleUnits.Item(item)
+                name = rStack.FindUnitStats(u).name
+                If Not s = "" Then s &= " # "
+                s &= u & " - " & name
+            Next u
+            result &= s
+        Next item
+        Call log.Add(result)
     End Sub
 
     ''' <summary>Читает и парсит файл с параметрами генерируемых отрядов.

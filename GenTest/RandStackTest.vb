@@ -740,9 +740,12 @@ Public Class RandStackTest
 
         If IsNothing(UnitsList) Then Call ReadTestUnits()
         If IsNothing(ItemsList) Then Call ReadTestItems()
-        Dim target As RandStack_Accessor = New RandStack_Accessor(UnitsList, ItemsList, excludeList, customLootChanceList, customRaceList, soleUnitsList, False)
+        Dim target As RandStack = New RandStack(UnitsList, ItemsList, excludeList, customLootChanceList, customRaceList, soleUnitsList, False)
 
         Dim ok As Boolean = True
+
+        target.log.Enable()
+        target.comm.PrintResourcesToLog(target.log, target)
 
         Dim s As New AllDataStructues.Stack With {.pos = New String() {"g000uu5017", "g000uu5117", "g000uu5018", _
                                                                        "g000uu5013", "G000000000", "g000uu5018"}, _
@@ -751,7 +754,6 @@ Public Class RandStackTest
         Dim stats As AllDataStructues.DesiredStats = target.StackStats(s)
         stats.LootCost = 2000
 
-        target.log.Enable()
         For i As Integer = 1 To 20 Step 1
             Call target.Gen(stats, 0, True, False)
         Next i
