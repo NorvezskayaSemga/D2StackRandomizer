@@ -335,7 +335,7 @@ Public Class RandStackTest
         Dim genitems As List(Of String)
         For i As Integer = 0 To 100 Step 1
             cost = target.minItemGoldCost + i * 125
-            genitems = target.ItemsGen(cost, False, False, False)
+            genitems = target.ItemsGen(cost, New AllDataStructues.ItemGenSettings)
             sum = target.LootCost(genitems).Gold
             If sum > cost Then ok = False
             If Math.Abs(cost - sum) >= target.minItemGoldCost Then ok = False
@@ -619,7 +619,7 @@ Public Class RandStackTest
                 If TestOverload1 Then
                     stack = target.Gen(stats, 0, True, noLeader)
                 Else
-                    stack = target.Gen(stats.ExpStackKilled, stats.LootCost, stats.Race, stats.excludeConsumableItems, stats.excludeNonconsumableItems, stats.excludeJewelItems, 0, True, False)
+                    stack = target.Gen(stats.ExpStackKilled, stats.LootCost, stats.Race, stats.IGen, 0, True, False)
                 End If
                 For Each item As String In stack.pos
                     If Not expected.Contains(item.ToLower) Then ok = False

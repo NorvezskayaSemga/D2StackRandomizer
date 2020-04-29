@@ -72,15 +72,16 @@ Public Class CommonTest
                .Race = New List(Of Integer), .StackSize = 1, .MaxGiants = 0, .MeleeCount = 2, .LootCost = 0}, _
             New AllDataStructues.DesiredStats With {.LocationName = "loc54", .ExpBarAverage = 1000, .ExpStackKilled = 200, _
                .Race = New List(Of Integer), .StackSize = 1, .MaxGiants = 0, .MeleeCount = 2, .LootCost = 0, _
-               .excludeConsumableItems = True}, _
+               .IGen = New AllDataStructues.ItemGenSettings With {.excludeConsumableItems = True}}, _
             New AllDataStructues.DesiredStats With {.LocationName = "l", .ExpBarAverage = 1000, .ExpStackKilled = 200, _
                .Race = New List(Of Integer), .StackSize = 1, .MaxGiants = 0, .MeleeCount = 2, .LootCost = 0, _
-               .excludeConsumableItems = True, .excludeNonconsumableItems = True, .isInternalCityGuard = True}, _
+               .IGen = New AllDataStructues.ItemGenSettings With {.excludeConsumableItems = True, .excludeNonconsumableItems = True}, _
+               .isInternalCityGuard = True}, _
             New AllDataStructues.DesiredStats With {.LocationName = "22", .ExpBarAverage = 200, .ExpStackKilled = 75, .MeleeCount = 2, _
                                              .Race = New List(Of Integer), .StackSize = 2, .shopContent = New List(Of String)}, _
             New AllDataStructues.DesiredStats With {.LocationName = "loc53", .ExpBarAverage = 1000, .ExpStackKilled = 200, _
                .Race = New List(Of Integer), .StackSize = 1, .MaxGiants = 0, .MeleeCount = 2, .LootCost = 0, _
-               .excludeConsumableItems = True, .excludeJewelItems = True}
+               .IGen = New AllDataStructues.ItemGenSettings With {.excludeConsumableItems = True, .excludeJewelItems = True}}
             }
         expected(0).Race.AddRange(New Integer() {2})
         expected(1).Race.AddRange(New Integer() {2, 9})
@@ -103,9 +104,9 @@ Public Class CommonTest
                 If Not expected(i).MaxGiants = actual(i).MaxGiants Then ok = False
                 If Not expected(i).MeleeCount = actual(i).MeleeCount Then ok = False
                 If Not expected(i).StackSize = actual(i).StackSize Then ok = False
-                If Not expected(i).excludeConsumableItems = actual(i).excludeConsumableItems Then ok = False
-                If Not expected(i).excludeNonconsumableItems = actual(i).excludeNonconsumableItems Then ok = False
-                If Not expected(i).excludeJewelItems = actual(i).excludeJewelItems Then ok = False
+                If Not expected(i).IGen.excludeConsumableItems = actual(i).IGen.excludeConsumableItems Then ok = False
+                If Not expected(i).IGen.excludeNonconsumableItems = actual(i).IGen.excludeNonconsumableItems Then ok = False
+                If Not expected(i).IGen.excludeJewelItems = actual(i).IGen.excludeJewelItems Then ok = False
                 If Not expected(i).isInternalCityGuard = actual(i).isInternalCityGuard Then ok = False
                 If expected(i).Race.Count = actual(i).Race.Count Then
                     For Each item As Integer In expected(i).Race

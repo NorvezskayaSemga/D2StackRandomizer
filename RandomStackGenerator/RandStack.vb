@@ -261,7 +261,27 @@ Public Class RandStack
         If result.StackSize > 0 Then result.ExpBarAverage = CInt(result.ExpBarAverage / result.StackSize)
         result.LootCost = LootCost(stack.items).Gold + LootCost(stack.items).Black + LootCost(stack.items).Blue + _
                           +LootCost(stack.items).Green + LootCost(stack.items).Red + LootCost(stack.items).White
+        result.IGen = GetItemsGenSettings(stack.items)
         Return result
+    End Function
+    ''' <summary>Определит настройки генерации новых предметов</summary>
+    ''' <param name="items">Список предметов объекта</param>
+    Public Function GetItemsGenSettings(ByRef items As List(Of String)) As AllDataStructues.ItemGenSettings
+        Dim result As New AllDataStructues.ItemGenSettings With { _
+            .excludeConsumableItems = True, _
+            .excludeJewelItems = True, _
+            .excludeNonconsumableItems = True}
+        Dim type As Integer
+        For Each item As String In items
+            type = FindItemStats(item).type
+            If comm.ConsumableItemsTypes.Contains(type) Then
+                result.excludeConsumableItems = False
+            ElseIf comm.NonconsumableItemsTypes.Contains(type) Then
+                result.excludeNonconsumableItems = False
+            ElseIf comm.JewelItemsTypes.Contains(type) Then
+                result.excludeJewelItems = False
+            End If
+        Next item
     End Function
 
     Private Function ItemTypeCostModify(ByRef item As AllDataStructues.Item) As AllDataStructues.Cost
@@ -356,18 +376,14 @@ Public Class RandStack
 
     ''' <summary>Генерирует набор предметов. В принципе может вернуть пустой список</summary>
     ''' <param name="GoldCost">Максимальная стоимость набора в золоте. Драгоценности считаются дешевле в два раза</param>
-    ''' <param name="excludeConsumableItems">Не генерировать зелья, сферы, талисманы и свитки</param>
-    ''' <param name="excludeNonconsumableItems">Не генерировать надеваемые предметы и посохи</param>
-    ''' <param name="excludeJewelItems">Не генерировать драгоценности</param>
+    ''' <param name="IGen">Настройки генерации предметов</param>
     Public Function ItemsGen(ByVal GoldCost As Integer, _
-                             ByVal excludeConsumableItems As Boolean, _
-                             ByVal excludeNonconsumableItems As Boolean, _
-                             ByVal excludeJewelItems As Boolean) As List(Of String)
+                             ByVal IGen As AllDataStructues.ItemGenSettings) As List(Of String)
         Call log.Add("----Loot creation started----")
         Call log.Add("Gold sum: " & GoldCost & _
-                     " exCons: " & excludeConsumableItems & _
-                     " exNoncons: " & excludeNonconsumableItems & _
-                     " exJewels: " & excludeJewelItems)
+                     " exCons: " & IGen.excludeConsumableItems & _
+                     " exNoncons: " & IGen.excludeNonconsumableItems & _
+                     " exJewels: " & IGen.excludeJewelItems)
 
         Dim costBar, maxCost, selected As Integer
         Dim DynCost As Integer = GoldCost
@@ -382,9 +398,9 @@ Public Class RandStack
             For i As Integer = 0 To UBound(MagicItem) Step 1
                 add = False
                 If ItemGoldCost(i) <= maxCost Then add = True
-                If excludeConsumableItems And comm.ConsumableItemsTypes.Contains(MagicItem(i).type) Then add = False
-                If excludeNonconsumableItems And comm.NonconsumableItemsTypes.Contains(MagicItem(i).type) Then add = False
-                If excludeJewelItems And comm.JewelItemsTypes.Contains(MagicItem(i).type) Then add = False
+                If IGen.excludeConsumableItems And comm.ConsumableItemsTypes.Contains(MagicItem(i).type) Then add = False
+                If IGen.excludeNonconsumableItems And comm.NonconsumableItemsTypes.Contains(MagicItem(i).type) Then add = False
+                If IGen.excludeJewelItems And comm.JewelItemsTypes.Contains(MagicItem(i).type) Then add = False
                 If add Then IDs.Add(i)
             Next i
             If IDs.Count = 0 Then Exit Do
@@ -401,16 +417,12 @@ Public Class RandStack
     End Function
     ''' <summary>Генерирует набор предметов. В принципе может вернуть пустой список</summary>
     ''' <param name="GoldCost">Максимальная стоимость набора в золоте. Драгоценности считаются дешевле в два раза</param>
-    ''' <param name="excludeConsumableItems">Не генерировать зелья, сферы, талисманы и свитки</param>
-    ''' <param name="excludeNonconsumableItems">Не генерировать надеваемые предметы и посохи</param>
-    ''' <param name="excludeJewelItems">Не генерировать драгоценности</param>
+    ''' <param name="IGen">Настройки генерации предметов</param>
     ''' <param name="LootCostMultiplier">Множитель стоимости предметов</param>
     Public Function ItemsGen(ByVal GoldCost As Integer, _
-                             ByVal excludeConsumableItems As Boolean, _
-                             ByVal excludeNonconsumableItems As Boolean, _
-                             ByVal excludeJewelItems As Boolean, _
+                             ByRef IGen As AllDataStructues.ItemGenSettings, _
                              ByVal LootCostMultiplier As Double) As List(Of String)
-        Return ItemsGen(CInt(GoldCost * LootCostMultiplier), excludeConsumableItems, excludeNonconsumableItems, excludeJewelItems)
+        Return ItemsGen(CInt(GoldCost * LootCostMultiplier), igen)
     End Function
     Private Function CostBarGen(ByRef minBar As Integer, ByRef maxBar As Integer) As Integer
         'Return CInt(rndgen.Rand(CDbl(minBar), CDbl(maxBar), serialExecution))
@@ -426,19 +438,15 @@ Public Class RandStack
     End Function
     ''' <summary>Генерирует один предмет. Если не получится выбрать подходящий предмет, вернет пустую строку</summary>
     ''' <param name="GoldCost">Максимальная стоимость предмета в золоте. Драгоценности считаются дешевле в два раза</param>
-    ''' <param name="excludeConsumableItems">Не генерировать зелья, сферы, талисманы и свитки</param>
-    ''' <param name="excludeNonconsumableItems">Не генерировать надеваемые предметы и посохи</param>
-    ''' <param name="excludeJewelItems">Не генерировать драгоценности</param>
+    ''' <param name="IGen">Настройки генерации предметов</param>
     Public Function ThingGen(ByVal GoldCost As Integer, _
-                             ByVal excludeConsumableItems As Boolean, _
-                             ByVal excludeNonconsumableItems As Boolean, _
-                             ByVal excludeJewelItems As Boolean) As String
+                             ByRef IGen As AllDataStructues.ItemGenSettings) As String
 
         Call log.Add("----Single item creation started----")
         Call log.Add("Max cost: " & GoldCost & _
-                     " exCons: " & excludeConsumableItems & _
-                     " exNoncons: " & excludeNonconsumableItems & _
-                     " exJewels: " & excludeJewelItems)
+                     " exCons: " & IGen.excludeConsumableItems & _
+                     " exNoncons: " & IGen.excludeNonconsumableItems & _
+                     " exJewels: " & IGen.excludeJewelItems)
 
         Dim selected As Integer
         Dim IDs As New List(Of Integer)
@@ -449,9 +457,9 @@ Public Class RandStack
         For i As Integer = 0 To UBound(MagicItem) Step 1
             add = False
             If ItemGoldCost(i) <= GoldCost Then add = True
-            If excludeConsumableItems And comm.ConsumableItemsTypes.Contains(MagicItem(i).type) Then add = False
-            If excludeNonconsumableItems And comm.NonconsumableItemsTypes.Contains(MagicItem(i).type) Then add = False
-            If excludeJewelItems And comm.JewelItemsTypes.Contains(MagicItem(i).type) Then add = False
+            If IGen.excludeConsumableItems And comm.ConsumableItemsTypes.Contains(MagicItem(i).type) Then add = False
+            If IGen.excludeNonconsumableItems And comm.NonconsumableItemsTypes.Contains(MagicItem(i).type) Then add = False
+            If IGen.excludeJewelItems And comm.JewelItemsTypes.Contains(MagicItem(i).type) Then add = False
             If add Then IDs.Add(i)
         Next i
         If IDs.Count > 0 Then
@@ -466,16 +474,12 @@ Public Class RandStack
     End Function
     ''' <summary>Генерирует один предмет. Если не получится выбрать подходящий предмет, вернет пустую строку</summary>
     ''' <param name="GoldCost">Максимальная стоимость предмета в золоте. Драгоценности считаются дешевле в два раза</param>
-    ''' <param name="excludeConsumableItems">Не генерировать зелья, сферы, талисманы и свитки</param>
-    ''' <param name="excludeNonconsumableItems">Не генерировать надеваемые предметы и посохи</param>
-    ''' <param name="excludeJewelItems">Не генерировать драгоценности</param>
+    ''' <param name="IGen">Настройки генерации предметов</param>
     ''' <param name="LootCostMultiplier">Множитель стоимости предметов</param>
     Public Function ThingGen(ByVal GoldCost As Integer, _
-                             ByVal excludeConsumableItems As Boolean, _
-                             ByVal excludeNonconsumableItems As Boolean, _
-                             ByVal excludeJewelItems As Boolean, _
+                             ByRef IGen As AllDataStructues.ItemGenSettings, _
                              ByVal LootCostMultiplier As Double) As String
-        Return ThingGen(CInt(GoldCost * LootCostMultiplier), excludeConsumableItems, excludeNonconsumableItems, excludeJewelItems)
+        Return ThingGen(CInt(GoldCost * LootCostMultiplier), IGen)
     End Function
 
     ''' <summary>Затычка: вернет отряд из двух сквайров и трех лучников. Лидер - паладин. С зельем воскрешения</summary>
@@ -678,7 +682,7 @@ Public Class RandStack
         For i As Integer = 0 To UBound(result.pos) Step 1
             If result.pos(i) = "" Then result.pos(i) = emptyItem
         Next i
-        result.items = ItemsGen(DynStackStats.LootCost, DynStackStats.excludeConsumableItems, DynStackStats.excludeNonconsumableItems, DynStackStats.excludeJewelItems)
+        result.items = ItemsGen(DynStackStats.LootCost, DynStackStats.IGen)
 
         Call log.Add("----Stack creation ended----")
 
@@ -688,21 +692,16 @@ Public Class RandStack
     ''' <param name="ExpStackKilled">Примерный опыт за убийство стэка</param>
     ''' <param name="LootCost">Стоимость лута (предметы со стоимостью в золоте, равной нулю, не добавляются). При расчете стоимость драгоценностей уменьшается в два раза</param>
     ''' <param name="Races">Допустимые расы юнитов в отряде</param>
-    ''' <param name="excludeConsumableItems">Не генерировать зелья, сферы, талисманы и свитки</param>
-    ''' <param name="excludeNonconsumableItems">Не генерировать надеваемые предметы и посохи</param>
-    ''' <param name="excludeJewelItems">Не генерировать драгоценности</param>
+    ''' <param name="IGen">Настройки генерации предметов</param>
     ''' <param name="deltaLeadership">Изменение лидерства за счет модификаторов</param>
     ''' <param name="GroundTile">True, если на клетку нельзя ставить водных лидеров. Водной считается клетка с водой, окруженная со всех сторон клетками с водой</param>
     ''' <param name="NoLeader">True, если стэк находится внутри руин или города</param>
     Public Function Gen(ByVal ExpStackKilled As Integer, ByVal LootCost As Double, ByRef Races As List(Of Integer), _
-                        ByVal excludeConsumableItems As Boolean, ByVal excludeNonconsumableItems As Boolean, _
-                        ByVal excludeJewelItems As Boolean, ByVal deltaLeadership As Integer, _
+                        ByRef IGen As AllDataStructues.ItemGenSettings, ByVal deltaLeadership As Integer, _
                         ByVal GroundTile As Boolean, ByVal NoLeader As Boolean) As AllDataStructues.Stack
         Dim StackStat As AllDataStructues.DesiredStats = StackStatsGen.GenDesiredStats(CDbl(ExpStackKilled), LootCost, rndgen, valConv)
         StackStat.Race = Races
-        StackStat.excludeConsumableItems = excludeConsumableItems
-        StackStat.excludeNonconsumableItems = excludeNonconsumableItems
-        StackStat.excludeJewelItems = excludeJewelItems
+        StackStat.IGen = IGen
         Return Gen(StackStat, deltaLeadership, GroundTile, NoLeader)
     End Function
     ''' <summary>Создаст отряд  в соответствие с желаемыми параметрами. Не нужно пытаться создать отряд водных жителей на земле</summary>
@@ -725,22 +724,19 @@ Public Class RandStack
     ''' <param name="ExpStackKilled">Примерный опыт за убийство стэка</param>
     ''' <param name="LootCost">Стоимость лута (предметы со стоимостью в золоте, равной нулю, не добавляются). При расчете стоимость драгоценностей уменьшается в два раза</param>
     ''' <param name="Races">Допустимые расы юнитов в отряде</param>
-    ''' <param name="excludeConsumableItems">Не генерировать зелья, сферы, талисманы и свитки</param>
-    ''' <param name="excludeNonconsumableItems">Не генерировать надеваемые предметы и посохи</param>
-    ''' <param name="excludeJewelItems">Не генерировать драгоценности</param>
+    ''' <param name="IGen">Настройки генерации предметов</param>
     ''' <param name="deltaLeadership">Изменение лидерства за счет модификаторов</param>
     ''' <param name="GroundTile">True, если на клетку нельзя ставить водных лидеров. Водной считается клетка с водой, окруженная со всех сторон клетками с водой</param>
     ''' <param name="NoLeader">True, если стэк находится внутри руин или города</param>
     ''' <param name="StackStrengthMultiplier">Множитель силы отряда: изменяем опыт за убийство и среднюю планку опыта</param>
     ''' <param name="LootCostMultiplier">Множитель стоимости предметов</param>
     Public Function Gen(ByVal ExpStackKilled As Integer, ByVal LootCost As Double, ByRef Races As List(Of Integer), _
-                        ByVal excludeConsumableItems As Boolean, ByVal excludeNonconsumableItems As Boolean, _
-                        ByVal excludeJewelItems As Boolean, ByVal deltaLeadership As Integer, _
+                        ByRef IGen As AllDataStructues.ItemGenSettings, ByVal deltaLeadership As Integer, _
                         ByVal GroundTile As Boolean, ByVal NoLeader As Boolean, _
                         ByVal StackStrengthMultiplier As Double, ByVal LootCostMultiplier As Double) As AllDataStructues.Stack
         Dim esk As Integer = Math.Max(CInt(ExpStackKilled * StackStrengthMultiplier), 5)
         Dim lc As Double = LootCost * LootCostMultiplier
-        Return Gen(esk, lc, Races, excludeConsumableItems, excludeNonconsumableItems, excludeJewelItems, deltaLeadership, GroundTile, NoLeader)
+        Return Gen(esk, lc, Races, igen, deltaLeadership, GroundTile, NoLeader)
     End Function
     Private Function SelectPossibleLeader(ByRef leaderID As Integer, ByRef Tolerance As Double, _
                                           ByRef StackStats As AllDataStructues.DesiredStats, ByRef GroundTile As Boolean) As Boolean
@@ -1111,6 +1107,8 @@ Public Class Common
     End Sub
 
     ''' <summary>Передаст в лог содержимое excludedObjects, customRace, objectRace, LootItemChanceMultiplier, SoleUnits</summary>
+    ''' <param name="log">Сюда будем писать данные</param>
+    ''' <param name="rStack">Инициализированный класс</param>
     Public Sub PrintResourcesToLog(ByRef log As Log, ByRef rStack As RandStack)
         If Not log.IsEnabled Then Exit Sub
 
@@ -1224,11 +1222,11 @@ Public Class Common
                         ElseIf k = 7 Then
                             result(i).LootCost = Math.Max(ReadIntField(s(f + 1), txt(i), s(f)), 0) 'LootCost
                         ElseIf k = 8 Then
-                            result(i).excludeConsumableItems = ReadBoolField(s(f + 1)) 'CItemsExclude
+                            result(i).IGen.excludeConsumableItems = ReadBoolField(s(f + 1)) 'CItemsExclude
                         ElseIf k = 9 Then
-                            result(i).excludeNonconsumableItems = ReadBoolField(s(f + 1)) 'NItensExclude
+                            result(i).IGen.excludeNonconsumableItems = ReadBoolField(s(f + 1)) 'NItensExclude
                         ElseIf k = 10 Then
-                            result(i).excludeJewelItems = ReadBoolField(s(f + 1)) 'JItensExclude
+                            result(i).IGen.excludeJewelItems = ReadBoolField(s(f + 1)) 'JItensExclude
                         ElseIf k = 11 Then
                             r = s(f + 1).Split(CChar("+")) 'ShopContent
                             result(i).shopContent = New List(Of String)
@@ -1701,14 +1699,10 @@ Public Class AllDataStructues
         Dim MeleeCount As Integer
         ''' <summary>Стоимость лута (предметы со стоимостью в золоте, равной нулю, не добавляются). При расчете стоимость драгоценностей уменьшается в два раза</summary>
         Dim LootCost As Integer
-        ''' <summary> Идентификатор локации, для которой сгенерирован отряд</summary>
+        ''' <summary>Идентификатор локации, для которой сгенерирован отряд</summary>
         Dim LocationName As String
-        ''' <summary>Не генерировать зелья, сферы, талисманы и свитки</summary>
-        Dim excludeConsumableItems As Boolean
-        ''' <summary>Не генерировать надеваемые предметы и посохи</summary>
-        Dim excludeNonconsumableItems As Boolean
-        ''' <summary>Не генерировать драгоценности</summary>
-        Dim excludeJewelItems As Boolean
+        ''' <summary>Настройки генерации предметов</summary>
+        Dim IGen As ItemGenSettings
 
         ''' <summary>Не nothing только для торговцев предметами и магией, а также лагеря наемников</summary>
         Dim shopContent As List(Of String)
@@ -1739,9 +1733,7 @@ Public Class AllDataStructues
                                           .StackSize = v.StackSize, _
                                           .LootCost = v.LootCost, _
                                           .LocationName = v.LocationName, _
-                                          .excludeConsumableItems = v.excludeConsumableItems, _
-                                          .excludeNonconsumableItems = v.excludeNonconsumableItems, _
-                                          .excludeJewelItems = v.excludeJewelItems, _
+                                          .IGen = AllDataStructues.ItemGenSettings.copy(v.IGen), _
                                           .shopContent = shopContentList, _
                                           .isInternalCityGuard = v.isInternalCityGuard}
         End Function
@@ -1772,9 +1764,7 @@ Public Class AllDataStructues
                 If Not shortOut Then
                     s &= "LootCost" & vbTab & v.LootCost & vbNewLine & _
                          "IsInternalCityGuard" & vbTab & v.isInternalCityGuard & vbNewLine & _
-                         "CItemsExclude" & vbTab & v.excludeConsumableItems & vbNewLine & _
-                         "NItemsExclude" & vbTab & v.excludeNonconsumableItems & vbNewLine & _
-                         "JItemsExclude" & vbTab & v.excludeJewelItems & vbNewLine
+                         AllDataStructues.ItemGenSettings.print(v.IGen) & vbNewLine
                     s = "ID" & vbTab & v.LocationName & vbNewLine & s
                 End If
             Else
@@ -2025,6 +2015,26 @@ Public Class AllDataStructues
         Dim category As Integer
         ''' <summary>Площадь действия заклинания</summary>
         Dim area As Integer
+    End Structure
+
+    Public Structure ItemGenSettings
+        ''' <summary>Не генерировать зелья, сферы, талисманы и свитки</summary>
+        Dim excludeConsumableItems As Boolean
+        ''' <summary>Не генерировать надеваемые предметы и посохи</summary>
+        Dim excludeNonconsumableItems As Boolean
+        ''' <summary>Не генерировать драгоценности</summary>
+        Dim excludeJewelItems As Boolean
+
+        Public Shared Function Copy(ByVal v As ItemGenSettings) As ItemGenSettings
+            Return New ItemGenSettings With {.excludeConsumableItems = v.excludeConsumableItems, _
+                                             .excludeNonconsumableItems = v.excludeNonconsumableItems, _
+                                             .excludeJewelItems = v.excludeJewelItems}
+        End Function
+        Public Shared Function Print(ByVal v As ItemGenSettings) As String
+            Return "CItemsExclude" & vbTab & v.excludeConsumableItems & vbNewLine & _
+                   "NItemsExclude" & vbTab & v.excludeNonconsumableItems & vbNewLine & _
+                   "JItemsExclude" & vbTab & v.excludeJewelItems
+        End Function
     End Structure
 
 End Class

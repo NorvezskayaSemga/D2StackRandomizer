@@ -294,9 +294,7 @@ Class StackStatsGen
                                                        .LootCost = CInt(LootCost), _
                                                        .LocationName = "Loc_" & groupID, _
                                                        .ExpBarAverage = Math.Max(eBar, 50), _
-                                                       .excludeNonconsumableItems = False, _
-                                                       .excludeConsumableItems = False, _
-                                                       .excludeJewelItems = False}
+                                                       .IGen = New AllDataStructues.ItemGenSettings}
     End Function
 
 End Class
