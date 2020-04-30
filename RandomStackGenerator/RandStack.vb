@@ -542,20 +542,20 @@ Public Class RandStack
                 End If
             End If
 
-            Dim maxExpBar As Double = Math.Max(10000, 2 * DynStackStats.ExpBarAverage)
+            'Dim maxExpBar As Double = Math.Max(10000, 2 * DynStackStats.ExpBarAverage)
             Dim maxExpStrackKilled As Double = Math.Max(10000, 2 * DynStackStats.ExpStackKilled)
 
             'создаем список лидеров, которых вообще можем использовать
             Dim Tolerance As Double = 0.02 * (DynStackStats.StackSize - 1)
             Do While PossibleLeaders.Count < 3
                 PossibleLeaders.Clear()
-                Tolerance += 0.2
                 For i As Integer = 0 To UBound(AllLeaders) Step 1
                     If SelectPossibleLeader(i, Tolerance, DynStackStats, GroundTile) Then PossibleLeaders.Add(i)
                 Next i
                 If Tolerance > 2 And PossibleLeaders.Count > 0 Then Exit Do
 
-                If Tolerance * DynStackStats.ExpBarAverage > maxExpBar And Tolerance * DynStackStats.ExpStackKilled > maxExpStrackKilled Then
+                'If Tolerance * DynStackStats.ExpBarAverage > maxExpBar And Tolerance * DynStackStats.ExpStackKilled > maxExpStrackKilled Then
+                If Tolerance * DynStackStats.ExpStackKilled > maxExpStrackKilled Then
                     If DynStackStats.MaxGiants < 1 Then
                         DynStackStats.MaxGiants = 1
                         Tolerance = 0.02 * (DynStackStats.StackSize - 1)
@@ -567,6 +567,7 @@ Public Class RandStack
                                             "DynStackStats:" & vbNewLine & AllDataStructues.DesiredStats.Print(DynStackStats, comm.RaceNumberToRaceChar))
                     End If
                 End If
+                Tolerance += 0.2
             Loop
 
             Call log.Add(AddressOf PrintSelectionList, AllLeaders, PossibleLeaders)
@@ -744,14 +745,14 @@ Public Class RandStack
         If Not StackStats.Race.Contains(AllLeaders(leaderID).race) Then Return False
         If Not AllLeaders(leaderID).small And StackStats.MaxGiants = 0 Then Return False
         If AllLeaders(leaderID).waterOnly And GroundTile Then Return False
-        Dim mult As Double
-        If AllLeaders(leaderID).small Then
-            mult = 1
-        Else
-            mult = 2
-        End If
-        If Math.Abs(AllLeaders(leaderID).EXPnext - mult * StackStats.ExpBarAverage) _
-            > mult * Tolerance * StackStats.ExpBarAverage Then Return False
+        'Dim mult As Double
+        'If AllLeaders(leaderID).small Then
+        '    mult = 1
+        'Else
+        '    mult = 2
+        'End If
+        'If Math.Abs(AllLeaders(leaderID).EXPnext - mult * StackStats.ExpBarAverage) _
+        '    > mult * Tolerance * StackStats.ExpBarAverage Then Return False
         If AllLeaders(leaderID).EXPkilled > (1 + Tolerance) * StackStats.ExpStackKilled Then Return False
         Return True
     End Function
@@ -811,7 +812,7 @@ Public Class RandStack
         'End If
         'If AllFighters(fighterID).EXPkilled > mult * DynStackStats.ExpStackKilled / DynStackStats.StackSize Then Return False
         If DynStackStats.ExpStackKilled <= 0 Then Return False
-        If AllFighters(fighterID).EXPkilled > 1.1 * DynStackStats.ExpStackKilled + 10 Then Return False
+        If AllFighters(fighterID).EXPkilled > 1.15 * DynStackStats.ExpStackKilled + 15 Then Return False
         If Not AllFighters(fighterID).small Then
             If DynStackStats.MaxGiants = 0 And Not skipMaxGiantsFilter Then Return False
             If DynStackStats.StackSize < 2 Then Return False
