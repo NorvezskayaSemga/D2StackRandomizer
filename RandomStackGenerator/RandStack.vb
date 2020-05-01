@@ -12,7 +12,6 @@ Public Class RandStack
 
     Private AllLeaders(), AllFighters(), ExcludedUnits() As AllDataStructues.Unit
     Private MagicItem(), ExcludedItems() As AllDataStructues.Item
-    Public serialExecution As Boolean
     Public rndgen As RndValueGen
     Public comm As New Common
     Private valConv As New ValueConverter
@@ -22,6 +21,7 @@ Public Class RandStack
     Private minItemGoldCost As Integer
     Protected Friend itemType As New Dictionary(Of Integer, String)
 
+    ''' <summary>Сюда генератор пишет лог</summary>
     Public log As Log
 
     ''' <param name="AllUnitsList">Dсе юниты в игре</param>
@@ -39,11 +39,9 @@ Public Class RandStack
     ''' <param name="SoleUnitsList">Файлы со списками юнитов, которые должны находиться в отряде в единственном экземпляре. Записи в них могут повторяться, но записи с повторяющимся ID будут перезаписываться. 
     ''' Допускается передача неинициализитрованного массива.
     ''' Для чтения из дефолтного листа в массив нужно добавить строчку %default% (наличие этого ключевого в файле запустит чтение дефолтного файла)</param>
-    ''' <param name="serial">True, если код, использующий генератор выполняется в одном потоке</param>
     Public Sub New(ByRef AllUnitsList() As AllDataStructues.Unit, ByRef AllItemsList() As AllDataStructues.Item, _
                    ByRef ExcludeLists() As String, ByRef LootChanceMultiplierLists() As String, ByRef CustomUnitRace() As String, _
-                   ByRef SoleUnitsList() As String, ByRef serial As Boolean)
-        serialExecution = serial
+                   ByRef SoleUnitsList() As String)
         rndgen = comm.rndgen
         log = New Log(comm)
         If IsNothing(AllUnitsList) Or IsNothing(AllItemsList) Then Exit Sub
@@ -259,14 +257,17 @@ Public Class RandStack
             End If
         Next i
         If result.StackSize > 0 Then result.ExpBarAverage = CInt(result.ExpBarAverage / result.StackSize)
-        result.LootCost = LootCost(stack.items).Gold + LootCost(stack.items).Black + LootCost(stack.items).Blue + _
-                          +LootCost(stack.items).Green + LootCost(stack.items).Red + LootCost(stack.items).White
+
+        Dim LCost As AllDataStructues.Cost = LootCost(stack.items)
+        result.LootCost = LCost.Gold + LCost.Black + LCost.Blue + LCost.Green + LCost.Red + LCost.White
         result.IGen = GetItemsGenSettings(stack.items)
+
         Return result
     End Function
     ''' <summary>Определит настройки генерации новых предметов</summary>
     ''' <param name="items">Список предметов объекта</param>
     Public Function GetItemsGenSettings(ByRef items As List(Of String)) As AllDataStructues.LootGenSettings
+        If IsNothing(items) Then Return New AllDataStructues.LootGenSettings
         Dim result As New AllDataStructues.LootGenSettings With { _
             .excludeConsumableItems = True, _
             .excludeJewelItems = True, _
@@ -296,6 +297,7 @@ Public Class RandStack
     ''' <param name="items">Список предметов</param>
     Public Function LootCost(ByRef items As List(Of AllDataStructues.Item)) As AllDataStructues.Cost
         Dim result As AllDataStructues.Cost
+        If IsNothing(items) Then Return result
         For Each Item As AllDataStructues.Item In items
             result += LootCost(Item)
         Next Item
@@ -305,6 +307,7 @@ Public Class RandStack
     ''' <param name="items">Список предметов</param>
     Public Function LootCost(ByRef items() As AllDataStructues.Item) As AllDataStructues.Cost
         Dim result As AllDataStructues.Cost
+        If IsNothing(items) Then Return result
         For Each Item As AllDataStructues.Item In items
             result += LootCost(Item)
         Next Item
@@ -314,6 +317,7 @@ Public Class RandStack
     ''' <param name="items">Список предметов</param>
     Public Function LootCost(ByRef items As List(Of String)) As AllDataStructues.Cost
         Dim result As AllDataStructues.Cost
+        If IsNothing(items) Then Return result
         For Each Item As String In items
             result += LootCost(Item)
         Next Item
@@ -323,6 +327,7 @@ Public Class RandStack
     ''' <param name="items">Список предметов</param>
     Public Function LootCost(ByRef items() As String) As AllDataStructues.Cost
         Dim result As AllDataStructues.Cost
+        If IsNothing(items) Then Return result
         For Each Item As String In items
             result += LootCost(Item)
         Next Item
@@ -349,7 +354,7 @@ Public Class RandStack
     Public Function GoldToMana(ByRef input As AllDataStructues.Cost, ByVal conversionChance As Double, _
                                ByVal conversionAmount As Double, ByRef outputMana As List(Of Integer)) As AllDataStructues.Cost
         Dim output As AllDataStructues.Cost = AllDataStructues.Cost.Copy(input)
-        If conversionChance > 0 AndAlso outputMana.Count > 0 AndAlso rndgen.Rand(0, 1, serialExecution) <= conversionChance Then
+        If conversionChance > 0 AndAlso outputMana.Count > 0 AndAlso rndgen.Rand(0, 1, True) <= conversionChance Then
             Dim dAmount As Integer = 50
             Dim amount As Integer = 0
             Do While (amount + dAmount) * outputMana.Count <= Math.Floor(input.Gold * Math.Min(conversionAmount, 1))
@@ -375,26 +380,56 @@ Public Class RandStack
         Return output
     End Function
 
+    Private Sub AddToLog(ByRef LogID As Integer, ByRef Msg As String)
+        If LogID > -1 Then
+            Call log.MAdd(LogID, Msg)
+        Else
+            Call log.Add(Msg)
+        End If
+    End Sub
+    Private Sub AddToLog(ByRef LogID As Integer, ByRef IGen As AllDataStructues.LootGenSettings)
+        If LogID > -1 Then
+            Call log.MAdd(LogID, IGen)
+        Else
+            Call log.Add(IGen)
+        End If
+    End Sub
+    Private Sub AddToLog(ByRef LogID As Integer, ByRef DesiredStats As AllDataStructues.DesiredStats, ByRef shortOut As Boolean)
+        If LogID > -1 Then
+            Call log.MAdd(LogID, DesiredStats, shortOut)
+        Else
+            Call log.Add(DesiredStats, shortOut)
+        End If
+    End Sub
+    Public Sub AddToLog(ByVal LogID As Integer, ByRef contString As Log.printSelectionList, ByVal v() As AllDataStructues.Unit, ByRef i As List(Of Integer))
+        If LogID > -1 Then
+            Call log.MAdd(LogID, contString, v, i)
+        Else
+            Call log.Add(contString, v, i)
+        End If
+    End Sub
+
     ''' <summary>Генерирует набор предметов. В принципе может вернуть пустой список</summary>
     ''' <param name="GoldCost">Максимальная стоимость набора в золоте. Драгоценности считаются дешевле в два раза</param>
     ''' <param name="IGen">Настройки генерации предметов</param>
+    ''' <param name="LogID">Номер задачи. От 0 до Size-1. Если меньше 0, запись будет сделана в общий лог</param>
     Public Function ItemsGen(ByVal GoldCost As Integer, _
-                             ByVal IGen As AllDataStructues.LootGenSettings) As List(Of String)
-        Call log.Add("----Loot creation started----")
-        Call log.Add("Gold sum: " & GoldCost & _
-                     " exCons: " & IGen.excludeConsumableItems & _
-                     " exNoncons: " & IGen.excludeNonconsumableItems & _
-                     " exJewels: " & IGen.excludeJewelItems)
+                             ByVal IGen As AllDataStructues.LootGenSettings, _
+                             Optional ByVal LogID As Integer = -1) As List(Of String)
+        Call AddToLog(LogID, "----Loot creation started----" & vbNewLine & _
+                             "Gold sum: " & GoldCost)
+        Call AddToLog(LogID, IGen)
 
+        Dim serialExecution As Boolean = (LogID < 0)
         Dim costBar, maxCost, selected As Integer
         Dim DynCost As Integer = GoldCost
         Dim IDs As New List(Of Integer)
         Dim result As New List(Of String)
         Dim add As Boolean
         Do While DynCost >= minItemGoldCost
-            costBar = CostBarGen(minItemGoldCost, DynCost)
+            costBar = CostBarGen(minItemGoldCost, DynCost, serialExecution)
             maxCost = Math.Min(2 * costBar, DynCost)
-            Call log.Add("Max cost bar:" & DynCost & " Selected cost bar:" & costBar & " max item cost:" & maxCost)
+            Call AddToLog(LogID, "Max cost bar:" & DynCost & " Selected cost bar:" & costBar & " max item cost:" & maxCost)
             IDs.Clear()
             For i As Integer = 0 To UBound(MagicItem) Step 1
                 add = False
@@ -407,12 +442,12 @@ Public Class RandStack
             If IDs.Count = 0 Then Exit Do
             selected = comm.RandomSelection(IDs, New Double()() {ItemGoldCost}, New Double() {costBar}, _
                                             multItems, multiItemGenSigmaMultiplier * itemGenSigma, serialExecution)
-            Call log.Add("Selected item:" & MagicItem(selected).name & " id:" & MagicItem(selected).itemID & " gold cost:" & ItemGoldCost(selected))
+            Call AddToLog(LogID, "Selected item:" & MagicItem(selected).name & " id:" & MagicItem(selected).itemID & " gold cost:" & ItemGoldCost(selected))
             result.Add(MagicItem(selected).itemID)
             DynCost = CInt(DynCost - ItemGoldCost(selected))
         Loop
 
-        Call log.Add("----Loot creation ended----")
+        Call AddToLog(LogID, "----Loot creation ended----")
 
         Return result
     End Function
@@ -420,12 +455,14 @@ Public Class RandStack
     ''' <param name="GoldCost">Максимальная стоимость набора в золоте. Драгоценности считаются дешевле в два раза</param>
     ''' <param name="IGen">Настройки генерации предметов</param>
     ''' <param name="LootCostMultiplier">Множитель стоимости предметов</param>
+    ''' <param name="LogID">Номер задачи. От 0 до Size-1. Если меньше 0, запись будет сделана в общий лог</param>
     Public Function ItemsGen(ByVal GoldCost As Integer, _
                              ByRef IGen As AllDataStructues.LootGenSettings, _
-                             ByVal LootCostMultiplier As Double) As List(Of String)
-        Return ItemsGen(CInt(GoldCost * LootCostMultiplier), igen)
+                             ByVal LootCostMultiplier As Double, _
+                             Optional ByVal LogID As Integer = -1) As List(Of String)
+        Return ItemsGen(CInt(GoldCost * LootCostMultiplier), IGen, LogID)
     End Function
-    Private Function CostBarGen(ByRef minBar As Integer, ByRef maxBar As Integer) As Integer
+    Private Function CostBarGen(ByRef minBar As Integer, ByRef maxBar As Integer, ByRef serialExecution As Boolean) As Integer
         'Return CInt(rndgen.Rand(CDbl(minBar), CDbl(maxBar), serialExecution))
         Dim R As Double = rndgen.Rand(0, 1, serialExecution)
         Dim G As Double = 3
@@ -440,15 +477,16 @@ Public Class RandStack
     ''' <summary>Генерирует один предмет. Если не получится выбрать подходящий предмет, вернет пустую строку</summary>
     ''' <param name="GoldCost">Максимальная стоимость предмета в золоте. Драгоценности считаются дешевле в два раза</param>
     ''' <param name="IGen">Настройки генерации предметов</param>
+    ''' <param name="LogID">Номер задачи. От 0 до Size-1. Если меньше 0, запись будет сделана в общий лог</param>
     Public Function ThingGen(ByVal GoldCost As Integer, _
-                             ByRef IGen As AllDataStructues.LootGenSettings) As String
+                             ByRef IGen As AllDataStructues.LootGenSettings, _
+                             Optional ByVal LogID As Integer = -1) As String
 
-        Call log.Add("----Single item creation started----")
-        Call log.Add("Max cost: " & GoldCost & _
-                     " exCons: " & IGen.excludeConsumableItems & _
-                     " exNoncons: " & IGen.excludeNonconsumableItems & _
-                     " exJewels: " & IGen.excludeJewelItems)
+        Call AddToLog(LogID, "----Single item creation started----" & vbNewLine & _
+                            "Max cost: " & GoldCost)
+        Call AddToLog(LogID, IGen)
 
+        Dim serialExecution As Boolean = (LogID < 0)
         Dim selected As Integer
         Dim IDs As New List(Of Integer)
         Dim result As String = ""
@@ -465,11 +503,11 @@ Public Class RandStack
         Next i
         If IDs.Count > 0 Then
             selected = comm.RandomSelection(IDs, New Double()() {ItemGoldCost}, New Double() {GoldCost}, multItems, itemGenSigma, serialExecution)
-            Call log.Add("Selected item:" & MagicItem(selected).name & " id:" & MagicItem(selected).itemID & " gold cost:" & ItemGoldCost(selected))
+            Call AddToLog(LogID, "Selected item:" & MagicItem(selected).name & " id:" & MagicItem(selected).itemID & " gold cost:" & ItemGoldCost(selected))
             result = MagicItem(selected).itemID
         End If
 
-        Call log.Add("----Single item creation ended----")
+        Call AddToLog(LogID, "----Single item creation ended----")
 
         Return result
     End Function
@@ -477,10 +515,12 @@ Public Class RandStack
     ''' <param name="GoldCost">Максимальная стоимость предмета в золоте. Драгоценности считаются дешевле в два раза</param>
     ''' <param name="IGen">Настройки генерации предметов</param>
     ''' <param name="LootCostMultiplier">Множитель стоимости предметов</param>
+    ''' <param name="LogID">Номер задачи. От 0 до Size-1. Если меньше 0, запись будет сделана в общий лог</param>
     Public Function ThingGen(ByVal GoldCost As Integer, _
                              ByRef IGen As AllDataStructues.LootGenSettings, _
-                             ByVal LootCostMultiplier As Double) As String
-        Return ThingGen(CInt(GoldCost * LootCostMultiplier), IGen)
+                             ByVal LootCostMultiplier As Double, _
+                             Optional ByVal LogID As Integer = -1) As String
+        Return ThingGen(CInt(GoldCost * LootCostMultiplier), IGen, LogID)
     End Function
 
     ''' <summary>Затычка: вернет отряд из двух сквайров и трех лучников. Лидер - паладин. С зельем воскрешения</summary>
@@ -510,7 +550,9 @@ Public Class RandStack
     ''' <param name="deltaLeadership">Изменение лидерства за счет модификаторов</param>
     ''' <param name="GroundTile">True, если на клетку нельзя ставить водных лидеров. Водной считается клетка с водой, окруженная со всех сторон клетками с водой</param>
     ''' <param name="NoLeader">True, если стэк находится внутри руин или города</param>
-    Public Function Gen(ByRef StackStats As AllDataStructues.DesiredStats, ByVal deltaLeadership As Integer, ByVal GroundTile As Boolean, ByVal NoLeader As Boolean) As AllDataStructues.Stack
+    Public Function Gen(ByRef StackStats As AllDataStructues.DesiredStats, _
+                        ByVal deltaLeadership As Integer, ByVal GroundTile As Boolean, _
+                        ByVal NoLeader As Boolean) As AllDataStructues.Stack
 
         If Not IsNothing(StackStats.shopContent) Then Return Nothing
 
@@ -523,167 +565,10 @@ Public Class RandStack
 
         Call log.Add(vbNewLine & "----Stack creation started----")
         Call log.Add("DeltaLeadership: " & deltaLeadership & " GroundTile: " & GroundTile & " NoLeader: " & NoLeader)
-        Call log.Add(AddressOf AllDataStructues.DesiredStats.Print, DynStackStats, False)
+        Call log.Add(DynStackStats, False)
 
-        Dim PossibleLeaders, SelectedFighters As New List(Of Integer)
-        Dim FreeMeleeSlots As Integer = 3
-        Dim SelectedLeader As Integer = -1
+        Dim result As AllDataStructues.Stack = GenStackMultithread(StackStats, DynStackStats, deltaLeadership, GroundTile, NoLeader)
 
-        If Not NoLeader Then
-
-            If ((DynStackStats.StackSize = 1 And DynStackStats.MaxGiants = 0) Or _
-                (DynStackStats.StackSize = 2 And DynStackStats.MaxGiants = 1)) _
-               AndAlso rndgen.Rand(0, 1, serialExecution) > 0.5 Then
-                If DynStackStats.StackSize = 1 Then
-                    DynStackStats.StackSize += 1
-                    DynStackStats.MaxGiants += 1
-                Else
-                    DynStackStats.StackSize += 1
-                End If
-            End If
-
-            'Dim maxExpBar As Double = Math.Max(10000, 2 * DynStackStats.ExpBarAverage)
-            Dim maxExpStrackKilled As Double = Math.Max(10000, 2 * DynStackStats.ExpStackKilled)
-
-            'создаем список лидеров, которых вообще можем использовать
-            Dim Tolerance As Double = 0.02 * (DynStackStats.StackSize - 1)
-            Do While PossibleLeaders.Count < 3
-                PossibleLeaders.Clear()
-                For i As Integer = 0 To UBound(AllLeaders) Step 1
-                    If SelectPossibleLeader(i, Tolerance, DynStackStats, GroundTile) Then PossibleLeaders.Add(i)
-                Next i
-                If Tolerance > 2 And PossibleLeaders.Count > 0 Then Exit Do
-
-                'If Tolerance * DynStackStats.ExpBarAverage > maxExpBar And Tolerance * DynStackStats.ExpStackKilled > maxExpStrackKilled Then
-                If Tolerance * DynStackStats.ExpStackKilled > maxExpStrackKilled Then
-                    If DynStackStats.MaxGiants < 1 Then
-                        DynStackStats.MaxGiants = 1
-                        Tolerance = 0.02 * (DynStackStats.StackSize - 1)
-                    Else
-                        If PossibleLeaders.Count > 0 Then Exit Do
-                        Throw New Exception("Что-то не так в выборе возможных лидеров отряда" & vbNewLine & _
-                                            "Имя локации: " & StackStats.LocationName & vbNewLine & _
-                                            "StackStats:" & vbNewLine & AllDataStructues.DesiredStats.Print(StackStats, comm.RaceNumberToRaceChar) & vbNewLine & _
-                                            "DynStackStats:" & vbNewLine & AllDataStructues.DesiredStats.Print(DynStackStats, comm.RaceNumberToRaceChar))
-                    End If
-                End If
-                Tolerance += 0.2
-            Loop
-
-            Call log.Add(AddressOf PrintSelectionList, AllLeaders, PossibleLeaders)
-            SelectedLeader = comm.RandomSelection(PossibleLeaders, {ExpBarLeaders}, {DynStackStats.ExpBarAverage}, multLeaders, SigmaMultiplier(DynStackStats), serialExecution)
-
-            If SelectedLeader = -1 Then
-                Throw New Exception("Возможно, бесконечный цикл в случайном выборе из массива возможных лидеров" & vbNewLine & _
-                                    "Имя локации: " & StackStats.LocationName & vbNewLine & _
-                                    "StackStats:" & vbNewLine & AllDataStructues.DesiredStats.Print(StackStats, comm.RaceNumberToRaceChar) & vbNewLine & _
-                                    "DynStackStats:" & vbNewLine & AllDataStructues.DesiredStats.Print(DynStackStats, comm.RaceNumberToRaceChar))
-            End If
-
-            'теперь нужно добрать воинов в отряд
-            Dim R As Double = rndgen.Rand(0, 1, serialExecution)
-            Dim leadershipCap As Integer = Math.Min(AllLeaders(SelectedLeader).leadership + deltaLeadership, 6)
-            If AllLeaders(SelectedLeader).small Then
-                leadershipCap = Math.Max(leadershipCap, 1)
-            Else
-                leadershipCap = Math.Max(leadershipCap, 2)
-            End If
-            If R < 0.1 Then
-                DynStackStats.StackSize -= 1
-            ElseIf R > 0.9 Then
-                DynStackStats.StackSize += 1
-                If DynStackStats.StackSize - DynStackStats.MeleeCount < secondrow.Length Then DynStackStats.MeleeCount += 1
-            End If
-            If AllLeaders(SelectedLeader).small Then
-                DynStackStats.StackSize = Math.Max(DynStackStats.StackSize, 1)
-            Else
-                DynStackStats.StackSize = Math.Max(DynStackStats.StackSize, 2)
-            End If
-            DynStackStats.StackSize = Math.Min(DynStackStats.StackSize, leadershipCap)
-            DynStackStats.MeleeCount = Math.Min(DynStackStats.MeleeCount, 3)
-            DynStackStats.MaxGiants = Math.Min(DynStackStats.MaxGiants, 3)
-            DynStackStats.ExpBarAverage = CInt((DynStackStats.ExpBarAverage * StackStats.StackSize) / DynStackStats.StackSize)
-
-            Call ChangeLimit(AllLeaders, SelectedLeader, DynStackStats, FreeMeleeSlots)
-        End If
-
-        Dim fighter As Integer
-        Do While DynStackStats.StackSize > 0
-            'создаем список воинов, которых можно использовать
-            fighter = SelectFighters(False, False, DynStackStats, FreeMeleeSlots, SelectedLeader, SelectedFighters)
-            If fighter = -1 Then
-                fighter = SelectFighters(True, False, DynStackStats, FreeMeleeSlots, SelectedLeader, SelectedFighters)
-                If fighter = -1 Then fighter = SelectFighters(True, True, DynStackStats, FreeMeleeSlots, SelectedLeader, SelectedFighters)
-            End If
-            If fighter = -1 Then
-                If DynStackStats.MeleeCount > 0 Then
-                    DynStackStats.MeleeCount = 0
-                Else
-                    Exit Do
-                End If
-            ElseIf fighter = -2 Then
-                Throw New Exception("Возможно, бесконечный цикл в случайном выборе из массива возможных воинов" & vbNewLine & _
-                                    "Имя локации: " & StackStats.LocationName & vbNewLine & _
-                                    "StackStats:" & vbNewLine & AllDataStructues.DesiredStats.Print(StackStats, comm.RaceNumberToRaceChar) & vbNewLine & _
-                                    "DynStackStats:" & vbNewLine & AllDataStructues.DesiredStats.Print(DynStackStats, comm.RaceNumberToRaceChar))
-            Else
-                SelectedFighters.Add(fighter)
-            End If
-        Loop
-        'в итоге должны получить лидера и остальной отряд
-        'дальше расставляем в зависимости от размера и дальности атаки и пишем в файл карты
-        Dim SelectedUnits() As AllDataStructues.Unit
-        If NoLeader Then
-            ReDim SelectedUnits(SelectedFighters.Count - 1)
-        Else
-            ReDim SelectedUnits(SelectedFighters.Count)
-        End If
-        Dim result As New AllDataStructues.Stack With {.leaderPos = -1}
-        ReDim result.pos(UBound(busytransfer)), result.level(UBound(busytransfer))
-        Dim unitIsUsed(UBound(SelectedUnits)) As Boolean
-        Dim firstRowSlots As Integer = 3
-        Dim secondRowSlots As Integer = 3
-
-        If Not NoLeader Then SelectedUnits(0) = AllDataStructues.Unit.Copy(AllLeaders(SelectedLeader))
-        Dim n As Integer
-        If NoLeader Then
-            n = -1
-        Else
-            n = 0
-        End If
-        For Each i As Integer In SelectedFighters
-            n += 1
-            SelectedUnits(n) = AllDataStructues.Unit.Copy(AllFighters(i))
-        Next i
-        For i As Integer = 0 To UBound(SelectedUnits) Step 1
-            If Not unitIsUsed(i) And Not SelectedUnits(i).small Then
-                unitIsUsed(i) = SetUnitPosition(i, SelectedUnits, firstRowSlots, secondRowSlots, False, result)
-            End If
-        Next i
-        For i As Integer = 0 To UBound(SelectedUnits) Step 1
-            If Not unitIsUsed(i) And SelectedUnits(i).reach = 3 Then
-                unitIsUsed(i) = SetUnitPosition(i, SelectedUnits, firstRowSlots, secondRowSlots, False, result)
-            End If
-        Next i
-        For i As Integer = 0 To UBound(SelectedUnits) Step 1
-            If Not unitIsUsed(i) And Not SelectedUnits(i).reach = 3 Then
-                unitIsUsed(i) = SetUnitPosition(i, SelectedUnits, firstRowSlots, secondRowSlots, False, result)
-            End If
-        Next i
-        For i As Integer = 0 To UBound(SelectedUnits) Step 1
-            If Not unitIsUsed(i) Then
-                unitIsUsed(i) = SetUnitPosition(i, SelectedUnits, firstRowSlots, secondRowSlots, True, result)
-            End If
-        Next i
-        For i As Integer = 0 To UBound(unitIsUsed) Step 1
-            If Not unitIsUsed(i) Then Throw New Exception("Что-то не так в размещателе юнитов" & vbNewLine & _
-                                                          "Имя локации: " & StackStats.LocationName & vbNewLine & _
-                                                          "StackStats:" & vbNewLine & AllDataStructues.DesiredStats.Print(StackStats, comm.RaceNumberToRaceChar) & vbNewLine & _
-                                                          "DynStackStats:" & vbNewLine & AllDataStructues.DesiredStats.Print(DynStackStats, comm.RaceNumberToRaceChar))
-        Next i
-        For i As Integer = 0 To UBound(result.pos) Step 1
-            If result.pos(i) = "" Then result.pos(i) = emptyItem
-        Next i
         result.items = ItemsGen(DynStackStats.LootCost, DynStackStats.IGen)
 
         Call log.Add("----Stack creation ended----")
@@ -738,7 +623,7 @@ Public Class RandStack
                         ByVal StackStrengthMultiplier As Double, ByVal LootCostMultiplier As Double) As AllDataStructues.Stack
         Dim esk As Integer = Math.Max(CInt(ExpStackKilled * StackStrengthMultiplier), 5)
         Dim lc As Double = LootCost * LootCostMultiplier
-        Return Gen(esk, lc, Races, igen, deltaLeadership, GroundTile, NoLeader)
+        Return Gen(esk, lc, Races, IGen, deltaLeadership, GroundTile, NoLeader)
     End Function
     Private Function SelectPossibleLeader(ByRef leaderID As Integer, ByRef Tolerance As Double, _
                                           ByRef StackStats As AllDataStructues.DesiredStats, ByRef GroundTile As Boolean) As Boolean
@@ -760,10 +645,287 @@ Public Class RandStack
         Return valConv.defaultSigma * (CDbl(stat.StackSize) + 1.25 * CDbl(stat.StackSize * stat.StackSize - 1) + 0.2 * CDbl(stat.MaxGiants))
     End Function
 
+    Private Function GenStackMultithread(ByVal StackStats As AllDataStructues.DesiredStats, _
+                                         ByVal BakDynStackStats As AllDataStructues.DesiredStats, _
+                                         ByVal deltaLeadership As Integer, ByVal GroundTile As Boolean, _
+                                         ByVal NoLeader As Boolean) As AllDataStructues.Stack
+
+        Dim units(11)() As AllDataStructues.Unit
+        Dim DynStackStats(UBound(units)) As AllDataStructues.DesiredStats
+        log.MRedim(units.Length)
+
+        Parallel.For(0, units.Length, _
+         Sub(jobID As Integer)
+             log.MAdd(jobID, "--------Attempt " & jobID + 1 & " started--------")
+             Dim FreeMeleeSlots As Integer = 3
+             DynStackStats(jobID) = AllDataStructues.DesiredStats.Copy(BakDynStackStats)
+             Dim SelectedLeader As Integer = GenLeader(StackStats, DynStackStats(jobID), FreeMeleeSlots, deltaLeadership, _
+                                                       GroundTile, NoLeader, CDbl(jobID / units.Length), jobID)
+             Dim SelectedFighters As List(Of Integer) = GenFingters(StackStats, DynStackStats(jobID), FreeMeleeSlots, _
+                                                                    SelectedLeader, GroundTile, CDbl(jobID / units.Length), jobID)
+             units(jobID) = GenUnitsList(SelectedFighters, SelectedLeader, NoLeader)
+             log.MAdd(jobID, "--------Attempt " & jobID + 1 & " ended--------")
+         End Sub)
+
+        log.Add(log.MPrintAll())
+        log.MRedim(0)
+
+        Dim selected As Integer = SelectStack(StackStats, DynStackStats)
+
+        If log.IsEnabled Then
+            Dim txt As String = ""
+            For Each unit As AllDataStructues.Unit In units(selected)
+                txt &= vbNewLine & unit.unitID & " " & unit.name
+            Next unit
+            log.Add("--------Selected Stack--------" & txt)
+        End If
+
+        Return GenPositions(StackStats, DynStackStats(selected), units(selected))
+    End Function
+    Private Function GenLeader(ByRef StackStats As AllDataStructues.DesiredStats, ByRef DynStackStats As AllDataStructues.DesiredStats, _
+                               ByRef FreeMeleeSlots As Integer, _
+                               ByRef deltaLeadership As Integer, ByRef GroundTile As Boolean, ByRef NoLeader As Boolean, _
+                               ByRef Bias As Double, ByRef LogID As Integer) As Integer
+        If NoLeader Then Return -1
+
+        Dim serialExecution As Boolean = (LogID < 0)
+        Dim PossibleLeaders As New List(Of Integer)
+        Dim SelectedLeader As Integer
+
+        If ((DynStackStats.StackSize = 1 And DynStackStats.MaxGiants = 0) Or _
+              (DynStackStats.StackSize = 2 And DynStackStats.MaxGiants = 1)) _
+             AndAlso rndgen.Rand(0, 1, serialExecution) > 0.5 Then
+            If DynStackStats.StackSize = 1 Then
+                DynStackStats.StackSize += 1
+                DynStackStats.MaxGiants += 1
+            Else
+                DynStackStats.StackSize += 1
+            End If
+        End If
+
+        'Dim maxExpBar As Double = Math.Max(10000, 2 * DynStackStats.ExpBarAverage)
+        Dim maxExpStrackKilled As Double = Math.Max(10000, 2 * DynStackStats.ExpStackKilled)
+
+        'создаем список лидеров, которых вообще можем использовать
+        Dim Tolerance As Double = 0.02 * (DynStackStats.StackSize - 1)
+        Do While PossibleLeaders.Count < 3
+            PossibleLeaders.Clear()
+            For i As Integer = 0 To UBound(AllLeaders) Step 1
+                If SelectPossibleLeader(i, Tolerance, DynStackStats, GroundTile) Then PossibleLeaders.Add(i)
+            Next i
+            If Tolerance > 2 And PossibleLeaders.Count > 0 Then Exit Do
+
+            'If Tolerance * DynStackStats.ExpBarAverage > maxExpBar And Tolerance * DynStackStats.ExpStackKilled > maxExpStrackKilled Then
+            If Tolerance * DynStackStats.ExpStackKilled > maxExpStrackKilled Then
+                If DynStackStats.MaxGiants < 1 Then
+                    DynStackStats.MaxGiants = 1
+                    Tolerance = 0.02 * (DynStackStats.StackSize - 1)
+                Else
+                    If PossibleLeaders.Count > 0 Then Exit Do
+                    Throw New Exception("Что-то не так в выборе возможных лидеров отряда" & vbNewLine & _
+                                        "Имя локации: " & StackStats.LocationName & vbNewLine & _
+                                        "StackStats:" & vbNewLine & AllDataStructues.DesiredStats.Print(StackStats, comm.RaceNumberToRaceChar) & vbNewLine & _
+                                        "DynStackStats:" & vbNewLine & AllDataStructues.DesiredStats.Print(DynStackStats, comm.RaceNumberToRaceChar))
+                End If
+            End If
+            Tolerance += 0.2
+        Loop
+
+        Call AddToLog(LogID, AddressOf PrintSelectionList, AllLeaders, PossibleLeaders)
+        Dim bar() As Double = SelectBar({DynStackStats.ExpBarAverage}, PossibleLeaders, {ExpBarLeaders}, Bias)
+        SelectedLeader = comm.RandomSelection(PossibleLeaders, {ExpBarLeaders}, bar, _
+                                              multLeaders, SigmaMultiplier(DynStackStats), serialExecution)
+
+        If SelectedLeader = -1 Then
+            Throw New Exception("Возможно, бесконечный цикл в случайном выборе из массива возможных лидеров" & vbNewLine & _
+                                "Имя локации: " & StackStats.LocationName & vbNewLine & _
+                                "StackStats:" & vbNewLine & AllDataStructues.DesiredStats.Print(StackStats, comm.RaceNumberToRaceChar) & vbNewLine & _
+                                "DynStackStats:" & vbNewLine & AllDataStructues.DesiredStats.Print(DynStackStats, comm.RaceNumberToRaceChar))
+        End If
+
+        'теперь нужно добрать воинов в отряд
+        Dim R As Double = rndgen.Rand(0, 1, serialExecution)
+        Dim leadershipCap As Integer = Math.Min(AllLeaders(SelectedLeader).leadership + deltaLeadership, 6)
+        If AllLeaders(SelectedLeader).small Then
+            leadershipCap = Math.Max(leadershipCap, 1)
+        Else
+            leadershipCap = Math.Max(leadershipCap, 2)
+        End If
+        If R < 0.1 Then
+            DynStackStats.StackSize -= 1
+        ElseIf R > 0.9 Then
+            DynStackStats.StackSize += 1
+            If DynStackStats.StackSize - DynStackStats.MeleeCount < secondrow.Length Then DynStackStats.MeleeCount += 1
+        End If
+        If AllLeaders(SelectedLeader).small Then
+            DynStackStats.StackSize = Math.Max(DynStackStats.StackSize, 1)
+        Else
+            DynStackStats.StackSize = Math.Max(DynStackStats.StackSize, 2)
+        End If
+        DynStackStats.StackSize = Math.Min(DynStackStats.StackSize, leadershipCap)
+        DynStackStats.MeleeCount = Math.Min(DynStackStats.MeleeCount, 3)
+        DynStackStats.MaxGiants = Math.Min(DynStackStats.MaxGiants, 3)
+        DynStackStats.ExpBarAverage = CInt((DynStackStats.ExpBarAverage * StackStats.StackSize) / DynStackStats.StackSize)
+
+        Call ChangeLimit(AllLeaders, SelectedLeader, DynStackStats, FreeMeleeSlots, LogID)
+
+        Return SelectedLeader
+    End Function
+    Private Function GenFingters(ByRef StackStats As AllDataStructues.DesiredStats, _
+                                 ByRef DynStackStats As AllDataStructues.DesiredStats, _
+                                 ByRef FreeMeleeSlots As Integer, ByRef SelectedLeader As Integer, ByRef GroundTile As Boolean, _
+                                 ByRef Bias As Double, ByRef LogID As Integer) As List(Of Integer)
+        Dim SelectedFighters As New List(Of Integer)
+        Dim fighter As Integer
+        Do While DynStackStats.StackSize > 0
+            'создаем список воинов, которых можно использовать
+            fighter = SelectFighters(False, False, DynStackStats, FreeMeleeSlots, SelectedLeader, SelectedFighters, Bias, LogID)
+            If fighter = -1 Then
+                fighter = SelectFighters(True, False, DynStackStats, FreeMeleeSlots, SelectedLeader, SelectedFighters, Bias, LogID)
+                If fighter = -1 Then fighter = SelectFighters(True, True, DynStackStats, FreeMeleeSlots, SelectedLeader, SelectedFighters, Bias, LogID)
+            End If
+            If fighter = -1 Then
+                If DynStackStats.MeleeCount > 0 Then
+                    DynStackStats.MeleeCount = 0
+                Else
+                    Exit Do
+                End If
+            ElseIf fighter = -2 Then
+                Throw New Exception("Возможно, бесконечный цикл в случайном выборе из массива возможных воинов" & vbNewLine & _
+                                    "Имя локации: " & StackStats.LocationName & vbNewLine & _
+                                    "StackStats:" & vbNewLine & AllDataStructues.DesiredStats.Print(StackStats, comm.RaceNumberToRaceChar) & vbNewLine & _
+                                    "DynStackStats:" & vbNewLine & AllDataStructues.DesiredStats.Print(DynStackStats, comm.RaceNumberToRaceChar))
+            Else
+                SelectedFighters.Add(fighter)
+            End If
+        Loop
+        Return SelectedFighters
+    End Function
+    Private Function GenUnitsList(ByRef SelectedFighters As List(Of Integer), ByRef SelectedLeader As Integer, ByRef NoLeader As Boolean) As AllDataStructues.Unit()
+        Dim SelectedUnits() As AllDataStructues.Unit
+        If NoLeader Then
+            ReDim SelectedUnits(SelectedFighters.Count - 1)
+        Else
+            ReDim SelectedUnits(SelectedFighters.Count)
+        End If
+        If Not NoLeader Then SelectedUnits(0) = AllDataStructues.Unit.Copy(AllLeaders(SelectedLeader))
+        Dim n As Integer
+        If NoLeader Then
+            n = -1
+        Else
+            n = 0
+        End If
+        For Each i As Integer In SelectedFighters
+            n += 1
+            SelectedUnits(n) = AllDataStructues.Unit.Copy(AllFighters(i))
+        Next i
+        Return SelectedUnits
+    End Function
+    Private Function GenPositions(ByRef StackStats As AllDataStructues.DesiredStats, _
+                                  ByRef DynStackStats As AllDataStructues.DesiredStats, _
+                                  ByRef SelectedUnits() As AllDataStructues.Unit) As AllDataStructues.Stack
+        Dim result As New AllDataStructues.Stack With {.leaderPos = -1}
+        ReDim result.pos(UBound(busytransfer)), result.level(UBound(busytransfer))
+        Dim unitIsUsed(UBound(SelectedUnits)) As Boolean
+        Dim firstRowSlots As Integer = 3
+        Dim secondRowSlots As Integer = 3
+
+        For i As Integer = 0 To UBound(SelectedUnits) Step 1
+            If Not unitIsUsed(i) And Not SelectedUnits(i).small Then
+                unitIsUsed(i) = SetUnitPosition(i, SelectedUnits, firstRowSlots, secondRowSlots, False, result)
+            End If
+        Next i
+        For i As Integer = 0 To UBound(SelectedUnits) Step 1
+            If Not unitIsUsed(i) And SelectedUnits(i).reach = 3 Then
+                unitIsUsed(i) = SetUnitPosition(i, SelectedUnits, firstRowSlots, secondRowSlots, False, result)
+            End If
+        Next i
+        For i As Integer = 0 To UBound(SelectedUnits) Step 1
+            If Not unitIsUsed(i) And Not SelectedUnits(i).reach = 3 Then
+                unitIsUsed(i) = SetUnitPosition(i, SelectedUnits, firstRowSlots, secondRowSlots, False, result)
+            End If
+        Next i
+        For i As Integer = 0 To UBound(SelectedUnits) Step 1
+            If Not unitIsUsed(i) Then
+                unitIsUsed(i) = SetUnitPosition(i, SelectedUnits, firstRowSlots, secondRowSlots, True, result)
+            End If
+        Next i
+        For i As Integer = 0 To UBound(unitIsUsed) Step 1
+            If Not unitIsUsed(i) Then Throw New Exception("Что-то не так в размещателе юнитов" & vbNewLine & _
+                                                          "Имя локации: " & StackStats.LocationName & vbNewLine & _
+                                                          "StackStats:" & vbNewLine & AllDataStructues.DesiredStats.Print(StackStats, comm.RaceNumberToRaceChar) & vbNewLine & _
+                                                          "DynStackStats:" & vbNewLine & AllDataStructues.DesiredStats.Print(DynStackStats, comm.RaceNumberToRaceChar))
+        Next i
+        For i As Integer = 0 To UBound(result.pos) Step 1
+            If result.pos(i) = "" Then result.pos(i) = emptyItem
+        Next i
+        Return result
+    End Function
+    'Private Function GenPositions(ByRef SelectedUnits() As AllDataStructues.Unit, ByRef NoLeader As Boolean) As AllDataStructues.Stack
+    '    Dim result As New AllDataStructues.Stack
+    '    ReDim result.pos(UBound(busytransfer)), result.level(UBound(busytransfer))
+    '    If NoLeader Then
+    '        result.leaderPos = -1
+    '    Else
+    '        result.leaderPos = 0
+    '        result.pos(0) = SelectedUnits(0).unitID
+    '        result.level(0) = SelectedUnits(0).level
+    '    End If
+    '    For i As Integer = result.leaderPos + 1 To UBound(SelectedUnits) Step 1
+    '        result.pos(i) = SelectedUnits(i).unitID
+    '        result.level(i) = SelectedUnits(i).level
+    '    Next i
+    '    For i As Integer = SelectedUnits.Length To UBound(result.pos) Step 1
+    '        If result.pos(i) = "" Then result.pos(i) = emptyItem
+    '    Next i
+    '    Return result
+    'End Function
+    Private Function SelectBar(ByRef Average() As Double, ByRef IDs As List(Of Integer), ByRef values()() As Double, ByRef bias As Double) As Double()
+        Dim maxV, result(UBound(Average)) As Double
+        For i As Integer = 0 To UBound(Average) Step 1
+            maxV = 0
+            For Each id As Integer In IDs
+                maxV = Math.Max(maxV, values(i)(id))
+            Next id
+            result(i) = Average(i) + bias * (maxV - Average(i))
+        Next i
+        Return result
+    End Function
+    Private Function SelectStack(ByRef StackStats As AllDataStructues.DesiredStats, _
+                                 ByRef DynStackStats() As AllDataStructues.DesiredStats) As Integer
+        Dim possible1, possible2 As New List(Of Integer)
+        Dim SizeTolerance As Integer = 0
+        Do While possible1.Count < 0.5 * DynStackStats.Length
+            possible1.Clear()
+            SizeTolerance += 1
+            For i As Integer = 0 To UBound(DynStackStats) Step 1
+                If DynStackStats(i).StackSize <= SizeTolerance Then possible1.Add(i)
+            Next i
+        Loop
+        Dim ExpTolerance As Double = 0
+        Do While True
+            possible2.Clear()
+            ExpTolerance += 0.05
+            For Each i As Integer In possible1
+                If Math.Abs(DynStackStats(i).ExpStackKilled) <= ExpTolerance * StackStats.ExpStackKilled Then possible2.Add(i)
+            Next i
+            If possible2.Count >= 0.2 * DynStackStats.Length Then Exit Do
+            If possible2.Count > 0 And ExpTolerance >= 0.1 Then Exit Do
+        Loop
+        Dim weight(UBound(DynStackStats)) As Double
+        For Each i As Integer In possible2
+            weight(i) = 1 / (1 + Math.Abs(DynStackStats(i).ExpStackKilled))
+        Next i
+        Dim selected As Integer = comm.RandomSelection(possible2, weight, False)
+        Return selected
+    End Function
+
     Private Function SelectFighters(ByRef skipfilter1 As Boolean, ByRef skipfilter2 As Boolean, _
                                     ByRef DynStackStats As AllDataStructues.DesiredStats, ByRef FreeMeleeSlots As Integer, _
-                                    ByRef SelectedLeader As Integer, ByRef SelectedFighters As List(Of Integer)) As Integer
+                                    ByRef SelectedLeader As Integer, ByRef SelectedFighters As List(Of Integer), _
+                                    ByRef Bias As Double, ByRef LogID As Integer) As Integer
 
+        Dim serialExecution As Boolean = (LogID < 0)
         Dim PossibleFighters As New List(Of Integer)
         'Dim TExpStack As Double = DynStackStats.ExpStackKilled / DynStackStats.StackSize
         Dim SelectedFighter As Integer
@@ -778,12 +940,14 @@ Public Class RandStack
         '    If nloops > 10 Then Exit Do
         'Loop
         If PossibleFighters.Count > 0 Then
-            Call log.Add(AddressOf PrintSelectionList, AllFighters, PossibleFighters)
+            Call AddToLog(LogID, AddressOf PrintSelectionList, AllFighters, PossibleFighters)
+
+            Dim bar() As Double = SelectBar({DynStackStats.ExpBarAverage, CDbl(DynStackStats.ExpStackKilled) / CDbl(DynStackStats.StackSize)}, _
+                                            PossibleFighters, {ExpBarFighters, ExpKilledFighters}, Bias)
             SelectedFighter = comm.RandomSelection(PossibleFighters, {ExpBarFighters, ExpKilledFighters}, _
-                 {DynStackStats.ExpBarAverage, CDbl(DynStackStats.ExpStackKilled) / CDbl(DynStackStats.StackSize)}, _
-                 multFighters, SigmaMultiplier(DynStackStats), serialExecution)
+                                                   bar, multFighters, SigmaMultiplier(DynStackStats), serialExecution)
             If SelectedFighter = -1 Then Return -2
-            Call ChangeLimit(AllFighters, SelectedFighter, DynStackStats, FreeMeleeSlots)
+            Call ChangeLimit(AllFighters, SelectedFighter, DynStackStats, FreeMeleeSlots, LogID)
         Else
             SelectedFighter = -1
         End If
@@ -840,8 +1004,8 @@ Public Class RandStack
                                      ByRef FRowSlots As Integer, ByRef SRowSlots As Integer, _
                                      ByRef AnySlot As Boolean, ByRef result As AllDataStructues.Stack) As Boolean
         Dim placed As Boolean = False
-        Dim n1 As Integer = rndgen.RndPos(FRowSlots, serialExecution)
-        Dim n2 As Integer = rndgen.RndPos(SRowSlots, serialExecution)
+        Dim n1 As Integer = rndgen.RndPos(FRowSlots, True)
+        Dim n2 As Integer = rndgen.RndPos(SRowSlots, True)
 
         Dim t As Integer
         Dim m As Integer = 0
@@ -908,7 +1072,7 @@ Public Class RandStack
 
     Private Sub ChangeLimit(ByRef List() As AllDataStructues.Unit, ByRef id As Integer, _
                             ByRef DynStackStats As AllDataStructues.DesiredStats,
-                            ByRef FreeMeleeSlots As Integer)
+                            ByRef FreeMeleeSlots As Integer, ByRef LogID As Integer)
         DynStackStats.ExpStackKilled -= List(id).EXPkilled
 
         If List(id).small And DynStackStats.StackSize > 1 Then
@@ -930,8 +1094,8 @@ Public Class RandStack
         End If
         DynStackStats.MeleeCount = Math.Min(DynStackStats.MeleeCount, FreeMeleeSlots)
 
-        Call log.Add("Unit added: " & List(id).name & " id: " & List(id).unitID)
-        Call log.Add(AddressOf AllDataStructues.DesiredStats.Print, DynStackStats, True)
+        Call AddToLog(LogID, "Unit added: " & List(id).name & " id: " & List(id).unitID)
+        Call AddToLog(LogID, DynStackStats, True)
     End Sub
 
 End Class
@@ -2132,11 +2296,11 @@ Public Class Log
     Private Enabled As Boolean
     Private Content As New List(Of String)
 
+    Private multiThreadLog() As List(Of String)
+
     Private comm As Common
 
     Delegate Function printWithNoInput() As String
-    Delegate Function printDesiredStats(ByVal v As AllDataStructues.DesiredStats, ByRef RaceNumberToRaceChar As Dictionary(Of Integer, String), ByVal shortOut As Boolean) As String
-    Delegate Function printCost(ByVal v As AllDataStructues.Cost) As String
     Delegate Function printSelectionList(ByRef units() As AllDataStructues.Unit, ByRef possible As List(Of Integer)) As String
 
     Public Sub New(ByRef c As Common)
@@ -2167,16 +2331,23 @@ Public Class Log
     End Function
     ''' <summary>Вернет запись с указанным номером (от 0 до Size-1)</summary>
     Public Function PrintItem(ByVal id As Integer) As String
-        Return Content.Item(id)
+        Return LogPrint(Content, id)
     End Function
     ''' <summary>Вернет все записи</summary>
     Public Function PrintAll() As String
+        Return LogPrint(Content)
+    End Function
+
+    Private Function LogPrint(ByRef log As List(Of String), ByRef id As Integer) As String
+        Return log.Item(id)
+    End Function
+    Private Function LogPrint(ByRef log As List(Of String)) As String
         Dim result As String = ""
-        Dim len As Integer = Size() - 1
+        Dim len As Integer = log.Count - 1
         If len = -1 Then Return result
-        result = PrintItem(0)
+        result = LogPrint(log, 0)
         For i As Integer = 1 To len Step 1
-            result &= vbNewLine & PrintItem(i)
+            result &= vbNewLine & LogPrint(log, i)
         Next i
         Return result
     End Function
@@ -2194,16 +2365,22 @@ Public Class Log
         Content.Add(contString())
     End Sub
     ''' <summary>Добавить запись в лог, если логирование включено</summary>
-    ''' <param name="contString">Будет добавлен результат выполнения этой функции</param>
-    Public Sub Add(ByRef contString As printDesiredStats, ByVal v As AllDataStructues.DesiredStats, ByVal shortOut As Boolean)
+    ''' <param name="contString">Будут добавлены поля этой переменной</param>
+    Public Sub Add(ByRef contString As AllDataStructues.DesiredStats, ByVal shortOut As Boolean)
         If Not Enabled Then Exit Sub
-        Content.Add(contString(v, comm.RaceNumberToRaceChar, shortOut))
+        Content.Add(AllDataStructues.DesiredStats.Print(contString, comm.RaceNumberToRaceChar, shortOut))
     End Sub
     ''' <summary>Добавить запись в лог, если логирование включено</summary>
-    ''' <param name="contString">Будет добавлен результат выполнения этой функции</param>
-    Public Sub Add(ByRef contString As printCost, ByVal v As AllDataStructues.Cost)
+    ''' <param name="contString">Будут добавлены поля этой переменной</param>
+    Public Sub Add(ByRef contString As AllDataStructues.Cost)
         If Not Enabled Then Exit Sub
-        Content.Add(contString(v))
+        Content.Add(AllDataStructues.Cost.Print(contString))
+    End Sub
+    ''' <summary>Добавить запись в лог, если логирование включено</summary>
+    ''' <param name="contString">Будут добавлены поля этой переменной</param>
+    Public Sub Add(ByRef contString As AllDataStructues.LootGenSettings)
+        If Not Enabled Then Exit Sub
+        Content.Add(AllDataStructues.LootGenSettings.Print(contString))
     End Sub
     ''' <summary>Добавить запись в лог, если логирование включено</summary>
     ''' <param name="contString">Будет добавлен результат выполнения этой функции</param>
@@ -2211,4 +2388,109 @@ Public Class Log
         If Not Enabled Then Exit Sub
         Content.Add(contString(v, i))
     End Sub
+
+    ''' <summary>Очистить лог с заданным номером</summary>
+    ''' <param name="LogID">Номер задачи. От 0 до Size-1</param>
+    Public Sub MClear(ByVal LogID As Integer)
+        multiThreadLog(LogID).Clear()
+    End Sub
+    ''' <summary>Очистить все мультизадачные логи</summary>
+    Public Sub MClear()
+        If IsNothing(multiThreadLog) Then Exit Sub
+        For LogID As Integer = 0 To UBound(multiThreadLog) Step 1
+            MClear(LogID)
+        Next LogID
+    End Sub
+    ''' <summary>Вернет количество записей в логе</summary>
+    ''' <param name="LogID">Номер задачи. От 0 до Size-1</param>
+    Public Function MSize(ByVal LogID As Integer) As Integer
+        Return multiThreadLog(LogID).Count
+    End Function
+    ''' <summary>Вернет количество мультизадачных логов</summary>
+    Public Function MSize() As Integer
+        If IsNothing(multiThreadLog) Then
+            Return 0
+        Else
+            Return multiThreadLog.Length
+        End If
+    End Function
+    ''' <summary>Вернет запись с указанным номером (от 0 до Size-1)</summary>
+    ''' <param name="LogID">Номер задачи. От 0 до Size-1</param>
+    Public Function MPrintItem(ByVal LogID As Integer, ByVal id As Integer) As String
+        Return LogPrint(multiThreadLog(LogID), id)
+    End Function
+    ''' <summary>Вернет все записи</summary>
+    ''' <param name="LogID">Номер задачи. От 0 до Size-1</param>
+    Public Function MPrintAll(ByVal LogID As Integer) As String
+        Return LogPrint(multiThreadLog(LogID))
+    End Function
+    ''' <summary>Вернет все записи в мультизадачных логах</summary>
+    Public Function MPrintAll() As String
+        Dim result As String = ""
+        Dim len As Integer = MSize() - 1
+        If len = -1 Then Return result
+        result = MPrintAll(0)
+        For i As Integer = 1 To len Step 1
+            result &= vbNewLine & MPrintAll(i)
+        Next i
+        Return result
+    End Function
+
+    ''' <summary>Создает логи под несколько задач, если логирование включено</summary>
+    ''' <param name="size">Количество задач, больше 0. Если меньше 1 - уничтожит массив</param>
+    Public Sub MRedim(ByVal size As Integer)
+        If Not Enabled Then Exit Sub
+        If size > 0 Then
+            ReDim multiThreadLog(size - 1)
+            For i As Integer = 0 To size - 1 Step 1
+                multiThreadLog(i) = New List(Of String)
+            Next i
+        Else
+            Call MClear()
+            multiThreadLog = Nothing
+        End If
+    End Sub
+    ''' <summary>Добавить запись в лог, если логирование включено</summary>
+    ''' <param name="LogID">Номер задачи. От 0 до Size-1</param>
+    ''' <param name="contString">Строка с записью</param>
+    Public Sub MAdd(ByVal LogID As Integer, ByVal contString As String)
+        If Not Enabled Then Exit Sub
+        multiThreadLog(LogID).Add(contString)
+    End Sub
+    ''' <summary>Добавить запись в лог, если логирование включено</summary>
+    ''' <param name="LogID">Номер задачи. От 0 до Size-1</param>
+    ''' <param name="contString">Будет добавлен результат выполнения этой функции</param>
+    Public Sub MAdd(ByVal LogID As Integer, ByRef contString As printWithNoInput)
+        If Not Enabled Then Exit Sub
+        multiThreadLog(LogID).Add(contString())
+    End Sub
+    ''' <summary>Добавить запись в лог, если логирование включено</summary>
+    ''' <param name="LogID">Номер задачи. От 0 до Size-1</param>
+    ''' <param name="contString">Будут добавлены поля этой переменной</param>
+    Public Sub MAdd(ByVal LogID As Integer, ByVal contString As AllDataStructues.DesiredStats, ByVal shortOut As Boolean)
+        If Not Enabled Then Exit Sub
+        multiThreadLog(LogID).Add(AllDataStructues.DesiredStats.Print(contString, comm.RaceNumberToRaceChar, shortOut))
+    End Sub
+    ''' <summary>Добавить запись в лог, если логирование включено</summary>
+    ''' <param name="LogID">Номер задачи. От 0 до Size-1</param>
+    ''' <param name="contString">Будут добавлены поля этой переменной</param>
+    Public Sub MAdd(ByVal LogID As Integer, ByVal contString As AllDataStructues.Cost)
+        If Not Enabled Then Exit Sub
+        multiThreadLog(LogID).Add(AllDataStructues.Cost.Print(contString))
+    End Sub
+    ''' <summary>Добавить запись в лог, если логирование включено</summary>
+    ''' <param name="LogID">Номер задачи. От 0 до Size-1</param>
+    ''' <param name="contString">Будут добавлены поля этой переменной</param>
+    Public Sub MAdd(ByVal LogID As Integer, ByRef contString As AllDataStructues.LootGenSettings)
+        If Not Enabled Then Exit Sub
+        Content.Add(AllDataStructues.LootGenSettings.Print(contString))
+    End Sub
+    ''' <summary>Добавить запись в лог, если логирование включено</summary>
+    ''' <param name="LogID">Номер задачи. От 0 до Size-1</param>
+    ''' <param name="contString">Будет добавлен результат выполнения этой функции</param>
+    Public Sub MAdd(ByVal LogID As Integer, ByRef contString As printSelectionList, ByVal v() As AllDataStructues.Unit, ByRef i As List(Of Integer))
+        If Not Enabled Then Exit Sub
+        multiThreadLog(LogID).Add(contString(v, i))
+    End Sub
+
 End Class
