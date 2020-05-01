@@ -14,12 +14,10 @@ Public Class RandStack
     Private MagicItem(), ExcludedItems() As AllDataStructues.Item
     Public rndgen As RndValueGen
     Public comm As New Common
-    Private valConv As New ValueConverter
 
     Private ExpBarLeaders(), ExpBarFighters(), ExpKilledLeaders(), ExpKilledFighters(), multLeaders(), multFighters() As Double
     Private ItemGoldCost(), multItems() As Double
     Private minItemGoldCost As Integer
-    Protected Friend itemType As New Dictionary(Of Integer, String)
 
     ''' <summary>Сюда генератор пишет лог</summary>
     Public log As Log
@@ -69,12 +67,6 @@ Public Class RandStack
         Call MakeAccessoryArrays(AllUnitsList, comm.customRace, AllLeaders, cat, 2, ExpBarLeaders, ExpKilledLeaders, multLeaders)
         Call MakeAccessoryArrays(AllUnitsList, comm.customRace, ExcludedUnits, cat, 0, Nothing, Nothing, Nothing)
 
-        Dim srow() As String
-        Dim splitedItemsTypes() As String = comm.TxtSplit(My.Resources.Items)
-        For i As Integer = 0 To UBound(splitedItemsTypes) Step 1
-            srow = splitedItemsTypes(i).Split(CChar(" "))
-            itemType.Add(CInt(srow(0)), srow(1).ToUpper)
-        Next i
         Call MakeAccessoryArrays(AllItemsList, MagicItem, ExcludedItems, ItemGoldCost, multItems)
 
     End Sub
@@ -101,9 +93,9 @@ Public Class RandStack
                 If Not IsNothing(expKuilled) Then expKuilled(n) = units(n).EXPkilled
                 If Not IsNothing(mult) Then
                     If units(n).small Then
-                        mult(n) = valConv.smallUnitsExpMultiplicator
+                        mult(n) = comm.valConv.smallUnitsExpMultiplicator
                     Else
-                        mult(n) = valConv.giantUnitsExpMultiplicator
+                        mult(n) = comm.valConv.giantUnitsExpMultiplicator
                     End If
                 End If
             End If
@@ -118,7 +110,7 @@ Public Class RandStack
         Dim add(UBound(allitems)) As Boolean
         For i As Integer = 0 To UBound(allitems) Step 1
             If Not comm.excludedObjects.Contains(allitems(i).itemID.ToUpper) _
-            And Not comm.excludedObjects.Contains(itemType.Item(allitems(i).type)) _
+            And Not comm.excludedObjects.Contains(comm.itemType.Item(allitems(i).type)) _
             And allitems(i).itemCost.Gold > 0 Then
                 add(i) = True
                 n += 1
@@ -129,7 +121,7 @@ Public Class RandStack
         ReDim items(n), GoldCost(n), multItems(n), excluded(m)
 
         Dim weight As New Dictionary(Of String, String)
-        For Each s As String In valConv.WeightMultiplicator.Split(CChar(";"))
+        For Each s As String In comm.valConv.WeightMultiplicator.Split(CChar(";"))
             Dim i As Integer = s.IndexOf("=")
             weight.Add(s.Substring(0, i).ToUpper, s.Substring(i + 1).ToUpper)
         Next s
@@ -142,7 +134,7 @@ Public Class RandStack
                 n += 1
                 items(n) = AllDataStructues.Item.Copy(allitems(i))
                 GoldCost(n) = LootCost(items(n)).Gold
-                mult(n) = ItemTypeWeight(weight, itemType.Item(items(n).type), GoldCost(n))
+                mult(n) = ItemTypeWeight(weight, comm.itemType.Item(items(n).type), GoldCost(n))
                 If comm.LootItemChanceMultiplier.ContainsKey(items(n).itemID.ToUpper) Then
                     mult(n) *= comm.LootItemChanceMultiplier.Item(items(n).itemID.ToUpper)
                 End If
@@ -286,13 +278,6 @@ Public Class RandStack
         Return result
     End Function
 
-    Private Function ItemTypeCostModify(ByRef item As AllDataStructues.Item) As AllDataStructues.Cost
-        If itemType.Item(item.type) = "JEWEL" Then
-            Return item.itemCost / valConv.JewelItemsCostDevider
-        Else
-            Return item.itemCost / valConv.nonJewelItemsCostDevider
-        End If
-    End Function
     ''' <summary>Определяет суммарную ценность предметов</summary>
     ''' <param name="items">Список предметов</param>
     Public Function LootCost(ByRef items As List(Of AllDataStructues.Item)) As AllDataStructues.Cost
@@ -336,7 +321,7 @@ Public Class RandStack
     ''' <summary>Определяет ценность предмета</summary>
     ''' <param name="item">Предмет</param>
     Public Function LootCost(ByRef item As AllDataStructues.Item) As AllDataStructues.Cost
-        Return ItemTypeCostModify(item)
+        Return comm.ItemTypeCostModify(item)
     End Function
     ''' <summary>Определяет ценность предмета</summary>
     ''' <param name="item">Предмет</param>
@@ -434,9 +419,7 @@ Public Class RandStack
             For i As Integer = 0 To UBound(MagicItem) Step 1
                 add = False
                 If ItemGoldCost(i) <= maxCost Then add = True
-                If IGen.excludeConsumableItems And comm.ConsumableItemsTypes.Contains(MagicItem(i).type) Then add = False
-                If IGen.excludeNonconsumableItems And comm.NonconsumableItemsTypes.Contains(MagicItem(i).type) Then add = False
-                If IGen.excludeJewelItems And comm.JewelItemsTypes.Contains(MagicItem(i).type) Then add = False
+                If add Then add = comm.ItemFilter(IGen, MagicItem(i))
                 If add Then IDs.Add(i)
             Next i
             If IDs.Count = 0 Then Exit Do
@@ -496,9 +479,7 @@ Public Class RandStack
         For i As Integer = 0 To UBound(MagicItem) Step 1
             add = False
             If ItemGoldCost(i) <= GoldCost Then add = True
-            If IGen.excludeConsumableItems And comm.ConsumableItemsTypes.Contains(MagicItem(i).type) Then add = False
-            If IGen.excludeNonconsumableItems And comm.NonconsumableItemsTypes.Contains(MagicItem(i).type) Then add = False
-            If IGen.excludeJewelItems And comm.JewelItemsTypes.Contains(MagicItem(i).type) Then add = False
+            If add Then add = comm.ItemFilter(IGen, MagicItem(i))
             If add Then IDs.Add(i)
         Next i
         If IDs.Count > 0 Then
@@ -586,7 +567,8 @@ Public Class RandStack
     Public Function Gen(ByVal ExpStackKilled As Integer, ByVal LootCost As Double, ByRef Races As List(Of Integer), _
                         ByRef IGen As AllDataStructues.LootGenSettings, ByVal deltaLeadership As Integer, _
                         ByVal GroundTile As Boolean, ByVal NoLeader As Boolean) As AllDataStructues.Stack
-        Dim StackStat As AllDataStructues.DesiredStats = StackStatsGen.GenDesiredStats(CDbl(ExpStackKilled), LootCost, rndgen, valConv)
+        Dim StackStat As AllDataStructues.DesiredStats = StackStatsGen.GenDesiredStats(CDbl(ExpStackKilled), _
+                                                                                       LootCost, rndgen, comm.valConv)
         StackStat.Race = Races
         StackStat.IGen = IGen
         Return Gen(StackStat, deltaLeadership, GroundTile, NoLeader)
@@ -642,7 +624,7 @@ Public Class RandStack
         Return True
     End Function
     Private Function SigmaMultiplier(ByRef stat As AllDataStructues.DesiredStats) As Double
-        Return valConv.defaultSigma * (CDbl(stat.StackSize) + 1.25 * CDbl(stat.StackSize * stat.StackSize - 1) + 0.2 * CDbl(stat.MaxGiants))
+        Return comm.valConv.defaultSigma * (CDbl(stat.StackSize) + 1.25 * CDbl(stat.StackSize * stat.StackSize - 1) + 0.2 * CDbl(stat.MaxGiants))
     End Function
 
     Private Function GenStackMultithread(ByVal StackStats As AllDataStructues.DesiredStats, _
@@ -652,7 +634,7 @@ Public Class RandStack
 
         Dim units(11)() As AllDataStructues.Unit
         Dim DynStackStats(UBound(units)) As AllDataStructues.DesiredStats
-        log.MRedim(units.Length)
+        Call log.MRedim(units.Length)
 
         Parallel.For(0, units.Length, _
          Sub(jobID As Integer)
@@ -667,8 +649,8 @@ Public Class RandStack
              log.MAdd(jobID, "--------Attempt " & jobID + 1 & " ended--------")
          End Sub)
 
-        log.Add(log.MPrintAll())
-        log.MRedim(0)
+        Call log.Add(log.MPrintAll())
+        Call log.MRedim(0)
 
         Dim selected As Integer = SelectStack(StackStats, DynStackStats)
 
@@ -677,7 +659,7 @@ Public Class RandStack
             For Each unit As AllDataStructues.Unit In units(selected)
                 txt &= vbNewLine & unit.unitID & " " & unit.name
             Next unit
-            log.Add("--------Selected Stack--------" & txt)
+            Call log.Add("--------Selected Stack--------" & txt)
         End If
 
         Return GenPositions(StackStats, DynStackStats(selected), units(selected))
@@ -1226,6 +1208,12 @@ Public Class Common
     Public LootItemChanceMultiplier As New Dictionary(Of String, Double)
     ''' <summary>Ключ - ID юнита, значение - ID юнитов, с которыми он не должен быть в одном отряде</summary>
     Public SoleUnits As New Dictionary(Of String, List(Of String))
+    ''' <summary>Ключ - ID типа предмета, значение - тип предмета</summary>
+    Public itemType As New Dictionary(Of Integer, String)
+    ''' <summary>Ключ - тип предмета, значение - ID типа предмета</summary>
+    Public itemTypeID As New Dictionary(Of String, Integer)
+
+    Friend valConv As New ValueConverter
 
     Friend ConsumableItemsTypes, NonconsumableItemsTypes, JewelItemsTypes As New List(Of Integer)
 
@@ -1270,6 +1258,14 @@ Public Class Common
         ConsumableItemsTypes.AddRange(New Integer() {4, 5, 6, 7, 8, 11, 12})
         NonconsumableItemsTypes.AddRange(New Integer() {0, 1, 2, 3, 9, 13})
         JewelItemsTypes.AddRange(New Integer() {10})
+
+        Dim splitedItemsTypes() As String = TxtSplit(My.Resources.Items)
+        For i As Integer = 0 To UBound(splitedItemsTypes) Step 1
+            srow = splitedItemsTypes(i).Split(CChar(" "))
+            itemType.Add(CInt(srow(0)), srow(1).ToUpper)
+            itemTypeID.Add(srow(1).ToUpper, CInt(srow(0)))
+        Next i
+
     End Sub
 
     ''' <summary>Передаст в лог содержимое excludedObjects, customRace, objectRace, LootItemChanceMultiplier, SoleUnits</summary>
@@ -1292,7 +1288,7 @@ Public Class Common
         For Each item As String In excludedObjects
             name = rStack.FindUnitStats(item).name
             If name = "" Then name = rStack.FindItemStats(item).name
-            If name = "" AndAlso rStack.itemType.ContainsValue(item.ToUpper) Then name = "item type"
+            If name = "" AndAlso rStack.comm.itemType.ContainsValue(item.ToUpper) Then name = "item type"
             If name = "" Then name = "I don't know what is that"
             result &= vbNewLine & item & " - " & name
         Next item
@@ -1812,6 +1808,21 @@ Public Class Common
     Friend Shared Function ValueUpperBound(ByRef ratio As Double, ByRef average As Double) As Double
         Return Common.ValueLowerBound(ratio, average) * ratio
     End Function
+
+    Friend Function ItemFilter(ByRef IGen As AllDataStructues.LootGenSettings, ByRef item As AllDataStructues.Item) As Boolean
+        If IGen.excludeConsumableItems And ConsumableItemsTypes.Contains(item.type) Then Return False
+        If IGen.excludeNonconsumableItems And NonconsumableItemsTypes.Contains(item.type) Then Return False
+        If IGen.excludeJewelItems And JewelItemsTypes.Contains(item.type) Then Return False
+        Return True
+    End Function
+
+    Friend Function ItemTypeCostModify(ByRef item As AllDataStructues.Item) As AllDataStructues.Cost
+        If itemType.Item(item.type) = "JEWEL" Then
+            Return item.itemCost / valConv.JewelItemsCostDevider
+        Else
+            Return item.itemCost / valConv.nonJewelItemsCostDevider
+        End If
+    End Function
 End Class
 
 Public MustInherit Class DecorationPlacingPropertiesFields
@@ -1876,7 +1887,16 @@ Public Class AllDataStructues
         ''' <summary>Настройки генерации предметов</summary>
         Dim IGen As LootGenSettings
 
-        ''' <summary>Не nothing только для торговцев предметами и магией, а также лагеря наемников</summary>
+        ''' <summary>Не nothing только для торговцев предметами и магией, а также лагеря наемников.
+        ''' Список идентификаторов содержимого лавки с предметами/заклинаниями/наемниками, 
+        ''' либо параметра генерации (цена, тип или тип#цена для предмета, уровень для заклинания и 
+        ''' планка опыта на 1 занимаемый слот для существа).
+        ''' Типы предметов можно посмотреть в Items.txt или Common.itemType
+        ''' Примеры:
+        ''' Наемник - g000uu0001 200 700
+        ''' Волшебник - g000ss0005 g000ss0006 1RT 2CF (T - может быть глобальным, F - не может. H,L,C,U,E - раса, R - случайная раса)
+        ''' Торговец - g000ig0002 1200 750 attack_artefact sphere#300 6#400
+        ''' </summary>
         Dim shopContent As List(Of String)
 
         ''' <summary>True, если отряд является внутренней охраной города</summary>
@@ -2176,6 +2196,8 @@ Public Class AllDataStructues
 
     Public Structure Spell
         ''' <summary>ID заклинания</summary>
+        Dim spellID As String
+        ''' <summary>Название заклинания</summary>
         Dim name As String
         ''' <summary>Цена изучения для каждого лорда. Ключ - id лорда в верхнем регистре. Список лордов хранится в Common.LordsRace</summary>
         Dim researchCost As Dictionary(Of String, AllDataStructues.Cost)
@@ -2343,12 +2365,18 @@ Public Class Log
     End Function
     Private Function LogPrint(ByRef log As List(Of String)) As String
         Dim result As String = ""
+        Dim boofer As String = ""
         Dim len As Integer = log.Count - 1
         If len = -1 Then Return result
         result = LogPrint(log, 0)
         For i As Integer = 1 To len Step 1
-            result &= vbNewLine & LogPrint(log, i)
+            boofer &= vbNewLine & LogPrint(log, i)
+            If boofer.Length > 10000 Then
+                result &= boofer
+                boofer = ""
+            End If
         Next i
+        If Not boofer = "" Then result &= boofer
         Return result
     End Function
 

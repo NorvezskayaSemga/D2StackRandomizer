@@ -252,7 +252,7 @@ again:
                                                          .castCost = AllDataStructues.Cost.Read(s(3)), _
                                                          .category = s(1), _
                                                          .level = s(2), _
-                                                         .name = s(0).ToUpper, _
+                                                         .spellID = s(0).ToUpper, _
                                                          .researchCost = New Dictionary(Of String, AllDataStructues.Cost)})
         Next i
         For i As Integer = 1 To UBound(rspells) Step 1

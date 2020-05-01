@@ -106,6 +106,8 @@ Public Class ObjectsContentSetTest
         Dim races() As String = New String() {"H", "U", "E", "C", "L", "R"}
         Dim mass() As String = New String() {"F", "T"}
         Dim c As New AllDataStructues.Cost
+        Dim log As New Log(New Common)
+        Call log.Enable()
 
         For i As Integer = 1 To 10 Step 1
             For m1 As Integer = 0 To 1 Step 1
@@ -127,9 +129,9 @@ Public Class ObjectsContentSetTest
                                 For Each g As String In mass
                                     For Each r As String In races
                                         For level As Integer = 1 To 5 Step 1
-                                            input.Clear()
+                                            If input.Count > 10 Then input.Clear()
                                             input.Add(level & r & g)
-                                            actual = target.MakeSpellsList(New AllDataStructues.DesiredStats With {.shopContent = input}, mines)
+                                            actual = target.MakeSpellsList(New AllDataStructues.DesiredStats With {.shopContent = input}, mines, log, -1)
                                             If actual.Count = 0 Then ok = False
                                         Next level
                                     Next r
@@ -140,6 +142,10 @@ Public Class ObjectsContentSetTest
                 Next
             Next
         Next i
+
+        Dim t As Integer = Environment.TickCount
+        Dim txt As String = log.PrintAll
+        t = Environment.TickCount - t
 
         If Not ok Then Assert.Inconclusive("Verify the correctness of this test method.")
     End Sub
@@ -158,13 +164,19 @@ Public Class ObjectsContentSetTest
         Dim ok As Boolean = True
         Dim actual As List(Of String)
         Dim input As New List(Of String)
+        Dim log As New Log(New Common)
+        Call log.Enable()
 
-        For i As Integer = 1 To 10000 Step 10
-            input.Clear()
+        For i As Integer = 100 To 10000 Step 100
+            'input.Clear()
             input.Add(i)
-            actual = target.MakeMercenariesList(New AllDataStructues.DesiredStats With {.shopContent = input})
+            actual = target.MakeMercenariesList(New AllDataStructues.DesiredStats With {.shopContent = input}, log, -1)
             If actual.Count = 0 Then ok = False
         Next i
+
+        Dim t As Integer = Environment.TickCount
+        Dim txt As String = log.PrintAll
+        t = Environment.TickCount - t
 
         If Not ok Then Assert.Inconclusive("Verify the correctness of this test method.")
     End Sub
@@ -183,14 +195,59 @@ Public Class ObjectsContentSetTest
         Dim ok As Boolean = True
         Dim actual As List(Of String)
         Dim input As New List(Of String)
+        Dim log As New Log(New Common)
+        Call log.Enable()
 
-        For i As Integer = 1 To 10000 Step 10
-            input.Clear()
+        For i As Integer = 100 To 10000 Step 100
+            'input.Clear()
             input.Add(i)
-            actual = target.MakeMerchItemsList(New AllDataStructues.DesiredStats With {.shopContent = input})
+            actual = target.MakeMerchItemsList(New AllDataStructues.DesiredStats With {.shopContent = input}, log, -1)
             If actual.Count = 0 Then ok = False
         Next i
 
+        Dim t As Integer = Environment.TickCount
+        Dim txt As String = log.PrintAll
+        t = Environment.TickCount - t
+
         If Not ok Then Assert.Inconclusive("Verify the correctness of this test method.")
     End Sub
+
+    ''''<summary>
+    ''''A test for LogPrint
+    ''''</summary>
+    '<TestMethod()> _
+    'Public Sub WriteTestSpeed()
+    '    Dim textStr, boofer As String
+    '    Dim testArray(50000) As String
+    '    Dim time(20), bsize As Integer
+    '    Dim nStep As Integer = 1000
+    '    For i As Integer = 0 To UBound(testArray) Step 1
+    '        For j As Integer = 0 To 5 + (i Mod 75) Step 1
+    '            testArray(i) &= Chr((i + j) Mod 255)
+    '        Next j
+    '    Next i
+    '
+    '    boofer = ""
+    '
+    '    For b As Integer = 0 To UBound(time) Step 1
+    '        bsize = 5000 + nStep * (b + 1)
+    '        textStr = ""
+    '        time(b) = Environment.TickCount
+    '
+    '        For i As Integer = 0 To UBound(testArray) Step 1
+    '            boofer &= testArray(i)
+    '            If boofer.Length > bsize Then
+    '                textStr &= boofer
+    '                boofer = ""
+    '            End If
+    '        Next i
+    '
+    '        time(b) = Environment.TickCount - time(b)
+    '
+    '    Next b
+    '
+    '    textStr = ""
+    '
+    'End Sub
+
 End Class

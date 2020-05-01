@@ -5627,12 +5627,23 @@ Public Class ObjectsContentSet
         excludeItems.AddRange(New Integer() {10, 14})
         For i As Integer = 0 To UBound(AllItemsList) Step 1
             If Not comm.excludedObjects.Contains(AllItemsList(i).itemID.ToUpper) _
-            AndAlso Not excludeItems.Contains(AllItemsList(i).type) Then
-                items.Add(AllItemsList(i))
+            AndAlso Not excludeItems.Contains(AllItemsList(i).type) _
+            AndAlso AllItemsList(i).itemCost.Gold > 0 Then
+                Dim item As AllDataStructues.Item = AllDataStructues.Item.Copy(AllItemsList(i))
+                item.itemCost = comm.ItemTypeCostModify(item)
+                items.Add(AllDataStructues.Item.Copy(item))
             End If
         Next i
 
         spells = AllSpells
+    End Sub
+
+    Private Sub AddToLog(ByRef log As Log, ByRef LogID As Integer, ByRef Msg As String)
+        If LogID > -1 Then
+            Call Log.MAdd(LogID, Msg)
+        Else
+            Call Log.Add(Msg)
+        End If
     End Sub
 
     ''' <summary>Определит тип случайной шахты. Если тип уже определен, то этот тип и вернет</summary>
@@ -5649,7 +5660,13 @@ Public Class ObjectsContentSet
     ''' <summary>Создаст список заклинаний</summary>
     ''' <param name="d">Желаемые параметры доступных заклинаний. Имеет значение только .shopContent</param>
     ''' <param name="AllManaSources">Список источников маны на карте (Только такие ID: G000CR0000GR, G000CR0000RG, G000CR0000WH, G000CR0000RD, G000CR0000YE)</param>
-    Public Function MakeSpellsList(ByRef d As AllDataStructues.DesiredStats, ByRef AllManaSources As List(Of String)) As List(Of String)
+    ''' <param name="log">Лог для записей результатов</param>
+    ''' <param name="LogID">Номер задачи. От 0 до Size-1. Если меньше 0, запись будет сделана в общий лог</param>
+    Public Function MakeSpellsList(ByRef d As AllDataStructues.DesiredStats, ByRef AllManaSources As List(Of String), _
+                                   ByRef log As Log, ByVal LogID As Integer) As List(Of String)
+
+        Call AddToLog(log, LogID, "----Spells creation started----")
+
         Dim availMana As New AllDataStructues.Cost
         If AllManaSources.Contains("G000CR0000GR") Then availMana.Green = 1
         If AllManaSources.Contains("G000CR0000RG") Then availMana.Black = 1
@@ -5659,51 +5676,73 @@ Public Class ObjectsContentSet
         Dim races() As String = New String() {"H", "C", "L", "U", "E", "R"}
         Dim level, race As Integer
         Dim mass, ignoreAvailMana As Boolean
-        Dim slist, res As New List(Of String)
+        Dim slist ,res As New List(Of String)
         Dim rlist() As Integer
+        Dim txt As String
+
         For Each L As String In d.shopContent
-            L = L.ToUpper
-            If L.Contains("T") Then
-                mass = True
-                L = L.Replace("T", "")
-            Else
-                mass = False
-                L = L.Replace("F", "")
-            End If
-            race = -2
-            For Each r As String In races
-                If L.Contains(r) Then
-                    If r = "R" Then
-                        race = -1
-                    Else
-                        race = comm.RaceIdentifierToSubrace(r)
-                    End If
-                    L = L.Replace(r, "")
-                    Exit For
+            txt = "In: " & L & " -> "
+            If L.Length = 10 AndAlso (L.Substring(0, 1).ToUpper = "G" And L.Substring(4, 2).ToUpper = "SS") Then
+                If Not res.Contains(L.ToUpper) Then
+                    res.Add(L.ToUpper)
+                    txt &= L.ToUpper
+                Else
+                    txt = ""
                 End If
-            Next r
-            level = CInt(L)
-            slist.Clear()
-            ignoreAvailMana = False
-            rlist = New Integer() {race, -1}
-            For rr As Integer = 0 To UBound(rlist) Step 1
-                For p As Integer = 0 To 1 Step 1
-                    For spellLevel As Integer = level To 0 Step -1
-                        For Each s As AllDataStructues.Spell In spells.Values
-                            If AddSpell(spellLevel, rlist(rr), mass, availMana, ignoreAvailMana, s) Then slist.Add(s.name)
-                        Next s
+            Else
+                L = L.ToUpper
+                If L.Contains("T") Then
+                    mass = True
+                    L = L.Replace("T", "")
+                Else
+                    mass = False
+                    L = L.Replace("F", "")
+                End If
+                race = -2
+                For Each r As String In races
+                    If L.Contains(r) Then
+                        If r = "R" Then
+                            race = -1
+                        Else
+                            race = comm.RaceIdentifierToSubrace(r)
+                        End If
+                        L = L.Replace(r, "")
+                        Exit For
+                    End If
+                Next r
+                level = CInt(L)
+                slist.Clear()
+                ignoreAvailMana = False
+                rlist = New Integer() {race, -1}
+                For rr As Integer = 0 To UBound(rlist) Step 1
+                    For p As Integer = 0 To 1 Step 1
+                        For spellLevel As Integer = level To 0 Step -1
+                            For Each s As AllDataStructues.Spell In spells.Values
+                                If Not res.Contains(s.spellID) AndAlso AddSpell(spellLevel, rlist(rr), mass, _
+                                                                             availMana, ignoreAvailMana, s) Then
+                                    slist.Add(s.spellID)
+                                End If
+                            Next s
+                            If slist.Count > 0 Then Exit For
+                        Next spellLevel
+                        ignoreAvailMana = Not ignoreAvailMana
                         If slist.Count > 0 Then Exit For
-                    Next spellLevel
-                    ignoreAvailMana = Not ignoreAvailMana
+                    Next p
                     If slist.Count > 0 Then Exit For
-                Next p
-                If slist.Count > 0 Then Exit For
-            Next rr
-            If slist.Count > 0 Then
-                Dim selected As Integer = comm.rndgen.RndPos(slist.Count, True) - 1
-                res.Add(slist.Item(selected))
+                Next rr
+                If slist.Count > 0 Then
+                    Dim selected As String = slist.Item(comm.rndgen.RndPos(slist.Count, True) - 1)
+                    res.Add(selected)
+                    txt &= spells.Item(selected).spellID & " - " & spells.Item(selected).name & " - " & spells.Item(selected).level
+                Else
+                    txt &= "nothing"
+                End If
             End If
+            If Not txt = "" Then Call AddToLog(log, LogID, txt)
         Next L
+
+        Call AddToLog(log, LogID, "----Spells creation ended----")
+
         Return res
     End Function
     Private Function AddSpell(ByRef level As Integer, ByRef race As Integer, ByRef mass As Boolean, _
@@ -5735,60 +5774,175 @@ Public Class ObjectsContentSet
 
     ''' <summary>Создаст список наемников</summary>
     ''' <param name="d">Желаемые параметры доступных наемников. Имеет значение только .shopContent</param>
-    Public Function MakeMercenariesList(ByRef d As AllDataStructues.DesiredStats) As List(Of String)
-        Dim res, selection As New List(Of String)
+    ''' <param name="log">Лог для записей результатов</param>
+    ''' <param name="LogID">Номер задачи. От 0 до Size-1. Если меньше 0, запись будет сделана в общий лог</param>
+    Public Function MakeMercenariesList(ByRef d As AllDataStructues.DesiredStats, _
+                                        ByRef log As Log, ByVal LogID As Integer) As List(Of String)
+
+        Call AddToLog(log, LogID, "----Mercenaries creation started----")
+
+        Dim res As New List(Of String)
+        Dim selection As New List(Of Integer)
         Dim tolerance As Integer
-        Dim dtolerance As Integer = 100
+        Dim dtolerance As Integer = 50
+        Dim oneMore As Boolean
+        Dim txt As String = ""
+
         For Each v As String In d.shopContent
-            Dim bar As Integer = CInt(v)
-            selection.Clear()
-            tolerance = 0
-            Do While selection.Count < 2 Or tolerance > 10000
-                tolerance += dtolerance
-                For Each u As AllDataStructues.Unit In units
-                    If Math.Abs(u.EXPnext - bar) <= tolerance Then selection.Add(u.unitID)
-                Next u
-            Loop
-            If selection.Count = 0 Then Throw New Exception("Не могу выбрать юнита в качестве наемника. Планка опыта: " & bar.ToString)
-            Dim r As Integer = comm.rndgen.RndPos(selection.Count, True) - 1
-            res.Add(selection.Item(r))
+            txt = "In: " & v & " -> "
+            If IsNumeric(v) Then
+                Dim bar As Integer = CInt(v)
+                selection.Clear()
+                tolerance = 0
+                oneMore = False
+                Do While (selection.Count = 0 Or oneMore) And tolerance <= 10000
+                    tolerance += dtolerance
+                    For u As Integer = 0 To units.Count - 1 Step 1
+                        If Not res.Contains(units.Item(u).unitID) Then
+                            If units.Item(u).small Then
+                                If Math.Abs(units.Item(u).EXPnext - bar) <= tolerance Then selection.Add(u)
+                            Else
+                                If Math.Abs(units.Item(u).EXPnext - 2 * bar) <= 2 * tolerance Then selection.Add(u)
+                            End If
+                        End If
+                    Next u
+                    If selection.Count > 0 Then oneMore = Not oneMore
+                Loop
+                'If selection.Count = 0 Then Throw New Exception("Не могу выбрать юнита в качестве наемника. Планка опыта: " & bar.ToString)
+                If selection.Count > 0 Then
+                    Dim r As Integer = selection.Item(comm.rndgen.RndPos(selection.Count, True) - 1)
+                    res.Add(units.Item(r).unitID)
+                    txt &= units.Item(r).unitID & " - " & units.Item(r).name & " - " & units.Item(r).EXPnext
+                    If units.Item(r).small Then
+                        txt &= " (small)"
+                    Else
+                        txt &= " (big)"
+                    End If
+                Else
+                    txt &= "nothing"
+                End If
+            Else
+                If Not res.Contains(v.ToUpper) Then
+                    res.Add(v)
+                    txt &= v.ToUpper
+                Else
+                    txt = ""
+                End If
+            End If
+            If Not txt = "" Then Call AddToLog(log, LogID, txt)
         Next v
+
+        Call AddToLog(log, LogID, "----Mercenaries creation ended----")
+
         Return res
     End Function
 
     ''' <summary>Создаст список предметов</summary>
-    ''' <param name="d">Желаемые параметры доступных предметов. Имеет значение только .shopContent</param>
-    Public Function MakeMerchItemsList(ByRef d As AllDataStructues.DesiredStats) As List(Of String)
+    ''' <param name="d">Желаемые параметры доступных предметов. Имеет значение только .shopContent и .IGen.
+    ''' IGen используется только при генерации по цене</param>
+    ''' <param name="log">Лог для записей результатов</param>
+    ''' <param name="LogID">Номер задачи. От 0 до Size-1. Если меньше 0, запись будет сделана в общий лог</param>
+    Public Function MakeMerchItemsList(ByRef d As AllDataStructues.DesiredStats, _
+                                       ByRef log As Log, ByVal LogID As Integer) As List(Of String)
+
+        Call AddToLog(log, LogID, "----Alternative loot creation started----")
+        Dim txt As String
         Dim res, selection As New List(Of String)
-        Dim cost As New Dictionary(Of String, Integer)
-        Dim tolerance As Integer
-        Dim dtolerance As Integer = 100
         Dim dCost As Integer = 0
-        Dim countThreshold As Integer = 2
+        Dim itemID As Integer = -1
         For Each v As String In d.shopContent
-            Dim bar As Integer = CInt(v)
-            selection.Clear()
-            cost.Clear()
-            tolerance = 0
-            If d.shopContent.Count = res.Count + 1 Then
-                countThreshold = 1
-                dtolerance = Math.Max(1, CInt(0.1 * dtolerance))
-            End If
-            Do While selection.Count < countThreshold Or tolerance > 10000
-                tolerance += dtolerance
+            txt = "In: " & v
+            If IsNumeric(v) Then
+                Dim bar As Integer = CInt(v)
+                itemID = SelectItem(bar, -1, dCost, d, res.Count)
+                If itemID > -1 Then res.Add(items.Item(itemID).itemID)
+                txt &= msgToLog(itemID, dCost, True)
+            ElseIf comm.itemTypeID.ContainsKey(v.ToUpper) Then
+                selection.Clear()
+                Dim type As Integer = comm.itemTypeID.Item(v.ToUpper)
                 For Each u As AllDataStructues.Item In items
-                    If Math.Abs(u.itemCost.Gold - bar + CInt(dCost / Math.Max(d.shopContent.Count - res.Count, 1))) <= tolerance Then
-                        selection.Add(u.itemID)
-                        cost.Add(u.itemID, u.itemCost.Gold)
-                    End If
+                    If type = u.type AndAlso comm.ItemFilter(d.IGen, u) Then selection.Add(u.itemID)
                 Next u
-            Loop
-            If selection.Count = 0 Then Throw New Exception("Не могу выбрать юнита в качестве наемника. Планка опыта: " & bar.ToString)
-            Dim r As Integer = comm.rndgen.RndPos(selection.Count, True) - 1
-            res.Add(selection.Item(r))
-            dCost += bar - cost.Item(selection.Item(r))
+                If selection.Count = 0 Then Throw New Exception("Не могу выбрать предмет в качестве товара. Тип: " & v)
+                itemID = comm.rndgen.RndPos(selection.Count, True) - 1
+                res.Add(selection.Item(itemID))
+                txt &= msgToLog(itemID, dCost, False)
+            ElseIf v.Contains("#") Then
+                Dim s() As String = v.Split(CChar("#"))
+                Dim type As Integer
+                If IsNumeric(s(0)) Then
+                    type = CInt(s(0))
+                Else
+                    type = comm.itemTypeID.Item(s(0).ToUpper)
+                End If
+                Dim bar As Integer = CInt(s(1))
+                itemID = SelectItem(bar, type, dCost, d, res.Count)
+                If itemID > -1 Then res.Add(items.Item(itemID).itemID)
+                txt &= msgToLog(itemID, dCost, True)
+            Else
+                res.Add(v.ToUpper)
+                txt &= " -> " & v.ToUpper
+            End If
+            Call AddToLog(log, LogID, txt)
         Next v
+
+        Call AddToLog(log, LogID, "----Alternative loot creation ended----")
+
         Return res
+    End Function
+    Private Function msgToLog(ByRef itemID As Integer, ByRef dCost As Integer, ByRef addDeltaCost As Boolean) As String
+        Dim txt As String = ""
+        If addDeltaCost Then txt &= " deltaCost: " & dCost
+        txt &= " -> "
+        If itemID > -1 Then
+            txt &= items.Item(itemID).itemID & " - " & items.Item(itemID).name & " - " & items.Item(itemID).itemCost.Gold
+        Else
+            txt &= "nothong"
+        End If
+        Return txt
+    End Function
+    Private Function SelectItem(ByRef bar As Integer, ByRef type As Integer, ByRef dCost As Integer, _
+                                ByRef d As AllDataStructues.DesiredStats, ByRef addedCount As Integer) As Integer
+        Dim selection As New List(Of Integer)
+        Dim correctedBar As Integer = bar + CInt(dCost / Math.Max(d.shopContent.Count - addedCount, 1))
+        If correctedBar <= 0 Then
+            dCost += bar
+            Return -1
+        End If
+        Dim dtolerance As Integer = 100
+        Dim tolerance As Integer
+        Dim oneMore As Boolean = False
+        Dim add As Boolean
+
+        tolerance = 0
+        Do While (selection.Count = 0 Or oneMore) And tolerance <= 10000
+            tolerance += dtolerance
+            selection.Clear()
+            For u As Integer = 0 To items.Count - 1 Step 1
+                If Math.Abs(items.Item(u).itemCost.Gold - correctedBar) <= tolerance Then
+                    If type < 0 Then
+                        add = comm.ItemFilter(d.IGen, items.Item(u))
+                    Else
+                        If type = items.Item(u).type Then
+                            add = True
+                        Else
+                            add = False
+                        End If
+                    End If
+                    If add Then selection.Add(u)
+                End If
+            Next u
+            If selection.Count > 0 Then oneMore = Not oneMore
+        Loop
+        dCost += bar
+        If selection.Count > 0 Then
+            Dim r As Integer = selection.Item(comm.rndgen.RndPos(selection.Count, True) - 1)
+            dCost -= items.Item(r).itemCost.Gold
+            Return r
+        Else
+            'Throw New Exception("Не могу выбрать предмет в качестве товара. Планка цены: " & bar.ToString)
+            Return -1
+        End If
     End Function
 
 End Class
