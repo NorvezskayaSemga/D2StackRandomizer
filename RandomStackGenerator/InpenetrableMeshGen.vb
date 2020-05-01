@@ -5663,7 +5663,8 @@ Public Class ObjectsContentSet
     ''' <param name="log">Лог для записей результатов</param>
     ''' <param name="LogID">Номер задачи. От 0 до Size-1. Если меньше 0, запись будет сделана в общий лог</param>
     Public Function MakeSpellsList(ByRef d As AllDataStructues.DesiredStats, ByRef AllManaSources As List(Of String), _
-                                   ByRef log As Log, ByVal LogID As Integer) As List(Of String)
+                                   ByRef log As Log,
+                                   Optional ByVal LogID As Integer = -1) As List(Of String)
 
         Call AddToLog(log, LogID, "----Spells creation started----")
 
@@ -5676,7 +5677,7 @@ Public Class ObjectsContentSet
         Dim races() As String = New String() {"H", "C", "L", "U", "E", "R"}
         Dim level, race As Integer
         Dim mass, ignoreAvailMana As Boolean
-        Dim slist ,res As New List(Of String)
+        Dim slist, res As New List(Of String)
         Dim rlist() As Integer
         Dim txt As String
 
@@ -5777,7 +5778,8 @@ Public Class ObjectsContentSet
     ''' <param name="log">Лог для записей результатов</param>
     ''' <param name="LogID">Номер задачи. От 0 до Size-1. Если меньше 0, запись будет сделана в общий лог</param>
     Public Function MakeMercenariesList(ByRef d As AllDataStructues.DesiredStats, _
-                                        ByRef log As Log, ByVal LogID As Integer) As List(Of String)
+                                        ByRef log As Log,
+                                        Optional ByVal LogID As Integer = -1) As List(Of String)
 
         Call AddToLog(log, LogID, "----Mercenaries creation started----")
 
@@ -5843,7 +5845,8 @@ Public Class ObjectsContentSet
     ''' <param name="log">Лог для записей результатов</param>
     ''' <param name="LogID">Номер задачи. От 0 до Size-1. Если меньше 0, запись будет сделана в общий лог</param>
     Public Function MakeMerchItemsList(ByRef d As AllDataStructues.DesiredStats, _
-                                       ByRef log As Log, ByVal LogID As Integer) As List(Of String)
+                                       ByRef log As Log, _
+                                       Optional ByVal LogID As Integer = -1) As List(Of String)
 
         Call AddToLog(log, LogID, "----Alternative loot creation started----")
         Dim txt As String
