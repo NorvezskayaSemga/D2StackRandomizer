@@ -2289,7 +2289,7 @@ Friend Class ValueConverter
     Friend Function WeightMultiplicator() As String
         If WeightMultiplicatorReplaced = "" Then
             WeightMultiplicatorReplaced = "talisman=0.1;" & _
-                                          "scroll=0.5;" & _
+                                          "scroll=0.333;" & _
                                           "stuff=0.75;" & _
                                           "healing_elixir=3#cost>100else1;" & _
                                           "ressurection_elixir=3;" & _
