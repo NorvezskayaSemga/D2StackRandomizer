@@ -65,8 +65,8 @@ Public Class ObjectsContentSetTest
         If IsNothing(rndtest.ItemsList) Then rndtest.ReadTestItems()
         If IsNothing(rndtest.AllSpells) Then rndtest.ReadTestSpells()
 
-        Dim rStack As New RandStack(rndtest.UnitsList, rndtest.ItemsList, rndtest.excludeList, _
-                                    rndtest.customLootChanceList, rndtest.customRaceList, rndtest.soleUnitsList)
+        Dim rStack As New RandStack(rndtest.UnitsList, rndtest.ItemsList, rndtest.excludeList, rndtest.customLootChanceList, _
+                                    rndtest.customRaceList, rndtest.soleUnitsList, rndtest.bigStackUnitsList)
 
         Dim target As New ObjectsContentSet(rStack, rndtest.AllSpells)
         Dim ok As Boolean = True
@@ -102,8 +102,8 @@ Public Class ObjectsContentSetTest
         If IsNothing(rndtest.ItemsList) Then rndtest.ReadTestItems()
         If IsNothing(rndtest.AllSpells) Then rndtest.ReadTestSpells()
 
-        Dim rStack As New RandStack(rndtest.UnitsList, rndtest.ItemsList, rndtest.excludeList, _
-                                    rndtest.customLootChanceList, rndtest.customRaceList, rndtest.soleUnitsList)
+        Dim rStack As New RandStack(rndtest.UnitsList, rndtest.ItemsList, rndtest.excludeList, rndtest.customLootChanceList, _
+                                    rndtest.customRaceList, rndtest.soleUnitsList, rndtest.bigStackUnitsList)
 
         Dim target As New ObjectsContentSet(rStack, rndtest.AllSpells)
         Dim ok As Boolean = True
@@ -166,8 +166,8 @@ Public Class ObjectsContentSetTest
         If IsNothing(rndtest.ItemsList) Then rndtest.ReadTestItems()
         If IsNothing(rndtest.AllSpells) Then rndtest.ReadTestSpells()
 
-        Dim rStack As New RandStack(rndtest.UnitsList, rndtest.ItemsList, rndtest.excludeList, _
-                                    rndtest.customLootChanceList, rndtest.customRaceList, rndtest.soleUnitsList)
+        Dim rStack As New RandStack(rndtest.UnitsList, rndtest.ItemsList, rndtest.excludeList, rndtest.customLootChanceList, _
+                                    rndtest.customRaceList, rndtest.soleUnitsList, rndtest.bigStackUnitsList)
 
         Dim target As New ObjectsContentSet(rStack, rndtest.AllSpells)
         Dim ok As Boolean = True
@@ -200,8 +200,8 @@ Public Class ObjectsContentSetTest
         If IsNothing(rndtest.ItemsList) Then rndtest.ReadTestItems()
         If IsNothing(rndtest.AllSpells) Then rndtest.ReadTestSpells()
 
-        Dim rStack As New RandStack(rndtest.UnitsList, rndtest.ItemsList, rndtest.excludeList, _
-                                    rndtest.customLootChanceList, rndtest.customRaceList, rndtest.soleUnitsList)
+        Dim rStack As New RandStack(rndtest.UnitsList, rndtest.ItemsList, rndtest.excludeList, rndtest.customLootChanceList, _
+                                    rndtest.customRaceList, rndtest.soleUnitsList, rndtest.bigStackUnitsList)
 
         Dim target As New ObjectsContentSet(rStack, rndtest.AllSpells)
         Dim ok As Boolean = True
@@ -213,7 +213,7 @@ Public Class ObjectsContentSetTest
         For i As Integer = 100 To 10000 Step 100
             'input.Clear()
             input.Add(i)
-            actual = target.MakeMerchItemsList(New AllDataStructues.DesiredStats With {.shopContent = input}, log, -1)
+            actual = target.MakeMerchantItemsList(New AllDataStructues.DesiredStats With {.shopContent = input}, log, -1)
             If actual.Count = 0 Then ok = False
         Next i
 

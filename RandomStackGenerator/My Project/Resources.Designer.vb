@@ -62,6 +62,47 @@ Namespace My.Resources
         
         '''<summary>
         '''  Looks up a localized string similar to #строка, начинающаяся с решетки, игнорируется
+        '''#ID юнитов и минимальный размер стэка
+        '''
+        '''#темный эльф-гаст
+        '''g000uu8144	3
+        '''g000uu8044	3
+        '''
+        '''
+        '''#волхв
+        '''g000uu8218 g000uu8222
+        '''#друид
+        '''g000uu0035
+        '''#архидруид
+        '''
+        '''#исса
+        '''
+        '''#хэйсса
+        '''
+        '''#ламия  g000uu0160 g000uu7558 g000uu7559 g000uu2022
+        '''
+        '''#верховный некромант
+        '''g000uu8219 g000uu8223
+        '''#длань мортис мумификатор
+        '''g000uu2008 g000uu2007 g000uu7528
+        '''#проповедник
+        '''g000uu2021
+        '''#элементаль воды
+        '''g000uu7536 g002uu5026
+        '''#йети
+        '''g000uu0043
+        '''#снежный волк
+        '''g000uu8296 g004uu5039
+        '''#ка [rest of string was truncated]&quot;;.
+        '''</summary>
+        Friend ReadOnly Property BigStackUnits() As String
+            Get
+                Return ResourceManager.GetString("BigStackUnits", resourceCulture)
+            End Get
+        End Property
+        
+        '''<summary>
+        '''  Looks up a localized string similar to #строка, начинающаяся с решетки, игнорируется
         '''#ID юнитов
         '''#лидеры империи
         '''g000uu0019
@@ -110,11 +151,18 @@ Namespace My.Resources
         '''<summary>
         '''  Looks up a localized string similar to #строка, начинающаяся с решетки, игнорируется
         '''#ID юнитов
-        '''последователь
-        '''уста богов
-        '''божественная длань
-        '''избранник богов
-        '''каратель.
+        '''#последователь
+        '''g000uu8276
+        '''#уста богов
+        '''g000uu8277
+        '''#божественная длань
+        '''g000uu8278
+        '''#избранник богов
+        '''g000uu8298
+        '''g001uu8298
+        '''#каратель
+        '''g000uu7560
+        '''g001uu7560.
         '''</summary>
         Friend ReadOnly Property ExcludeIDs_ModLore() As String
             Get
@@ -497,8 +545,8 @@ Namespace My.Resources
         '''g000uu8218 g000uu8222 g000uu0035 g000uu0160 g000uu7558 g000uu7559 g000uu2022
         '''#верховный некромант
         '''g000uu8219 g000uu8223
-        '''#длань мортис
-        '''g000uu2008
+        '''#длань мортис мумификатор
+        '''g000uu2008 g000uu2007 g000uu7528
         '''#проповедник
         '''g000uu2021
         '''#элементаль воды
@@ -506,9 +554,7 @@ Namespace My.Resources
         '''#йети
         '''g000uu0043
         '''#снежный волк
-        '''g000uu8296 g004uu5039
-        '''#карманница
-        '''g000uu [rest of string was truncated]&quot;;.
+        '''g000uu82 [rest of string was truncated]&quot;;.
         '''</summary>
         Friend ReadOnly Property SingleUnits() As String
             Get

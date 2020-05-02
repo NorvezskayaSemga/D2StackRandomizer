@@ -5627,7 +5627,7 @@ Public Class ObjectsContentSet
 
     ''' <summary>Определит тип случайной шахты. Если тип уже определен, то этот тип и вернет</summary>
     ''' <param name="mineObjectName">Название шахты, как его выдал генератор</param>
-    Public Function SetMineType(ByRef mineObjectName As String) As String
+    Public Function SetMineType(ByVal mineObjectName As String) As String
         If mineObjectName.ToUpper = My.Resources.mineTypeRandomMana.ToUpper Then
             Dim r As Integer = randStack.comm.rndgen.RndPos(manaSourcesTypes.Length, True) - 1
             Return manaSourcesTypes(r)
@@ -5823,9 +5823,9 @@ Public Class ObjectsContentSet
     ''' IGen используется только при генерации по цене</param>
     ''' <param name="log">Лог для записей результатов</param>
     ''' <param name="LogID">Номер задачи. От 0 до Size-1. Если меньше 0, запись будет сделана в общий лог</param>
-    Public Function MakeMerchItemsList(ByRef d As AllDataStructues.DesiredStats, _
-                                       ByRef log As Log, _
-                                       Optional ByVal LogID As Integer = -1) As List(Of String)
+    Public Function MakeMerchantItemsList(ByRef d As AllDataStructues.DesiredStats, _
+                                          ByRef log As Log, _
+                                          Optional ByVal LogID As Integer = -1) As List(Of String)
 
         Call AddToLog(log, LogID, "----Alternative loot creation started----")
         Dim txt As String
@@ -5925,6 +5925,122 @@ Public Class ObjectsContentSet
             'Throw New Exception("Не могу выбрать предмет в качестве товара. Планка цены: " & bar.ToString)
             Return -1
         End If
+    End Function
+
+    Private Function GetSettingsCommon(ByRef input As List(Of String)) As List(Of String)
+        Dim output As New List(Of String)
+        For Each item In input
+            output.Add(item.ToUpper)
+        Next item
+        Return output
+    End Function
+
+    ''' <summary>Вернет настройки генерации заклинаний</summary>
+    ''' <param name="mode">1 - вернет ID, 2 - УровеньРасаМассовость</param>
+    ''' <param name="input">ID заклинаний</param>
+    Public Function GetSpellsListSettings(ByVal mode As Integer, ByRef input() As String) As List(Of String)
+        Dim L As New List(Of String)
+        L.AddRange(input)
+        Return GetSpellsListSettings(mode, L)
+    End Function
+    ''' <summary>Вернет настройки генерации заклинаний</summary>
+    ''' <param name="mode">1 - вернет ID, 2 - УровеньРасаМассовость</param>
+    ''' <param name="input">ID заклинаний</param>
+    Public Function GetSpellsListSettings(ByVal mode As Integer, ByRef input As List(Of String)) As List(Of String)
+        Dim output As New List(Of String)
+        Dim spell As AllDataStructues.Spell
+        If mode = 1 Then
+            output = GetSettingsCommon(input)
+        ElseIf mode = 2 Then
+            For Each item In input
+                spell = spells.Item(item)
+                Dim race As String
+                If IsNothing(spell.researchCost) Then
+                    race = "R"
+                Else
+                    Dim lord As String = spell.researchCost.Keys(0)
+                    race = randStack.comm.RaceNumberToRaceChar.Item(randStack.comm.LordsRace.Item(lord))
+                End If
+                Dim mass As String
+                If spell.area > 998 Then
+                    mass = "T"
+                Else
+                    mass = "F"
+                End If
+                output.Add(spell.level & race & mass)
+            Next item
+        Else
+            Throw New Exception("Unknown mode: " & mode)
+            output = Nothing
+        End If
+        Return output
+    End Function
+
+    ''' <summary>Вернет настройки генерации предметов</summary>
+    ''' <param name="mode">1 - вернет ID, 2 - Цена, 3 - Тип, 4 - Тип#Цена</param>
+    ''' <param name="input">ID заклинаний</param>
+    Public Function GetMerchantListSettings(ByVal mode As Integer, ByRef input() As String) As List(Of String)
+        Dim L As New List(Of String)
+        L.AddRange(input)
+        Return GetMerchantListSettings(mode, L)
+    End Function
+    ''' <summary>Вернет настройки генерации предметов</summary>
+    ''' <param name="mode">1 - вернет ID, 2 - Цена, 3 - Тип, 4 - Тип#Цена</param>
+    ''' <param name="input">ID заклинаний</param>
+    Public Function GetMerchantListSettings(ByVal mode As Integer, ByRef input As List(Of String)) As List(Of String)
+        Dim output As New List(Of String)
+        Dim thing As AllDataStructues.Item
+        If mode = 1 Then
+            output = GetSettingsCommon(input)
+        ElseIf mode = 2 Then
+            For Each item In input
+                thing = randStack.FindItemStats(item)
+                output.Add(thing.itemCost.Gold.ToString)
+            Next item
+        ElseIf mode = 3 Then
+            For Each item In input
+                thing = randStack.FindItemStats(item)
+                output.Add(randStack.comm.itemType.Item(thing.type))
+            Next item
+        ElseIf mode = 4 Then
+            For Each item In input
+                thing = randStack.FindItemStats(item)
+                output.Add(randStack.comm.itemType.Item(thing.type) & _
+                           "#" & thing.itemCost.Gold)
+            Next item
+        Else
+            Throw New Exception("Unknown mode: " & mode)
+            output = Nothing
+        End If
+        Return output
+    End Function
+
+    ''' <summary>Вернет настройки генерации предметов</summary>
+    ''' <param name="mode">1 - вернет ID, 2 - Планка опыта</param>
+    ''' <param name="input">ID заклинаний</param>
+    Public Function GetMercenariesListSettings(ByVal mode As Integer, ByRef input() As String) As List(Of String)
+        Dim L As New List(Of String)
+        L.AddRange(input)
+        Return GetMercenariesListSettings(mode, L)
+    End Function
+    ''' <summary>Вернет настройки генерации предметов</summary>
+    ''' <param name="mode">1 - вернет ID, 2 - Планка опыта</param>
+    ''' <param name="input">ID заклинаний</param>
+    Public Function GetMercenariesListSettings(ByVal mode As Integer, ByRef input As List(Of String)) As List(Of String)
+        Dim output As New List(Of String)
+        Dim unit As AllDataStructues.Unit
+        If mode = 1 Then
+            output = GetSettingsCommon(input)
+        ElseIf mode = 2 Then
+            For Each item In input
+                unit = randStack.FindUnitStats(item)
+                output.Add(unit.EXPnext.ToString)
+            Next item
+        Else
+            Throw New Exception("Unknown mode: " & mode)
+            output = Nothing
+        End If
+        Return output
     End Function
 
 End Class

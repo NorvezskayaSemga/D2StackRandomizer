@@ -40,9 +40,12 @@ Public Class RandStack
     ''' <param name="SoleUnitsList">Файлы со списками юнитов, которые должны находиться в отряде в единственном экземпляре. Записи в них могут повторяться, но записи с повторяющимся ID будут перезаписываться. 
     ''' Допускается передача неинициализитрованного массива.
     ''' Для чтения из дефолтного листа в массив нужно добавить строчку %default% (наличие этого ключевого в файле запустит чтение дефолтного файла)</param>
+    ''' <param name="BigStackUnits">Файлы со списками юнитов, которые должны находиться в отряде начиная с заданного количества слотов. Записи в них могут повторяться, но записи с повторяющимся ID будут перезаписываться. 
+    ''' Допускается передача неинициализитрованного массива.
+    ''' Для чтения из дефолтного листа в массив нужно добавить строчку %default% (наличие этого ключевого в файле запустит чтение дефолтного файла)</param>
     Public Sub New(ByRef AllUnitsList() As AllDataStructues.Unit, ByRef AllItemsList() As AllDataStructues.Item, _
                    ByRef ExcludeLists() As String, ByRef LootChanceMultiplierLists() As String, ByRef CustomUnitRace() As String, _
-                   ByRef SoleUnitsList() As String)
+                   ByRef SoleUnitsList() As String, ByRef BigStackUnits() As String)
         rndgen = comm.rndgen
         log = New Log(comm)
         If IsNothing(AllUnitsList) Or IsNothing(AllItemsList) Then Exit Sub
@@ -51,7 +54,7 @@ Public Class RandStack
         Call comm.ReadCustomUnitRace(CustomUnitRace)
         Call comm.ReadLootItemChanceMultiplier(LootChanceMultiplierLists)
         Call comm.ReadSoleUnits(SoleUnitsList)
-
+        Call comm.ReadBigStackUnits(BigStackUnits)
 
         Dim cat(UBound(AllUnitsList)) As Integer
         For i As Integer = 0 To UBound(AllUnitsList) Step 1
@@ -615,6 +618,10 @@ Public Class RandStack
         If Not StackStats.Race.Contains(AllLeaders(leaderID).race) Then Return False
         If Not AllLeaders(leaderID).small And StackStats.MaxGiants = 0 Then Return False
         If AllLeaders(leaderID).waterOnly And GroundTile Then Return False
+
+        If comm.BigStackUnits.ContainsKey(AllLeaders(leaderID).unitID) _
+        AndAlso StackStats.StackSize < comm.BigStackUnits.Item(AllLeaders(leaderID).unitID) Then Return False
+
         'Dim mult As Double
         'If AllLeaders(leaderID).small Then
         '    mult = 1
@@ -643,11 +650,22 @@ Public Class RandStack
          Sub(jobID As Integer)
              log.MAdd(jobID, "--------Attempt " & jobID + 1 & " started--------")
              Dim FreeMeleeSlots As Integer = 3
+             Dim BaseStackSize As Integer
              DynStackStats(jobID) = AllDataStructues.DesiredStats.Copy(BakDynStackStats)
              Dim SelectedLeader As Integer = GenLeader(StackStats, DynStackStats(jobID), FreeMeleeSlots, deltaLeadership, _
                                                        GroundTile, NoLeader, CDbl(jobID / units.Length), jobID)
+             BaseStackSize = DynStackStats(jobID).StackSize
+             If Not NoLeader Then
+                 If AllLeaders(SelectedLeader).small Then
+                     BaseStackSize += 1
+                 Else
+                     BaseStackSize += 2
+                 End If
+             End If
+
              Dim SelectedFighters As List(Of Integer) = GenFingters(StackStats, DynStackStats(jobID), FreeMeleeSlots, _
-                                                                    SelectedLeader, GroundTile, CDbl(jobID / units.Length), jobID)
+                                                                    SelectedLeader, GroundTile, BaseStackSize, _
+                                                                    CDbl(jobID / units.Length), jobID)
              units(jobID) = GenUnitsList(SelectedFighters, SelectedLeader, NoLeader)
              log.MAdd(jobID, "--------Attempt " & jobID + 1 & " ended--------")
          End Sub)
@@ -737,7 +755,13 @@ Public Class RandStack
             leadershipCap = Math.Max(leadershipCap, 2)
         End If
         If R < 0.1 Then
-            DynStackStats.StackSize -= 1
+            If comm.BigStackUnits.ContainsKey(AllLeaders(SelectedLeader).unitID) Then
+                If DynStackStats.StackSize > comm.BigStackUnits.Item(AllLeaders(SelectedLeader).unitID) Then
+                    DynStackStats.StackSize -= 1
+                End If
+            Else
+                DynStackStats.StackSize -= 1
+            End If
         ElseIf R > 0.9 Then
             DynStackStats.StackSize += 1
             If DynStackStats.StackSize - DynStackStats.MeleeCount < secondrow.Length Then DynStackStats.MeleeCount += 1
@@ -758,16 +782,20 @@ Public Class RandStack
     End Function
     Private Function GenFingters(ByRef StackStats As AllDataStructues.DesiredStats, _
                                  ByRef DynStackStats As AllDataStructues.DesiredStats, _
-                                 ByRef FreeMeleeSlots As Integer, ByRef SelectedLeader As Integer, ByRef GroundTile As Boolean, _
+                                 ByRef FreeMeleeSlots As Integer, ByRef SelectedLeader As Integer, _
+                                 ByRef GroundTile As Boolean, ByRef BaseStackSize As Integer, _
                                  ByRef Bias As Double, ByRef LogID As Integer) As List(Of Integer)
         Dim SelectedFighters As New List(Of Integer)
         Dim fighter As Integer
         Do While DynStackStats.StackSize > 0
             'создаем список воинов, которых можно использовать
-            fighter = SelectFighters(False, False, DynStackStats, FreeMeleeSlots, SelectedLeader, SelectedFighters, Bias, LogID)
+            fighter = SelectFighters(False, False, DynStackStats, FreeMeleeSlots, SelectedLeader, _
+                                     SelectedFighters, BaseStackSize, Bias, LogID)
             If fighter = -1 Then
-                fighter = SelectFighters(True, False, DynStackStats, FreeMeleeSlots, SelectedLeader, SelectedFighters, Bias, LogID)
-                If fighter = -1 Then fighter = SelectFighters(True, True, DynStackStats, FreeMeleeSlots, SelectedLeader, SelectedFighters, Bias, LogID)
+                fighter = SelectFighters(True, False, DynStackStats, FreeMeleeSlots, SelectedLeader, _
+                                         SelectedFighters, BaseStackSize, Bias, LogID)
+                If fighter = -1 Then fighter = SelectFighters(True, True, DynStackStats, FreeMeleeSlots, SelectedLeader, _
+                                                              SelectedFighters, BaseStackSize, Bias, LogID)
             End If
             If fighter = -1 Then
                 If DynStackStats.MeleeCount > 0 Then
@@ -908,6 +936,7 @@ Public Class RandStack
     Private Function SelectFighters(ByRef skipfilter1 As Boolean, ByRef skipfilter2 As Boolean, _
                                     ByRef DynStackStats As AllDataStructues.DesiredStats, ByRef FreeMeleeSlots As Integer, _
                                     ByRef SelectedLeader As Integer, ByRef SelectedFighters As List(Of Integer), _
+                                    ByRef BaseStackSize As Integer, _
                                     ByRef Bias As Double, ByRef LogID As Integer) As Integer
 
         Dim serialExecution As Boolean = (LogID < 0)
@@ -917,8 +946,8 @@ Public Class RandStack
         'Dim nloops As Integer = 0
         'Do While PossibleFighters.Count = 0 'And TExpStack < 1.1 * DynStackStats.ExpStackKilled
         For j As Integer = 0 To UBound(AllFighters) Step 1
-            If SelectPossibleFighter(skipfilter1, skipfilter2, j, DynStackStats, _
-                                     FreeMeleeSlots, SelectedLeader, SelectedFighters) Then PossibleFighters.Add(j)
+            If SelectPossibleFighter(skipfilter1, skipfilter2, j, DynStackStats, FreeMeleeSlots, _
+                                     SelectedLeader, SelectedFighters, BaseStackSize) Then PossibleFighters.Add(j)
         Next j
         '    TExpStack += 0.1 * DynStackStats.ExpStackKilled / DynStackStats.StackSize
         '    nloops += 1
@@ -944,7 +973,8 @@ Public Class RandStack
                                            ByRef DynStackStats As AllDataStructues.DesiredStats, _
                                            ByRef FreeMeleeSlots As Integer, _
                                            ByRef SelectedLeader As Integer, _
-                                           ByRef SelectedFighters As List(Of Integer)) As Boolean
+                                           ByRef SelectedFighters As List(Of Integer), _
+                                           ByRef BaseStackSize As Integer) As Boolean
         If comm.SoleUnits.ContainsKey(AllFighters(fighterID).unitID) Then
             Dim sole As List(Of String) = comm.SoleUnits.Item(AllFighters(fighterID).unitID)
             If SelectedLeader > -1 AndAlso sole.Contains(AllLeaders(SelectedLeader).unitID) Then Return False
@@ -953,6 +983,10 @@ Public Class RandStack
             Next id
         End If
         If Not DynStackStats.Race.Contains(AllFighters(fighterID).race) Then Return False
+
+        If comm.BigStackUnits.ContainsKey(AllFighters(fighterID).unitID) _
+        AndAlso BaseStackSize < comm.BigStackUnits.Item(AllFighters(fighterID).unitID) Then Return False
+
         'Dim mult As Double
         'If AllFighters(fighterID).small Then
         '    mult = 1
@@ -1211,6 +1245,8 @@ Public Class Common
     Public LootItemChanceMultiplier As New Dictionary(Of String, Double)
     ''' <summary>Ключ - ID юнита, значение - ID юнитов, с которыми он не должен быть в одном отряде</summary>
     Public SoleUnits As New Dictionary(Of String, List(Of String))
+    ''' <summary>Ключ - ID юнита, значение - минимальный размер стэка для юнита</summary>
+    Public BigStackUnits As New Dictionary(Of String, Integer)
     ''' <summary>Ключ - ID типа предмета, значение - тип предмета</summary>
     Public itemType As New Dictionary(Of Integer, String)
     ''' <summary>Ключ - тип предмета, значение - ID типа предмета</summary>
@@ -1692,6 +1728,20 @@ Public Class Common
             Call ReadFile(6, s, SoleUnitsList(i), AddressOf ReadSoleUnits, defaultKeys)
         Next i
     End Sub
+    ''' <summary>Читает список юнитов, которые должны находиться в отряде начиная с заданного количества слотов</summary>
+    ''' <param name="BigStackUnitsList">Файлы со списками юнитов. Записи в них могут повторяться, но записи с повторяющимся ID будут перезаписываться.
+    ''' Допускается передача неинициализитрованного массива.
+    ''' Для чтения из дефолтного листа в массив нужно добавить строчку %default% (наличие этого ключевого в файле запустит чтение дефолтного файла)</param>
+    Public Sub ReadBigStackUnits(ByRef BigStackUnitsList() As String)
+        If IsNothing(BigStackUnitsList) Then Exit Sub
+        Dim s() As String
+        Dim defaultKeys() As String = New String() {My.Resources.readDefaultFileKeyword}
+        Dim defaultVals() As String = New String() {My.Resources.BigStackUnits}
+        For i As Integer = 0 To UBound(BigStackUnitsList) Step 1
+            s = prepareToFileRead(BigStackUnitsList(i), defaultKeys, defaultVals)
+            Call ReadFile(7, s, BigStackUnitsList(i), AddressOf ReadBigStackUnits, defaultKeys)
+        Next i
+    End Sub
     ''' <summary>Читает список, определяющий принадлежность непроходимых объектов</summary>
     ''' <param name="CustomBuildingRace">Файлы со списками рас и положений зданий. Записи в них могут повторяться, но записи с повторяющимся ID будут перезаписываться. 
     ''' Допускается передача неинициализитрованного массива (будет прочтен дефолтный).
@@ -1789,6 +1839,11 @@ Public Class Common
                             SoleUnits.Item(srow(i).ToUpper).Add(srow(k).ToUpper)
                         Next k
                     Next i
+                ElseIf mode = 7 Then
+                    If srow.Length > 1 Then
+                        If BigStackUnits.ContainsKey(srow(0).ToUpper) Then BigStackUnits.Remove(srow(0).ToUpper)
+                        BigStackUnits.Add(srow(0).ToUpper, CInt(srow(1)))
+                    End If
                 Else
                     Throw New Exception("Invalid read mode: " & mode)
                 End If
