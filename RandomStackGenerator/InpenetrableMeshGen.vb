@@ -5599,7 +5599,7 @@ Public Class ObjectsContentSet
     Private randStack As RandStack
     Private manaSourcesTypes() As String = New String() {"G000CR0000GR", "G000CR0000RG", "G000CR0000WH", "G000CR0000RD", "G000CR0000YE"}
 
-    Private spells As Dictionary(Of String, AllDataStructues.Spell)
+    Private spells As New Dictionary(Of String, AllDataStructues.Spell)
 
     ''' <param name="RStack">Инициализированный класс</param>
     ''' <param name="AllSpells">Dсе заклинания в игре</param>
