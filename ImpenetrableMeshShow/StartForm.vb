@@ -33,6 +33,8 @@ Friend Class StartForm
         '    Next
         'Next
 
+        Call ReadSpells()
+
         Call comm.ReadExcludedObjectsList({"%default%"})
         Call ReadObjSize()
 
@@ -242,22 +244,28 @@ again:
         PictureBox1.Image = img
     End Sub
 
-    Private Function ReadSpells() As Dictionary(Of String, AllDataStructues.Spell)
+    Private Function ReadSpells() As AllDataStructues.Spell()
         Dim spells() As String = comm.TxtSplit(My.Resources.TestSpells)
         Dim rspells() As String = comm.TxtSplit(My.Resources.TestSpellsRace)
-        Dim res As New Dictionary(Of String, AllDataStructues.Spell)
+        Dim res(UBound(spells) - 1) As AllDataStructues.Spell
         For i As Integer = 1 To UBound(spells) Step 1
             Dim s() As String = spells(i).Split(" ")
-            res.Add(s(0).ToUpper, New AllDataStructues.Spell With {.area = s(4), _
-                                                         .castCost = AllDataStructues.Cost.Read(s(3)), _
-                                                         .category = s(1), _
-                                                         .level = s(2), _
-                                                         .spellID = s(0).ToUpper, _
-                                                         .researchCost = New Dictionary(Of String, AllDataStructues.Cost)})
+            res(i - 1) = New AllDataStructues.Spell With {.area = s(4), _
+                                                          .castCost = AllDataStructues.Cost.Read(s(3)), _
+                                                          .category = s(1), _
+                                                          .level = s(2), _
+                                                          .spellID = s(0).ToUpper, _
+                                                          .name = s(0) & "_test", _
+                                                          .researchCost = New Dictionary(Of String, AllDataStructues.Cost)}
         Next i
         For i As Integer = 1 To UBound(rspells) Step 1
             Dim s() As String = rspells(i).Split(" ")
-            res.Item(s(1).ToUpper).researchCost.Add(s(0).ToUpper, AllDataStructues.Cost.Read(s(2)))
+            For j As Integer = 0 To UBound(res) Step 1
+                If res(j).spellID.ToUpper = s(1).ToUpper Then
+                    res(j).researchCost.Add(s(0).ToUpper, AllDataStructues.Cost.Read(s(2)))
+                    Exit For
+                End If
+            Next j
         Next i
         Return res
     End Function
@@ -309,13 +317,11 @@ again:
             If r.Length = 3 Then
                 ItemsList(i - 1).type = r(0)
                 ItemsList(i - 1).itemID = r(1)
+                ItemsList(i - 1).name = r(1) & "_test"
                 ItemsList(i - 1).itemCost = AllDataStructues.Cost.Read(r(2))
             End If
         Next i
         Return ItemsList
     End Function
 
-    Private Sub GenButton_Click(sender As System.Object, e As System.EventArgs) Handles GenButton.Click
-
-    End Sub
 End Class

@@ -10,13 +10,16 @@ Public Class RandStack
     Private itemGenSigma As Double = 0.5
     Private multiItemGenSigmaMultiplier As Double = 1.5
 
-    Private AllLeaders(), AllFighters(), ExcludedUnits() As AllDataStructues.Unit
-    Private MagicItem(), ExcludedItems() As AllDataStructues.Item
+    Private AllLeaders(), ExcludedUnits() As AllDataStructues.Unit
+    Friend AllFighters() As AllDataStructues.Unit
+    Friend MagicItem() As AllDataStructues.Item
+    Private ExcludedItems() As AllDataStructues.Item
     Public rndgen As RndValueGen
     Public comm As New Common
 
-    Private ExpBarLeaders(), ExpBarFighters(), ExpKilledLeaders(), ExpKilledFighters(), multLeaders(), multFighters() As Double
-    Private ItemGoldCost(), multItems() As Double
+    Private ExpBarLeaders(), ExpKilledLeaders(), multLeaders() As Double
+    Friend ExpBarFighters(), ExpKilledFighters(), multFighters() As Double
+    Friend ItemGoldCost(), multItems() As Double
     Private minItemGoldCost As Integer
 
     ''' <summary>Сюда генератор пишет лог</summary>

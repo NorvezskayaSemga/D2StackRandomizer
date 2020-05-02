@@ -4370,7 +4370,7 @@ Public Class ImpenetrableObjects
     Private plateau() As Plateau
     Private maxPlateauSize As Integer
     Private maxChainLen As Integer = 7
-    Private raceSpells As Dictionary(Of String, AllDataStructues.Spell)
+    Private raceSpells() As AllDataStructues.Spell
     Private raceIdToString As New Dictionary(Of Integer, String)
 
     Private Structure PlateauPlacingResult
@@ -4389,9 +4389,9 @@ Public Class ImpenetrableObjects
     ''' <param name="PlateauConstructionDescription">Файлы с описаниями.
     ''' Допускается передача неинициализитрованного массива (будет прочтен дефолтный).
     ''' Для чтения из дефолтного листа в массив нужно добавить строчку %default% (наличие этого ключевого в файле запустит чтение дефолтного файла)</param>
-    ''' <param name="spells">Все заклинания в игре. Ключ - id заклинания</param>
+    ''' <param name="spells">Все заклинания в игре</param>
     Public Sub New(ByRef ObjectsSize As Dictionary(Of String, Size), ByRef ExcludeLists() As String, ByRef CustomBuildingRace() As String, _
-                   ByRef PlateauConstructionDescription() As String, ByRef spells As Dictionary(Of String, AllDataStructues.Spell))
+                   ByRef PlateauConstructionDescription() As String, ByRef spells() As AllDataStructues.Spell)
         Call comm.ReadExcludedObjectsList(ExcludeLists)
         Call comm.ReadCustomBuildingRace(CustomBuildingRace)
         Call comm.ReadPlateauConstructionDescription(PlateauConstructionDescription)
@@ -4957,11 +4957,11 @@ Public Class ImpenetrableObjects
             Dim s() As String = r(i).Split(CChar(" "))
             res.Add(comm.RaceIdentifierToSubrace(s(UBound(s))), New AllDataStructues.Cost() {Nothing, Nothing, Nothing, Nothing, Nothing, Nothing})
         Next i
-        For Each s As AllDataStructues.Spell In raceSpells.Values
-            If s.researchCost.Count > 0 Then
-                For Each L As String In s.researchCost.Keys
+        For s As Integer = 0 To UBound(raceSpells) Step 1
+            If raceSpells(s).researchCost.Count > 0 Then
+                For Each L As String In raceSpells(s).researchCost.Keys
                     Dim LRace As Integer = comm.LordsRace.Item(L)
-                    res.Item(LRace)(s.level) = s.researchCost.Item(L) + s.castCost
+                    res.Item(LRace)(raceSpells(s).level) = raceSpells(s).researchCost.Item(L) + raceSpells(s).castCost
                 Next L
             End If
         Next s
@@ -5596,46 +5596,25 @@ End Class
 
 Public Class ObjectsContentSet
 
-    Private comm As New Common
+    Private randStack As RandStack
     Private manaSourcesTypes() As String = New String() {"G000CR0000GR", "G000CR0000RG", "G000CR0000WH", "G000CR0000RD", "G000CR0000YE"}
 
-    Private units As New List(Of AllDataStructues.Unit)
-    Private items As New List(Of AllDataStructues.Item)
     Private spells As Dictionary(Of String, AllDataStructues.Spell)
 
-    ''' <param name="AllUnitsList">Dсе юниты в игре</param>
-    ''' <param name="AllItemsList">Все предметы в игре</param>
-    ''' <param name="ExcludeLists">Файлы со списками исключенных объектов. Записи в них могут повторяться. 
-    ''' Допускается передача неинициализитрованного массива.
-    ''' Для чтения из дефолтного листа в массив нужно добавить строчку %default% (наличие этого ключевого в файле запустит чтение дефолтного файла)</param>
-    Public Sub New(ByRef AllUnitsList() As AllDataStructues.Unit, ByRef AllItemsList() As AllDataStructues.Item, _
-                   ByRef ExcludeLists() As String, ByRef AllSpells As Dictionary(Of String, AllDataStructues.Spell))
+    ''' <param name="RStack">Инициализированный класс</param>
+    ''' <param name="AllSpells">Dсе заклинания в игре</param>
+    Public Sub New(ByRef RStack As RandStack, ByRef AllSpells() As AllDataStructues.Spell)
 
-        Call comm.ReadExcludedObjectsList(ExcludeLists)
-
-        Dim excludeRaces As New List(Of Integer)
-        excludeRaces.AddRange(New Integer() {1, 2, 3, 4, 14})
-        For i As Integer = 0 To UBound(AllUnitsList) Step 1
-            If AllUnitsList(i).unitBranch < 5 _
-            AndAlso Not comm.excludedObjects.Contains(AllUnitsList(i).unitID.ToUpper) _
-            AndAlso Not excludeRaces.Contains(AllUnitsList(i).race) Then
-                units.Add(AllUnitsList(i))
-            End If
-        Next i
+        randStack = RStack
 
         Dim excludeItems As New List(Of Integer)
         excludeItems.AddRange(New Integer() {10, 14})
-        For i As Integer = 0 To UBound(AllItemsList) Step 1
-            If Not comm.excludedObjects.Contains(AllItemsList(i).itemID.ToUpper) _
-            AndAlso Not excludeItems.Contains(AllItemsList(i).type) _
-            AndAlso AllItemsList(i).itemCost.Gold > 0 Then
-                Dim item As AllDataStructues.Item = AllDataStructues.Item.Copy(AllItemsList(i))
-                item.itemCost = comm.ItemTypeCostModify(item)
-                items.Add(AllDataStructues.Item.Copy(item))
+        For i As Integer = 0 To UBound(AllSpells) Step 1
+            If Not randStack.comm.excludedObjects.Contains(AllSpells(i).spellID.ToUpper) Then
+                spells.Add(AllSpells(i).spellID.ToUpper, AllSpells(i))
             End If
         Next i
 
-        spells = AllSpells
     End Sub
 
     Private Sub AddToLog(ByRef log As Log, ByRef LogID As Integer, ByRef Msg As String)
@@ -5650,7 +5629,7 @@ Public Class ObjectsContentSet
     ''' <param name="mineObjectName">Название шахты, как его выдал генератор</param>
     Public Function SetMineType(ByRef mineObjectName As String) As String
         If mineObjectName.ToUpper = My.Resources.mineTypeRandomMana.ToUpper Then
-            Dim r As Integer = comm.rndgen.RndPos(manaSourcesTypes.Length, True) - 1
+            Dim r As Integer = randStack.comm.rndgen.RndPos(manaSourcesTypes.Length, True) - 1
             Return manaSourcesTypes(r)
         Else
             Return mineObjectName
@@ -5705,7 +5684,7 @@ Public Class ObjectsContentSet
                         If r = "R" Then
                             race = -1
                         Else
-                            race = comm.RaceIdentifierToSubrace(r)
+                            race = randStack.comm.RaceIdentifierToSubrace(r)
                         End If
                         L = L.Replace(r, "")
                         Exit For
@@ -5732,7 +5711,7 @@ Public Class ObjectsContentSet
                     If slist.Count > 0 Then Exit For
                 Next rr
                 If slist.Count > 0 Then
-                    Dim selected As String = slist.Item(comm.rndgen.RndPos(slist.Count, True) - 1)
+                    Dim selected As String = slist.Item(randStack.comm.rndgen.RndPos(slist.Count, True) - 1)
                     res.Add(selected)
                     txt &= spells.Item(selected).spellID & " - " & spells.Item(selected).name & " - " & spells.Item(selected).level
                 Else
@@ -5763,7 +5742,7 @@ Public Class ObjectsContentSet
             If IsNothing(s.researchCost) Then Return False
             Dim ok As Boolean = False
             For Each lord As String In s.researchCost.Keys
-                If comm.LordsRace(lord) = race Then
+                If randStack.comm.LordsRace(lord) = race Then
                     ok = True
                     Exit For
                 End If
@@ -5799,12 +5778,12 @@ Public Class ObjectsContentSet
                 oneMore = False
                 Do While (selection.Count = 0 Or oneMore) And tolerance <= 10000
                     tolerance += dtolerance
-                    For u As Integer = 0 To units.Count - 1 Step 1
-                        If Not res.Contains(units.Item(u).unitID) Then
-                            If units.Item(u).small Then
-                                If Math.Abs(units.Item(u).EXPnext - bar) <= tolerance Then selection.Add(u)
+                    For u As Integer = 0 To UBound(randStack.AllFighters) Step 1
+                        If Not res.Contains(randStack.AllFighters(u).unitID) Then
+                            If randStack.AllFighters(u).small Then
+                                If Math.Abs(randStack.AllFighters(u).EXPnext - bar) <= tolerance Then selection.Add(u)
                             Else
-                                If Math.Abs(units.Item(u).EXPnext - 2 * bar) <= 2 * tolerance Then selection.Add(u)
+                                If Math.Abs(randStack.AllFighters(u).EXPnext - 2 * bar) <= 2 * tolerance Then selection.Add(u)
                             End If
                         End If
                     Next u
@@ -5812,10 +5791,10 @@ Public Class ObjectsContentSet
                 Loop
                 'If selection.Count = 0 Then Throw New Exception("Не могу выбрать юнита в качестве наемника. Планка опыта: " & bar.ToString)
                 If selection.Count > 0 Then
-                    Dim r As Integer = selection.Item(comm.rndgen.RndPos(selection.Count, True) - 1)
-                    res.Add(units.Item(r).unitID)
-                    txt &= units.Item(r).unitID & " - " & units.Item(r).name & " - " & units.Item(r).EXPnext
-                    If units.Item(r).small Then
+                    Dim r As Integer = selection.Item(randStack.comm.rndgen.RndPos(selection.Count, True) - 1)
+                    res.Add(randStack.AllFighters(r).unitID)
+                    txt &= randStack.AllFighters(r).unitID & " - " & randStack.AllFighters(r).name & " - " & randStack.AllFighters(r).EXPnext
+                    If randStack.AllFighters(r).small Then
                         txt &= " (small)"
                     Else
                         txt &= " (big)"
@@ -5858,16 +5837,16 @@ Public Class ObjectsContentSet
             If IsNumeric(v) Then
                 Dim bar As Integer = CInt(v)
                 itemID = SelectItem(bar, -1, dCost, d, res.Count)
-                If itemID > -1 Then res.Add(items.Item(itemID).itemID)
+                If itemID > -1 Then res.Add(randStack.MagicItem(itemID).itemID)
                 txt &= msgToLog(itemID, dCost, True)
-            ElseIf comm.itemTypeID.ContainsKey(v.ToUpper) Then
+            ElseIf randStack.comm.itemTypeID.ContainsKey(v.ToUpper) Then
                 selection.Clear()
-                Dim type As Integer = comm.itemTypeID.Item(v.ToUpper)
-                For Each u As AllDataStructues.Item In items
-                    If type = u.type AndAlso comm.ItemFilter(d.IGen, u) Then selection.Add(u.itemID)
+                Dim type As Integer = randStack.comm.itemTypeID.Item(v.ToUpper)
+                For Each u As AllDataStructues.Item In randStack.MagicItem
+                    If type = u.type AndAlso randStack.comm.ItemFilter(d.IGen, u) Then selection.Add(u.itemID)
                 Next u
                 If selection.Count = 0 Then Throw New Exception("Не могу выбрать предмет в качестве товара. Тип: " & v)
-                itemID = comm.rndgen.RndPos(selection.Count, True) - 1
+                itemID = randStack.comm.rndgen.RndPos(selection.Count, True) - 1
                 res.Add(selection.Item(itemID))
                 txt &= msgToLog(itemID, dCost, False)
             ElseIf v.Contains("#") Then
@@ -5876,11 +5855,11 @@ Public Class ObjectsContentSet
                 If IsNumeric(s(0)) Then
                     type = CInt(s(0))
                 Else
-                    type = comm.itemTypeID.Item(s(0).ToUpper)
+                    type = randStack.comm.itemTypeID.Item(s(0).ToUpper)
                 End If
                 Dim bar As Integer = CInt(s(1))
                 itemID = SelectItem(bar, type, dCost, d, res.Count)
-                If itemID > -1 Then res.Add(items.Item(itemID).itemID)
+                If itemID > -1 Then res.Add(randStack.MagicItem(itemID).itemID)
                 txt &= msgToLog(itemID, dCost, True)
             Else
                 res.Add(v.ToUpper)
@@ -5898,7 +5877,7 @@ Public Class ObjectsContentSet
         If addDeltaCost Then txt &= " deltaCost: " & dCost
         txt &= " -> "
         If itemID > -1 Then
-            txt &= items.Item(itemID).itemID & " - " & items.Item(itemID).name & " - " & items.Item(itemID).itemCost.Gold
+            txt &= randStack.MagicItem(itemID).itemID & " - " & randStack.MagicItem(itemID).name & " - " & randStack.MagicItem(itemID).itemCost.Gold
         Else
             txt &= "nothong"
         End If
@@ -5921,12 +5900,12 @@ Public Class ObjectsContentSet
         Do While (selection.Count = 0 Or oneMore) And tolerance <= 10000
             tolerance += dtolerance
             selection.Clear()
-            For u As Integer = 0 To items.Count - 1 Step 1
-                If Math.Abs(items.Item(u).itemCost.Gold - correctedBar) <= tolerance Then
+            For u As Integer = 0 To UBound(randStack.MagicItem) Step 1
+                If Math.Abs(randStack.MagicItem(u).itemCost.Gold - correctedBar) <= tolerance Then
                     If type < 0 Then
-                        add = comm.ItemFilter(d.IGen, items.Item(u))
+                        add = randStack.comm.ItemFilter(d.IGen, randStack.MagicItem(u))
                     Else
-                        If type = items.Item(u).type Then
+                        If type = randStack.MagicItem(u).type Then
                             add = True
                         Else
                             add = False
@@ -5939,8 +5918,8 @@ Public Class ObjectsContentSet
         Loop
         dCost += bar
         If selection.Count > 0 Then
-            Dim r As Integer = selection.Item(comm.rndgen.RndPos(selection.Count, True) - 1)
-            dCost -= items.Item(r).itemCost.Gold
+            Dim r As Integer = selection.Item(randStack.comm.rndgen.RndPos(selection.Count, True) - 1)
+            dCost -= randStack.MagicItem(r).itemCost.Gold
             Return r
         Else
             'Throw New Exception("Не могу выбрать предмет в качестве товара. Планка цены: " & bar.ToString)

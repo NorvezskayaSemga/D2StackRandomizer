@@ -65,7 +65,7 @@ Public Class RandStackTest
                                                      RandomStackGenerator.My.Resources.readDefaultFileKeyword}
     Friend UnitsList() As AllDataStructues.Unit = Nothing
     Friend ItemsList() As AllDataStructues.Item = Nothing
-    Friend AllSpells As Dictionary(Of String, AllDataStructues.Spell) = Nothing
+    Friend AllSpells() As AllDataStructues.Spell = Nothing
 
     Friend Sub ReadTestUnits()
         UnitsList = (New ImpenetrableMeshShow.StartForm_Accessor).ReadTestUnits
