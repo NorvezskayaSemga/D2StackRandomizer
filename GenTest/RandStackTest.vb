@@ -339,8 +339,8 @@ Public Class RandStackTest
             cost = target.minItemGoldCost + i * 125
             genitems = target.ItemsGen(cost, New AllDataStructues.LootGenSettings)
             sum = target.LootCost(genitems).Gold
-            If sum > cost Then ok = False
-            If Math.Abs(cost - sum) >= target.minItemGoldCost Then ok = False
+            'If sum > cost Then ok = False
+            If Math.Abs(cost - sum) > cost Then ok = False
             If Not ok Then Exit For
         Next i
         If Not ok Then Assert.Inconclusive("Verify the correctness of this test method.")
@@ -757,6 +757,9 @@ Public Class RandStackTest
                                                   .items = New List(Of String)}
         Dim stats As AllDataStructues.DesiredStats = target.StackStats(s)
         stats.LootCost = 2000
+        stats.IGen = New AllDataStructues.LootGenSettings With {.ConsumableItems = New AllDataStructues.ItemGenSettings With {.amount = 2}, _
+                                                                .NonconsumableItems = New AllDataStructues.ItemGenSettings With {.costPart = 0.333}, _
+                                                                .JewelItems = New AllDataStructues.ItemGenSettings With {.exclude = True, .costPart = 0.9}}
 
         For i As Integer = 1 To 20 Step 1
             Call target.Gen(stats, 0, True, False)

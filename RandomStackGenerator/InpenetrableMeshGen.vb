@@ -4970,10 +4970,7 @@ Public Class ImpenetrableObjects
             For j As Integer = 1 To 5 Step 1
                 res.Item(i)(0) += res.Item(i)(j)
             Next j
-            If res.Item(i)(0).Black = 0 And res.Item(i)(0).Blue = 0 And res.Item(i)(0).Gold = 0 _
-            And res.Item(i)(0).Green = 0 And res.Item(i)(0).Red = 0 And res.Item(i)(0).White = 0 Then
-                remove.Add(i)
-            End If
+            If AllDataStructues.Cost.Sum(res.Item(i)(0)) = 0 Then remove.Add(i)
         Next i
         For Each i As Integer In remove
             res.Remove(i)
@@ -5843,7 +5840,7 @@ Public Class ObjectsContentSet
                 selection.Clear()
                 Dim type As Integer = randStack.comm.itemTypeID.Item(v.ToUpper)
                 For Each u As AllDataStructues.Item In randStack.MagicItem
-                    If type = u.type AndAlso randStack.comm.ItemFilter(d.IGen, u) Then selection.Add(u.itemID)
+                    If type = u.type AndAlso randStack.ItemFilter(d.IGen, u) Then selection.Add(u.itemID)
                 Next u
                 If selection.Count = 0 Then Throw New Exception("Не могу выбрать предмет в качестве товара. Тип: " & v)
                 itemID = randStack.comm.rndgen.RndPos(selection.Count, True) - 1
@@ -5901,9 +5898,9 @@ Public Class ObjectsContentSet
             tolerance += dtolerance
             selection.Clear()
             For u As Integer = 0 To UBound(randStack.MagicItem) Step 1
-                If Math.Abs(randStack.MagicItem(u).itemCost.Gold - correctedBar) <= tolerance Then
+                If Math.Abs(randStack.LootCost(randStack.MagicItem(u)).Gold - correctedBar) <= tolerance Then
                     If type < 0 Then
-                        add = randStack.comm.ItemFilter(d.IGen, randStack.MagicItem(u))
+                        add = randStack.ItemFilter(d.IGen, randStack.MagicItem(u))
                     Else
                         If type = randStack.MagicItem(u).type Then
                             add = True

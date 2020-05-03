@@ -19,7 +19,7 @@ Public Class RandStack
 
     Private ExpBarLeaders(), ExpKilledLeaders(), multLeaders() As Double
     Friend ExpBarFighters(), ExpKilledFighters(), multFighters() As Double
-    Friend ItemGoldCost(), multItems() As Double
+    Friend ItemCostSum(), multItems() As Double
     Private minItemGoldCost As Integer
 
     ''' <summary>Сюда генератор пишет лог</summary>
@@ -73,7 +73,7 @@ Public Class RandStack
         Call MakeAccessoryArrays(AllUnitsList, comm.customRace, AllLeaders, cat, 2, ExpBarLeaders, ExpKilledLeaders, multLeaders)
         Call MakeAccessoryArrays(AllUnitsList, comm.customRace, ExcludedUnits, cat, 0, Nothing, Nothing, Nothing)
 
-        Call MakeAccessoryArrays(AllItemsList, MagicItem, ExcludedItems, ItemGoldCost, multItems)
+        Call MakeAccessoryArrays(AllItemsList, MagicItem, ExcludedItems, ItemCostSum, multItems)
 
     End Sub
     Private Sub MakeAccessoryArrays(ByRef allunits() As AllDataStructues.Unit, ByRef customRace As Dictionary(Of String, String), _
@@ -110,7 +110,7 @@ Public Class RandStack
     Private Sub MakeAccessoryArrays(ByRef allitems() As AllDataStructues.Item, _
                                     ByRef items() As AllDataStructues.Item, _
                                     ByRef excluded() As AllDataStructues.Item, _
-                                    ByRef GoldCost() As Double, ByRef mult() As Double)
+                                    ByRef itemCostSum() As Double, ByRef mult() As Double)
         Dim n As Integer = -1
         Dim m As Integer = -1
         Dim add(UBound(allitems)) As Boolean
@@ -124,7 +124,7 @@ Public Class RandStack
                 m += 1
             End If
         Next i
-        ReDim items(n), GoldCost(n), multItems(n), excluded(m)
+        ReDim items(n), itemCostSum(n), multItems(n), excluded(m)
 
         Dim weight As New Dictionary(Of String, String)
         For Each s As String In comm.valConv.WeightMultiplicator.Split(CChar(";"))
@@ -139,15 +139,15 @@ Public Class RandStack
             If add(i) Then
                 n += 1
                 items(n) = AllDataStructues.Item.Copy(allitems(i))
-                GoldCost(n) = LootCost(items(n)).Gold
-                mult(n) = ItemTypeWeight(weight, comm.itemType.Item(items(n).type), GoldCost(n))
+                itemCostSum(n) = AllDataStructues.Cost.Sum(LootCost(items(n)))
+                mult(n) = ItemTypeWeight(weight, comm.itemType.Item(items(n).type), itemCostSum(n))
                 If comm.LootItemChanceMultiplier.ContainsKey(items(n).itemID.ToUpper) Then
                     mult(n) *= comm.LootItemChanceMultiplier.Item(items(n).itemID.ToUpper)
                 End If
                 minItemGoldCost = Math.Min(minItemGoldCost, CInt(items(n).itemCost.Gold))
             Else
-            m += 1
-            excluded(m) = AllDataStructues.Item.Copy(allitems(i))
+                m += 1
+                excluded(m) = AllDataStructues.Item.Copy(allitems(i))
             End If
         Next i
     End Sub
@@ -257,7 +257,7 @@ Public Class RandStack
         If result.StackSize > 0 Then result.ExpBarAverage = CInt(result.ExpBarAverage / result.StackSize)
 
         Dim LCost As AllDataStructues.Cost = LootCost(stack.items)
-        result.LootCost = LCost.Gold + LCost.Black + LCost.Blue + LCost.Green + LCost.Red + LCost.White
+        result.LootCost = AllDataStructues.Cost.Sum(LCost)
         result.IGen = GetItemsGenSettings(stack.items)
 
         Return result
@@ -267,20 +267,33 @@ Public Class RandStack
     Public Function GetItemsGenSettings(ByRef items As List(Of String)) As AllDataStructues.LootGenSettings
         If IsNothing(items) Then Return New AllDataStructues.LootGenSettings
         Dim result As New AllDataStructues.LootGenSettings With { _
-            .excludeConsumableItems = True, _
-            .excludeJewelItems = True, _
-            .excludeNonconsumableItems = True}
-        Dim type As Integer
-        For Each item As String In items
-            type = FindItemStats(item).type
-            If comm.ConsumableItemsTypes.Contains(type) Then
-                result.excludeConsumableItems = False
-            ElseIf comm.NonconsumableItemsTypes.Contains(type) Then
-                result.excludeNonconsumableItems = False
-            ElseIf comm.JewelItemsTypes.Contains(type) Then
-                result.excludeJewelItems = False
+            .ConsumableItems = New AllDataStructues.ItemGenSettings With {.exclude = True}, _
+            .NonconsumableItems = New AllDataStructues.ItemGenSettings With {.exclude = True}, _
+            .JewelItems = New AllDataStructues.ItemGenSettings With {.exclude = True}}
+        Dim item As AllDataStructues.Item
+        For Each id As String In items
+            item = FindItemStats(id)
+            If comm.ConsumableItemsTypes.Contains(item.type) Then
+                result.ConsumableItems.exclude = False
+                result.ConsumableItems.amount += 1
+                result.ConsumableItems.costPart += AllDataStructues.Cost.Sum(LootCost(item))
+            ElseIf comm.NonconsumableItemsTypes.Contains(item.type) Then
+                result.NonconsumableItems.exclude = False
+                result.NonconsumableItems.amount += 1
+                result.NonconsumableItems.costPart += AllDataStructues.Cost.Sum(LootCost(item))
+            ElseIf comm.JewelItemsTypes.Contains(item.type) Then
+                result.JewelItems.exclude = False
+                result.JewelItems.amount += 1
+                result.JewelItems.costPart += AllDataStructues.Cost.Sum(LootCost(item))
             End If
-        Next item
+        Next id
+        Dim sum As Double = result.ConsumableItems.costPart + result.NonconsumableItems.costPart + result.JewelItems.costPart
+        If sum > 0 Then
+            sum = 1 / sum
+            result.ConsumableItems.costPart *= sum
+            result.NonconsumableItems.costPart *= sum
+            result.JewelItems.costPart *= sum
+        End If
         Return result
     End Function
 
@@ -411,29 +424,36 @@ Public Class RandStack
                              "Gold sum: " & GoldCost)
         Call AddToLog(LogID, IGen)
 
+        Dim DynIGen As AllDataStructues.LootGenSettings = GenItemSetDynIGen(IGen, GoldCost)
         Dim serialExecution As Boolean = (LogID < 0)
-        Dim costBar, maxCost, selected As Integer
+        Dim costBar(), maxCost(), selected As Integer
+        Dim weight(UBound(MagicItem)) As Double
         Dim DynCost As Integer = GoldCost
         Dim IDs As New List(Of Integer)
         Dim result As New List(Of String)
-        Dim add As Boolean
         Do While DynCost >= minItemGoldCost
-            costBar = CostBarGen(minItemGoldCost, DynCost, serialExecution)
-            maxCost = Math.Min(2 * costBar, DynCost)
-            Call AddToLog(LogID, "Max cost bar:" & DynCost & " Selected cost bar:" & costBar & " max item cost:" & maxCost)
+            maxCost = GenItemMaxCost(DynIGen, DynCost)
+            costBar = GenItemCostBar(DynIGen, maxCost, serialExecution)
+            Call AddToLog(LogID, "Max cost bar:" & DynCost & _
+                                 " Selected cost bar:" & costBar(0) & "|" & costBar(1) & "|" & costBar(2) & _
+                                 " max item cost:" & maxCost(0) & "|" & maxCost(1) & "|" & maxCost(2))
             IDs.Clear()
             For i As Integer = 0 To UBound(MagicItem) Step 1
-                add = False
-                If ItemGoldCost(i) <= maxCost Then add = True
-                If add Then add = comm.ItemFilter(IGen, MagicItem(i))
-                If add Then IDs.Add(i)
+                If ItemFilter(DynIGen, MagicItem(i), costBar) Then
+                    IDs.Add(i)
+                    weight(i) = GenItemWeight(MagicItem(i), costBar) * multItems(i)
+                Else
+                    weight(i) = 0
+                End If
             Next i
             If IDs.Count = 0 Then Exit Do
-            selected = comm.RandomSelection(IDs, New Double()() {ItemGoldCost}, New Double() {costBar}, _
-                                            multItems, multiItemGenSigmaMultiplier * itemGenSigma, serialExecution)
-            Call AddToLog(LogID, "Selected item:" & MagicItem(selected).name & " id:" & MagicItem(selected).itemID & " gold cost:" & ItemGoldCost(selected))
+
+            selected = comm.RandomSelection(IDs, weight, serialExecution)
+
+            Call AddToLog(LogID, "Selected item:" & MagicItem(selected).name & " id:" & MagicItem(selected).itemID & " cost:" & ItemCostSum(selected))
             result.Add(MagicItem(selected).itemID)
-            DynCost = CInt(DynCost - ItemGoldCost(selected))
+            Call GenItemIGenChange(DynIGen, MagicItem(selected), DynCost)
+            DynCost = CInt(DynCost - ItemCostSum(selected))
         Loop
 
         Call AddToLog(LogID, "----Loot creation ended----")
@@ -479,18 +499,14 @@ Public Class RandStack
         Dim selected As Integer
         Dim IDs As New List(Of Integer)
         Dim result As String = ""
-        Dim add As Boolean
 
         IDs.Clear()
         For i As Integer = 0 To UBound(MagicItem) Step 1
-            add = False
-            If ItemGoldCost(i) <= GoldCost Then add = True
-            If add Then add = comm.ItemFilter(IGen, MagicItem(i))
-            If add Then IDs.Add(i)
+            If ItemCostSum(i) <= GoldCost AndAlso ItemFilter(IGen, MagicItem(i)) Then IDs.Add(i)
         Next i
         If IDs.Count > 0 Then
-            selected = comm.RandomSelection(IDs, New Double()() {ItemGoldCost}, New Double() {GoldCost}, multItems, itemGenSigma, serialExecution)
-            Call AddToLog(LogID, "Selected item:" & MagicItem(selected).name & " id:" & MagicItem(selected).itemID & " gold cost:" & ItemGoldCost(selected))
+            selected = comm.RandomSelection(IDs, New Double()() {ItemCostSum}, New Double() {GoldCost}, multItems, itemGenSigma, serialExecution)
+            Call AddToLog(LogID, "Selected item:" & MagicItem(selected).name & " id:" & MagicItem(selected).itemID & " cost:" & ItemCostSum(selected))
             result = MagicItem(selected).itemID
         End If
 
@@ -508,6 +524,136 @@ Public Class RandStack
                              ByVal LootCostMultiplier As Double, _
                              Optional ByVal LogID As Integer = -1) As String
         Return ThingGen(CInt(GoldCost * LootCostMultiplier), IGen, LogID)
+    End Function
+    Private Function GenItemSetDynIGen(ByRef IGen As AllDataStructues.LootGenSettings, ByRef GoldCost As Integer) As AllDataStructues.LootGenSettings
+        Dim settings() As AllDataStructues.ItemGenSettings = AllDataStructues.LootGenSettings.ToArray(IGen)
+        Dim weightsSum As Double
+        For i As Integer = 0 To UBound(settings) Step 1
+            If Not settings(i).exclude Then weightsSum += settings(i).costPart
+        Next i
+        If weightsSum > 1 Then Throw New Exception("Invalid cost parts sum: " & weightsSum)
+        Dim Dyn As AllDataStructues.LootGenSettings = AllDataStructues.LootGenSettings.Copy(IGen)
+        Dyn.ConsumableItems.dynCostPart = CInt(GoldCost * Dyn.ConsumableItems.costPart)
+        Dyn.NonconsumableItems.dynCostPart = CInt(GoldCost * Dyn.NonconsumableItems.costPart)
+        Dyn.JewelItems.dynCostPart = CInt(GoldCost * Dyn.JewelItems.costPart)
+        Return Dyn
+    End Function
+    Private Function GenItemMaxCost(ByRef IGen As AllDataStructues.LootGenSettings, ByRef GoldCost As Integer) As Integer()
+        Dim settings() As AllDataStructues.ItemGenSettings = AllDataStructues.LootGenSettings.ToArray(IGen)
+        Dim result(UBound(settings)) As Integer
+        For i As Integer = 0 To UBound(settings) Step 1
+            If Not settings(i).exclude Then
+                If settings(i).costPart > 0 Then
+                    result(i) = settings(i).dynCostPart
+                Else
+                    result(i) = GoldCost
+                End If
+            End If
+        Next i
+        Return result
+    End Function
+    Private Function GenItemCostBar(ByRef IGen As AllDataStructues.LootGenSettings, ByRef MaxCost() As Integer, _
+                                    ByRef serialExecution As Boolean) As Integer()
+        Dim settings() As AllDataStructues.ItemGenSettings = AllDataStructues.LootGenSettings.ToArray(IGen)
+        Dim result(UBound(settings)), min, max As Integer
+        Dim upCost As Integer = CInt(0.75 * minItemGoldCost)
+        For i As Integer = 0 To UBound(settings) Step 1
+            If Not settings(i).exclude Then
+                If settings(i).amount > 0 And settings(i).dynCostPart > 0 Then
+                    max = CInt(Math.Max(minItemGoldCost, (settings(i).dynCostPart + upCost) / settings(i).amount))
+                    min = minItemGoldCost + CInt(0.75 * (max - minItemGoldCost))
+                ElseIf settings(i).amount > 0 Then
+                    max = CInt(Math.Max(minItemGoldCost, (MaxCost(i) + upCost) / settings(i).amount))
+                    min = minItemGoldCost + CInt(0.75 * (max - minItemGoldCost))
+                Else
+                    max = Math.Max(minItemGoldCost, MaxCost(i) + upCost)
+                    min = minItemGoldCost
+                End If
+                result(i) = CostBarGen(min, max, serialExecution)
+            End If
+        Next i
+        Return result
+    End Function
+    Private Function GenItemWeight(ByRef item As AllDataStructues.Item, ByRef CostBar() As Integer) As Double
+        Dim result As Double
+        For i As Integer = 0 To UBound(CostBar) Step 1
+            If comm.ItemTypesLists(i).Contains(item.type) Then
+                result = comm.Gauss(AllDataStructues.Cost.Sum(LootCost(item)), _
+                                    CostBar(i), multiItemGenSigmaMultiplier * itemGenSigma)
+                Exit For
+            End If
+        Next i
+        Return result
+    End Function
+    Private Sub GenItemIGenChange(ByRef IGen As AllDataStructues.LootGenSettings, _
+                                  ByRef item As AllDataStructues.Item, _
+                                  ByRef DynCost As Integer)
+        Dim settings() As AllDataStructues.ItemGenSettings = AllDataStructues.LootGenSettings.ToArray(IGen)
+        For i As Integer = 0 To UBound(settings) Step 1
+            If comm.ItemTypesLists(i).Contains(item.type) Then
+                If settings(i).amount > 0 Then
+                    settings(i).amount -= 1
+                    If settings(i).amount = 0 Then
+                        Dim weightsSum As Double
+                        For j As Integer = 0 To UBound(settings) Step 1
+                            If Not settings(j).exclude Then weightsSum += settings(j).costPart
+                        Next j
+                        If weightsSum > 0 Then
+                            settings(i).costPart = 1 - weightsSum
+                            settings(i).dynCostPart = CInt(settings(i).costPart * DynCost)
+                        End If
+                    End If
+                End If
+                If settings(i).dynCostPart > 0 Then
+                    settings(i).dynCostPart -= AllDataStructues.Cost.Sum(LootCost(item))
+                    If settings(i).dynCostPart <= 0 Then
+                        settings(i).dynCostPart = 0
+                        For j As Integer = 0 To UBound(settings) Step 1
+                            If Not i = j And Not settings(j).exclude Then settings(i).exclude = True
+                        Next j
+                    End If
+                End If
+                If i = 0 Then
+                    IGen.ConsumableItems = settings(i)
+                ElseIf i = 1 Then
+                    IGen.NonconsumableItems = settings(i)
+                ElseIf i = 2 Then
+                    IGen.JewelItems = settings(i)
+                Else
+                    Throw New Exception
+                End If
+                Exit For
+            End If
+        Next i
+    End Sub
+
+    Friend Function ItemFilter(ByRef IGen As AllDataStructues.LootGenSettings, ByRef item As AllDataStructues.Item) As Boolean
+        Dim settings() As AllDataStructues.ItemGenSettings = AllDataStructues.LootGenSettings.ToArray(IGen)
+        For i As Integer = 0 To UBound(settings) Step 1
+            If comm.ItemTypesLists(i).Contains(item.type) Then
+                If settings(i).exclude Then
+                    Return False
+                Else
+                    Exit For
+                End If
+            End If
+        Next i
+        Return True
+    End Function
+    Friend Function ItemFilter(ByRef IGen As AllDataStructues.LootGenSettings, ByRef item As AllDataStructues.Item, _
+                               ByRef CostBar() As Integer) As Boolean
+        Dim settings() As AllDataStructues.ItemGenSettings = AllDataStructues.LootGenSettings.ToArray(IGen)
+        For i As Integer = 0 To UBound(settings) Step 1
+            If comm.ItemTypesLists(i).Contains(item.type) Then
+                If settings(i).exclude Then
+                    Return False
+                Else
+                    If AllDataStructues.Cost.Sum(LootCost(item)) > 2 * CostBar(i) Then Return False
+                    Exit For
+                End If
+            End If
+        Next i
+        Return True
     End Function
 
     ''' <summary>Затычка: вернет отряд из двух сквайров и трех лучников. Лидер - паладин. С зельем воскрешения</summary>
@@ -1255,6 +1401,7 @@ Public Class Common
     Friend valConv As New ValueConverter
 
     Friend ConsumableItemsTypes, NonconsumableItemsTypes, JewelItemsTypes As New List(Of Integer)
+    Friend ItemTypesLists() As List(Of Integer)
 
     Public Sub New()
         Dim splitedRace() As String = TxtSplit(My.Resources.Races)
@@ -1297,6 +1444,7 @@ Public Class Common
         ConsumableItemsTypes.AddRange(New Integer() {4, 5, 6, 7, 8, 11, 12})
         NonconsumableItemsTypes.AddRange(New Integer() {0, 1, 2, 3, 9, 13})
         JewelItemsTypes.AddRange(New Integer() {10})
+        ItemTypesLists = {ConsumableItemsTypes, NonconsumableItemsTypes, JewelItemsTypes}
 
         Dim splitedItemsTypes() As String = TxtSplit(My.Resources.Items)
         For i As Integer = 0 To UBound(splitedItemsTypes) Step 1
@@ -1417,9 +1565,9 @@ Public Class Common
                                 Throw New Exception("В файле с параметрами отрядов есть повторяющееся имя локации: " & result(i).LocationName)
                             End If
                         ElseIf k = 1 Then
-                            result(i).ExpBarAverage = Math.Max(ReadIntField(s(f + 1), txt(i), s(f)), 10) 'AverageExpBar
+                            result(i).ExpBarAverage = Math.Max(ValueConverter.StrToInt(s(f + 1), txt(i), s(f)), 10) 'AverageExpBar
                         ElseIf k = 2 Then
-                            result(i).ExpStackKilled = Math.Max(ReadIntField(s(f + 1), txt(i), s(f)), 5) 'ExpStackKilled
+                            result(i).ExpStackKilled = Math.Max(ValueConverter.StrToInt(s(f + 1), txt(i), s(f)), 5) 'ExpStackKilled
                         ElseIf k = 3 Then
                             Dim rid As Integer
                             r = s(f + 1).Split(CChar("+")) 'Race
@@ -1429,19 +1577,19 @@ Public Class Common
                                 If Not result(i).Race.Contains(rid) Then result(i).Race.Add(rid)
                             Next n
                         ElseIf k = 4 Then
-                            result(i).StackSize = Math.Max(ReadIntField(s(f + 1), txt(i), s(f)), 1) 'StackSize
+                            result(i).StackSize = Math.Max(ValueConverter.StrToInt(s(f + 1), txt(i), s(f)), 1) 'StackSize
                         ElseIf k = 5 Then
-                            result(i).MaxGiants = Math.Max(ReadIntField(s(f + 1), txt(i), s(f)), 0) 'MaxGiants
+                            result(i).MaxGiants = Math.Max(ValueConverter.StrToInt(s(f + 1), txt(i), s(f)), 0) 'MaxGiants
                         ElseIf k = 6 Then
-                            result(i).MeleeCount = Math.Max(ReadIntField(s(f + 1), txt(i), s(f)), 0) 'MeleeSlots
+                            result(i).MeleeCount = Math.Max(ValueConverter.StrToInt(s(f + 1), txt(i), s(f)), 0) 'MeleeSlots
                         ElseIf k = 7 Then
-                            result(i).LootCost = Math.Max(ReadIntField(s(f + 1), txt(i), s(f)), 0) 'LootCost
+                            result(i).LootCost = Math.Max(ValueConverter.StrToInt(s(f + 1), txt(i), s(f)), 0) 'LootCost
                         ElseIf k = 8 Then
-                            result(i).IGen.excludeConsumableItems = ReadBoolField(s(f + 1)) 'CItemsExclude
+                            result(i).IGen.ConsumableItems = AllDataStructues.ItemGenSettings.Read(s(f + 1)) 'CItemsGen
                         ElseIf k = 9 Then
-                            result(i).IGen.excludeNonconsumableItems = ReadBoolField(s(f + 1)) 'NItensExclude
+                            result(i).IGen.NonconsumableItems = AllDataStructues.ItemGenSettings.Read(s(f + 1)) 'NItemsGen
                         ElseIf k = 10 Then
-                            result(i).IGen.excludeJewelItems = ReadBoolField(s(f + 1)) 'JItensExclude
+                            result(i).IGen.JewelItems = AllDataStructues.ItemGenSettings.Read(s(f + 1)) 'JItemsGen
                         ElseIf k = 11 Then
                             r = s(f + 1).Split(CChar("+")) 'ShopContent
                             result(i).shopContent = New List(Of String)
@@ -1449,7 +1597,7 @@ Public Class Common
                                 result(i).shopContent.Add(r(n).ToUpper)
                             Next n
                         ElseIf k = 12 Then
-                            result(i).isInternalCityGuard = ReadBoolField(s(f + 1)) 'IsInternalCityGuard
+                            result(i).isInternalCityGuard = ValueConverter.StrToBool(s(f + 1)) 'IsInternalCityGuard
                         End If
                     End If
                 Next k
@@ -1457,23 +1605,7 @@ Public Class Common
         Next i
         Return result
     End Function
-    Private Function ReadIntField(ByRef v As String, ByRef fullLine As String, ByRef fieldName As String) As Integer
-        Try
-            Return CInt(v)
-        Catch ex As Exception
-            Throw New Exception(ex.Message & vbNewLine & fullLine & vbNewLine & "Field: " & fieldName)
-            Return 1
-        End Try
-    End Function
-    Private Function ReadBoolField(ByRef v As String) As Boolean
-        Dim f As String = v.ToUpper
-        If f = "T" Or f = "TRUE" Or f = "1" Then
-            Return True
-        Else
-            Return False
-        End If
-    End Function
-
+    
     ''' <summary>Сохраняет в файл параметры генерируемых отрядов</summary>
     ''' <param name="path">Путь к файлу</param>
     ''' <param name="content">Параметры</param>
@@ -1875,13 +2007,6 @@ Public Class Common
         Return Common.ValueLowerBound(ratio, average) * ratio
     End Function
 
-    Friend Function ItemFilter(ByRef IGen As AllDataStructues.LootGenSettings, ByRef item As AllDataStructues.Item) As Boolean
-        If IGen.excludeConsumableItems And ConsumableItemsTypes.Contains(item.type) Then Return False
-        If IGen.excludeNonconsumableItems And NonconsumableItemsTypes.Contains(item.type) Then Return False
-        If IGen.excludeJewelItems And JewelItemsTypes.Contains(item.type) Then Return False
-        Return True
-    End Function
-
     Friend Function ItemTypeCostModify(ByRef item As AllDataStructues.Item) As AllDataStructues.Cost
         If itemType.Item(item.type) = "JEWEL" Then
             Return item.itemCost / valConv.JewelItemsCostDevider
@@ -2156,17 +2281,17 @@ Public Class AllDataStructues
                     Return Nothing
                 End If
                 If s1 = "g" Then
-                    res.Gold = CInt(v)
+                    res.Gold = ValueConverter.StrToInt(v, costString, s1)
                 ElseIf s1 = "r" Then
-                    res.Red = CInt(v)
+                    res.Red = ValueConverter.StrToInt(v, costString, s1)
                 ElseIf s1 = "y" Then
-                    res.Blue = CInt(v)
+                    res.Blue = ValueConverter.StrToInt(v, costString, s1)
                 ElseIf s1 = "e" Then
-                    res.Black = CInt(v)
+                    res.Black = ValueConverter.StrToInt(v, costString, s1)
                 ElseIf s1 = "w" Then
-                    res.White = CInt(v)
+                    res.White = ValueConverter.StrToInt(v, costString, s1)
                 ElseIf s1 = "b" Then
-                    res.Green = CInt(v)
+                    res.Green = ValueConverter.StrToInt(v, costString, s1)
                 Else
                     Throw New Exception("Неожиданный формат стоимости: " & costString)
                     Return Nothing
@@ -2197,6 +2322,12 @@ Public Class AllDataStructues
                 If i < UBound(ch) Then s &= ":"
             Next i
             Return s
+        End Function
+
+        ''' <summary>Вернет суммарную стоимость в золоте и мане</summary>
+        ''' <param name="v">цена: золото и мана</param>
+        Public Shared Function Sum(ByVal v As Cost) As Integer
+            Return v.Gold + v.Black + v.Blue + v.Green + v.Red + v.White
         End Function
 
         Public Shared Operator *(ByVal v As Cost, ByVal n As Double) As Cost
@@ -2278,22 +2409,26 @@ Public Class AllDataStructues
     End Structure
 
     Public Structure LootGenSettings
-        ''' <summary>Не генерировать зелья, сферы, талисманы и свитки</summary>
-        Dim excludeConsumableItems As Boolean
-        ''' <summary>Не генерировать надеваемые предметы и посохи</summary>
-        Dim excludeNonconsumableItems As Boolean
-        ''' <summary>Не генерировать драгоценности</summary>
-        Dim excludeJewelItems As Boolean
+        ''' <summary>Cферы, талисманы и свитки</summary>
+        Dim ConsumableItems As ItemGenSettings
+        ''' <summary>Надеваемые предметы и посохи</summary>
+        Dim NonconsumableItems As ItemGenSettings
+        ''' <summary>Драгоценности</summary>
+        Dim JewelItems As ItemGenSettings
 
         Public Shared Function Copy(ByVal v As LootGenSettings) As LootGenSettings
-            Return New LootGenSettings With {.excludeConsumableItems = v.excludeConsumableItems, _
-                                             .excludeNonconsumableItems = v.excludeNonconsumableItems, _
-                                             .excludeJewelItems = v.excludeJewelItems}
+            Return New LootGenSettings With {.ConsumableItems = AllDataStructues.ItemGenSettings.Copy(v.ConsumableItems), _
+                                             .NonconsumableItems = AllDataStructues.ItemGenSettings.Copy(v.NonconsumableItems), _
+                                             .JewelItems = AllDataStructues.ItemGenSettings.Copy(v.JewelItems)}
         End Function
         Public Shared Function Print(ByVal v As LootGenSettings) As String
-            Return "CItemsExclude" & vbTab & v.excludeConsumableItems & vbNewLine & _
-                   "NItemsExclude" & vbTab & v.excludeNonconsumableItems & vbNewLine & _
-                   "JItemsExclude" & vbTab & v.excludeJewelItems
+            Return "CItemsGen" & vbTab & AllDataStructues.ItemGenSettings.Print(v.ConsumableItems) & vbNewLine & _
+                   "NItemsGen" & vbTab & AllDataStructues.ItemGenSettings.Print(v.NonconsumableItems) & vbNewLine & _
+                   "JItemsGen" & vbTab & AllDataStructues.ItemGenSettings.Print(v.JewelItems)
+        End Function
+        ''' <summary>Return {ConsumableItems,NonconsumableItems,JewelItems}</summary>
+        Public Shared Function ToArray(ByVal v As LootGenSettings) As ItemGenSettings()
+            Return New ItemGenSettings() {v.ConsumableItems, v.NonconsumableItems, v.JewelItems}
         End Function
     End Structure
 
@@ -2302,8 +2437,10 @@ Public Class AllDataStructues
         Dim exclude As Boolean
         ''' <summary>Примерное количество. Игнорируется, если меньше 1</summary>
         Dim amount As Integer
-        ''' <summary>Доля от общей стоимости лута. Игнорируется, если равно 0</summary>
+        ''' <summary>Доля от общей стоимости лута. Если равно 0</summary>
         Dim costPart As Double
+        ''' <summary>costPart*TotalLootCost</summary>
+        Friend dynCostPart As Integer
 
         Public Shared Function Copy(ByVal v As ItemGenSettings) As ItemGenSettings
             Return New ItemGenSettings With {.exclude = v.exclude, _
@@ -2318,7 +2455,9 @@ Public Class AllDataStructues
             Dim s() As String = v.Replace(" ", "").Replace(vbTab, "").Split(CChar("#"))
             Dim n As Integer = 3
             If Not s.Length = n Then Throw New Exception("ItemGenSettings.Read expects " & n & " values")
-            Return New ItemGenSettings With {.exclude = CBool(s(0)), .amount = CInt(s(1)), .costPart = CDbl(s(2))}
+            Return New ItemGenSettings With {.exclude = ValueConverter.StrToBool(s(0)), _
+                                             .amount = ValueConverter.StrToInt(s(1), v, "second"), _
+                                             .costPart = ValueConverter.StrToDbl(s(2))}
         End Function
     End Structure
 
@@ -2332,6 +2471,25 @@ Friend Class ValueConverter
         Return CDbl(s.Replace(",", ".").Replace(".", System.Globalization.CultureInfo.CurrentCulture.NumberFormat.NumberDecimalSeparator))
         'Return Convert.ToDouble(s, Globalization.NumberFormatInfo.InvariantInfo)
     End Function
+
+    Friend Shared Function StrToInt(ByRef v As String, ByRef fullLine As String, ByRef fieldName As String) As Integer
+        Try
+            Return CInt(v)
+        Catch ex As Exception
+            Throw New Exception(ex.Message & vbNewLine & fullLine & vbNewLine & "Field: " & fieldName)
+            Return 1
+        End Try
+    End Function
+
+    Friend Shared Function StrToBool(ByRef v As String) As Boolean
+        Dim f As String = v.ToUpper
+        If f = "T" Or f = "TRUE" Or f = "1" Then
+            Return True
+        Else
+            Return False
+        End If
+    End Function
+
 
     Friend Function defaultSigma() As Double
         Return 0.1
