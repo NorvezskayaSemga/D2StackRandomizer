@@ -1371,6 +1371,14 @@ Public Class Common
             result &= s
         Next item
         Call log.Add(result)
+
+        result = vbNewLine & "----Big stack units list----"
+        For Each item As String In BigStackUnits.Keys
+            name = rStack.FindUnitStats(item).name
+            If name = "" Then name = "I don't know what is that"
+            result &= vbNewLine & item & " - " & name & " - " & BigStackUnits.Item(item)
+        Next item
+        Call log.Add(result)
     End Sub
 
     ''' <summary>Читает и парсит файл с параметрами генерируемых отрядов.
