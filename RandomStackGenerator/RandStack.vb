@@ -2437,7 +2437,7 @@ Public Class AllDataStructues
         Dim exclude As Boolean
         ''' <summary>Примерное количество. Игнорируется, если меньше 1</summary>
         Dim amount As Integer
-        ''' <summary>Доля от общей стоимости лута. Если равно 0</summary>
+        ''' <summary>Доля от общей стоимости лута. Игнорируется, если равно 0</summary>
         Dim costPart As Double
         ''' <summary>costPart*TotalLootCost</summary>
         Friend dynCostPart As Integer
