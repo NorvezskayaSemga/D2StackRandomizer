@@ -531,7 +531,7 @@ Public Class RandStack
         For i As Integer = 0 To UBound(settings) Step 1
             If Not settings(i).exclude Then weightsSum += settings(i).costPart
         Next i
-        If weightsSum > 1 Then Throw New Exception("Invalid cost parts sum: " & weightsSum)
+        If weightsSum > 1.0001 Then Throw New Exception("Invalid cost parts sum: " & weightsSum)
         Dim Dyn As AllDataStructues.LootGenSettings = AllDataStructues.LootGenSettings.Copy(IGen)
         Dyn.ConsumableItems.dynCostPart = CInt(GoldCost * Dyn.ConsumableItems.costPart)
         Dyn.NonconsumableItems.dynCostPart = CInt(GoldCost * Dyn.NonconsumableItems.costPart)
