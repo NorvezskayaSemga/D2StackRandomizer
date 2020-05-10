@@ -2510,12 +2510,13 @@ Friend Class ValueConverter
     Friend Function WeightMultiplicator() As String
         If WeightMultiplicatorReplaced = "" Then
             WeightMultiplicatorReplaced = "talisman=0.1;" & _
-                                          "scroll=0.333;" & _
-                                          "stuff=0.75;" & _
+                                          "scroll=0.15;" & _
+                                          "sphere=0.5;" & _
+                                          "stuff=0.25;" & _
                                           "healing_elixir=3#cost>100else1;" & _
                                           "ressurection_elixir=3;" & _
                                           "permanent_elixir=0.6;" & _
-                                          "elixir=0.75#cost>400else1.15"
+                                          "elixir=0.75#cost>400else1.25"
             WeightMultiplicatorReplaced = WeightMultiplicatorReplaced.Replace(",", ".").Replace(".", System.Globalization.CultureInfo.CurrentCulture.NumberFormat.NumberDecimalSeparator)
         End If
         Return WeightMultiplicatorReplaced
