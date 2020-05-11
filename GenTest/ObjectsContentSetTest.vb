@@ -224,6 +224,70 @@ Public Class ObjectsContentSetTest
         If Not ok Then Assert.Inconclusive("Verify the correctness of this test method.")
     End Sub
 
+
+    '''<summary>
+    '''A test for MakeMerchItemsList MakeMercenariesList and MakeSpellsList
+    '''</summary>
+    <TestMethod()> _
+    Public Sub GenModesTest()
+
+        If IsNothing(rndtest.UnitsList) Then rndtest.ReadTestUnits()
+        If IsNothing(rndtest.ItemsList) Then rndtest.ReadTestItems()
+        If IsNothing(rndtest.AllSpells) Then rndtest.ReadTestSpells()
+
+        Dim rStack As New RandStack(rndtest.UnitsList, rndtest.ItemsList, rndtest.excludeList, rndtest.customLootChanceList, _
+                                    rndtest.customRaceList, rndtest.soleUnitsList, rndtest.bigStackUnitsList)
+
+        Dim target As New ObjectsContentSet(rStack, rndtest.AllSpells)
+        Dim ok As Boolean = True
+
+        'Dim spells, units, items As New List(Of String)
+        'For Each spell As AllDataStructues.Spell In rndtest.AllSpells
+        '   spells.Add(spell.spellID)
+        'Next spell
+
+        Dim input As New List(Of String)
+        Dim log As New Log(New Common)
+        Call log.Enable()
+
+        Dim mode() As Integer = {3, 4}
+
+        input.Clear()
+        For Each unit As AllDataStructues.Unit In rStack.AllFighters
+            input.Add(unit.unitID)
+        Next unit
+        Dim s As List(Of String) = target.GetMercenariesListSettings(-1, input)
+        Call target.MakeMercenariesList(New AllDataStructues.DesiredStats With {.shopContent = s}, log)
+        input.Clear()
+        For Each item As AllDataStructues.Item In rStack.MagicItem
+            input.Add(item.itemID)
+        Next item
+        s = target.GetMerchantListSettings(-1, input)
+        Call target.MakeMerchantItemsList(New AllDataStructues.DesiredStats With {.shopContent = s}, log)
+        log.Disable()
+
+        For i As Integer = 0 To 1 Step 1
+            For Each m As Integer In mode
+                For Each unit As AllDataStructues.Unit In rStack.AllFighters
+                    Dim r As List(Of String) = target.GetMercenariesListSettings(m, {unit.unitID})
+                    Dim result As String = target.MakeMercenariesList(New AllDataStructues.DesiredStats With {.shopContent = r}, log).Item(0)
+                    If Not unit.race = rStack.FindUnitStats(result).race Then ok = False
+                Next unit
+                For Each item As AllDataStructues.Item In rStack.MagicItem
+                    Dim r As List(Of String) = target.GetMerchantListSettings(m, {item.itemID})
+                    Dim result As String = target.MakeMerchantItemsList(New AllDataStructues.DesiredStats With {.shopContent = r}, log).Item(0)
+                    If Not item.type = rStack.FindItemStats(result).type Then ok = False
+                Next item
+            Next m
+        Next i
+
+        Dim t As Integer = Environment.TickCount
+        Dim txt As String = log.PrintAll
+        t = Environment.TickCount - t
+
+        If Not ok Then Assert.Inconclusive("Verify the correctness of this test method.")
+    End Sub
+
     ''''<summary>
     ''''A test for LogPrint
     ''''</summary>

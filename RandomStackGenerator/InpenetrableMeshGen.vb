@@ -5598,7 +5598,7 @@ Public Class ObjectsContentSet
 
     Private spells As New Dictionary(Of String, AllDataStructues.Spell)
 
-    Delegate Function getSettings(ByVal mode As Integer, ByRef input As List(Of String)) As List(Of String)
+    Delegate Function getSettings(ByVal mode As Integer, ByRef input() As String) As List(Of String)
 
     ''' <param name="RStack">Инициализированный класс</param>
     ''' <param name="AllSpells">Dсе заклинания в игре</param>
@@ -5792,9 +5792,9 @@ Public Class ObjectsContentSet
                 If IsNumeric(s(0)) Then
                     race = CInt(s(0))
                 Else
-                    race = randStack.comm.itemTypeID.Item(s(0).ToUpper)
+                    race = randStack.comm.RaceIdentifierToSubrace(s(0))
                 End If
-                Dim bar As Integer = CInt(v)
+                Dim bar As Integer = CInt(s(1))
                 Dim selected As Integer = SelectMercenary(bar, race, res)
                 If selected > -1 Then res.Add(randStack.AllFighters(selected).unitID)
                 txt &= msgToLog(selected)
@@ -5983,11 +5983,11 @@ Public Class ObjectsContentSet
         Dim output As New List(Of String)
         Dim ID As New List(Of Integer)
         For i As Integer = 0 To UBound(weight) Step 1
-            ID.Add(i + 1)
+            ID.Add(i)
         Next i
         For Each item In input
-            Dim r As Integer = randStack.comm.RandomSelection(ID, weight, True)
-            output.Add(GetMerchantListSettings(r, {item}).Item(0))
+            Dim r As Integer = randStack.comm.RandomSelection(ID, weight, True) + 1
+            output.Add(handler(r, {item}).Item(0))
         Next item
         Return output
     End Function
