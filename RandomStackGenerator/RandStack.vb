@@ -1626,12 +1626,12 @@ Public Class Common
 
     ''' <summary>Возвращает ID расы, соответствующее файлам игры</summary>
     ''' <param name="ID">Идентификатор расы (файл races.txt)</param>
-    Public Function RaceIdentifierToSubrace(ByVal ID As String) As Integer
+    Public Function RaceIdentifierToSubrace(ByVal ID As String, Optional ByVal ThrowExceptionIfUnknownID As Boolean = False) As Integer
         Dim uID As String = ID.ToUpper
         If Races.ContainsKey(uID) Then
             Return Races.Item(uID)
         Else
-            Throw New Exception("Неизвестный идентификатор расы:" & ID)
+            If ThrowExceptionIfUnknownID Then Throw New Exception("Неизвестный идентификатор расы:" & ID)
             Return -1
         End If
     End Function

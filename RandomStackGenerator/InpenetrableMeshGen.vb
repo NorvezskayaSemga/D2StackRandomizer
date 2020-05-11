@@ -5598,6 +5598,8 @@ Public Class ObjectsContentSet
 
     Private spells As New Dictionary(Of String, AllDataStructues.Spell)
 
+    Delegate Function getSettings(ByVal mode As Integer, ByRef input As List(Of String)) As List(Of String)
+
     ''' <param name="RStack">Инициализированный класс</param>
     ''' <param name="AllSpells">Dсе заклинания в игре</param>
     Public Sub New(ByRef RStack As RandStack, ByRef AllSpells() As AllDataStructues.Spell)
@@ -5761,44 +5763,41 @@ Public Class ObjectsContentSet
 
         Dim res As New List(Of String)
         Dim selection As New List(Of Integer)
-        Dim tolerance As Integer
-        Dim dtolerance As Integer = 50
-        Dim oneMore As Boolean
         Dim txt As String = ""
 
         For Each v As String In d.shopContent
             txt = "In: " & v & " -> "
             If IsNumeric(v) Then
                 Dim bar As Integer = CInt(v)
+                Dim selected As Integer = SelectMercenary(bar, -1, res)
+                If selected > -1 Then res.Add(randStack.AllFighters(selected).unitID)
+                txt &= msgToLog(selected)
+            ElseIf randStack.comm.RaceIdentifierToSubrace(v) > -1 Then
                 selection.Clear()
-                tolerance = 0
-                oneMore = False
-                Do While (selection.Count = 0 Or oneMore) And tolerance <= 10000
-                    tolerance += dtolerance
-                    For u As Integer = 0 To UBound(randStack.AllFighters) Step 1
-                        If Not res.Contains(randStack.AllFighters(u).unitID) Then
-                            If randStack.AllFighters(u).small Then
-                                If Math.Abs(randStack.AllFighters(u).EXPnext - bar) <= tolerance Then selection.Add(u)
-                            Else
-                                If Math.Abs(randStack.AllFighters(u).EXPnext - 2 * bar) <= 2 * tolerance Then selection.Add(u)
-                            End If
-                        End If
-                    Next u
-                    If selection.Count > 0 Then oneMore = Not oneMore
-                Loop
-                'If selection.Count = 0 Then Throw New Exception("Не могу выбрать юнита в качестве наемника. Планка опыта: " & bar.ToString)
-                If selection.Count > 0 Then
-                    Dim r As Integer = selection.Item(randStack.comm.rndgen.RndPos(selection.Count, True) - 1)
-                    res.Add(randStack.AllFighters(r).unitID)
-                    txt &= randStack.AllFighters(r).unitID & " - " & randStack.AllFighters(r).name & " - " & randStack.AllFighters(r).EXPnext
-                    If randStack.AllFighters(r).small Then
-                        txt &= " (small)"
-                    Else
-                        txt &= " (big)"
+                Dim selected As Integer = -1
+                Dim race As Integer = randStack.comm.RaceIdentifierToSubrace(v)
+                For u As Integer = 0 To UBound(randStack.AllFighters) Step 1
+                    If Not res.Contains(randStack.AllFighters(u).unitID) Then
+                        If race = randStack.AllFighters(u).race Then selection.Add(u)
                     End If
-                Else
-                    txt &= "nothing"
+                Next u
+                If selection.Count > 0 Then
+                    selected = selection.Item(randStack.comm.rndgen.RndPos(selection.Count, True) - 1)
+                    res.Add(randStack.AllFighters(selected).unitID)
                 End If
+                txt &= msgToLog(selected)
+            ElseIf v.Contains("#") Then
+                Dim s() As String = v.Split(CChar("#"))
+                Dim race As Integer
+                If IsNumeric(s(0)) Then
+                    race = CInt(s(0))
+                Else
+                    race = randStack.comm.itemTypeID.Item(s(0).ToUpper)
+                End If
+                Dim bar As Integer = CInt(v)
+                Dim selected As Integer = SelectMercenary(bar, race, res)
+                If selected > -1 Then res.Add(randStack.AllFighters(selected).unitID)
+                txt &= msgToLog(selected)
             Else
                 If Not res.Contains(v.ToUpper) Then
                     res.Add(v)
@@ -5813,6 +5812,55 @@ Public Class ObjectsContentSet
         Call AddToLog(log, LogID, "----Mercenaries creation ended----")
 
         Return res
+    End Function
+    Private Function msgToLog(ByRef unitID As Integer) As String
+        If unitID > 0 Then
+            Dim unit As AllDataStructues.Unit = randStack.AllFighters(unitID)
+            Dim txt As String = unit.unitID & " - " & unit.name & " - " & randStack.comm.RaceNumberToRaceChar(unit.race) & " - " & unit.EXPnext
+            If unit.small Then
+                txt &= " (small)"
+            Else
+                txt &= " (big)"
+            End If
+            Return txt
+        Else
+            Return "nothing"
+        End If
+    End Function
+    Private Function SelectMercenary(ByRef bar As Integer, ByRef race As Integer, ByRef added As List(Of String)) As Integer
+
+        Dim selection As New List(Of Integer)
+
+        Dim tolerance As Integer
+        Dim dtolerance As Integer = 50
+        Dim oneMore As Boolean = False
+        Dim add As Boolean
+
+        Do While (selection.Count = 0 Or oneMore) And tolerance <= 10000
+            tolerance += dtolerance
+            For u As Integer = 0 To UBound(randStack.AllFighters) Step 1
+                If Not added.Contains(randStack.AllFighters(u).unitID) Then
+                    add = False
+                    If randStack.AllFighters(u).small Then
+                        If Math.Abs(randStack.AllFighters(u).EXPnext - bar) <= tolerance Then add = True
+                    Else
+                        If Math.Abs(randStack.AllFighters(u).EXPnext - 2 * bar) <= 2 * tolerance Then add = True
+                    End If
+                    If add And race > -1 Then
+                        If Not race = randStack.AllFighters(u).race Then add = False
+                    End If
+                    If add Then selection.Add(u)
+                End If
+            Next u
+            If selection.Count > 0 Then oneMore = Not oneMore
+        Loop
+        'If selection.Count = 0 Then Throw New Exception("Не могу выбрать юнита в качестве наемника. Планка опыта: " & bar.ToString)
+        If selection.Count > 0 Then
+            Dim r As Integer = selection.Item(randStack.comm.rndgen.RndPos(selection.Count, True) - 1)
+            Return r
+        Else
+            Return -1
+        End If
     End Function
 
     ''' <summary>Создаст список предметов</summary>
@@ -5931,9 +5979,21 @@ Public Class ObjectsContentSet
         Next item
         Return output
     End Function
+    Private Function GetRandomMode(ByRef input As List(Of String), ByRef weight() As Double, ByRef handler As getSettings) As List(Of String)
+        Dim output As New List(Of String)
+        Dim ID As New List(Of Integer)
+        For i As Integer = 0 To UBound(weight) Step 1
+            ID.Add(i + 1)
+        Next i
+        For Each item In input
+            Dim r As Integer = randStack.comm.RandomSelection(ID, weight, True)
+            output.Add(GetMerchantListSettings(r, {item}).Item(0))
+        Next item
+        Return output
+    End Function
 
     ''' <summary>Вернет настройки генерации заклинаний</summary>
-    ''' <param name="mode">1 - вернет ID, 2 - УровеньРасаМассовость</param>
+    ''' <param name="mode">-1 - случайный мод в каждой строчке, 1 - вернет ID, 2 - УровеньРасаМассовость</param>
     ''' <param name="input">ID заклинаний</param>
     Public Function GetSpellsListSettings(ByVal mode As Integer, ByRef input() As String) As List(Of String)
         Dim L As New List(Of String)
@@ -5941,12 +6001,14 @@ Public Class ObjectsContentSet
         Return GetSpellsListSettings(mode, L)
     End Function
     ''' <summary>Вернет настройки генерации заклинаний</summary>
-    ''' <param name="mode">1 - вернет ID, 2 - УровеньРасаМассовость</param>
+    ''' <param name="mode">-1 - случайный мод в каждой строчке, 1 - вернет ID, 2 - УровеньРасаМассовость</param>
     ''' <param name="input">ID заклинаний</param>
     Public Function GetSpellsListSettings(ByVal mode As Integer, ByRef input As List(Of String)) As List(Of String)
         Dim output As New List(Of String)
         Dim spell As AllDataStructues.Spell
-        If mode = 1 Then
+        If mode = -1 Then
+            output = GetRandomMode(input, {0.25, 1}, AddressOf GetSpellsListSettings)
+        ElseIf mode = 1 Then
             output = GetSettingsCommon(input)
         ElseIf mode = 2 Then
             For Each item In input
@@ -5974,7 +6036,7 @@ Public Class ObjectsContentSet
     End Function
 
     ''' <summary>Вернет настройки генерации предметов</summary>
-    ''' <param name="mode">1 - вернет ID, 2 - Цена, 3 - Тип, 4 - Тип#Цена</param>
+    ''' <param name="mode">-1 - случайный мод в каждой строчке, 1 - вернет ID, 2 - Цена, 3 - Тип, 4 - Тип#Цена</param>
     ''' <param name="input">ID заклинаний</param>
     Public Function GetMerchantListSettings(ByVal mode As Integer, ByRef input() As String) As List(Of String)
         Dim L As New List(Of String)
@@ -5982,17 +6044,19 @@ Public Class ObjectsContentSet
         Return GetMerchantListSettings(mode, L)
     End Function
     ''' <summary>Вернет настройки генерации предметов</summary>
-    ''' <param name="mode">1 - вернет ID, 2 - Цена, 3 - Тип, 4 - Тип#Цена</param>
+    ''' <param name="mode">-1 - случайный мод в каждой строчке, 1 - вернет ID, 2 - Цена, 3 - Тип, 4 - Тип#Цена</param>
     ''' <param name="input">ID заклинаний</param>
     Public Function GetMerchantListSettings(ByVal mode As Integer, ByRef input As List(Of String)) As List(Of String)
         Dim output As New List(Of String)
         Dim thing As AllDataStructues.Item
-        If mode = 1 Then
+        If mode = -1 Then
+            output = GetRandomMode(input, {0.25, 1, 1, 1}, AddressOf GetMerchantListSettings)
+        ElseIf mode = 1 Then
             output = GetSettingsCommon(input)
         ElseIf mode = 2 Then
             For Each item In input
                 thing = randStack.FindItemStats(item)
-                output.Add(thing.itemCost.Gold.ToString)
+                output.Add(AllDataStructues.Cost.Sum(thing.itemCost).ToString)
             Next item
         ElseIf mode = 3 Then
             For Each item In input
@@ -6003,7 +6067,7 @@ Public Class ObjectsContentSet
             For Each item In input
                 thing = randStack.FindItemStats(item)
                 output.Add(randStack.comm.itemType.Item(thing.type) & _
-                           "#" & thing.itemCost.Gold)
+                           "#" & AllDataStructues.Cost.Sum(thing.itemCost))
             Next item
         Else
             Throw New Exception("Unknown mode: " & mode)
@@ -6013,7 +6077,7 @@ Public Class ObjectsContentSet
     End Function
 
     ''' <summary>Вернет настройки генерации предметов</summary>
-    ''' <param name="mode">1 - вернет ID, 2 - Планка опыта</param>
+    ''' <param name="mode">-1 - случайный мод в каждой строчке, 1 - вернет ID, 2 - Планка опыта, 3 - Раса, 4 - Раса#Планка опыта</param>
     ''' <param name="input">ID заклинаний</param>
     Public Function GetMercenariesListSettings(ByVal mode As Integer, ByRef input() As String) As List(Of String)
         Dim L As New List(Of String)
@@ -6021,17 +6085,34 @@ Public Class ObjectsContentSet
         Return GetMercenariesListSettings(mode, L)
     End Function
     ''' <summary>Вернет настройки генерации предметов</summary>
-    ''' <param name="mode">1 - вернет ID, 2 - Планка опыта</param>
+    ''' <param name="mode">-1 - случайный мод в каждой строчке, 1 - вернет ID, 2 - Планка опыта, 3 - Раса, 4 - Раса#Планка опыта</param>
     ''' <param name="input">ID заклинаний</param>
     Public Function GetMercenariesListSettings(ByVal mode As Integer, ByRef input As List(Of String)) As List(Of String)
         Dim output As New List(Of String)
         Dim unit As AllDataStructues.Unit
-        If mode = 1 Then
+        If mode = -1 Then
+            output = GetRandomMode(input, {0.25, 1, 1, 1}, AddressOf GetMercenariesListSettings)
+        ElseIf mode = 1 Then
             output = GetSettingsCommon(input)
         ElseIf mode = 2 Then
             For Each item In input
                 unit = randStack.FindUnitStats(item)
-                output.Add(unit.EXPnext.ToString)
+                Dim expNext As Integer = unit.EXPnext
+                If Not unit.small Then expNext = CInt(expNext * 0.5)
+                output.Add(expNext.ToString)
+            Next item
+        ElseIf mode = 3 Then
+            For Each item In input
+                unit = randStack.FindUnitStats(item)
+                output.Add(randStack.comm.RaceNumberToRaceChar(unit.race))
+            Next item
+        ElseIf mode = 4 Then
+            For Each item In input
+                unit = randStack.FindUnitStats(item)
+                Dim expNext As Integer = unit.EXPnext
+                If Not unit.small Then expNext = CInt(expNext * 0.5)
+                output.Add(randStack.comm.RaceNumberToRaceChar(unit.race) & _
+                           "#" & expNext.ToString)
             Next item
         Else
             Throw New Exception("Unknown mode: " & mode)
