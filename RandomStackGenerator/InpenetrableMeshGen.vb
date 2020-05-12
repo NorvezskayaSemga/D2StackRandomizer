@@ -5596,7 +5596,7 @@ Public Class ObjectsContentSet
     Private randStack As RandStack
     Private manaSourcesTypes() As String = New String() {"G000CR0000GR", "G000CR0000RG", "G000CR0000WH", "G000CR0000RD", "G000CR0000YE"}
 
-    Private spells As New Dictionary(Of String, AllDataStructues.Spell)
+    Private spells, excludedSpells As New Dictionary(Of String, AllDataStructues.Spell)
 
     Delegate Function getSettings(ByVal mode As Integer, ByRef input() As String) As List(Of String)
 
@@ -5611,6 +5611,8 @@ Public Class ObjectsContentSet
         For i As Integer = 0 To UBound(AllSpells) Step 1
             If Not randStack.comm.excludedObjects.Contains(AllSpells(i).spellID.ToUpper) Then
                 spells.Add(AllSpells(i).spellID.ToUpper, AllSpells(i))
+            Else
+                excludedSpells.Add(AllSpells(i).spellID.ToUpper, AllSpells(i))
             End If
         Next i
 
@@ -5635,9 +5637,16 @@ Public Class ObjectsContentSet
         End If
     End Function
 
+    Private Function FindSpell(ByRef id As String) As AllDataStructues.Spell
+        Dim u As String = id.ToUpper
+        If spells.ContainsKey(u) Then Return spells.Item(u)
+        If excludedSpells.ContainsKey(u) Then Return excludedSpells.Item(u)
+        Return Nothing
+    End Function
+
     ''' <summary>Создаст список заклинаний</summary>
     ''' <param name="d">Желаемые параметры доступных заклинаний. Имеет значение только .shopContent</param>
-    ''' <param name="AllManaSources">Список источников маны на карте (Только такие ID: G000CR0000GR, G000CR0000RG, G000CR0000WH, G000CR0000RD, G000CR0000YE)</param>
+    ''' <param name="AllManaSources">Список источников маны на карте (Только такие ID и в верхнем регистре: G000CR0000GR, G000CR0000RG, G000CR0000WH, G000CR0000RD, G000CR0000YE)</param>
     ''' <param name="log">Лог для записей результатов</param>
     ''' <param name="LogID">Номер задачи. От 0 до Size-1. Если меньше 0, запись будет сделана в общий лог</param>
     Public Function MakeSpellsList(ByRef d As AllDataStructues.DesiredStats, ByRef AllManaSources As List(Of String), _
@@ -5653,10 +5662,8 @@ Public Class ObjectsContentSet
         If AllManaSources.Contains("G000CR0000RD") Then availMana.Red = 1
         If AllManaSources.Contains("G000CR0000YE") Then availMana.Blue = 1
         Dim races() As String = New String() {"H", "C", "L", "U", "E", "R"}
-        Dim level, race As Integer
-        Dim mass, ignoreAvailMana As Boolean
-        Dim slist, res As New List(Of String)
-        Dim rlist() As Integer
+
+        Dim res , slist As New List(Of String)
         Dim txt As String
 
         For Each L As String In d.shopContent
@@ -5668,54 +5675,37 @@ Public Class ObjectsContentSet
                 Else
                     txt = ""
                 End If
-            Else
-                L = L.ToUpper
-                If L.Contains("T") Then
-                    mass = True
-                    L = L.Replace("T", "")
-                Else
-                    mass = False
-                    L = L.Replace("F", "")
-                End If
-                race = -2
-                For Each r As String In races
-                    If L.Contains(r) Then
-                        If r = "R" Then
-                            race = -1
-                        Else
-                            race = randStack.comm.RaceIdentifierToSubrace(r)
-                        End If
-                        L = L.Replace(r, "")
-                        Exit For
-                    End If
-                Next r
-                level = CInt(L)
+            ElseIf IsNumeric(L) Then
                 slist.Clear()
-                ignoreAvailMana = False
-                rlist = New Integer() {race, -1}
-                For rr As Integer = 0 To UBound(rlist) Step 1
-                    For p As Integer = 0 To 1 Step 1
-                        For spellLevel As Integer = level To 0 Step -1
-                            For Each s As AllDataStructues.Spell In spells.Values
-                                If Not res.Contains(s.spellID) AndAlso AddSpell(spellLevel, rlist(rr), mass, _
-                                                                             availMana, ignoreAvailMana, s) Then
-                                    slist.Add(s.spellID)
-                                End If
-                            Next s
-                            If slist.Count > 0 Then Exit For
-                        Next spellLevel
-                        ignoreAvailMana = Not ignoreAvailMana
-                        If slist.Count > 0 Then Exit For
-                    Next p
-                    If slist.Count > 0 Then Exit For
-                Next rr
+                Dim type As Integer = CInt(L)
+                For Each s As AllDataStructues.Spell In spells.Values
+                    If Not res.Contains(s.spellID) AndAlso AddSpell(-1, -1, True, availMana, False, s) Then
+                        If type > -1 Then
+                            If s.category = type Then slist.Add(s.spellID)
+                        Else
+                            slist.Add(s.spellID)
+                        End If
+                    End If
+                Next s
+                Dim selected As String
                 If slist.Count > 0 Then
-                    Dim selected As String = slist.Item(randStack.comm.rndgen.RndPos(slist.Count, True) - 1)
-                    res.Add(selected)
-                    txt &= spells.Item(selected).spellID & " - " & spells.Item(selected).name & " - " & spells.Item(selected).level
+                    selected = slist.Item(randStack.comm.rndgen.RndPos(slist.Count, True) - 1)
                 Else
-                    txt &= "nothing"
+                    selected = ""
                 End If
+                If Not selected = "" Then res.Add(selected)
+                txt &= msgToLog(selected)
+            ElseIf L.Contains("#") Then
+                Dim s() As String = L.Split(CChar("#"))
+                Dim type As Integer = CInt(s(0))
+                Dim prop As String = s(1)
+                Dim selected As String = SelectSpell(prop, type, races, availMana, res)
+                If Not selected = "" Then res.Add(selected)
+                txt &= msgToLog(selected)
+            Else
+                Dim selected As String = SelectSpell(L, -1, races, availMana, res)
+                If Not selected = "" Then res.Add(selected)
+                txt &= msgToLog(selected)
             End If
             If Not txt = "" Then Call AddToLog(log, LogID, txt)
         Next L
@@ -5723,6 +5713,74 @@ Public Class ObjectsContentSet
         Call AddToLog(log, LogID, "----Spells creation ended----")
 
         Return res
+    End Function
+    Private Function msgToLog(ByRef spellID As String) As String
+        If Not spellID = "" Then
+            Dim txt As String = spells.Item(spellID).spellID & " - " & _
+                                spells.Item(spellID).name & " - " & _
+                                "Lvl: " & spells.Item(spellID).level & " - " & _
+                                "Cat: " & spells.Item(spellID).category
+            Return txt
+        Else
+            Return "nothing"
+        End If
+    End Function
+    Private Function SelectSpell(ByRef sProperties As String, ByRef type As Integer, ByRef races() As String, _
+                                 ByRef availMana As AllDataStructues.Cost, ByRef res As List(Of String)) As String
+
+        Dim level, race As Integer
+        Dim mass, ignoreAvailMana As Boolean
+        Dim slist As New List(Of String)
+        Dim rlist() As Integer
+
+        Dim L As String = sProperties.ToUpper
+        If L.Contains("T") Then
+            mass = True
+            L = L.Replace("T", "")
+        Else
+            mass = False
+            L = L.Replace("F", "")
+        End If
+        race = -2
+        For Each r As String In races
+            If L.Contains(r) Then
+                If r = "R" Then
+                    race = -1
+                Else
+                    race = randStack.comm.RaceIdentifierToSubrace(r)
+                End If
+                L = L.Replace(r, "")
+                Exit For
+            End If
+        Next r
+        level = CInt(L)
+        ignoreAvailMana = False
+        rlist = New Integer() {race, -1}
+        For rr As Integer = 0 To UBound(rlist) Step 1
+            For p As Integer = 0 To 1 Step 1
+                For spellLevel As Integer = level To 0 Step -1
+                    For Each s As AllDataStructues.Spell In spells.Values
+                        If Not res.Contains(s.spellID) AndAlso AddSpell(spellLevel, rlist(rr), mass, _
+                                                                     availMana, ignoreAvailMana, s) Then
+                            If type > -1 Then
+                                If s.category = type Then slist.Add(s.spellID)
+                            Else
+                                slist.Add(s.spellID)
+                            End If
+                        End If
+                    Next s
+                    If slist.Count > 0 Then Exit For
+                Next spellLevel
+                ignoreAvailMana = Not ignoreAvailMana
+                If slist.Count > 0 Then Exit For
+            Next p
+            If slist.Count > 0 Then Exit For
+        Next rr
+        If slist.Count > 0 Then
+            Return slist.Item(randStack.comm.rndgen.RndPos(slist.Count, True) - 1)
+        Else
+            Return ""
+        End If
     End Function
     Private Function AddSpell(ByRef level As Integer, ByRef race As Integer, ByRef mass As Boolean, _
                               ByRef avail As AllDataStructues.Cost, ByRef ignoreAvail As Boolean, ByRef s As AllDataStructues.Spell) As Boolean
@@ -5993,7 +6051,7 @@ Public Class ObjectsContentSet
     End Function
 
     ''' <summary>Вернет настройки генерации заклинаний</summary>
-    ''' <param name="mode">-1 - случайный мод в каждой строчке, 1 - вернет ID, 2 - УровеньРасаМассовость</param>
+    ''' <param name="mode">-1 - случайный мод в каждой строчке, 1 - вернет ID, 2 - УровеньРасаМассовость, 3 - Тип, 4 - Тип#УровеньРасаМассовость</param>
     ''' <param name="input">ID заклинаний</param>
     Public Function GetSpellsListSettings(ByVal mode As Integer, ByRef input() As String) As List(Of String)
         Dim L As New List(Of String)
@@ -6001,38 +6059,59 @@ Public Class ObjectsContentSet
         Return GetSpellsListSettings(mode, L)
     End Function
     ''' <summary>Вернет настройки генерации заклинаний</summary>
-    ''' <param name="mode">-1 - случайный мод в каждой строчке, 1 - вернет ID, 2 - УровеньРасаМассовость</param>
+    ''' <param name="mode">-1 - случайный мод в каждой строчке, 1 - вернет ID, 2 - УровеньРасаМассовость, 3 - Тип, 4 - Тип#УровеньРасаМассовость</param>
     ''' <param name="input">ID заклинаний</param>
     Public Function GetSpellsListSettings(ByVal mode As Integer, ByRef input As List(Of String)) As List(Of String)
         Dim output As New List(Of String)
         Dim spell As AllDataStructues.Spell
         If mode = -1 Then
-            output = GetRandomMode(input, {0.25, 1}, AddressOf GetSpellsListSettings)
+            output = GetRandomMode(input, {0.25, 1, 1, 1}, AddressOf GetSpellsListSettings)
         ElseIf mode = 1 Then
             output = GetSettingsCommon(input)
         ElseIf mode = 2 Then
             For Each item In input
-                spell = spells.Item(item)
-                Dim race As String
-                If IsNothing(spell.researchCost) Then
-                    race = "R"
-                Else
-                    Dim lord As String = spell.researchCost.Keys(0)
-                    race = randStack.comm.RaceNumberToRaceChar.Item(randStack.comm.LordsRace.Item(lord))
+                spell = FindSpell(item)
+                If Not spell.spellID = "" Then
+                    Dim prop As String = SpellProperties(spell)
+                    output.Add(prop)
                 End If
-                Dim mass As String
-                If spell.area > 998 Then
-                    mass = "T"
-                Else
-                    mass = "F"
+            Next item
+        ElseIf mode = 3 Then
+            For Each item In input
+                spell = FindSpell(item)
+                If Not spell.spellID = "" Then
+                    output.Add(spell.category.ToString)
                 End If
-                output.Add(spell.level & race & mass)
+            Next item
+        ElseIf mode = 4 Then
+            For Each item In input
+                spell = FindSpell(item)
+                If Not spell.spellID = "" Then
+                    Dim prop As String = SpellProperties(spell)
+                    output.Add(spell.category.ToString & "#" & prop)
+                End If
             Next item
         Else
             Throw New Exception("Unknown mode: " & mode)
             output = Nothing
         End If
         Return output
+    End Function
+    Private Function SpellProperties(ByRef spell As AllDataStructues.Spell) As String
+        Dim race As String
+        If IsNothing(spell.researchCost) OrElse spell.researchCost.Count = 0 Then
+            race = "R"
+        Else
+            Dim lord As String = spell.researchCost.Keys(0)
+            race = randStack.comm.RaceNumberToRaceChar.Item(randStack.comm.LordsRace.Item(lord))
+        End If
+        Dim mass As String
+        If spell.area > 998 Then
+            mass = "T"
+        Else
+            mass = "F"
+        End If
+        Return spell.level & race & mass
     End Function
 
     ''' <summary>Вернет настройки генерации предметов</summary>

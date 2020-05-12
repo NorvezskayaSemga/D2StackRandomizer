@@ -246,8 +246,9 @@ Public Class ObjectsContentSetTest
         '   spells.Add(spell.spellID)
         'Next spell
 
-        Dim input As New List(Of String)
+        Dim input, mana As New List(Of String)
         Dim log As New Log(New Common)
+        mana.AddRange({"G000CR0000GR", "G000CR0000RG", "G000CR0000WH", "G000CR0000RD", "G000CR0000YE"})
         Call log.Enable()
 
         Dim mode() As Integer = {3, 4}
@@ -264,6 +265,12 @@ Public Class ObjectsContentSetTest
         Next item
         s = target.GetMerchantListSettings(-1, input)
         Call target.MakeMerchantItemsList(New AllDataStructues.DesiredStats With {.shopContent = s}, log)
+        input.Clear()
+        For Each spell As AllDataStructues.Spell In rndtest.AllSpells
+            input.Add(spell.spellID)
+        Next spell
+        s = target.GetSpellsListSettings(-1, input)
+        Call target.MakeSpellsList(New AllDataStructues.DesiredStats With {.shopContent = s}, mana, log)
         log.Disable()
 
         For i As Integer = 0 To 1 Step 1
@@ -278,6 +285,19 @@ Public Class ObjectsContentSetTest
                     Dim result As String = target.MakeMerchantItemsList(New AllDataStructues.DesiredStats With {.shopContent = r}, log).Item(0)
                     If Not item.type = rStack.FindItemStats(result).type Then ok = False
                 Next item
+                For Each spell As AllDataStructues.Spell In rndtest.AllSpells
+                    Dim r As List(Of String) = target.GetSpellsListSettings(m, {spell.spellID})
+                    Dim result As List(Of String) = target.MakeSpellsList(New AllDataStructues.DesiredStats With {.shopContent = r}, mana, log)
+                    If result.Count > 0 Then
+                        Dim item As String = result.Item(0)
+                        For Each k As AllDataStructues.Spell In rndtest.AllSpells
+                            If item = k.spellID Then
+                                If Not spell.category = k.category Then ok = False
+                                Exit For
+                            End If
+                        Next k
+                    End If
+                Next spell
             Next m
         Next i
 
