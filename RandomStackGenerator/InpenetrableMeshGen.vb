@@ -5772,7 +5772,7 @@ Public Class ObjectsContentSet
                 Dim selected As Integer = SelectMercenary(bar, -1, res)
                 If selected > -1 Then res.Add(randStack.AllFighters(selected).unitID)
                 txt &= msgToLog(selected)
-            ElseIf randStack.comm.RaceIdentifierToSubrace(v) > -1 Then
+            ElseIf randStack.comm.RaceIdentifierToSubrace(v, False) > -1 Then
                 selection.Clear()
                 Dim selected As Integer = -1
                 Dim race As Integer = randStack.comm.RaceIdentifierToSubrace(v)

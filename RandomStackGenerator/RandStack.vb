@@ -1626,7 +1626,7 @@ Public Class Common
 
     ''' <summary>Возвращает ID расы, соответствующее файлам игры</summary>
     ''' <param name="ID">Идентификатор расы (файл races.txt)</param>
-    Public Function RaceIdentifierToSubrace(ByVal ID As String, Optional ByVal ThrowExceptionIfUnknownID As Boolean = False) As Integer
+    Public Function RaceIdentifierToSubrace(ByVal ID As String, Optional ByVal ThrowExceptionIfUnknownID As Boolean = True) As Integer
         Dim uID As String = ID.ToUpper
         If Races.ContainsKey(uID) Then
             Return Races.Item(uID)
