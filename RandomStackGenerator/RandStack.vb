@@ -17,9 +17,9 @@ Public Class RandStack
     Public rndgen As RndValueGen
     Public comm As New Common
 
-    Private ExpBarLeaders(), ExpKilledLeaders(), multLeaders() As Double
-    Friend ExpBarFighters(), ExpKilledFighters(), multFighters() As Double
-    Friend ItemCostSum(), multItems() As Double
+    Private ExpBarLeaders(), ExpKilledLeaders(), multiplierLeadersDesiredStats() As Double
+    Friend ExpBarFighters(), ExpKilledFighters(), multiplierFightersDesiredStats() As Double
+    Friend ItemCostSum(), multiplierItemsWeight() As Double
     Private minItemGoldCost As Integer
 
     ''' <summary>Сюда генератор пишет лог</summary>
@@ -69,11 +69,11 @@ Public Class RandStack
             End If
         Next i
 
-        Call MakeAccessoryArrays(AllUnitsList, comm.customRace, AllFighters, cat, 1, ExpBarFighters, ExpKilledFighters, multFighters)
-        Call MakeAccessoryArrays(AllUnitsList, comm.customRace, AllLeaders, cat, 2, ExpBarLeaders, ExpKilledLeaders, multLeaders)
+        Call MakeAccessoryArrays(AllUnitsList, comm.customRace, AllFighters, cat, 1, ExpBarFighters, ExpKilledFighters, multiplierFightersDesiredStats)
+        Call MakeAccessoryArrays(AllUnitsList, comm.customRace, AllLeaders, cat, 2, ExpBarLeaders, ExpKilledLeaders, multiplierLeadersDesiredStats)
         Call MakeAccessoryArrays(AllUnitsList, comm.customRace, ExcludedUnits, cat, 0, Nothing, Nothing, Nothing)
 
-        Call MakeAccessoryArrays(AllItemsList, MagicItem, ExcludedItems, ItemCostSum, multItems)
+        Call MakeAccessoryArrays(AllItemsList, MagicItem, ExcludedItems, ItemCostSum, multiplierItemsWeight)
 
     End Sub
     Private Sub MakeAccessoryArrays(ByRef allunits() As AllDataStructues.Unit, ByRef customRace As Dictionary(Of String, String), _
@@ -124,7 +124,7 @@ Public Class RandStack
                 m += 1
             End If
         Next i
-        ReDim items(n), itemCostSum(n), multItems(n), excluded(m)
+        ReDim items(n), itemCostSum(n), multiplierItemsWeight(n), excluded(m)
 
         Dim weight As New Dictionary(Of String, String)
         For Each s As String In comm.valConv.WeightMultiplicator.Split(CChar(";"))
@@ -441,7 +441,7 @@ Public Class RandStack
             For i As Integer = 0 To UBound(MagicItem) Step 1
                 If ItemFilter(DynIGen, MagicItem(i), costBar) Then
                     IDs.Add(i)
-                    weight(i) = GenItemWeight(MagicItem(i), costBar) * multItems(i)
+                    weight(i) = GenItemWeight(MagicItem(i), costBar) * multiplierItemsWeight(i)
                 Else
                     weight(i) = 0
                 End If
@@ -505,7 +505,7 @@ Public Class RandStack
             If ItemCostSum(i) <= GoldCost AndAlso ItemFilter(IGen, MagicItem(i)) Then IDs.Add(i)
         Next i
         If IDs.Count > 0 Then
-            selected = comm.RandomSelection(IDs, New Double()() {ItemCostSum}, New Double() {GoldCost}, multItems, itemGenSigma, serialExecution)
+            selected = comm.RandomSelection(IDs, New Double()() {ItemCostSum}, New Double() {GoldCost}, multiplierItemsWeight, itemGenSigma, serialExecution)
             Call AddToLog(LogID, "Selected item:" & MagicItem(selected).name & " id:" & MagicItem(selected).itemID & " cost:" & ItemCostSum(selected))
             result = MagicItem(selected).itemID
         End If
@@ -883,7 +883,7 @@ Public Class RandStack
         Call AddToLog(LogID, AddressOf PrintSelectionList, AllLeaders, PossibleLeaders)
         Dim bar() As Double = SelectBar({DynStackStats.ExpBarAverage}, PossibleLeaders, {ExpBarLeaders}, Bias)
         SelectedLeader = comm.RandomSelection(PossibleLeaders, {ExpBarLeaders}, bar, _
-                                              multLeaders, SigmaMultiplier(DynStackStats), serialExecution)
+                                              multiplierLeadersDesiredStats, SigmaMultiplier(DynStackStats), serialExecution)
 
         If SelectedLeader = -1 Then
             Throw New Exception("Возможно, бесконечный цикл в случайном выборе из массива возможных лидеров" & vbNewLine & _
@@ -1105,7 +1105,7 @@ Public Class RandStack
             Dim bar() As Double = SelectBar({DynStackStats.ExpBarAverage, CDbl(DynStackStats.ExpStackKilled) / CDbl(DynStackStats.StackSize)}, _
                                             PossibleFighters, {ExpBarFighters, ExpKilledFighters}, Bias)
             SelectedFighter = comm.RandomSelection(PossibleFighters, {ExpBarFighters, ExpKilledFighters}, _
-                                                   bar, multFighters, SigmaMultiplier(DynStackStats), serialExecution)
+                                                   bar, multiplierFightersDesiredStats, SigmaMultiplier(DynStackStats), serialExecution)
             If SelectedFighter = -1 Then Return -2
             Call ChangeLimit(AllFighters, SelectedFighter, DynStackStats, FreeMeleeSlots, LogID)
         Else

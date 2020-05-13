@@ -5667,11 +5667,11 @@ Public Class ObjectsContentSet
         Dim txt As String
 
         For Each L As String In d.shopContent
-            txt = "In: " & L & " -> "
+            If log.IsEnabled Then txt = "In: " & L & " -> "
             If L.Length = 10 AndAlso (L.Substring(0, 1).ToUpper = "G" And L.Substring(4, 2).ToUpper = "SS") Then
                 If Not res.Contains(L.ToUpper) Then
                     res.Add(L.ToUpper)
-                    txt &= L.ToUpper
+                    If log.IsEnabled Then txt &= L.ToUpper
                 Else
                     txt = ""
                 End If
@@ -5694,18 +5694,18 @@ Public Class ObjectsContentSet
                     selected = ""
                 End If
                 If Not selected = "" Then res.Add(selected)
-                txt &= msgToLog(selected)
+                If log.IsEnabled Then txt &= msgToLog(selected)
             ElseIf L.Contains("#") Then
                 Dim s() As String = L.Split(CChar("#"))
                 Dim type As Integer = CInt(s(0))
                 Dim prop As String = s(1)
                 Dim selected As String = SelectSpell(prop, type, races, availMana, res)
                 If Not selected = "" Then res.Add(selected)
-                txt &= msgToLog(selected)
+                If log.IsEnabled Then txt &= msgToLog(selected)
             Else
                 Dim selected As String = SelectSpell(L, -1, races, availMana, res)
                 If Not selected = "" Then res.Add(selected)
-                txt &= msgToLog(selected)
+                If log.IsEnabled Then txt &= msgToLog(selected)
             End If
             If Not txt = "" Then Call AddToLog(log, LogID, txt)
         Next L
@@ -5824,12 +5824,12 @@ Public Class ObjectsContentSet
         Dim txt As String = ""
 
         For Each v As String In d.shopContent
-            txt = "In: " & v & " -> "
+            If log.IsEnabled Then txt = "In: " & v & " -> "
             If IsNumeric(v) Then
                 Dim bar As Integer = CInt(v)
                 Dim selected As Integer = SelectMercenary(bar, -1, res)
                 If selected > -1 Then res.Add(randStack.AllFighters(selected).unitID)
-                txt &= msgToLog(selected)
+                If log.IsEnabled Then txt &= msgToLog(selected)
             ElseIf randStack.comm.RaceIdentifierToSubrace(v, False) > -1 Then
                 selection.Clear()
                 Dim selected As Integer = -1
@@ -5843,7 +5843,7 @@ Public Class ObjectsContentSet
                     selected = selection.Item(randStack.comm.rndgen.RndPos(selection.Count, True) - 1)
                     res.Add(randStack.AllFighters(selected).unitID)
                 End If
-                txt &= msgToLog(selected)
+                If log.IsEnabled Then txt &= msgToLog(selected)
             ElseIf v.Contains("#") Then
                 Dim s() As String = v.Split(CChar("#"))
                 Dim race As Integer
@@ -5855,11 +5855,11 @@ Public Class ObjectsContentSet
                 Dim bar As Integer = CInt(s(1))
                 Dim selected As Integer = SelectMercenary(bar, race, res)
                 If selected > -1 Then res.Add(randStack.AllFighters(selected).unitID)
-                txt &= msgToLog(selected)
+                If log.IsEnabled Then txt &= msgToLog(selected)
             Else
                 If Not res.Contains(v.ToUpper) Then
                     res.Add(v)
-                    txt &= v.ToUpper
+                    If log.IsEnabled Then txt &= v.ToUpper
                 Else
                     txt = ""
                 End If
@@ -5931,27 +5931,29 @@ Public Class ObjectsContentSet
                                           Optional ByVal LogID As Integer = -1) As List(Of String)
 
         Call AddToLog(log, LogID, "----Alternative loot creation started----")
-        Dim txt As String
-        Dim res, selection As New List(Of String)
+        Dim txt As String = ""
+        Dim res As New List(Of String)
+        Dim selection As New List(Of Integer)
         Dim dCost As Integer = 0
         Dim itemID As Integer = -1
         For Each v As String In d.shopContent
-            txt = "In: " & v
+            If log.IsEnabled Then txt = "In: " & v
             If IsNumeric(v) Then
                 Dim bar As Integer = CInt(v)
                 itemID = SelectItem(bar, -1, dCost, d, res.Count)
                 If itemID > -1 Then res.Add(randStack.MagicItem(itemID).itemID)
-                txt &= msgToLog(itemID, dCost, True)
+                If log.IsEnabled Then txt &= msgToLog(itemID, dCost, True)
             ElseIf randStack.comm.itemTypeID.ContainsKey(v.ToUpper) Then
                 selection.Clear()
                 Dim type As Integer = randStack.comm.itemTypeID.Item(v.ToUpper)
-                For Each u As AllDataStructues.Item In randStack.MagicItem
-                    If type = u.type AndAlso randStack.ItemFilter(d.IGen, u) Then selection.Add(u.itemID)
+                For u As Integer = 0 To UBound(randStack.MagicItem) Step 1
+                    If type = randStack.MagicItem(u).type _
+                    AndAlso randStack.ItemFilter(d.IGen, randStack.MagicItem(u)) Then selection.Add(u)
                 Next u
                 If selection.Count = 0 Then Throw New Exception("Не могу выбрать предмет в качестве товара. Тип: " & v)
-                itemID = randStack.comm.rndgen.RndPos(selection.Count, True) - 1
-                res.Add(selection.Item(itemID))
-                txt &= msgToLog(itemID, dCost, False)
+                itemID = randStack.comm.RandomSelection(selection, randStack.multiplierItemsWeight, True)
+                res.Add(randStack.MagicItem(itemID).itemID)
+                If log.IsEnabled Then txt &= msgToLog(itemID, dCost, False)
             ElseIf v.Contains("#") Then
                 Dim s() As String = v.Split(CChar("#"))
                 Dim type As Integer
@@ -5966,7 +5968,7 @@ Public Class ObjectsContentSet
                 txt &= msgToLog(itemID, dCost, True)
             Else
                 res.Add(v.ToUpper)
-                txt &= " -> " & v.ToUpper
+                If log.IsEnabled Then txt &= " -> " & v.ToUpper
             End If
             Call AddToLog(log, LogID, txt)
         Next v
@@ -6021,7 +6023,7 @@ Public Class ObjectsContentSet
         Loop
         dCost += bar
         If selection.Count > 0 Then
-            Dim r As Integer = selection.Item(randStack.comm.rndgen.RndPos(selection.Count, True) - 1)
+            Dim r As Integer = randStack.comm.RandomSelection(selection, randStack.multiplierItemsWeight, True)
             dCost -= randStack.MagicItem(r).itemCost.Gold
             Return r
         Else
