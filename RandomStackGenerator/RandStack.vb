@@ -25,6 +25,9 @@ Public Class RandStack
     ''' <summary>Сюда генератор пишет лог</summary>
     Public log As Log
 
+    ''' <summary>Если True, генератор будет игнорировать ограничения по расе при создании отрядов. По умолчанию False</summary>
+    Public setting_IgnoreUnitRace As Boolean = False
+
     ''' <param name="AllUnitsList">Dсе юниты в игре</param>
     ''' <param name="AllItemsList">Все предметы в игре</param>
     ''' <param name="ExcludeLists">Файлы со списками исключенных объектов. Записи в них могут повторяться. 
@@ -761,7 +764,10 @@ Public Class RandStack
     End Function
     Private Function SelectPossibleLeader(ByRef leaderID As Integer, ByRef Tolerance As Double, _
                                           ByRef StackStats As AllDataStructues.DesiredStats, ByRef GroundTile As Boolean) As Boolean
-        If Not StackStats.Race.Contains(AllLeaders(leaderID).race) Then Return False
+        If Not setting_IgnoreUnitRace Then
+            If Not StackStats.Race.Contains(AllLeaders(leaderID).race) Then Return False
+        End If
+
         If Not AllLeaders(leaderID).small And StackStats.MaxGiants = 0 Then Return False
         If AllLeaders(leaderID).waterOnly And GroundTile Then Return False
 
@@ -1128,7 +1134,10 @@ Public Class RandStack
                 If sole.Contains(AllFighters(id).unitID) Then Return False
             Next id
         End If
-        If Not DynStackStats.Race.Contains(AllFighters(fighterID).race) Then Return False
+
+        If Not setting_IgnoreUnitRace Then
+            If Not DynStackStats.Race.Contains(AllFighters(fighterID).race) Then Return False
+        End If
 
         If comm.BigStackUnits.ContainsKey(AllFighters(fighterID).unitID) _
         AndAlso BaseStackSize < comm.BigStackUnits.Item(AllFighters(fighterID).unitID) Then Return False
