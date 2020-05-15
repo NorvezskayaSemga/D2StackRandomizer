@@ -337,7 +337,7 @@ Public Class RandStackTest
         Dim genitems As List(Of String)
         For i As Integer = 0 To 100 Step 1
             cost = target.minItemGoldCost + i * 125
-            genitems = target.ItemsGen(cost, New AllDataStructues.LootGenSettings)
+            genitems = target.ItemsGen(cost, New AllDataStructues.LootGenSettings, Nothing)
             sum = target.LootCost(genitems).Gold
             'If sum > cost Then ok = False
             If Math.Abs(cost - sum) > cost Then ok = False

@@ -419,9 +419,11 @@ Public Class RandStack
     ''' <summary>Генерирует набор предметов. В принципе может вернуть пустой список</summary>
     ''' <param name="GoldCost">Максимальная стоимость набора в золоте. Драгоценности считаются дешевле в два раза</param>
     ''' <param name="IGen">Настройки генерации предметов</param>
+    ''' <param name="TypeCostRestriction">Ключ - тип предмета, Значение - ограничение стоимости. Игнорируется, если массив неинициализирован</param>
     ''' <param name="LogID">Номер задачи. От 0 до Size-1. Если меньше 0, запись будет сделана в общий лог</param>
     Public Function ItemsGen(ByVal GoldCost As Integer, _
-                             ByVal IGen As AllDataStructues.LootGenSettings, _
+                             ByRef IGen As AllDataStructues.LootGenSettings, _
+                             ByRef TypeCostRestriction As Dictionary(Of Integer, AllDataStructues.Restriction), _
                              Optional ByVal LogID As Integer = -1) As List(Of String)
         Call AddToLog(LogID, "----Loot creation started----" & vbNewLine & _
                              "Gold sum: " & GoldCost)
@@ -442,7 +444,7 @@ Public Class RandStack
                                  " max item cost:" & maxCost(0) & "|" & maxCost(1) & "|" & maxCost(2))
             IDs.Clear()
             For i As Integer = 0 To UBound(MagicItem) Step 1
-                If ItemFilter(DynIGen, MagicItem(i), costBar) Then
+                If ItemFilter(DynIGen, MagicItem(i), costBar) AndAlso ItemFilter(TypeCostRestriction, MagicItem(i)) Then
                     IDs.Add(i)
                     weight(i) = GenItemWeight(MagicItem(i), costBar) * multiplierItemsWeight(i)
                 Else
@@ -466,13 +468,15 @@ Public Class RandStack
     ''' <summary>Генерирует набор предметов. В принципе может вернуть пустой список</summary>
     ''' <param name="GoldCost">Максимальная стоимость набора в золоте. Драгоценности считаются дешевле в два раза</param>
     ''' <param name="IGen">Настройки генерации предметов</param>
+    ''' <param name="TypeCostRestriction">Ключ - тип предмета, Значение - ограничение стоимости. Игнорируется, если массив неинициализирован</param>
     ''' <param name="LootCostMultiplier">Множитель стоимости предметов</param>
     ''' <param name="LogID">Номер задачи. От 0 до Size-1. Если меньше 0, запись будет сделана в общий лог</param>
     Public Function ItemsGen(ByVal GoldCost As Integer, _
                              ByRef IGen As AllDataStructues.LootGenSettings, _
+                             ByRef TypeCostRestriction As Dictionary(Of Integer, AllDataStructues.Restriction), _
                              ByVal LootCostMultiplier As Double, _
                              Optional ByVal LogID As Integer = -1) As List(Of String)
-        Return ItemsGen(CInt(GoldCost * LootCostMultiplier), IGen, LogID)
+        Return ItemsGen(CInt(GoldCost * LootCostMultiplier), IGen, TypeCostRestriction, LogID)
     End Function
     Private Function CostBarGen(ByRef minBar As Integer, ByRef maxBar As Integer, ByRef serialExecution As Boolean) As Integer
         'Return CInt(rndgen.Rand(CDbl(minBar), CDbl(maxBar), serialExecution))
@@ -489,9 +493,11 @@ Public Class RandStack
     ''' <summary>Генерирует один предмет. Если не получится выбрать подходящий предмет, вернет пустую строку</summary>
     ''' <param name="GoldCost">Максимальная стоимость предмета в золоте. Драгоценности считаются дешевле в два раза</param>
     ''' <param name="IGen">Настройки генерации предметов</param>
+    ''' <param name="TypeCostRestriction">Ключ - тип предмета, Значение - ограничение стоимости. Игнорируется, если массив неинициализирован</param>
     ''' <param name="LogID">Номер задачи. От 0 до Size-1. Если меньше 0, запись будет сделана в общий лог</param>
     Public Function ThingGen(ByVal GoldCost As Integer, _
                              ByRef IGen As AllDataStructues.LootGenSettings, _
+                             ByRef TypeCostRestriction As Dictionary(Of Integer, AllDataStructues.Restriction), _
                              Optional ByVal LogID As Integer = -1) As String
 
         Call AddToLog(LogID, "----Single item creation started----" & vbNewLine & _
@@ -505,7 +511,8 @@ Public Class RandStack
 
         IDs.Clear()
         For i As Integer = 0 To UBound(MagicItem) Step 1
-            If ItemCostSum(i) <= GoldCost AndAlso ItemFilter(IGen, MagicItem(i)) Then IDs.Add(i)
+            If ItemCostSum(i) <= GoldCost AndAlso ItemFilter(IGen, MagicItem(i)) _
+            AndAlso ItemFilter(TypeCostRestriction, MagicItem(i)) Then IDs.Add(i)
         Next i
         If IDs.Count > 0 Then
             selected = comm.RandomSelection(IDs, New Double()() {ItemCostSum}, New Double() {GoldCost}, multiplierItemsWeight, itemGenSigma, serialExecution)
@@ -520,13 +527,15 @@ Public Class RandStack
     ''' <summary>Генерирует один предмет. Если не получится выбрать подходящий предмет, вернет пустую строку</summary>
     ''' <param name="GoldCost">Максимальная стоимость предмета в золоте. Драгоценности считаются дешевле в два раза</param>
     ''' <param name="IGen">Настройки генерации предметов</param>
+    ''' <param name="TypeCostRestriction">Ключ - тип предмета, Значение - ограничение стоимости. Игнорируется, если массив неинициализирован</param>
     ''' <param name="LootCostMultiplier">Множитель стоимости предметов</param>
     ''' <param name="LogID">Номер задачи. От 0 до Size-1. Если меньше 0, запись будет сделана в общий лог</param>
     Public Function ThingGen(ByVal GoldCost As Integer, _
                              ByRef IGen As AllDataStructues.LootGenSettings, _
+                             ByRef TypeCostRestriction As Dictionary(Of Integer, AllDataStructues.Restriction), _
                              ByVal LootCostMultiplier As Double, _
                              Optional ByVal LogID As Integer = -1) As String
-        Return ThingGen(CInt(GoldCost * LootCostMultiplier), IGen, LogID)
+        Return ThingGen(CInt(GoldCost * LootCostMultiplier), IGen, TypeCostRestriction, LogID)
     End Function
     Private Function GenItemSetDynIGen(ByRef IGen As AllDataStructues.LootGenSettings, ByRef GoldCost As Integer) As AllDataStructues.LootGenSettings
         Dim settings() As AllDataStructues.ItemGenSettings = AllDataStructues.LootGenSettings.ToArray(IGen)
@@ -658,6 +667,16 @@ Public Class RandStack
         Next i
         Return True
     End Function
+    Friend Function ItemFilter(ByRef TypeCostRestriction As Dictionary(Of Integer, AllDataStructues.Restriction), _
+                               ByRef item As AllDataStructues.Item) As Boolean
+        If IsNothing(TypeCostRestriction) Then Return True
+        If AllDataStructues.Restriction.CheckValue(AllDataStructues.Cost.Sum(LootCost(item)), _
+                                                   TypeCostRestriction.Item(item.type)) Then
+            Return True
+        Else
+            Return False
+        End If
+    End Function
 
     ''' <summary>Затычка: вернет отряд из двух сквайров и трех лучников. Лидер - паладин. С зельем воскрешения</summary>
     Public Function GenGag() As AllDataStructues.Stack
@@ -705,7 +724,7 @@ Public Class RandStack
 
         Dim result As AllDataStructues.Stack = GenStackMultithread(StackStats, DynStackStats, deltaLeadership, GroundTile, NoLeader)
 
-        result.items = ItemsGen(DynStackStats.LootCost, DynStackStats.IGen)
+        result.items = ItemsGen(DynStackStats.LootCost, DynStackStats.IGen, Nothing)
 
         Call log.Add("----Stack creation ended----")
 
@@ -2468,6 +2487,24 @@ Public Class AllDataStructues
                                              .amount = ValueConverter.StrToInt(s(1), v, "second"), _
                                              .costPart = ValueConverter.StrToDbl(s(2))}
         End Function
+    End Structure
+
+    Public Structure Restriction
+
+        ''' <summary>Minimum value allowed</summary>
+        Dim minimum As Double
+        ''' <summary>Maximum value allowed</summary>
+        Dim maximum As Double
+
+        ''' <summary>Returns False, if v less than r.minimum or v greater than r.maximum </summary>
+        Public Shared Function CheckValue(ByRef v As Double, ByRef r As Restriction) As Boolean
+            If v < r.minimum OrElse v > r.maximum Then
+                Return False
+            Else
+                Return True
+            End If
+        End Function
+
     End Structure
 
 End Class

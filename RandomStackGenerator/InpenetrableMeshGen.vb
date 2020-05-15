@@ -5664,7 +5664,7 @@ Public Class ObjectsContentSet
         Dim races() As String = New String() {"H", "C", "L", "U", "E", "R"}
 
         Dim res , slist As New List(Of String)
-        Dim txt As String
+        Dim txt As String = ""
 
         For Each L As String In d.shopContent
             If log.IsEnabled Then txt = "In: " & L & " -> "
@@ -5924,36 +5924,41 @@ Public Class ObjectsContentSet
     ''' <summary>Создаст список предметов</summary>
     ''' <param name="d">Желаемые параметры доступных предметов. Имеет значение только .shopContent и .IGen.
     ''' IGen используется только при генерации по цене</param>
+    ''' <param name="TypeCostRestriction">Ключ - тип предмета, Значение - ограничение стоимости. Игнорируется, если массив неинициализирован</param>
     ''' <param name="log">Лог для записей результатов</param>
     ''' <param name="LogID">Номер задачи. От 0 до Size-1. Если меньше 0, запись будет сделана в общий лог</param>
     Public Function MakeMerchantItemsList(ByRef d As AllDataStructues.DesiredStats, _
+                                          ByRef TypeCostRestriction As Dictionary(Of Integer, AllDataStructues.Restriction), _
                                           ByRef log As Log, _
                                           Optional ByVal LogID As Integer = -1) As List(Of String)
 
-        Call AddToLog(log, LogID, "----Alternative loot creation started----")
+        Call AddToLog(Log, LogID, "----Alternative loot creation started----")
         Dim txt As String = ""
         Dim res As New List(Of String)
         Dim selection As New List(Of Integer)
         Dim dCost As Integer = 0
         Dim itemID As Integer = -1
         For Each v As String In d.shopContent
-            If log.IsEnabled Then txt = "In: " & v
+            If Log.IsEnabled Then txt = "In: " & v
             If IsNumeric(v) Then
                 Dim bar As Integer = CInt(v)
-                itemID = SelectItem(bar, -1, dCost, d, res.Count)
+                itemID = SelectItem(bar, -1, dCost, d, res.Count, TypeCostRestriction)
                 If itemID > -1 Then res.Add(randStack.MagicItem(itemID).itemID)
-                If log.IsEnabled Then txt &= msgToLog(itemID, dCost, True)
+                If Log.IsEnabled Then txt &= msgToLog(itemID, dCost, True)
             ElseIf randStack.comm.itemTypeID.ContainsKey(v.ToUpper) Then
                 selection.Clear()
                 Dim type As Integer = randStack.comm.itemTypeID.Item(v.ToUpper)
                 For u As Integer = 0 To UBound(randStack.MagicItem) Step 1
-                    If type = randStack.MagicItem(u).type _
-                    AndAlso randStack.ItemFilter(d.IGen, randStack.MagicItem(u)) Then selection.Add(u)
+                    If type = randStack.MagicItem(u).type AndAlso randStack.ItemFilter(d.IGen, randStack.MagicItem(u)) Then
+                        If randStack.ItemFilter(TypeCostRestriction, randStack.MagicItem(u)) Then
+                            selection.Add(u)
+                        End If
+                    End If
                 Next u
                 If selection.Count = 0 Then Throw New Exception("Не могу выбрать предмет в качестве товара. Тип: " & v)
                 itemID = randStack.comm.RandomSelection(selection, randStack.multiplierItemsWeight, True)
                 res.Add(randStack.MagicItem(itemID).itemID)
-                If log.IsEnabled Then txt &= msgToLog(itemID, dCost, False)
+                If Log.IsEnabled Then txt &= msgToLog(itemID, dCost, False)
             ElseIf v.Contains("#") Then
                 Dim s() As String = v.Split(CChar("#"))
                 Dim type As Integer
@@ -5963,17 +5968,17 @@ Public Class ObjectsContentSet
                     type = randStack.comm.itemTypeID.Item(s(0).ToUpper)
                 End If
                 Dim bar As Integer = CInt(s(1))
-                itemID = SelectItem(bar, type, dCost, d, res.Count)
+                itemID = SelectItem(bar, type, dCost, d, res.Count, TypeCostRestriction)
                 If itemID > -1 Then res.Add(randStack.MagicItem(itemID).itemID)
                 txt &= msgToLog(itemID, dCost, True)
             Else
                 res.Add(v.ToUpper)
-                If log.IsEnabled Then txt &= " -> " & v.ToUpper
+                If Log.IsEnabled Then txt &= " -> " & v.ToUpper
             End If
-            Call AddToLog(log, LogID, txt)
+            Call AddToLog(Log, LogID, txt)
         Next v
 
-        Call AddToLog(log, LogID, "----Alternative loot creation ended----")
+        Call AddToLog(Log, LogID, "----Alternative loot creation ended----")
 
         Return res
     End Function
@@ -5989,7 +5994,8 @@ Public Class ObjectsContentSet
         Return txt
     End Function
     Private Function SelectItem(ByRef bar As Integer, ByRef type As Integer, ByRef dCost As Integer, _
-                                ByRef d As AllDataStructues.DesiredStats, ByRef addedCount As Integer) As Integer
+                                ByRef d As AllDataStructues.DesiredStats, ByRef addedCount As Integer, _
+                                ByRef TypeCostRestriction As Dictionary(Of Integer, AllDataStructues.Restriction)) As Integer
         Dim selection As New List(Of Integer)
         Dim correctedBar As Integer = bar + CInt(dCost / Math.Max(d.shopContent.Count - addedCount, 1))
         If correctedBar <= 0 Then
@@ -6016,6 +6022,7 @@ Public Class ObjectsContentSet
                             add = False
                         End If
                     End If
+                    If add AndAlso Not randStack.ItemFilter(TypeCostRestriction, randStack.MagicItem(u)) Then add = False
                     If add Then selection.Add(u)
                 End If
             Next u

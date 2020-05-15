@@ -213,7 +213,7 @@ Public Class ObjectsContentSetTest
         For i As Integer = 100 To 10000 Step 100
             'input.Clear()
             input.Add(i)
-            actual = target.MakeMerchantItemsList(New AllDataStructues.DesiredStats With {.shopContent = input}, log, -1)
+            actual = target.MakeMerchantItemsList(New AllDataStructues.DesiredStats With {.shopContent = input}, Nothing, log, -1)
             If actual.Count = 0 Then ok = False
         Next i
 
@@ -264,7 +264,7 @@ Public Class ObjectsContentSetTest
             input.Add(item.itemID)
         Next item
         s = target.GetMerchantListSettings(-1, input)
-        Call target.MakeMerchantItemsList(New AllDataStructues.DesiredStats With {.shopContent = s}, log)
+        Call target.MakeMerchantItemsList(New AllDataStructues.DesiredStats With {.shopContent = s}, Nothing, log)
         input.Clear()
         For Each spell As AllDataStructues.Spell In rndtest.AllSpells
             input.Add(spell.spellID)
@@ -282,7 +282,7 @@ Public Class ObjectsContentSetTest
                 Next unit
                 For Each item As AllDataStructues.Item In rStack.MagicItem
                     Dim r As List(Of String) = target.GetMerchantListSettings(m, {item.itemID})
-                    Dim result As String = target.MakeMerchantItemsList(New AllDataStructues.DesiredStats With {.shopContent = r}, log).Item(0)
+                    Dim result As String = target.MakeMerchantItemsList(New AllDataStructues.DesiredStats With {.shopContent = r}, Nothing, log).Item(0)
                     If Not item.type = rStack.FindItemStats(result).type Then ok = False
                 Next item
                 For Each spell As AllDataStructues.Spell In rndtest.AllSpells
