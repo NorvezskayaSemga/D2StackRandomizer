@@ -8,7 +8,7 @@
         If Not settMap.isChecked Then Throw New Exception("Check parameters via settMap.Check()")
 
         If Not m.complited.ImpenetrableObjectsPlacing_Done Then
-            Throw New Exception("Сначала нужно выполнить RaceGen.Gen")
+            Throw New Exception("Сначала нужно выполнить ImpenetrableObjects.Gen")
         End If
 
         Dim t0 As Integer = Environment.TickCount
