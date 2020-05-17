@@ -2509,16 +2509,16 @@ Public Class AllDataStructues
 
 End Class
 
-Friend Class ValueConverter
+Public Class ValueConverter
 
     Private WeightMultiplicatorReplaced As String = ""
 
-    Friend Shared Function StrToDbl(ByRef s As String) As Double
+    Public Shared Function StrToDbl(ByRef s As String) As Double
         Return CDbl(s.Replace(",", ".").Replace(".", System.Globalization.CultureInfo.CurrentCulture.NumberFormat.NumberDecimalSeparator))
         'Return Convert.ToDouble(s, Globalization.NumberFormatInfo.InvariantInfo)
     End Function
 
-    Friend Shared Function StrToInt(ByRef v As String, ByRef fullLine As String, ByRef fieldName As String) As Integer
+    Public Shared Function StrToInt(ByRef v As String, ByRef fullLine As String, ByRef fieldName As String) As Integer
         Try
             Return CInt(v)
         Catch ex As Exception
@@ -2527,7 +2527,7 @@ Friend Class ValueConverter
         End Try
     End Function
 
-    Friend Shared Function StrToBool(ByRef v As String) As Boolean
+    Public Shared Function StrToBool(ByRef v As String) As Boolean
         Dim f As String = v.ToUpper
         If f = "T" Or f = "TRUE" Or f = "1" Then
             Return True
@@ -2537,23 +2537,23 @@ Friend Class ValueConverter
     End Function
 
 
-    Friend Function defaultSigma() As Double
+    Public Function defaultSigma() As Double
         Return 0.1
     End Function
 
     'units
-    Friend Function expBarDispersion() As Double
+    Public Function expBarDispersion() As Double
         Return 1.3
     End Function
-    Friend Function giantUnitsExpMultiplicator() As Double
+    Public Function giantUnitsExpMultiplicator() As Double
         Return 2
     End Function
-    Friend Function smallUnitsExpMultiplicator() As Double
+    Public Function smallUnitsExpMultiplicator() As Double
         Return 1
     End Function
 
     'loot
-    Friend Function WeightMultiplicator() As String
+    Public Function WeightMultiplicator() As String
         If WeightMultiplicatorReplaced = "" Then
             WeightMultiplicatorReplaced = "talisman=0.1;" & _
                                           "scroll=0.15;" & _
@@ -2567,19 +2567,60 @@ Friend Class ValueConverter
         End If
         Return WeightMultiplicatorReplaced
     End Function
-    Friend Function JewelItemsCostDevider() As Double
+    Public Function JewelItemsCostDevider() As Double
         Return 2
     End Function
-    Friend Function nonJewelItemsCostDevider() As Double
+    Public Function nonJewelItemsCostDevider() As Double
         Return 1
     End Function
-    Friend Function lootCostDispersion() As Double
+    Public Function lootCostDispersion() As Double
         Return 2
     End Function
 
     'map
-    Friend Function minLocationRadiusAtAll() As Double
+    Public Function minLocationRadiusAtAll() As Double
         Return 7
+    End Function
+
+    'ключевые слова
+    Public Function wMineTypeGold() As String
+        Return My.Resources.mineTypeGold
+    End Function
+    Public Function wMineTypeRandomMana() As String
+        Return My.Resources.mineTypeRandomMana
+    End Function
+    Public Function wMineTypeT1Mana() As String
+        Return My.Resources.mineTypeT1Mana
+    End Function
+    Public Function wMineTypeT3Mana() As String
+        Return My.Resources.mineTypeT3Mana
+    End Function
+    Public Function wObjKeyMage() As String
+        Return My.Resources.objKeyMage
+    End Function
+    Public Function wObjKeyMercenaries() As String
+        Return My.Resources.objKeyMercenaries
+    End Function
+    Public Function wObjKeyMerchant() As String
+        Return My.Resources.objKeyMerchant
+    End Function
+    Public Function wObjKeyMountain() As String
+        Return My.Resources.objKeyMountain
+    End Function
+    Public Function wObjKeyRuin() As String
+        Return My.Resources.objKeyRuin
+    End Function
+    Public Function wObjKeyTrainer() As String
+        Return My.Resources.objKeyTrainer
+    End Function
+    Public Function wReadDefaultFileKeyword() As String
+        Return My.Resources.readDefaultFileKeyword
+    End Function
+    Public Function wReadModLoreFileKeyword() As String
+        Return My.Resources.readMLoreFileKeyword
+    End Function
+    Public Function wReadVanillaLoreFileKeyword() As String
+        Return My.Resources.readVLoreFileKeyword
     End Function
 
 End Class
