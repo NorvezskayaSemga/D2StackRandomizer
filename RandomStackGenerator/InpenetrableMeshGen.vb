@@ -2,12 +2,45 @@
 Imports System.ComponentModel
 Imports System.Threading.Tasks
 
+
+Public Class DefMapObjects
+
+    Public Enum Types As Integer
+        None = 0
+        Capital = 1
+        City = 2
+        Vendor = 3
+        Mercenary = 4
+        Mage = 5
+        Trainer = 6
+        Ruins = 7
+        Mine = 8
+    End Enum
+
+    Public Const capitalEmpire As String = "G000FT0000HU0"
+    Public Const capitalUndead As String = "G000FT0000UN0"
+    Public Const capitalClans As String = "G000FT0000DWC0"
+    Public Const capitalLegions As String = "G000FT0000HE0"
+    Public Const capitalElves As String = "G000FT0000EL0"
+
+    Public Const townT1 As String = "G000FT0000NE1"
+    Public Const townT2 As String = "G000FT0000NE2"
+    Public Const townT3 As String = "G000FT0000NE3"
+    Public Const townT4 As String = "G000FT0000NE4"
+    Public Const townT5 As String = "G000FT0000NE5"
+
+    Public Const mineGold As String = "G000CR0000GL"
+    Public Const mineGreen As String = "G000CR0000GR"
+    Public Const mineBlack As String = "G000CR0000RG"
+    Public Const mineWhite As String = "G000CR0000WH"
+    Public Const mineRed As String = "G000CR0000RD"
+    Public Const mineBlue As String = "G000CR0000YE"
+
+End Class
+
 Public Class ImpenetrableMeshGen
 
     Public ReadOnly minLocationRadiusAtAll As Double
-    Public Sub New()
-        minLocationRadiusAtAll = (New GenDefaultValues).minLocationRadiusAtAll
-    End Sub
 
     Private Structure PrepareToRaceLocGenResult
         Dim DminimumDist As Double
@@ -23,15 +56,21 @@ Public Class ImpenetrableMeshGen
     Private comm As New Common
     Private symm As New SymmetryOperations
 
-    Public ActiveObjects() As AttendedObject = New AttendedObject() {Nothing, _
-                                               New AttendedObject("Capital", 5, 1), _
-                                               New AttendedObject("City", 4, 2), _
-                                               New AttendedObject("Vendor", 3, 3, True), _
-                                               New AttendedObject("Mercenary", 3, 4, True), _
-                                               New AttendedObject("Mage", 3, 5, True), _
-                                               New AttendedObject("Trainer", 3, 6, True), _
-                                               New AttendedObject("Ruins", 3, 7), _
-                                               New AttendedObject("Mine", 1, 8)}
+    Public ActiveObjects() As AttendedObject
+
+    Public Sub New()
+        minLocationRadiusAtAll = (New GenDefaultValues).minLocationRadiusAtAll
+
+        ActiveObjects = New AttendedObject() {Nothing, _
+                                              New AttendedObject(5, DefMapObjects.Types.Capital), _
+                                              New AttendedObject(4, DefMapObjects.Types.City), _
+                                              New AttendedObject(3, DefMapObjects.Types.Vendor, True), _
+                                              New AttendedObject(3, DefMapObjects.Types.Mercenary, True), _
+                                              New AttendedObject(3, DefMapObjects.Types.Mage, True), _
+                                              New AttendedObject(3, DefMapObjects.Types.Trainer, True), _
+                                              New AttendedObject(3, DefMapObjects.Types.Ruins), _
+                                              New AttendedObject(1, DefMapObjects.Types.Mine)}
+    End Sub
 
     Private Function ActiveObjectsSet(ByRef settMap As Map.SettingsMap, ByRef symmId As Integer) As Map.Cell()(,)
         Dim symm As New SymmetryOperations
@@ -518,7 +557,7 @@ Public Class ImpenetrableMeshGen
                 m.board(x, y).isAttended = False
                 m.board(x, y).isBorder = False
                 m.board(x, y).isPass = False
-                m.board(x, y).objectID = 0
+                m.board(x, y).objectID = DefMapObjects.Types.None
             Next y
         Next x
         For Each Loc As Location In m.Loc
@@ -1436,7 +1475,7 @@ Public Class ImpenetrableMeshGen
 
         For y As Integer = tmpm.ySize To 0 Step -1
             For x As Integer = tmpm.xSize To 0 Step -1
-                If tmpm.board(x, y).objectID > 0 Then
+                If tmpm.board(x, y).objectID > DefMapObjects.Types.None Then
                     Dim id As Integer = tmpm.board(x, y).objectID
                     Dim gid As Integer = tmpm.board(x, y).groupID
                     Dim d As Integer = ActiveObjects(id).dxy
@@ -1455,7 +1494,8 @@ Public Class ImpenetrableMeshGen
                                 If ObjectBlank(id)(i, j).isAttended Or ObjectBlank(id)(i, j).isBorder Then
                                     tmpm.board(dx, dy).isPass = False
                                 End If
-                            ElseIf ObjectBlank(id)(i, j).GuardLoc Or ObjectBlank(id)(i, j).isAttended Or ObjectBlank(id)(i, j).isBorder Or ObjectBlank(id)(i, j).objectID > 0 Then
+                            ElseIf ObjectBlank(id)(i, j).GuardLoc Or ObjectBlank(id)(i, j).isAttended Or ObjectBlank(id)(i, j).isBorder _
+                            Or ObjectBlank(id)(i, j).objectID > DefMapObjects.Types.None Then
                                 Throw New Exception("Неправильно поставлен объект: objectID = " & id & " position = " & x & "; " & y)
                             End If
                         Next i
@@ -2891,8 +2931,8 @@ Public Class AttendedObject
     Public ReadOnly TypeID As Integer
     ''' <summary>Длина стороны объекта</summary>
     Public ReadOnly Size As Integer
-    ''' <summary>Название объекта</summary>
-    Public ReadOnly Name As String
+    '''' <summary>Название объекта</summary>
+    'Public ReadOnly Name As String
     ''' <summary>Нужно ли размещать охраняющий отряд</summary>
     Public ReadOnly hasExternalGuard As Boolean
     ''' <summary>Площадь, которую нужно выделить под объект</summary>
@@ -2900,9 +2940,10 @@ Public Class AttendedObject
     ''' <summary>Положение объекта по X и Y относительно положения области, выделенной под него</summary>
     Friend ReadOnly dxy As Integer
 
-    Public Sub New(ByVal objName As String, ByVal objSize As Integer, ByVal objTypeID As Integer, _
+    'ByVal objName As String,
+    Public Sub New(ByVal objSize As Integer, ByVal objTypeID As Integer, _
                    Optional ByVal objHasExternalGuard As Boolean = False)
-        Name = objName
+        'Name = objName
         Size = objSize
         TypeID = objTypeID
         hasExternalGuard = objHasExternalGuard
@@ -3243,16 +3284,18 @@ Public Class Map
                 If complited.StacksPlacing_Done And board(x, y).GuardLoc Then
                     If board(x, y).isBorder Then
                         Return "Warning: border and guard are on the same place"
-                    ElseIf board(x, y).isAttended And board(x, y).objectID = 0 Then
+                    ElseIf board(x, y).isAttended And board(x, y).objectID = DefMapObjects.Types.None Then
                         Return "Warning: object and guard are on the same place"
-                    ElseIf (board(x, y).objectID = 2 Or board(x, y).objectID = 7) And board(x, y).groupID < 1 Then
+                    ElseIf (board(x, y).objectID = DefMapObjects.Types.City Or _
+                            board(x, y).objectID = DefMapObjects.Types.Ruins) And board(x, y).groupID < 1 Then
                         Return "Warning: group for internal guard for object is zero"
-                    ElseIf board(x, y).objectID > 0 AndAlso imp.ActiveObjects(board(x, y).objectID).hasExternalGuard Then
+                    ElseIf board(x, y).objectID > DefMapObjects.Types.None AndAlso imp.ActiveObjects(board(x, y).objectID).hasExternalGuard Then
                         Return "Warning: object with external guard has internal one"
                     End If
                 End If
                 If complited.StacksPlacing_Done Then
-                    If Not board(x, y).GuardLoc And (board(x, y).objectID = 2 Or board(x, y).objectID = 7) Then
+                    If Not board(x, y).GuardLoc And (board(x, y).objectID = DefMapObjects.Types.City Or _
+                                                     board(x, y).objectID = DefMapObjects.Types.Ruins) Then
                         Return "Warning: internal guard for object is not set"
                     End If
                 End If
@@ -3350,7 +3393,7 @@ Public Class StackLocationsGen
         Dim tmpm As Map = m
         For y As Integer = 0 To m.ySize Step 1
             For x As Integer = 0 To m.xSize Step 1
-                If m.board(x, y).objectID = 8 Then
+                If m.board(x, y).objectID = DefMapObjects.Types.Mine Then
                     Dim b As Location.Borders = genmap.ObjectBorders(m.board(x, y).objectID, x, y)
                     b.minX = Math.Max(b.minX, 0)
                     b.minY = Math.Max(b.minY, 0)
@@ -3402,7 +3445,7 @@ Public Class StackLocationsGen
         Dim protect(m.xSize, m.ySize) As Boolean
         For y As Integer = 0 To m.ySize Step 1
             For x As Integer = 0 To m.xSize Step 1
-                If m.board(x, y).objectID > 0 AndAlso genmap.ActiveObjects(m.board(x, y).objectID).hasExternalGuard Then
+                If m.board(x, y).objectID > DefMapObjects.Types.None AndAlso genmap.ActiveObjects(m.board(x, y).objectID).hasExternalGuard Then
                     protect(x + genmap.ActiveObjects(m.board(x, y).objectID).Size, _
                             y + genmap.ActiveObjects(m.board(x, y).objectID).Size) = True
                 End If
@@ -3460,7 +3503,8 @@ Public Class StackLocationsGen
 
         For y As Integer = 0 To m.ySize Step 1
             For x As Integer = 0 To m.xSize Step 1
-                If m.board(x, y).objectID = 2 Or m.board(x, y).objectID = 7 Then
+                If m.board(x, y).objectID = DefMapObjects.Types.City _
+                Or m.board(x, y).objectID = DefMapObjects.Types.Ruins Then
                     m.board(x, y).GuardLoc = True
                 End If
             Next x
@@ -4003,7 +4047,7 @@ Public Class WaterGen
     Public Sub Gen(ByRef m As Map, ByRef settMap As Map.SettingsMap)
 
         If Not settMap.isChecked Then Throw New Exception("Check parameters via settMap.Check()")
-        
+
         If Not m.complited.StacksDesiredStatsGen_Done Then
             Throw New Exception("Сначала нужно выполнить StackPowerGen.Gen")
         End If
@@ -4013,7 +4057,7 @@ Public Class WaterGen
         For i As Integer = 0 To m.xSize Step 1
             For j As Integer = 0 To m.ySize Step 1
                 If m.board(i, j).isAttended Or m.board(i, j).Penetrable Then HaveToBeGround(i, j) = True
-                If m.board(i, j).objectID = 8 Then
+                If m.board(i, j).objectID = DefMapObjects.Types.Mine Then
                     Dim b As Location.Borders = ImpenetrableMeshGen.NearestXY(i, j, m.xSize, m.ySize, 1)
                     For x As Integer = b.minX To b.maxX Step 1
                         For y As Integer = b.minY To b.maxY Step 1
@@ -4256,7 +4300,7 @@ Public Class WaterGen
         Dim makeWatered As Boolean
         For i As Integer = 0 To m.xSize Step 1
             For j As Integer = 0 To m.ySize Step 1
-                If m.board(i, j).locID(0) = loc.ID And m.board(i, j).objectID = 7 Then
+                If m.board(i, j).locID(0) = loc.ID And m.board(i, j).objectID = DefMapObjects.Types.Ruins Then
                     makeWatered = (rndgen.PRand(0, 1) < chance)
 
                     Dim d As Integer = 1
@@ -4661,16 +4705,16 @@ Public Class ImpenetrableObjects
         Dim id As Integer
         For y As Integer = 0 To m.ySize Step 1
             For x As Integer = 0 To m.xSize Step 1
-                If m.board(x, y).objectID > 2 And m.board(x, y).objectID < 8 Then
-                    If m.board(x, y).objectID = 3 Then
+                If m.board(x, y).objectID > DefMapObjects.Types.City And m.board(x, y).objectID < DefMapObjects.Types.Mine Then
+                    If m.board(x, y).objectID = DefMapObjects.Types.Vendor Then
                         objList = merchants
-                    ElseIf m.board(x, y).objectID = 4 Then
+                    ElseIf m.board(x, y).objectID = DefMapObjects.Types.Mercenary Then
                         objList = mercenaries
-                    ElseIf m.board(x, y).objectID = 5 Then
+                    ElseIf m.board(x, y).objectID = DefMapObjects.Types.Mage Then
                         objList = mages
-                    ElseIf m.board(x, y).objectID = 6 Then
+                    ElseIf m.board(x, y).objectID = DefMapObjects.Types.Trainer Then
                         objList = trainers
-                    ElseIf m.board(x, y).objectID = 7 Then
+                    ElseIf m.board(x, y).objectID = DefMapObjects.Types.Ruins Then
                         objList = ruins
                     Else
                         objList = Nothing
@@ -4696,17 +4740,17 @@ Public Class ImpenetrableObjects
         Dim cityGroup As Dictionary(Of Integer, List(Of Point)) = MakeCityGroupsList(m)
         For y As Integer = 0 To m.ySize Step 1
             For x As Integer = 0 To m.xSize Step 1
-                If m.board(x, y).objectID = 1 Then
+                If m.board(x, y).objectID = DefMapObjects.Types.Capital Then
                     If m.board(x, y).objRace.Item(0) = comm.RaceIdentifierToSubrace("H") Then
-                        m.board(x, y).objectName = "G000FT0000HU0"
+                        m.board(x, y).objectName = DefMapObjects.capitalEmpire
                     ElseIf m.board(x, y).objRace.Item(0) = comm.RaceIdentifierToSubrace("U") Then
-                        m.board(x, y).objectName = "G000FT0000UN0"
+                        m.board(x, y).objectName = DefMapObjects.capitalUndead
                     ElseIf m.board(x, y).objRace.Item(0) = comm.RaceIdentifierToSubrace("C") Then
-                        m.board(x, y).objectName = "G000FT0000DWC0"
+                        m.board(x, y).objectName = DefMapObjects.capitalClans
                     ElseIf m.board(x, y).objRace.Item(0) = comm.RaceIdentifierToSubrace("L") Then
-                        m.board(x, y).objectName = "G000FT0000HE0"
+                        m.board(x, y).objectName = DefMapObjects.capitalLegions
                     ElseIf m.board(x, y).objRace.Item(0) = comm.RaceIdentifierToSubrace("E") Then
-                        m.board(x, y).objectName = "G000FT0000EL0"
+                        m.board(x, y).objectName = DefMapObjects.capitalElves
                     End If
                 End If
             Next x
@@ -4715,15 +4759,15 @@ Public Class ImpenetrableObjects
             For Each L As List(Of Point) In cityGroup.Values
                 Dim town As String
                 If m.board(L.Item(0).X, L.Item(0).Y).locID.Item(0) <= settMap.nRaces Then
-                    town = "G000FT0000NE1"
+                    town = DefMapObjects.townT1
                 Else
                     Dim r As Double = comm.rndgen.PRand(0, 1)
                     If r > 0.3 Then
-                        town = "G000FT0000NE1"
+                        town = DefMapObjects.townT1
                     ElseIf r > 0.1 Then
-                        town = "G000FT0000NE2"
+                        town = DefMapObjects.townT2
                     Else
-                        town = "G000FT0000NE3"
+                        town = DefMapObjects.townT3
                     End If
                 End If
                 For Each p As Point In L
@@ -4736,7 +4780,7 @@ Public Class ImpenetrableObjects
         Dim cityGroup As New Dictionary(Of Integer, List(Of Point))
         For y As Integer = 0 To m.ySize Step 1
             For x As Integer = 0 To m.xSize Step 1
-                If m.board(x, y).objectID = 2 Then
+                If m.board(x, y).objectID = DefMapObjects.Types.City Then
                     Dim g As Integer = m.board(x, y).groupID
                     If Not cityGroup.ContainsKey(g) Then cityGroup.Add(g, New List(Of Point))
                     cityGroup.Item(g).Add(New Point(x, y))
@@ -4789,14 +4833,7 @@ Public Class ImpenetrableObjects
         'установить для шахт конкретный вид ресурсов
         Dim raceMana As Dictionary(Of Integer, AllDataStructues.Cost()) = RacesManaUsing()
         Dim raceManaTier As Dictionary(Of Integer, String()) = ManaTier(raceMana)
-        Dim mines As New Dictionary(Of String, String)
         Dim IDs As New List(Of Integer)
-        mines.Add("gold", "G000CR0000GL")
-        mines.Add("green", "G000CR0000GR")
-        mines.Add("black", "G000CR0000RG")
-        mines.Add("white", "G000CR0000WH")
-        mines.Add("red", "G000CR0000RD")
-        mines.Add("blue", "G000CR0000YE")
         For y As Integer = 0 To m.ySize Step 1
             For x As Integer = 0 To m.xSize Step 1
                 If Not mineType(x, y) = "" Then
@@ -4850,9 +4887,9 @@ Public Class ImpenetrableObjects
         For y As Integer = 0 To m.ySize Step 1
             For x As Integer = 0 To m.xSize Step 1
                 If m.board(x, y).locID.Item(0) = Loc.ID Then
-                    If m.board(x, y).objectID = 8 Then
+                    If m.board(x, y).objectID = DefMapObjects.Types.Mine Then
                         ListPos.Add(New Point(x, y))
-                    ElseIf m.board(x, y).objectID = 1 Then
+                    ElseIf m.board(x, y).objectID = DefMapObjects.Types.Capital Then
                         capitalPos = New Point(x, y)
                     End If
                 End If
@@ -4897,7 +4934,7 @@ Public Class ImpenetrableObjects
         Dim ListPos As New List(Of Point)
         For y As Integer = 0 To m.ySize Step 1
             For x As Integer = 0 To m.xSize Step 1
-                If m.board(x, y).locID.Item(0) = Loc.ID And m.board(x, y).objectID = 8 Then ListPos.Add(New Point(x, y))
+                If m.board(x, y).locID.Item(0) = Loc.ID And m.board(x, y).objectID = DefMapObjects.Types.Mine Then ListPos.Add(New Point(x, y))
             Next x
         Next y
         Dim goldLimit As Double = CDbl(ListPos.Count) * settCommLoc.maxGoldMines / (settCommLoc.maxGoldMines + settCommLoc.maxManaSources + 0.001)
@@ -5594,11 +5631,14 @@ End Class
 Public Class ObjectsContentSet
 
     Private randStack As RandStack
-    Private manaSourcesTypes() As String = New String() {"G000CR0000GR", "G000CR0000RG", "G000CR0000WH", "G000CR0000RD", "G000CR0000YE"}
+    Private manaSourcesTypes() As String = New String() {DefMapObjects.mineGreen, DefMapObjects.mineBlack, DefMapObjects.mineWhite, _
+                                                         DefMapObjects.mineRed, DefMapObjects.mineBlue}
 
     Private spells, excludedSpells As New Dictionary(Of String, AllDataStructues.Spell)
 
     Delegate Function getSettings(ByVal mode As Integer, ByRef input() As String) As List(Of String)
+
+    Private mines As New Dictionary(Of String, String)
 
     ''' <param name="RStack">Инициализированный класс</param>
     ''' <param name="AllSpells">Dсе заклинания в игре</param>
@@ -5616,6 +5656,13 @@ Public Class ObjectsContentSet
             End If
         Next i
 
+        mines.Add("gold", DefMapObjects.mineGold)
+        mines.Add("green", DefMapObjects.mineGreen)
+        mines.Add("black", DefMapObjects.mineBlack)
+        mines.Add("white", DefMapObjects.mineWhite)
+        mines.Add("red", DefMapObjects.mineRed)
+        mines.Add("blue", DefMapObjects.mineBlue)
+
     End Sub
 
     Private Sub AddToLog(ByRef log As Log, ByRef LogID As Integer, ByRef Msg As String)
@@ -5626,14 +5673,14 @@ Public Class ObjectsContentSet
         End If
     End Sub
 
-    ''' <summary>Определит тип случайной шахты. Если тип уже определен, то этот тип и вернет</summary>
+    ''' <summary>Определит тип шахты</summary>
     ''' <param name="mineObjectName">Название шахты, как его выдал генератор</param>
     Public Function SetMineType(ByVal mineObjectName As String) As String
         If mineObjectName.ToUpper = My.Resources.mineTypeRandomMana.ToUpper Then
             Dim r As Integer = randStack.comm.rndgen.RndPos(manaSourcesTypes.Length, True) - 1
             Return manaSourcesTypes(r)
         Else
-            Return mineObjectName
+            Return mines.Item(mineObjectName.ToLower)
         End If
     End Function
 
@@ -5646,7 +5693,7 @@ Public Class ObjectsContentSet
 
     ''' <summary>Создаст список заклинаний</summary>
     ''' <param name="d">Желаемые параметры доступных заклинаний. Имеет значение только .shopContent</param>
-    ''' <param name="AllManaSources">Список источников маны на карте (Только такие ID и в верхнем регистре: G000CR0000GR, G000CR0000RG, G000CR0000WH, G000CR0000RD, G000CR0000YE)</param>
+    ''' <param name="AllManaSources">Список источников маны на карте (см. DefMapObjects)</param>
     ''' <param name="log">Лог для записей результатов</param>
     ''' <param name="LogID">Номер задачи. От 0 до Size-1. Если меньше 0, запись будет сделана в общий лог</param>
     Public Function MakeSpellsList(ByRef d As AllDataStructues.DesiredStats, ByRef AllManaSources As List(Of String), _
@@ -5656,11 +5703,11 @@ Public Class ObjectsContentSet
         Call AddToLog(log, LogID, "----Spells creation started----")
 
         Dim availMana As New AllDataStructues.Cost
-        If AllManaSources.Contains("G000CR0000GR") Then availMana.Green = 1
-        If AllManaSources.Contains("G000CR0000RG") Then availMana.Black = 1
-        If AllManaSources.Contains("G000CR0000WH") Then availMana.White = 1
-        If AllManaSources.Contains("G000CR0000RD") Then availMana.Red = 1
-        If AllManaSources.Contains("G000CR0000YE") Then availMana.Blue = 1
+        If AllManaSources.Contains(DefMapObjects.mineGreen) Then availMana.Green = 1
+        If AllManaSources.Contains(DefMapObjects.mineBlack) Then availMana.Black = 1
+        If AllManaSources.Contains(DefMapObjects.mineWhite) Then availMana.White = 1
+        If AllManaSources.Contains(DefMapObjects.mineRed) Then availMana.Red = 1
+        If AllManaSources.Contains(DefMapObjects.mineBlue) Then availMana.Blue = 1
         Dim races() As String = New String() {"H", "C", "L", "U", "E", "R"}
 
         Dim res , slist As New List(Of String)

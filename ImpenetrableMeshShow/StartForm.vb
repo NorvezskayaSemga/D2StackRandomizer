@@ -183,6 +183,10 @@ again:
                 End If
                 If grid.board(x, y).isAttended Then
                     t(x, y) = 51 + 2 * grid.board(x, y).objectID
+                    Dim objname As String = grid.board(x, y).objectName
+                    If grid.board(x, y).objectID = DefMapObjects.Types.Mine Then
+                        x = x
+                    End If
                 ElseIf grid.board(x, y).isPass Then
                     't(x, y) = 90
                 End If

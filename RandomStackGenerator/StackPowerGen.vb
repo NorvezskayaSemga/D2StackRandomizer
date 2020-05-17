@@ -52,7 +52,7 @@
         centerY = 0.5 * m.ySize
         For y As Integer = 0 To m.ySize Step 1
             For x As Integer = 0 To m.xSize Step 1
-                If m.board(x, y).isAttended AndAlso m.board(x, y).objectID = 1 Then
+                If m.board(x, y).isAttended AndAlso m.board(x, y).objectID = DefMapObjects.Types.Capital Then
                     CapPos.Add(New Point(CInt(x + 0.5 * (imp.ActiveObjects(m.board(x, y).objectID).Size - 1)), _
                                          CInt(y + 0.5 * (imp.ActiveObjects(m.board(x, y).objectID).Size - 1))))
                 End If
@@ -415,7 +415,7 @@ Public Class RaceGen
         Dim n As Integer = 0
         For y As Integer = 0 To m.ySize Step 1
             For x As Integer = 0 To m.xSize Step 1
-                If m.board(x, y).isAttended AndAlso m.board(x, y).objectID = 1 Then n += 1
+                If m.board(x, y).isAttended AndAlso m.board(x, y).objectID = DefMapObjects.Types.Capital Then n += 1
             Next x
         Next y
         Return n
