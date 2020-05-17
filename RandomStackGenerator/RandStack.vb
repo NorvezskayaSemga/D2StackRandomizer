@@ -102,9 +102,9 @@ Public Class RandStack
                 If Not IsNothing(expKuilled) Then expKuilled(n) = units(n).EXPkilled
                 If Not IsNothing(mult) Then
                     If units(n).small Then
-                        mult(n) = comm.valConv.smallUnitsExpMultiplicator
+                        mult(n) = comm.defValues.smallUnitsExpMultiplicator
                     Else
-                        mult(n) = comm.valConv.giantUnitsExpMultiplicator
+                        mult(n) = comm.defValues.giantUnitsExpMultiplicator
                     End If
                 End If
             End If
@@ -130,7 +130,7 @@ Public Class RandStack
         ReDim items(n), itemCostSum(n), multiplierItemsWeight(n), excluded(m)
 
         Dim weight As New Dictionary(Of String, String)
-        For Each s As String In comm.valConv.WeightMultiplicator.Split(CChar(";"))
+        For Each s As String In comm.defValues.WeightMultiplicator.Split(CChar(";"))
             Dim i As Integer = s.IndexOf("=")
             weight.Add(s.Substring(0, i).ToUpper, s.Substring(i + 1).ToUpper)
         Next s
@@ -741,8 +741,8 @@ Public Class RandStack
     Public Function Gen(ByVal ExpStackKilled As Integer, ByVal LootCost As Double, ByRef Races As List(Of Integer), _
                         ByRef IGen As AllDataStructues.LootGenSettings, ByVal deltaLeadership As Integer, _
                         ByVal GroundTile As Boolean, ByVal NoLeader As Boolean) As AllDataStructues.Stack
-        Dim StackStat As AllDataStructues.DesiredStats = StackStatsGen.GenDesiredStats(CDbl(ExpStackKilled), _
-                                                                                       LootCost, rndgen, comm.valConv)
+        Dim StackStat As AllDataStructues.DesiredStats = StackStatsGen.GenDesiredStats _
+                            (CDbl(ExpStackKilled), LootCost, rndgen, comm.valConv, comm.defValues)
         StackStat.Race = Races
         StackStat.IGen = IGen
         Return Gen(StackStat, deltaLeadership, GroundTile, NoLeader)
@@ -805,7 +805,7 @@ Public Class RandStack
         Return True
     End Function
     Private Function SigmaMultiplier(ByRef stat As AllDataStructues.DesiredStats) As Double
-        Return comm.valConv.defaultSigma * (CDbl(stat.StackSize) + 1.25 * CDbl(stat.StackSize * stat.StackSize - 1) + 0.2 * CDbl(stat.MaxGiants))
+        Return comm.defValues.defaultSigma * (CDbl(stat.StackSize) + 1.25 * CDbl(stat.StackSize * stat.StackSize - 1) + 0.2 * CDbl(stat.MaxGiants))
     End Function
 
     Private Function GenStackMultithread(ByVal StackStats As AllDataStructues.DesiredStats, _
@@ -1427,6 +1427,7 @@ Public Class Common
     Public itemTypeID As New Dictionary(Of String, Integer)
 
     Friend valConv As New ValueConverter
+    Friend defValues As New GenDefaultValues
 
     Friend ConsumableItemsTypes, NonconsumableItemsTypes, JewelItemsTypes As New List(Of Integer)
     Friend ItemTypesLists() As List(Of Integer)
@@ -1457,8 +1458,8 @@ Public Class Common
             k = CInt(i / 2)
             StatFields(k).description = splitedFields(i)
             StatFields(k).name = splitedFields(i + 1)
-            StatFields(k).description = StatFields(k).description.Replace("$jm$", valConv.JewelItemsCostDevider.ToString)
-            StatFields(k).description = StatFields(k).description.Replace("$gm$", valConv.giantUnitsExpMultiplicator.ToString)
+            StatFields(k).description = StatFields(k).description.Replace("$jm$", defValues.JewelItemsCostDevider.ToString)
+            StatFields(k).description = StatFields(k).description.Replace("$gm$", defValues.giantUnitsExpMultiplicator.ToString)
             StatFields(k).description = StatFields(k).description.Replace("$ri$", racesList)
             StatFields(k).description = StatFields(k).description.Replace("$newline$", vbNewLine)
         Next i
@@ -1633,7 +1634,7 @@ Public Class Common
         Next i
         Return result
     End Function
-    
+
     ''' <summary>Сохраняет в файл параметры генерируемых отрядов</summary>
     ''' <param name="path">Путь к файлу</param>
     ''' <param name="content">Параметры</param>
@@ -2037,9 +2038,9 @@ Public Class Common
 
     Friend Function ItemTypeCostModify(ByRef item As AllDataStructues.Item) As AllDataStructues.Cost
         If itemType.Item(item.type) = "JEWEL" Then
-            Return item.itemCost / valConv.JewelItemsCostDevider
+            Return item.itemCost / defValues.JewelItemsCostDevider
         Else
-            Return item.itemCost / valConv.nonJewelItemsCostDevider
+            Return item.itemCost / defValues.nonJewelItemsCostDevider
         End If
     End Function
 End Class
@@ -2509,16 +2510,14 @@ Public Class AllDataStructues
 
 End Class
 
-Public Class ValueConverter
+Friend Class ValueConverter
 
-    Private WeightMultiplicatorReplaced As String = ""
-
-    Public Shared Function StrToDbl(ByRef s As String) As Double
+    Friend Shared Function StrToDbl(ByRef s As String) As Double
         Return CDbl(s.Replace(",", ".").Replace(".", System.Globalization.CultureInfo.CurrentCulture.NumberFormat.NumberDecimalSeparator))
         'Return Convert.ToDouble(s, Globalization.NumberFormatInfo.InvariantInfo)
     End Function
 
-    Public Shared Function StrToInt(ByRef v As String, ByRef fullLine As String, ByRef fieldName As String) As Integer
+    Friend Shared Function StrToInt(ByRef v As String, ByRef fullLine As String, ByRef fieldName As String) As Integer
         Try
             Return CInt(v)
         Catch ex As Exception
@@ -2527,7 +2526,7 @@ Public Class ValueConverter
         End Try
     End Function
 
-    Public Shared Function StrToBool(ByRef v As String) As Boolean
+    Friend Shared Function StrToBool(ByRef v As String) As Boolean
         Dim f As String = v.ToUpper
         If f = "T" Or f = "TRUE" Or f = "1" Then
             Return True
@@ -2536,6 +2535,11 @@ Public Class ValueConverter
         End If
     End Function
 
+End Class
+
+Public Class GenDefaultValues
+
+    Private WeightMultiplicatorReplaced As String = ""
 
     Public Function defaultSigma() As Double
         Return 0.1

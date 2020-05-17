@@ -3,6 +3,7 @@
     Private rndgen As New RndValueGen
     Private imp As New ImpenetrableMeshGen
     Private valConv As New ValueConverter
+    Private defValues As New GenDefaultValues
 
     Private Structure StackLoc
         Dim pos As Point
@@ -177,8 +178,8 @@
             End If
         Next id
 
-        Dim minD As Double = Common.ValueLowerBound(valConv.lootCostDispersion, settMap.Wealth)
-        Dim maxD As Double = Common.ValueUpperBound(valConv.lootCostDispersion, settMap.Wealth)
+        Dim minD As Double = Common.ValueLowerBound(defValues.lootCostDispersion, settMap.Wealth)
+        Dim maxD As Double = Common.ValueUpperBound(defValues.lootCostDispersion, settMap.Wealth)
 
         Dim expKilled, LootCost As New Dictionary(Of Integer, Double)
         For Each id As Integer In guards.Keys
@@ -245,7 +246,7 @@
         Return res
     End Function
     Private Function GenDesiredStats(ByRef expKilled As Double, ByRef LootCost As Double, ByRef groupID As Integer) As AllDataStructues.DesiredStats
-        Return StackStatsGen.GenDesiredStats(expKilled, LootCost, rndgen, valConv, groupID)
+        Return StackStatsGen.GenDesiredStats(expKilled, LootCost, rndgen, valConv, defValues, groupID)
     End Function
 End Class
 
@@ -264,10 +265,10 @@ Class StackStatsGen
         Return CInt(UnitExpBarToExpKilled(CDbl(value)))
     End Function
 
-    Friend Shared Function GenDesiredStats(ByRef expKilled As Double, ByRef LootCost As Double, ByRef rndGen As RandomStackGenerator.RndValueGen, ByRef valConv As ValueConverter) As AllDataStructues.DesiredStats
-        Return StackStatsGen.GenDesiredStats(expKilled, LootCost, rndGen, valConv, -1)
+    Friend Shared Function GenDesiredStats(ByRef expKilled As Double, ByRef LootCost As Double, ByRef rndGen As RandomStackGenerator.RndValueGen, ByRef valConv As ValueConverter, ByRef defValues As GenDefaultValues) As AllDataStructues.DesiredStats
+        Return StackStatsGen.GenDesiredStats(expKilled, LootCost, rndGen, valConv, defValues, -1)
     End Function
-    Friend Shared Function GenDesiredStats(ByRef expKilled As Double, ByRef LootCost As Double, ByRef rndGen As RandomStackGenerator.RndValueGen, ByRef valConv As ValueConverter, ByRef groupID As Integer) As AllDataStructues.DesiredStats
+    Friend Shared Function GenDesiredStats(ByRef expKilled As Double, ByRef LootCost As Double, ByRef rndGen As RandomStackGenerator.RndValueGen, ByRef valConv As ValueConverter, ByRef defValues As GenDefaultValues, ByRef groupID As Integer) As AllDataStructues.DesiredStats
         Dim stackSize As Integer = rndGen.RndPos(6, True)
         Dim meleeCount As Integer = rndGen.RndPos(Math.Min(stackSize, 3), True)
         Dim maxGiants As Integer
@@ -282,8 +283,8 @@ Class StackStatsGen
         End If
 
         Dim averageExpBar As Double = UnitExpKilledToExpBar(expKilled / (stackSize - 0.5 * maxGiants))
-        Dim minExpBar As Double = Common.ValueLowerBound(valConv.expBarDispersion, averageExpBar)
-        Dim maxExpBar As Double = Common.ValueUpperBound(valConv.expBarDispersion, averageExpBar)
+        Dim minExpBar As Double = Common.ValueLowerBound(defValues.expBarDispersion, averageExpBar)
+        Dim maxExpBar As Double = Common.ValueUpperBound(defValues.expBarDispersion, averageExpBar)
         Dim eBar As Integer = CInt(rndGen.PRand(minExpBar, maxExpBar))
 
         Return New AllDataStructues.DesiredStats With {.ExpStackKilled = Math.Max(CInt(expKilled), 5), _
