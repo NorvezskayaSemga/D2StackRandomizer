@@ -332,7 +332,7 @@ Public Class RaceGen
                                                  "E:2:E,E+A+AW+AG,E+AG," & commonBlock, _
                                                  "N:3:N,G,B,G+AW+AS,B+AW,B+AW+D," & commonBlock, _
                                                  "S:1:S,S+A,S+AS," & commonBlock}
-    Dim StackRaceWeight() As Double = New Double() {0, 1, 1, 1, 1, 0.75, 1, 1, 2, 0.25, 1, 3, 1, 1, 1, 1, 0.75, 0, 1, 1}
+    Dim StackRaceWeight() As Double = New Double() {0, 1, 1, 1, 1, 0.75, 1, 1, 2, 0.05, 1, 3, 1, 1, 1, 1, 0.75, 0, 1, 1}
     '                                               -, H, U, L, C,    N, H, E, G,    D, S, W, B, A, E,AS,  AST, -. AW,AG 
     Dim LRaces() As Integer
     Dim LRacesWeight(), SRacesWeight()() As Double
