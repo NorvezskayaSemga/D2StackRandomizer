@@ -496,9 +496,10 @@ Public Class RaceGen
         Dim rO, rS, IDs As New List(Of Integer)
         Dim added As New List(Of String)
         Dim t As Integer = -1
+        Dim isWaterCell As Boolean = MayBeWater(m, x, y)
 
         For Each r As Integer In m.board(x, y).locID
-            rO.Add(LocR(r - 1))
+            If Not rO.Contains(LocR(r - 1)) Then rO.Add(LocR(r - 1))
         Next r
         If m.board(x, y).locID.Item(0) > nRaces Then
             For Each r As Integer In rO
@@ -508,18 +509,7 @@ Public Class RaceGen
                         str &= SRaces(r)(i)(q).ToString & "_"
                     Next q
                     If str = "11_" AndAlso Not added.Contains(str) Then
-                        Dim ok As Boolean = True
-                        Dim b As Location.Borders = ImpenetrableMeshGen.NearestXY(x, y, m.xSize, m.ySize, 1)
-                        For q As Integer = b.minY To b.maxY Step 1
-                            For p As Integer = b.minX To b.maxX Step 1
-                                If Not m.board(p, q).isWater Then
-                                    ok = False
-                                    p = b.maxX
-                                    q = b.maxY
-                                End If
-                            Next p
-                        Next q
-                        If Not ok Then added.Add(str)
+                        If Not isWaterCell Then added.Add(str)
                     End If
                     If Not added.Contains(str) Then
                         Call AddPossibleRace(t, r, i, races, weight)
@@ -528,8 +518,11 @@ Public Class RaceGen
                 Next i
             Next r
         Else
+            Dim add As Boolean
             For i As Integer = 0 To UBound(SRaces(neutralI)) Step 1
-                Call AddPossibleRace(t, neutralI, i, races, weight)
+                add = True
+                If SRaces(neutralI)(i).Length = 1 AndAlso SRaces(neutralI)(i)(0) = 11 Then add = isWaterCell
+                If add Then Call AddPossibleRace(t, neutralI, i, races, weight)
             Next i
         End If
         IDs.Clear()
@@ -565,4 +558,13 @@ Public Class RaceGen
             races(t).Add(SRaces(raceLocID)(i)(q))
         Next q
     End Sub
+    Private Function MayBeWater(ByRef m As Map, ByRef x As Integer, ByRef y As Integer) As Boolean
+        Dim b As Location.Borders = ImpenetrableMeshGen.NearestXY(x, y, m.xSize, m.ySize, 1)
+        For q As Integer = b.minY To b.maxY Step 1
+            For p As Integer = b.minX To b.maxX Step 1
+                If Not m.board(p, q).isWater Then Return False
+            Next p
+        Next q
+        Return True
+    End Function
 End Class
