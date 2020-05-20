@@ -323,14 +323,15 @@ Public Class RaceGen
     Dim rndgen As New RndValueGen
     Dim symm As New SymmetryOperations
 
-    Private commonBlock As String = "D,D+A+AW+AG," & "W," & "A,AS,AW,A+AW+AG"
+    Private commonBlock As String = "D,A+AW+AG," & "W," & "A,AS,AW,A+AW+AG"
+    'Private commonBlock As String = "D,D+A+AW+AG," & "W," & "A,AS,AW,A+AW+AG"
 
     Private LocRaces() As String = New String() {"H:2:H,H+AW," & commonBlock, _
                                                  "U:2:U,U+AS," & commonBlock, _
                                                  "L:2:L," & commonBlock, _
                                                  "C:2:C,C+AST,AST,AST+AW," & commonBlock, _
                                                  "E:2:E,E+A+AW+AG,E+AG," & commonBlock, _
-                                                 "N:3:N,G,B,G+AW+AS,B+AW,B+AW+D," & commonBlock, _
+                                                 "N:3:N,G,B,G+AW+AS,B+AW," & commonBlock, _
                                                  "S:1:S,S+A,S+AS," & commonBlock}
     Dim StackRaceWeight() As Double = New Double() {0, 1, 1, 1, 1, 0.75, 1, 1, 2, 0.05, 1, 3, 1, 1, 1, 1, 0.75, 0, 1, 1}
     '                                               -, H, U, L, C,    N, H, E, G,    D, S, W, B, A, E,AS,  AST, -. AW,AG 
@@ -498,42 +499,46 @@ Public Class RaceGen
         Dim t As Integer = -1
         Dim isWaterCell As Boolean = MayBeWater(m, x, y)
 
-        For Each r As Integer In m.board(x, y).locID
-            If Not rO.Contains(LocR(r - 1)) Then rO.Add(LocR(r - 1))
-        Next r
-        If m.board(x, y).locID.Item(0) > nRaces Then
-            For Each r As Integer In rO
-                For i As Integer = 0 To UBound(SRaces(r)) Step 1
-                    Dim str As String = ""
-                    For q As Integer = 0 To UBound(SRaces(r)(i)) Step 1
-                        str &= SRaces(r)(i)(q).ToString & "_"
-                    Next q
-                    If str = "11_" AndAlso Not added.Contains(str) Then
-                        If Not isWaterCell Then added.Add(str)
-                    End If
-                    If Not added.Contains(str) Then
-                        Call AddPossibleRace(t, r, i, races, weight)
-                        added.Add(str)
-                    End If
-                Next i
+        If Not isWaterCell Then
+            For Each r As Integer In m.board(x, y).locID
+                If Not rO.Contains(LocR(r - 1)) Then rO.Add(LocR(r - 1))
             Next r
-        Else
-            Dim add As Boolean
-            For i As Integer = 0 To UBound(SRaces(neutralI)) Step 1
-                add = True
-                If SRaces(neutralI)(i).Length = 1 AndAlso SRaces(neutralI)(i)(0) = 11 Then add = isWaterCell
-                If add Then Call AddPossibleRace(t, neutralI, i, races, weight)
+            If m.board(x, y).locID.Item(0) > nRaces Then
+                For Each r As Integer In rO
+                    For i As Integer = 0 To UBound(SRaces(r)) Step 1
+                        Dim str As String = ""
+                        For q As Integer = 0 To UBound(SRaces(r)(i)) Step 1
+                            str &= SRaces(r)(i)(q).ToString & "_"
+                        Next q
+                        If str = "11_" AndAlso Not added.Contains(str) Then
+                            If Not isWaterCell Then added.Add(str)
+                        End If
+                        If Not added.Contains(str) Then
+                            Call AddPossibleRace(t, r, i, races, weight)
+                            added.Add(str)
+                        End If
+                    Next i
+                Next r
+            Else
+                Dim add As Boolean
+                For i As Integer = 0 To UBound(SRaces(neutralI)) Step 1
+                    add = True
+                    If SRaces(neutralI)(i).Length = 1 AndAlso SRaces(neutralI)(i)(0) = 11 Then add = isWaterCell
+                    If add Then Call AddPossibleRace(t, neutralI, i, races, weight)
+                Next i
+            End If
+            IDs.Clear()
+            For i As Integer = 0 To t Step 1
+                IDs.Add(i)
             Next i
-        End If
-        IDs.Clear()
-        For i As Integer = 0 To t Step 1
-            IDs.Add(i)
-        Next i
-        Dim s As Integer = comm.RandomSelection(IDs, weight, True) ' rndgen.RndPos(t + 1, True) - 1
+            Dim s As Integer = comm.RandomSelection(IDs, weight, True) ' rndgen.RndPos(t + 1, True) - 1
 
-        For Each item As Integer In races(s)
-            rS.Add(item)
-        Next item
+            For Each item As Integer In races(s)
+                rS.Add(item)
+            Next item
+        Else
+            rS.Add(11)
+        End If
         If m.symmID > -1 Then
             Dim pp() As Point = symm.ApplySymm(New Point(x, y), nRaces, m, 1)
             For Each p As Point In pp
