@@ -3320,18 +3320,44 @@ Public Class Map
         Return ""
     End Function
 
-    Public Function ObjectsPositions() As String
-        Dim log As New Log(New Common)
-        Call log.Enable()
+    Public Sub ObjectsPositions(ByRef log As Log, ByRef ObjectsSize As Dictionary(Of String, Size))
+        If Not log.IsEnabled Then Exit Sub
+
+        Dim imp As New ImpenetrableMeshGen
 
         Dim objList() As String = New String() {"None", "Capital", "City", "Vendor", "Mercenary", _
                                                 "Mage", "Trainer", "Ruins", "Mine"}
         log.Add("----Objects list----")
+        log.Add("Map size:" & vbTab & xSize & vbTab & ySize)
         For i As Integer = 0 To UBound(objList) Step 1
             log.Add("----Type: " & objList(i) & "----")
             For y As Integer = 0 To ySize Step 1
                 For x As Integer = 0 To xSize Step 1
-                    If board(x, y).objectID = i Then log.Add(board(x, y).objectName & vbTab & x & vbTab & y)
+                    If board(x, y).objectID = i _
+                    And ((i = DefMapObjects.Types.None And Not board(x, y).objectName = "") _
+                         Or Not i = DefMapObjects.Types.None) Then
+                        Dim basic As String = board(x, y).objectName & " ; pos: " & vbTab & x & vbTab & y
+                        Dim min As String = ""
+                        Dim max As String = ""
+                        Dim x1, x2, y1, y2 As Integer
+                        If i = DefMapObjects.Types.None Then
+                            x1 = x
+                            y1 = y
+                            If Not IsNothing(ObjectsSize) Then
+                                x2 = x1 + ObjectsSize.Item(board(x, y).objectName).Width - 1
+                                y2 = y1 + ObjectsSize.Item(board(x, y).objectName).Height - 1
+                            Else
+                                x2 = x1
+                                y2 = y1
+                            End If
+                        Else
+                            x1 = x - imp.ActiveObjects(i).dxy
+                            y1 = y - imp.ActiveObjects(i).dxy
+                            x2 = x + imp.ActiveObjects(i).dxy + imp.ActiveObjects(i).Size - 1
+                            y2 = y + imp.ActiveObjects(i).dxy + imp.ActiveObjects(i).Size - 1
+                        End If
+                        log.Add(basic & PrintPos(x1, y1, x2, y2))
+                    End If
                 Next x
             Next y
         Next i
@@ -3343,7 +3369,31 @@ Public Class Map
             Next x
         Next y
         log.Add("----End of stack positions list----")
-        Return log.PrintAll
+    End Sub
+    Private Function PrintPos(ByRef minX As Integer, ByRef minY As Integer, ByRef maxX As Integer, ByRef maxY As Integer) As String
+        Dim res As String = " ; minPos: " & minX
+        Dim addWarning As Boolean
+        If minX < 0 Then
+            res &= "(!)"
+            addWarning = True
+        End If
+        res &= vbTab & minY
+        If minY < 0 Then
+            res &= "(!)"
+            addWarning = True
+        End If
+        res &= " ; maxPos: " & maxX
+        If maxX > xSize Then
+            res &= "(!)"
+            addWarning = True
+        End If
+        res &= vbTab & maxY
+        If maxY > ySize Then
+            res &= "(!)"
+            addWarning = True
+        End If
+        If addWarning Then res &= " !!!!!!!!!!!!!!!!"
+        Return res
     End Function
 
 End Class
