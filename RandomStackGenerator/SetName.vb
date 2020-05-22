@@ -22,6 +22,8 @@
     Public Sub New()
 
         log = New Log(comm)
+        Call log.Enable()
+        Call AddToLog(-1, "-----Names creator initialization started-----")
 
         defaultLordNames(1) = New String() {"Алексис", "Лотай", "Келли", "Моар"}
         defaultLordNames(2) = New String() {"Заориш", "Сагот", "Абрааль", "Интар"}
@@ -42,9 +44,16 @@
             Call PrintNames()
         End If
         Call ReadExclusions()
+
+        Call AddToLog(-1, "-----Names creator initialization ended-----")
     End Sub
 
     Private Sub DownloadList()
+        Net.ServicePointManager.SecurityProtocol = CType(3072, Net.SecurityProtocolType) Or _
+                                                   CType(768, Net.SecurityProtocolType) Or _
+                                                   CType(192, Net.SecurityProtocolType) Or _
+                                                   CType(48, Net.SecurityProtocolType)
+
         Dim w As New System.Net.WebClient With {.Proxy = Nothing}
         Dim Tn() As String = Nothing
         Dim Tw() As Double = Nothing
@@ -107,6 +116,7 @@
                 LordMinWeight = lordDonationThreshold / wsum
             End If
         Catch ex As Exception
+            Console.WriteLine(ex.Message)
             AddToLog(-1, "Names downloader: " & ex.Message)
         End Try
         If Not IsNothing(Tn) And Not IsNothing(Tw) Then
