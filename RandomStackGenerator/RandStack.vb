@@ -21,6 +21,7 @@ Public Class RandStack
     Friend ExpBarFighters(), ExpKilledFighters(), multiplierFightersDesiredStats() As Double
     Friend ItemCostSum(), multiplierItemsWeight() As Double
     Private minItemGoldCost As Integer
+    Private bak_multiplierItemsWeight() As Double
 
     ''' <summary>Сюда генератор пишет лог</summary>
     Public log As Log
@@ -77,6 +78,8 @@ Public Class RandStack
         Call MakeAccessoryArrays(AllUnitsList, comm.customRace, ExcludedUnits, cat, 0, Nothing, Nothing, Nothing)
 
         Call MakeAccessoryArrays(AllItemsList, MagicItem, ExcludedItems, ItemCostSum, multiplierItemsWeight)
+
+        bak_multiplierItemsWeight = CType(multiplierItemsWeight.Clone, Double())
 
     End Sub
     Private Sub MakeAccessoryArrays(ByRef allunits() As AllDataStructues.Unit, ByRef customRace As Dictionary(Of String, String), _
@@ -193,6 +196,10 @@ Public Class RandStack
         End If
         Return w1
     End Function
+    ''' <summary>Установит множители шанса появления предметов на значения по умолчанию</summary>
+    Public Sub ResetItemWeightMultiplier()
+        multiplierItemsWeight = CType(bak_multiplierItemsWeight.Clone, Double())
+    End Sub
 
     ''' <summary>Найдет статы юнита по ID (нечувствительно к регистру)</summary>
     ''' <param name="ID">GxxxUUxxxx</param>
@@ -454,6 +461,7 @@ Public Class RandStack
             If IDs.Count = 0 Then Exit Do
 
             selected = comm.RandomSelection(IDs, weight, serialExecution)
+            multiplierItemsWeight(selected) *= comm.defValues.AddedItemWeightMultiplier
 
             Call AddToLog(LogID, "Selected item:" & MagicItem(selected).name & " id:" & MagicItem(selected).itemID & " cost:" & ItemCostSum(selected))
             result.Add(MagicItem(selected).itemID)
@@ -516,6 +524,7 @@ Public Class RandStack
         Next i
         If IDs.Count > 0 Then
             selected = comm.RandomSelection(IDs, New Double()() {ItemCostSum}, New Double() {GoldCost}, multiplierItemsWeight, itemGenSigma, serialExecution)
+            multiplierItemsWeight(selected) *= comm.defValues.AddedItemWeightMultiplier
             Call AddToLog(LogID, "Selected item:" & MagicItem(selected).name & " id:" & MagicItem(selected).itemID & " cost:" & ItemCostSum(selected))
             result = MagicItem(selected).itemID
         End If
@@ -2574,11 +2583,14 @@ Public Class GenDefaultValues
     Public Function JewelItemsCostDevider() As Double
         Return 2
     End Function
-    Public Function nonJewelItemsCostDevider() As Double
+    Public Function NonJewelItemsCostDevider() As Double
         Return 1
     End Function
-    Public Function lootCostDispersion() As Double
+    Public Function LootCostDispersion() As Double
         Return 2
+    End Function
+    Public Function AddedItemWeightMultiplier() As Double
+        Return 0.8
     End Function
 
     'map
