@@ -4766,7 +4766,7 @@ Public Class ImpenetrableObjects
     Private Function ObjectWeight(ByRef m As Map, ByRef obj As MapObject, _
                                   ByRef x As Integer, ByRef y As Integer) As Double
         Dim w As Double = 1
-        Dim minW As Double = 0.05
+        Dim minW As Double = 0.025
         Dim maxW As Double = 0.5
         Dim L As Integer = 12
         Dim dW As Double = (maxW - minW) / ((L * L + 1) ^ 2)
