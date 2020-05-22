@@ -3320,6 +3320,32 @@ Public Class Map
         Return ""
     End Function
 
+    Public Function ObjectsPositions() As String
+        Dim log As New Log(New Common)
+        Call log.Enable()
+
+        Dim objList() As String = New String() {"None", "Capital", "City", "Vendor", "Mercenary", _
+                                                "Mage", "Trainer", "Ruins", "Mine"}
+        log.Add("----Objects list----")
+        For i As Integer = 0 To UBound(objList) Step 1
+            log.Add("----Type: " & objList(i) & "----")
+            For y As Integer = 0 To ySize Step 1
+                For x As Integer = 0 To xSize Step 1
+                    If board(x, y).objectID = i Then log.Add(board(x, y).objectName & vbTab & x & vbTab & y)
+                Next x
+            Next y
+        Next i
+        log.Add("----End of objects list----")
+        log.Add("----Stacks positions list----")
+        For y As Integer = 0 To ySize Step 1
+            For x As Integer = 0 To xSize Step 1
+                If (board(x, y).GuardLoc Or board(x, y).PassGuardLoc) And board(x, y).objectID = DefMapObjects.Types.None Then log.Add(x & vbTab & y)
+            Next x
+        Next y
+        log.Add("----End of stack positions list----")
+        Return log.PrintAll
+    End Function
+
 End Class
 
 Public Class StackLocationsGen

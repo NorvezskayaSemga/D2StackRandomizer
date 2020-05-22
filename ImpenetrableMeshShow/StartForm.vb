@@ -64,8 +64,8 @@ Friend Class StartForm
         sM.Wealth = 0.8
         sM.WaterAmount = 0
         sM.SpellsMaxLevel = 5
-        sM.RoadsAmount = 0.3
-        sM.ForestAmount = 0.5
+        sM.RoadsAmount = 0
+        sM.ForestAmount = 0
 
         Dim sR As Map.SettingsLoc
         sR.AverageRadius = 20
@@ -76,7 +76,7 @@ Friend Class StartForm
         sR.maxCities = 1
         sR.maxMages = 1
         sR.maxMercenaries = 0
-        sR.maxRuins = 0
+        sR.maxRuins = 3
         sR.maxTrainers = 0
         sR.maxVendors = 0
         sR.minStackToStackDist = 4
@@ -103,7 +103,7 @@ Friend Class StartForm
         sC.maxCities = 1
         sC.maxMages = 0
         sC.maxMercenaries = 0
-        sC.maxRuins = 0
+        sC.maxRuins = 3
         sC.maxTrainers = 0
         sC.maxVendors = 0
 
