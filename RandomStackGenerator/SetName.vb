@@ -16,6 +16,7 @@
     Private defaultLordNames(14)() As String
     Private lordDonationThreshold As Double = 999
 
+    ''' <summary>Сюда генератор пишет лог</summary>
     Public log As Log
 
     Public Sub New()
