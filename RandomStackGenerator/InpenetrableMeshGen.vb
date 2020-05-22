@@ -1380,7 +1380,7 @@ Public Class ImpenetrableMeshGen
              Dim PlaceCells(UBound(freeCells, 1), UBound(freeCells, 2)) As Boolean
              For y As Integer = 0 To UBound(freeCells, 2) Step 1
                  For x As Integer = 0 To UBound(freeCells, 1) Step 1
-                     If freeCells(x, y) AndAlso MayPlaceObject(freeCells, 8, x, y) Then
+                     If freeCells(x, y) AndAlso MayPlaceObject(freeCells, DefMapObjects.Types.Mine, x, y) Then
                          Dim b As Location.Borders = NearestXY(x, y, UBound(freeCells, 1), UBound(freeCells, 2), 1)
                          For q As Integer = b.minY To b.maxY Step 1
                              For p As Integer = b.minX To b.maxX Step 1
