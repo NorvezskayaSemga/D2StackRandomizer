@@ -162,10 +162,14 @@
         Return LExp
     End Function
     Private Function CapitalDistWeight(ByRef dist As Double, ByRef minDist As Double, ByRef maxDist As Double) As Double
-        Return (dist - minDist) / (maxDist - minDist + 0.000001)
+        Dim w As Double = 0.5 + (dist - minDist) / (maxDist - minDist + 0.000001)
+        'Console.WriteLine("Cap W " & w)
+        Return w
     End Function
     Private Function CenterDistWeight(ByRef dist As Double, ByRef minDist As Double, ByRef maxDist As Double) As Double
-        Return (maxDist - dist) / (maxDist - minDist + 0.000001)
+        Dim w As Double = 0.5 + (maxDist - dist) / (maxDist - minDist + 0.000001)
+        'Console.WriteLine("Cen W " & w)
+        Return w
     End Function
 
     Private Function GenStacksStats(ByRef settMap As Map.SettingsMap, _
