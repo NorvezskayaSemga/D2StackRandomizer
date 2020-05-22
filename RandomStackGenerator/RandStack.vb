@@ -2346,7 +2346,8 @@ Public Class AllDataStructues
             For i As Integer = 0 To UBound(ch) Step 1
                 s &= ch(i)
                 If val(i) > 9999 Then
-                    Throw New Exception("Too great value of " & ch(i) & " : " & val(i))
+                    'Throw New Exception("Too great value of " & ch(i) & " : " & val(i))
+                    val(i) = 9999
                 ElseIf val(i) < 1000 Then
                     If val(i) > 99 Then
                         s &= "0"
