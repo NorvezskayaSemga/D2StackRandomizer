@@ -142,8 +142,8 @@
             maxCenDist = Math.Max(maxCenDist, CenDist(i))
         Next i
         For i As Integer = CapPos.Count To UBound(m.Loc) Step 1
-            Dim w1 As Double = (CapDist(i) - minCapDist) / (maxCapDist - minCapDist + 0.000001)
-            Dim w2 As Double = (maxCenDist - CenDist(i)) / (maxCenDist - minCenDist + 0.000001)
+            Dim w1 As Double = CapitalDistWeight(CapDist(i), minCapDist, maxCapDist)
+            Dim w2 As Double = CenterDistWeight(CenDist(i), minCenDist, maxCenDist)
             LWeight(i) = w1 + w2
             Wmin = Math.Min(Wmin, LWeight(i))
             Wmax = Math.Max(Wmax, LWeight(i))
@@ -161,16 +161,40 @@
         Next i
         Return LExp
     End Function
+    Private Function CapitalDistWeight(ByRef dist As Double, ByRef minDist As Double, ByRef maxDist As Double) As Double
+        Return (dist - minDist) / (maxDist - minDist + 0.000001)
+    End Function
+    Private Function CenterDistWeight(ByRef dist As Double, ByRef minDist As Double, ByRef maxDist As Double) As Double
+        Return (maxDist - dist) / (maxDist - minDist + 0.000001)
+    End Function
 
     Private Function GenStacksStats(ByRef settMap As Map.SettingsMap, _
                                     ByRef guards As Dictionary(Of Integer, StackLoc), _
                                     ByRef LocTotalExp() As Double) As Dictionary(Of Integer, AllDataStructues.DesiredStats)
+        Dim minCapDist, maxCapDist, minCenDist, maxCenDist As Double
+
+        minCapDist = Double.MaxValue : maxCapDist = Double.MinValue
+        minCenDist = Double.MaxValue : maxCenDist = Double.MinValue
+        For Each id As Integer In guards.Keys
+            If Not guards.Item(id).isPassGuard Then
+                Dim ca As Double = guards.Item(id).CapDist
+                Dim ce As Double = guards.Item(id).CenDist
+                minCapDist = Math.Min(minCapDist, ca)
+                maxCapDist = Math.Max(maxCapDist, ca)
+                minCenDist = Math.Min(minCenDist, ce)
+                maxCenDist = Math.Max(maxCenDist, ce)
+            End If
+        Next id
+
         Dim res As New Dictionary(Of Integer, AllDataStructues.DesiredStats)
         Dim W, WLoot As New Dictionary(Of Integer, Double)
         Dim Wsum(UBound(LocTotalExp)), WLootSum(UBound(LocTotalExp)) As Double
         For Each id As Integer In guards.Keys
             If Not guards.Item(id).isPassGuard Then
-                Dim t As Double = (guards.Item(id).CapDist + guards.Item(id).CenDist) * rndgen.PRand(0.85, 1.15)
+                Dim r As Double = rndgen.PRand(0.85, 1.15)
+                Dim t As Double = CapitalDistWeight(guards.Item(id).CapDist, minCapDist, maxCapDist)
+                If guards.Item(id).LocID > settMap.nRaces Then t += CenterDistWeight(guards.Item(id).CenDist, minCenDist, maxCenDist)
+                t *= r
                 W.Add(id, t)
                 Wsum(guards.Item(id).LocID - 1) += t
             Else
@@ -178,8 +202,8 @@
             End If
         Next id
 
-        Dim minD As Double = Common.ValueLowerBound(defValues.lootCostDispersion, settMap.Wealth)
-        Dim maxD As Double = Common.ValueUpperBound(defValues.lootCostDispersion, settMap.Wealth)
+        Dim minD As Double = Common.ValueLowerBound(defValues.LootCostDispersion, settMap.Wealth)
+        Dim maxD As Double = Common.ValueUpperBound(defValues.LootCostDispersion, settMap.Wealth)
 
         Dim expKilled, LootCost As New Dictionary(Of Integer, Double)
         For Each id As Integer In guards.Keys
