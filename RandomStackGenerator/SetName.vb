@@ -167,14 +167,14 @@
                 i0 = 0
             End If
             ReDim name(UBound(str) - i0), weight(UBound(str) - i0)
-            For i As Integer = i0 To UBound(name) Step 1
+            For i As Integer = i0 To UBound(name) + i0 Step 1
                 s = str(i).Split(CChar(" "))
                 For j As Integer = 0 To UBound(s) - 1 Step 1
                     name(i - i0) &= s(j)
-                    If j < UBound(s) - 1 Then name(i) &= " "
+                    If j < UBound(s) - 1 Then name(i - i0) &= " "
                 Next j
                 w = s(UBound(s))
-                AddToLog(-1, "Read line " & i + 1 & "; Name: " & name(i) & " weight: " & w)
+                AddToLog(-1, "Read line " & i + 1 & "; Name: " & name(i - i0) & " weight: " & w)
                 weight(i - i0) = ValueConverter.StrToDbl(w)
             Next i
             If IsNumeric(str(0)) Then
