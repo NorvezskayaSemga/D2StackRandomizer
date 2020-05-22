@@ -4766,10 +4766,19 @@ Public Class ImpenetrableObjects
     Private Function ObjectWeight(ByRef m As Map, ByRef obj As MapObject, _
                                   ByRef x As Integer, ByRef y As Integer) As Double
         Dim w As Double = 1
-        Dim b As Location.Borders = ImpenetrableMeshGen.NearestXY(x, y, m.xSize, m.ySize, 12)
+        Dim minW As Double = 0.05
+        Dim maxW As Double = 0.5
+        Dim L As Integer = 12
+        Dim dW As Double = (maxW - minW) / ((L * L + 1) ^ 2)
+        Dim b As Location.Borders = ImpenetrableMeshGen.NearestXY(x, y, m.xSize, m.ySize, L)
+        Dim dx, dy As Integer
         For p As Integer = b.minY To b.maxY Step 1
+            dy = p - y : dy = dy * dy + 1
             For q As Integer = b.minX To b.maxX Step 1
-                If obj.name = m.board(q, p).objectName Then w *= 0.5
+                If obj.name = m.board(q, p).objectName Then
+                    dx = q - x : dx = dx * dx + 1
+                    w = w * (minW + dW * dx * dy)
+                End If
             Next q
         Next p
         Return w
