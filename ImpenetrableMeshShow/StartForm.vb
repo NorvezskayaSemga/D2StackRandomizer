@@ -51,8 +51,8 @@ Friend Class StartForm
         End If
 
         Dim sM As Map.SettingsMap
-        sM.xSize = 95
-        sM.ySize = 95
+        sM.xSize = 96
+        sM.ySize = 96
         sM.RaceLocsDistTolerance = 0.2
         sM.nRaces = races
         sM.minPassDist = 7

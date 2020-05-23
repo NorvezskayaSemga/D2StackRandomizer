@@ -185,7 +185,10 @@ Public Class ImpenetrableMeshGen
     ''' Если не получится с пяти попыток, вернет Nothing</param>
     Public Function UnsymmGen(ByRef settMap As Map.SettingsMap, ByRef settRaceLoc As Map.SettingsLoc, _
                               ByRef settCommLoc As Map.SettingsLoc, ByRef maxGenTime As Integer) As Map
-        Return CommonGen(settMap, settRaceLoc, settCommLoc, maxGenTime, -1)
+        Dim sM As Map.SettingsMap = Map.SettingsMap.Copy(settMap)
+        sM.xSize -= 1
+        sM.ySize -= 1
+        Return (CommonGen(sM, settRaceLoc, settCommLoc, maxGenTime, -1))
     End Function
     ''' <summary>Генерирует заготовку ландшафта с использованием симметрии</summary>
     ''' <param name="settMap">Общие настройки для карты</param>
@@ -203,8 +206,12 @@ Public Class ImpenetrableMeshGen
     Public Function SymmGen(ByRef settMap As Map.SettingsMap, ByRef settRaceLoc As Map.SettingsLoc, _
                             ByRef settCommLoc As Map.SettingsLoc, ByRef maxGenTime As Integer, _
                             Optional ByRef symmID As Integer = -1) As Map
+        Dim sM As Map.SettingsMap = Map.SettingsMap.Copy(settMap)
+        sM.xSize -= 1
+        sM.ySize -= 1
+
         Dim s As Integer
-        Dim slist As List(Of Integer) = symm.PossibleOperationsList(settMap.nRaces, settMap.xSize, settMap.ySize)
+        Dim slist As List(Of Integer) = symm.PossibleOperationsList(sM.nRaces, sM.xSize, sM.ySize)
         If symmID > -1 Then
             s = symmID
             If Not slist.Contains(s) Then
@@ -215,7 +222,7 @@ Public Class ImpenetrableMeshGen
             s = comm.RandomSelection(slist, True)
         End If
         slist = Nothing
-        Return CommonGen(settMap, settRaceLoc, settCommLoc, maxGenTime, s)
+        Return CommonGen(sM, settRaceLoc, settCommLoc, maxGenTime, s)
     End Function
 
     Private Sub PlaceLoc(ByRef m As Map, ByRef loc As Location)
@@ -3159,9 +3166,9 @@ Public Class Map
 
     End Structure
     Public Structure SettingsMap
-        ''' <summary>Правая граница карты (например, если генерируем карту 24x48, то сюда пишем 23)</summary>
+        ''' <summary>Правая граница карты (например, если генерируем карту 24x48, то сюда пишем 24)</summary>
         Dim xSize As Integer
-        ''' <summary>Верхняя граница карты (например, если генерируем карту 24x48, то сюда пишем 47)</summary>
+        ''' <summary>Верхняя граница карты (например, если генерируем карту 24x48, то сюда пишем 48)</summary>
         Dim ySize As Integer
         ''' <summary>Минимальное расстояние между проходами</summary>
         Dim minPassDist As Double
@@ -3238,6 +3245,27 @@ Public Class Map
         ''' <summary>True, если проверка параметров запускалась</summary>
         Public Function isChecked() As Boolean
             Return Checked
+        End Function
+
+        Public Shared Function Copy(ByRef v As SettingsMap) As SettingsMap
+            Dim r As New SettingsMap
+            r.xSize = v.xSize
+            r.ySize = v.ySize
+            r.minPassDist = v.minPassDist
+            r.minPassWidth = v.minPassWidth
+            r.nRaces = v.nRaces
+            r.RaceLocsDistTolerance = v.RaceLocsDistTolerance
+            r.AddGuardsBetweenLocations = v.AddGuardsBetweenLocations
+            r.PassGuardsPowerMultiplicator = v.PassGuardsPowerMultiplicator
+            r.ObjectGuardsPowerMultiplicator = v.ObjectGuardsPowerMultiplicator
+            r.LocExpRatio = v.LocExpRatio
+            r.Wealth = v.Wealth
+            r.WaterAmount = v.WaterAmount
+            r.SpellsMaxLevel = v.SpellsMaxLevel
+            r.RoadsAmount = v.RoadsAmount
+            r.ForestAmount = v.ForestAmount
+            r.Checked = v.Checked
+            Return r
         End Function
 
     End Structure
@@ -3320,7 +3348,7 @@ Public Class Map
         Return ""
     End Function
 
-    Public Sub ObjectsPositions(ByRef log As Log, ByRef ObjectsSize As Dictionary(Of String, Size))
+    Public Sub PrintObjectsPositions(ByRef log As Log, ByRef ObjectsSize As Dictionary(Of String, Size))
         If Not log.IsEnabled Then Exit Sub
 
         Dim imp As New ImpenetrableMeshGen
@@ -4692,7 +4720,7 @@ Public Class ImpenetrableObjects
     End Function
 
     Private Function MayPlace(ByRef m As Map, ByRef x As Integer, ByRef y As Integer, _
-                          ByRef free(,) As Boolean, ByRef obj As MapObject) As Boolean
+                              ByRef free(,) As Boolean, ByRef obj As MapObject) As Boolean
         Return MayPlace(m, x, y, free, obj.xSize, obj.ySize, obj.ground, obj.water, obj.race)
     End Function
     Private Function MayPlace(ByRef m As Map, ByRef x As Integer, ByRef y As Integer, _
