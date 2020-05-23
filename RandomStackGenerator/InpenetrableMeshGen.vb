@@ -185,10 +185,9 @@ Public Class ImpenetrableMeshGen
     ''' Если не получится с пяти попыток, вернет Nothing</param>
     Public Function UnsymmGen(ByRef settMap As Map.SettingsMap, ByRef settRaceLoc As Map.SettingsLoc, _
                               ByRef settCommLoc As Map.SettingsLoc, ByRef maxGenTime As Integer) As Map
-        Dim sM As Map.SettingsMap = Map.SettingsMap.Copy(settMap)
-        sM.xSize -= 1
-        sM.ySize -= 1
-        Return (CommonGen(sM, settRaceLoc, settCommLoc, maxGenTime, -1))
+        settMap.xSize -= 1
+        settMap.ySize -= 1
+        Return (CommonGen(settMap, settRaceLoc, settCommLoc, maxGenTime, -1))
     End Function
     ''' <summary>Генерирует заготовку ландшафта с использованием симметрии</summary>
     ''' <param name="settMap">Общие настройки для карты</param>
@@ -206,12 +205,11 @@ Public Class ImpenetrableMeshGen
     Public Function SymmGen(ByRef settMap As Map.SettingsMap, ByRef settRaceLoc As Map.SettingsLoc, _
                             ByRef settCommLoc As Map.SettingsLoc, ByRef maxGenTime As Integer, _
                             Optional ByRef symmID As Integer = -1) As Map
-        Dim sM As Map.SettingsMap = Map.SettingsMap.Copy(settMap)
-        sM.xSize -= 1
-        sM.ySize -= 1
+        settMap.xSize -= 1
+        settMap.ySize -= 1
 
         Dim s As Integer
-        Dim slist As List(Of Integer) = symm.PossibleOperationsList(sM.nRaces, sM.xSize, sM.ySize)
+        Dim slist As List(Of Integer) = symm.PossibleOperationsList(settMap.nRaces, settMap.xSize, settMap.ySize)
         If symmID > -1 Then
             s = symmID
             If Not slist.Contains(s) Then
@@ -222,7 +220,7 @@ Public Class ImpenetrableMeshGen
             s = comm.RandomSelection(slist, True)
         End If
         slist = Nothing
-        Return CommonGen(sM, settRaceLoc, settCommLoc, maxGenTime, s)
+        Return CommonGen(settMap, settRaceLoc, settCommLoc, maxGenTime, s)
     End Function
 
     Private Sub PlaceLoc(ByRef m As Map, ByRef loc As Location)
@@ -3245,27 +3243,6 @@ Public Class Map
         ''' <summary>True, если проверка параметров запускалась</summary>
         Public Function isChecked() As Boolean
             Return Checked
-        End Function
-
-        Public Shared Function Copy(ByRef v As SettingsMap) As SettingsMap
-            Dim r As New SettingsMap
-            r.xSize = v.xSize
-            r.ySize = v.ySize
-            r.minPassDist = v.minPassDist
-            r.minPassWidth = v.minPassWidth
-            r.nRaces = v.nRaces
-            r.RaceLocsDistTolerance = v.RaceLocsDistTolerance
-            r.AddGuardsBetweenLocations = v.AddGuardsBetweenLocations
-            r.PassGuardsPowerMultiplicator = v.PassGuardsPowerMultiplicator
-            r.ObjectGuardsPowerMultiplicator = v.ObjectGuardsPowerMultiplicator
-            r.LocExpRatio = v.LocExpRatio
-            r.Wealth = v.Wealth
-            r.WaterAmount = v.WaterAmount
-            r.SpellsMaxLevel = v.SpellsMaxLevel
-            r.RoadsAmount = v.RoadsAmount
-            r.ForestAmount = v.ForestAmount
-            r.Checked = v.Checked
-            Return r
         End Function
 
     End Structure
