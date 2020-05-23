@@ -38,7 +38,7 @@
         Dim t0 As Integer = Environment.TickCount
         Dim guards As Dictionary(Of Integer, StackLoc) = MakeGuardsList(m, settMap)
         Dim LocTotalExp() As Double = MakeLocationsList(m, settMap, settRaceLoc, settCommLoc)
-        m.groupStats = GenStacksStats(settMap, guards, LocTotalExp)
+        m.groupStats = GenStacksStats(m, settMap, guards, LocTotalExp)
         m.complited.StacksDesiredStatsGen_Done = True
 
         Console.WriteLine("Stacks stats gen " & Environment.TickCount - t0)
