@@ -283,18 +283,23 @@ Public Class RandStack
         Dim item As AllDataStructues.Item
         For Each id As String In items
             item = FindItemStats(id)
-            If comm.ConsumableItemsTypes.Contains(item.type) Then
-                result.ConsumableItems.exclude = False
-                result.ConsumableItems.amount += 1
-                result.ConsumableItems.costPart += AllDataStructues.Cost.Sum(LootCost(item))
-            ElseIf comm.NonconsumableItemsTypes.Contains(item.type) Then
-                result.NonconsumableItems.exclude = False
-                result.NonconsumableItems.amount += 1
-                result.NonconsumableItems.costPart += AllDataStructues.Cost.Sum(LootCost(item))
-            ElseIf comm.JewelItemsTypes.Contains(item.type) Then
-                result.JewelItems.exclude = False
-                result.JewelItems.amount += 1
-                result.JewelItems.costPart += AllDataStructues.Cost.Sum(LootCost(item))
+            If Not item.type = GenDefaultValues.ItemTypes.special Then
+                If comm.ConsumableItemsTypes.Contains(item.type) Then
+                    result.ConsumableItems.exclude = False
+                    result.ConsumableItems.amount += 1
+                    result.ConsumableItems.costPart += AllDataStructues.Cost.Sum(LootCost(item))
+                ElseIf comm.NonconsumableItemsTypes.Contains(item.type) Then
+                    result.NonconsumableItems.exclude = False
+                    result.NonconsumableItems.amount += 1
+                    result.NonconsumableItems.costPart += AllDataStructues.Cost.Sum(LootCost(item))
+                ElseIf comm.JewelItemsTypes.Contains(item.type) Then
+                    result.JewelItems.exclude = False
+                    result.JewelItems.amount += 1
+                    result.JewelItems.costPart += AllDataStructues.Cost.Sum(LootCost(item))
+                End If
+            Else
+                If IsNothing(result.PreserveItems) Then result.PreserveItems = New List(Of String)
+                result.PreserveItems.Add(item.itemID.ToUpper)
             End If
         Next id
         Dim sum As Double = result.ConsumableItems.costPart + result.NonconsumableItems.costPart + result.JewelItems.costPart
@@ -469,6 +474,14 @@ Public Class RandStack
             DynCost = CInt(DynCost - ItemCostSum(selected))
         Loop
 
+        If Not IsNothing(IGen.PreserveItems) Then
+            For Each item As String In IGen.PreserveItems
+                result.Add(item.ToUpper)
+                Dim thing As AllDataStructues.Item = FindItemStats(item)
+                Call AddToLog(LogID, "Preserved item:" & thing.name & " id:" & item.ToUpper)
+            Next item
+        End If
+
         Call AddToLog(LogID, "----Loot creation ended----")
 
         Return result
@@ -511,6 +524,13 @@ Public Class RandStack
         Call AddToLog(LogID, "----Single item creation started----" & vbNewLine & _
                             "Max cost: " & GoldCost)
         Call AddToLog(LogID, IGen)
+
+        If Not IsNothing(IGen.PreserveItems) Then
+            Dim thing As AllDataStructues.Item = FindItemStats(IGen.PreserveItems.Item(0))
+            Call AddToLog(LogID, "Preserved item:" & thing.name & " id:" & IGen.PreserveItems.Item(0).ToUpper)
+            Call AddToLog(LogID, "----Single item creation ended----")
+            Return IGen.PreserveItems.Item(0).ToUpper
+        End If
 
         Dim serialExecution As Boolean = (LogID < 0)
         Dim selected As Integer
@@ -1629,18 +1649,26 @@ Public Class Common
                         ElseIf k = 10 Then
                             result(i).IGen.JewelItems = AllDataStructues.ItemGenSettings.Read(s(f + 1)) 'JItemsGen
                         ElseIf k = 11 Then
-                            r = s(f + 1).Split(CChar("+")) 'ShopContent
-                            result(i).shopContent = New List(Of String)
-                            For n As Integer = 0 To UBound(r) Step 1
-                                result(i).shopContent.Add(r(n).ToUpper)
-                            Next n
+                            If Not s(f + 1).ToUpper = "NO" Then
+                                result(i).IGen.PreserveItems = DelimitedStringToList(s(f + 1), CChar("+"))  'PreservedItems
+                            End If
                         ElseIf k = 12 Then
+                            result(i).shopContent = DelimitedStringToList(s(f + 1), CChar("+")) 'ShopContent
+                        ElseIf k = 13 Then
                             result(i).isInternalCityGuard = ValueConverter.StrToBool(s(f + 1)) 'IsInternalCityGuard
                         End If
                     End If
                 Next k
             Next f
         Next i
+        Return result
+    End Function
+    Private Function DelimitedStringToList(ByRef s As String, ByRef delimiter As Char) As List(Of String)
+        Dim r() As String = s.Split(delimiter)
+        Dim result As New List(Of String)
+        For n As Integer = 0 To UBound(r) Step 1
+            result.Add(r(n).ToUpper)
+        Next n
         Return result
     End Function
 
@@ -2143,7 +2171,7 @@ Public Class AllDataStructues
             If Not IsNothing(v.shopContent) Then
                 shopContentList = New List(Of String)
                 For Each Item As String In v.shopContent
-                    shopContentList.Add(Item)
+                    shopContentList.Add(Item.ToUpper)
                 Next Item
             End If
             Return New DesiredStats With {.ExpBarAverage = v.ExpBarAverage, _
@@ -2454,16 +2482,36 @@ Public Class AllDataStructues
         Dim NonconsumableItems As ItemGenSettings
         ''' <summary>Драгоценности</summary>
         Dim JewelItems As ItemGenSettings
+        ''' <summary>Добавит эти предметы в любом случае</summary>
+        Dim PreserveItems As List(Of String)
 
         Public Shared Function Copy(ByVal v As LootGenSettings) As LootGenSettings
+            Dim P As List(Of String) = Nothing
+            If Not IsNothing(v.PreserveItems) Then
+                P = New List(Of String)
+                For Each Item As String In v.PreserveItems
+                    P.Add(Item.ToUpper)
+                Next Item
+            End If
             Return New LootGenSettings With {.ConsumableItems = AllDataStructues.ItemGenSettings.Copy(v.ConsumableItems), _
                                              .NonconsumableItems = AllDataStructues.ItemGenSettings.Copy(v.NonconsumableItems), _
-                                             .JewelItems = AllDataStructues.ItemGenSettings.Copy(v.JewelItems)}
+                                             .JewelItems = AllDataStructues.ItemGenSettings.Copy(v.JewelItems), _
+                                             .PreserveItems = P}
         End Function
         Public Shared Function Print(ByVal v As LootGenSettings) As String
+            Dim p As String = ""
+            If Not IsNothing(v.PreserveItems) Then
+                For Each Item As String In v.PreserveItems
+                    p &= Item.ToUpper & "+"
+                Next Item
+                p = p.Remove(p.Length - 1)
+            Else
+                p = "no"
+            End If
             Return "CItemsGen" & vbTab & AllDataStructues.ItemGenSettings.Print(v.ConsumableItems) & vbNewLine & _
                    "NItemsGen" & vbTab & AllDataStructues.ItemGenSettings.Print(v.NonconsumableItems) & vbNewLine & _
-                   "JItemsGen" & vbTab & AllDataStructues.ItemGenSettings.Print(v.JewelItems)
+                   "JItemsGen" & vbTab & AllDataStructues.ItemGenSettings.Print(v.JewelItems) & vbNewLine & _
+                   "PreservedItems" & vbTab & p
         End Function
         ''' <summary>Return {ConsumableItems,NonconsumableItems,JewelItems}</summary>
         Public Shared Function ToArray(ByVal v As LootGenSettings) As ItemGenSettings()
@@ -2639,6 +2687,24 @@ Public Class GenDefaultValues
     Public Function wReadVanillaLoreFileKeyword() As String
         Return My.Resources.readVLoreFileKeyword
     End Function
+
+    Public Enum ItemTypes As Integer
+        nonattack_artefact = 0
+        relic = 1
+        attack_artefact = 2
+        banner = 3
+        elixir = 4
+        healing_elixir = 5
+        ressurection_elixir = 6
+        permanent_elixir = 7
+        scroll = 8
+        stuff = 9
+        jewel = 10
+        sphere = 11
+        talisman = 12
+        boots = 13
+        special = 14
+    End Enum
 
 End Class
 

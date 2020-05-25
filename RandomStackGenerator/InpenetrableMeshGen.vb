@@ -5730,14 +5730,15 @@ Public Class ObjectsContentSet
 
     Private mines As New Dictionary(Of String, String)
 
+    Friend excludedItemType As New List(Of Integer)
+
     ''' <param name="RStack">Инициализированный класс</param>
     ''' <param name="AllSpells">Dсе заклинания в игре</param>
     Public Sub New(ByRef RStack As RandStack, ByRef AllSpells() As AllDataStructues.Spell)
 
         randStack = RStack
 
-        Dim excludeItems As New List(Of Integer)
-        excludeItems.AddRange(New Integer() {10, 14})
+        excludedItemType.AddRange(New Integer() {GenDefaultValues.ItemTypes.jewel, GenDefaultValues.ItemTypes.special})
         For i As Integer = 0 To UBound(AllSpells) Step 1
             If Not randStack.comm.excludedObjects.Contains(AllSpells(i).spellID.ToUpper) Then
                 spells.Add(AllSpells(i).spellID.ToUpper, AllSpells(i))
@@ -5766,11 +5767,16 @@ Public Class ObjectsContentSet
     ''' <summary>Определит тип шахты</summary>
     ''' <param name="mineObjectName">Название шахты, как его выдал генератор</param>
     Public Function SetMineType(ByVal mineObjectName As String) As String
-        If mineObjectName.ToUpper = My.Resources.mineTypeRandomMana.ToUpper Then
+        Dim m As String = mineObjectName.ToUpper
+        If m = My.Resources.mineTypeRandomMana.ToUpper Then
             Dim r As Integer = randStack.comm.rndgen.RndPos(manaSourcesTypes.Length, True) - 1
             Return manaSourcesTypes(r)
         Else
-            Return mines.Item(mineObjectName.ToLower)
+            If mines.ContainsValue(m) Then
+                Return m
+            Else
+                Return mines.Item(m)
+            End If
         End If
     End Function
 
@@ -5800,7 +5806,7 @@ Public Class ObjectsContentSet
         If AllManaSources.Contains(DefMapObjects.mineBlue) Then availMana.Blue = 1
         Dim races() As String = New String() {"H", "C", "L", "U", "E", "R"}
 
-        Dim res , slist As New List(Of String)
+        Dim res, slist As New List(Of String)
         Dim txt As String = ""
 
         For Each L As String In d.shopContent
@@ -6086,11 +6092,13 @@ Public Class ObjectsContentSet
                 selection.Clear()
                 Dim type As Integer = randStack.comm.itemTypeID.Item(v.ToUpper)
                 For u As Integer = 0 To UBound(randStack.MagicItem) Step 1
+                    'If Not excludedItemType.Contains(type) Then
                     If type = randStack.MagicItem(u).type AndAlso randStack.ItemFilter(d.IGen, randStack.MagicItem(u)) Then
                         If randStack.ItemFilter(TypeCostRestriction, randStack.MagicItem(u)) Then
                             selection.Add(u)
                         End If
                     End If
+                    'End If
                 Next u
                 If selection.Count = 0 Then Throw New Exception("Не могу выбрать предмет в качестве товара. Тип: " & v)
                 itemID = randStack.comm.RandomSelection(selection, randStack.multiplierItemsWeight, True)
@@ -6151,7 +6159,8 @@ Public Class ObjectsContentSet
             For u As Integer = 0 To UBound(randStack.MagicItem) Step 1
                 If Math.Abs(randStack.LootCost(randStack.MagicItem(u)).Gold - correctedBar) <= tolerance Then
                     If type < 0 Then
-                        add = randStack.ItemFilter(d.IGen, randStack.MagicItem(u))
+                        add = Not excludedItemType.Contains(randStack.MagicItem(u).type)
+                        If add Then add = randStack.ItemFilter(d.IGen, randStack.MagicItem(u))
                     Else
                         If type = randStack.MagicItem(u).type Then
                             add = True
@@ -6281,18 +6290,30 @@ Public Class ObjectsContentSet
         ElseIf mode = 2 Then
             For Each item In input
                 thing = randStack.FindItemStats(item)
-                output.Add(AllDataStructues.Cost.Sum(thing.itemCost).ToString)
+                If thing.type = GenDefaultValues.ItemTypes.special Then
+                    output.Add(item.ToUpper)
+                Else
+                    output.Add(AllDataStructues.Cost.Sum(thing.itemCost).ToString)
+                End If
             Next item
         ElseIf mode = 3 Then
             For Each item In input
                 thing = randStack.FindItemStats(item)
-                output.Add(randStack.comm.itemType.Item(thing.type))
+                If thing.type = GenDefaultValues.ItemTypes.special Then
+                    output.Add(item.ToUpper)
+                Else
+                    output.Add(randStack.comm.itemType.Item(thing.type))
+                End If
             Next item
         ElseIf mode = 4 Then
             For Each item In input
                 thing = randStack.FindItemStats(item)
-                output.Add(randStack.comm.itemType.Item(thing.type) & _
-                           "#" & AllDataStructues.Cost.Sum(thing.itemCost))
+                If thing.type = GenDefaultValues.ItemTypes.special Then
+                    output.Add(item.ToUpper)
+                Else
+                    output.Add(randStack.comm.itemType.Item(thing.type) & _
+                               "#" & AllDataStructues.Cost.Sum(thing.itemCost))
+                End If
             Next item
         Else
             Throw New Exception("Unknown mode: " & mode)
