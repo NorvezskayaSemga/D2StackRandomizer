@@ -10,8 +10,8 @@ Public Class RandStack
     Private itemGenSigma As Double = 0.5
     Private multiItemGenSigmaMultiplier As Double = 1.5
 
-    Private AllLeaders(), ExcludedUnits() As AllDataStructues.Unit
-    Friend AllFighters() As AllDataStructues.Unit
+    Private ExcludedUnits() As AllDataStructues.Unit
+    Friend AllLeaders(), AllFighters() As AllDataStructues.Unit
     Friend MagicItem() As AllDataStructues.Item
     Private ExcludedItems() As AllDataStructues.Item
     Public rndgen As RndValueGen
@@ -1934,7 +1934,7 @@ Public Class Common
             Call ReadFile(6, s, SoleUnitsList(i), AddressOf ReadSoleUnits, defaultKeys)
         Next i
     End Sub
-    ''' <summary>Читает список юнитов, которые должны находиться в отряде начиная с заданного количества слотов</summary>
+    ''' <summary>Читает список юнитов, которые могут находиться в отряде начиная с заданного количества слотов</summary>
     ''' <param name="BigStackUnitsList">Файлы со списками юнитов. Записи в них могут повторяться, но записи с повторяющимся ID будут перезаписываться.
     ''' Допускается передача неинициализитрованного массива.
     ''' Для чтения из дефолтного листа в массив нужно добавить строчку %default% (наличие этого ключевого в файле запустит чтение дефолтного файла)</param>

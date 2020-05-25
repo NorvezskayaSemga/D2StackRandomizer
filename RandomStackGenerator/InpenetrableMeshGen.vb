@@ -6368,3 +6368,104 @@ Public Class ObjectsContentSet
     End Function
 
 End Class
+
+Public Class VanillaSagaContentReplace
+
+    Dim RandStack As RandStack
+
+    Dim VanillaLoreUnits As List(Of String)
+
+    ''' <param name="RStack">Инициализированный класс</param>
+    Public Sub New(ByRef RStack As RandStack)
+        RandStack = RStack
+        Dim c As New Common
+        c.ReadExcludedObjectsList(New String() {My.Resources.readVLoreFileKeyword})
+        VanillaLoreUnits = c.excludedObjects
+    End Sub
+
+    Public Function ReplaceItem(ByRef ID As String) As String
+
+        Dim item As AllDataStructues.Item = RandStack.FindItemStats(ID)
+
+        If item.type = GenDefaultValues.ItemTypes.special Then Return ID
+
+        Dim selection As New List(Of Integer)
+        Dim dtolerance As Integer = 100
+        Dim tolerance As Integer = 0
+        Dim oneMore As Boolean = False
+        Dim add As Boolean
+
+        Do While (selection.Count = 0 Or oneMore) And tolerance <= 10000
+            tolerance += dtolerance
+            selection.Clear()
+            For u As Integer = 0 To UBound(RandStack.MagicItem) Step 1
+                If Math.Abs(RandStack.LootCost(RandStack.MagicItem(u)).Gold - RandStack.LootCost(item).Gold) <= tolerance Then
+                    If item.type = RandStack.MagicItem(u).type Then
+                        add = True
+                    Else
+                        add = False
+                    End If
+                    If add Then selection.Add(u)
+                End If
+            Next u
+            If selection.Count > 0 Then oneMore = Not oneMore
+        Loop
+        If selection.Count > 0 Then
+            Dim r As Integer = RandStack.comm.RandomSelection(selection, True)
+            Return RandStack.MagicItem(r).itemID
+        Else
+            Return ID
+        End If
+    End Function
+
+    Public Function ReplaceUnit(ByRef ID As String) As String
+
+        Dim unit As AllDataStructues.Unit = RandStack.FindUnitStats(ID)
+
+        If VanillaLoreUnits.Contains(unit.unitID) Then Return unit.unitID
+
+        Dim selection As New List(Of Integer)
+        Dim dtolerance As Integer = 100
+        Dim tolerance As Integer = 0
+        Dim oneMore As Boolean = False
+        Dim add As Boolean
+
+        Dim items() As AllDataStructues.Unit
+
+        If unit.unitBranch = 5 Then
+            items = RandStack.AllLeaders
+        Else
+            items = RandStack.AllFighters
+        End If
+
+        Do While (selection.Count = 0 Or oneMore) And tolerance <= 10000
+            tolerance += dtolerance
+            selection.Clear()
+            For u As Integer = 0 To UBound(items) Step 1
+                If Math.Abs(items(u).EXPkilled - unit.EXPkilled) <= tolerance Then
+                    add = True
+                    If add Then add = (items(u).small = unit.small)
+                    If add Then add = (items(u).waterOnly = unit.waterOnly)
+                    If add Then add = (items(u).leadership = unit.leadership)
+                    If add Then
+                        If items(u).reach = 3 Then
+                            add = (items(u).reach = unit.reach)
+                        Else
+                            add = (items(u).reach < 3)
+                        End If
+                    End If
+                    If add Then add = (items(u).race = unit.race)
+                    If add Then selection.Add(u)
+                End If
+            Next u
+            If selection.Count > 0 Then oneMore = Not oneMore
+        Loop
+        If selection.Count > 0 Then
+            Dim r As Integer = RandStack.comm.RandomSelection(selection, True)
+            Return items(r).unitID
+        Else
+            Return unit.unitID
+        End If
+    End Function
+
+End Class
