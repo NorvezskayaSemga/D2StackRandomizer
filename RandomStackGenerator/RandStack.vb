@@ -474,7 +474,7 @@ Public Class RandStack
             DynCost = CInt(DynCost - ItemCostSum(selected))
         Loop
 
-        If Not IsNothing(IGen.PreserveItems) Then
+        If Not IsNothing(IGen.PreserveItems) AndAlso IGen.PreserveItems.Count > 0 Then
             For Each item As String In IGen.PreserveItems
                 result.Add(item.ToUpper)
                 Dim thing As AllDataStructues.Item = FindItemStats(item)
@@ -525,7 +525,7 @@ Public Class RandStack
                             "Max cost: " & GoldCost)
         Call AddToLog(LogID, IGen)
 
-        If Not IsNothing(IGen.PreserveItems) Then
+        If Not IsNothing(IGen.PreserveItems) AndAlso IGen.PreserveItems.Count > 0 Then
             Dim thing As AllDataStructues.Item = FindItemStats(IGen.PreserveItems.Item(0))
             Call AddToLog(LogID, "Preserved item:" & thing.name & " id:" & IGen.PreserveItems.Item(0).ToUpper)
             Call AddToLog(LogID, "----Single item creation ended----")
