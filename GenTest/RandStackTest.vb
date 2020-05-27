@@ -227,22 +227,22 @@ Public Class RandStackTest
 
         Parallel.ForEach(statsList, _
          Sub(item As AllDataStructues.DesiredStats)
-            If Not ok Then Exit Sub
-            Dim GroundTile As Boolean
-            Dim locOk As Boolean = True
-            For g As Integer = 0 To 1 Step 1
-                If g = 0 Then
-                    GroundTile = False
-                    If item.Race.Item(0) = target.comm.RaceIdentifierToSubrace("W") Then g = 1
-                Else
-                    GroundTile = True
-                End If
-                Dim stack As AllDataStructues.Stack = target.Gen(item, 0, GroundTile, False)
-                locOk = TestStack(stack, target)
-                If Not locOk Then Exit For
-            Next g
-            If Not locOk Then ok = False
-        End Sub)
+             If Not ok Then Exit Sub
+             Dim GroundTile As Boolean
+             Dim locOk As Boolean = True
+             For g As Integer = 0 To 1 Step 1
+                 If g = 0 Then
+                     GroundTile = False
+                     If item.Race.Item(0) = target.comm.RaceIdentifierToSubrace("W") Then g = 1
+                 Else
+                     GroundTile = True
+                 End If
+                 Dim stack As AllDataStructues.Stack = target.Gen(item, 0, GroundTile, False, New Point(1, 1))
+                 locOk = TestStack(stack, target)
+                 If Not locOk Then Exit For
+             Next g
+             If Not locOk Then ok = False
+         End Sub)
 
         If Not ok Then Assert.Inconclusive("Verify the correctness of this test method.")
     End Sub
@@ -337,7 +337,7 @@ Public Class RandStackTest
         Dim genitems As List(Of String)
         For i As Integer = 0 To 100 Step 1
             cost = target.minItemGoldCost + i * 125
-            genitems = target.ItemsGen(cost, New AllDataStructues.LootGenSettings, Nothing)
+            genitems = target.ItemsGen(cost, New AllDataStructues.LootGenSettings, Nothing, New Point(1, 1))
             sum = target.LootCost(genitems).Gold
             'If sum > cost Then ok = False
             If Math.Abs(cost - sum) > cost Then ok = False
@@ -364,7 +364,7 @@ Public Class RandStackTest
         stats.Race.AddRange(races)
 
         For i As Integer = 0 To 10000 Step 1
-            Dim stack As AllDataStructues.Stack = target.Gen(stats, 0, True, False)
+            Dim stack As AllDataStructues.Stack = target.Gen(stats, 0, True, False, New Point(1, 1))
             ok = TestStack(stack, target, races, raceokL, raceokF)
             If Not ok Then Exit For
         Next i
@@ -474,7 +474,7 @@ Public Class RandStackTest
             stats.Race.AddRange(races)
 
             For i As Integer = 0 To 10000 Step 1
-                Dim stack As AllDataStructues.Stack = target.Gen(stats, 0, True, False)
+                Dim stack As AllDataStructues.Stack = target.Gen(stats, 0, True, False, New Point(1, 1))
                 ok = TestStack(stack, target, races, raceokL, raceokF)
                 If Not ok Then Exit For
             Next i
@@ -504,7 +504,7 @@ Public Class RandStackTest
 
         Dim c As Integer
         For i As Integer = 0 To 10000 Step 1
-            Dim stack As AllDataStructues.Stack = target.Gen(stats, 0, True, False)
+            Dim stack As AllDataStructues.Stack = target.Gen(stats, 0, True, False, New Point(1, 1))
             c = 0
             For Each item As String In stack.pos
                 If Not item = "G000000000" Then c += 1
@@ -534,7 +534,7 @@ Public Class RandStackTest
 
         Dim c As Integer
         For i As Integer = 0 To 10000 Step 1
-            Dim stack As AllDataStructues.Stack = target.Gen(stats, 0, True, True)
+            Dim stack As AllDataStructues.Stack = target.Gen(stats, 0, True, True, New Point(1, 1))
             c = 0
             For Each item As String In stack.pos
                 If Not item = "G000000000" Then
@@ -619,9 +619,9 @@ Public Class RandStackTest
             For i As Integer = 0 To 10000 Step 1
                 Dim stack As AllDataStructues.Stack
                 If TestOverload1 Then
-                    stack = target.Gen(stats, 0, True, noLeader)
+                    stack = target.Gen(stats, 0, True, noLeader, New Point(1, 1))
                 Else
-                    stack = target.Gen(stats.ExpStackKilled, stats.LootCost, stats.Race, stats.IGen, 0, True, False)
+                    stack = target.Gen(stats.ExpStackKilled, stats.LootCost, stats.Race, stats.IGen, 0, True, False, New Point(1, 1))
                 End If
                 For Each item As String In stack.pos
                     If Not expected.Contains(item.ToLower) Then ok = False
@@ -762,7 +762,7 @@ Public Class RandStackTest
                                                                 .JewelItems = New AllDataStructues.ItemGenSettings With {.exclude = True, .costPart = 0.9}}
 
         For i As Integer = 1 To 20 Step 1
-            Call target.Gen(stats, 0, True, False)
+            Call target.Gen(stats, 0, True, False, New Point(1, 1))
         Next i
         Dim log As String = target.log.PrintAll
         If log = "" Then ok = False
