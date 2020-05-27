@@ -445,7 +445,8 @@ Public Class RandStack
                              ByRef pos As Point, _
                              Optional ByVal LogID As Integer = -1) As List(Of String)
         Call AddToLog(LogID, "----Loot creation started----" & vbNewLine & _
-                             "Gold sum: " & GoldCost)
+                             "Gold sum: " & GoldCost & vbNewLine & _
+                             "Position: " & pos.X & " " & pos.Y)
         Call AddToLog(LogID, IGen)
 
         Dim DynTypeWeightMultiplier() As Double = ItemTypeDynWeight(pos)
@@ -538,7 +539,8 @@ Public Class RandStack
                              Optional ByVal LogID As Integer = -1) As String
 
         Call AddToLog(LogID, "----Single item creation started----" & vbNewLine & _
-                            "Max cost: " & GoldCost)
+                            "Max cost: " & GoldCost & vbNewLine & _
+                            "Position: " & pos.X & " " & pos.Y)
         Call AddToLog(LogID, IGen)
 
         If Not IsNothing(IGen.PreserveItems) AndAlso IGen.PreserveItems.Count > 0 Then
@@ -805,7 +807,8 @@ Public Class RandStack
         Next i
 
         Call log.Add(vbNewLine & "----Stack creation started----")
-        Call log.Add("DeltaLeadership: " & deltaLeadership & " GroundTile: " & GroundTile & " NoLeader: " & NoLeader)
+        Call log.Add("DeltaLeadership: " & deltaLeadership & " GroundTile: " & GroundTile & " NoLeader: " & NoLeader & vbNewLine & _
+                     "Position: " & pos.X & " " & pos.Y)
         Call log.Add(DynStackStats, False)
 
         Dim result As AllDataStructues.Stack = GenStackMultithread(StackStats, DynStackStats, deltaLeadership, GroundTile, NoLeader)
