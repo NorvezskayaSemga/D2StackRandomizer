@@ -2264,7 +2264,7 @@ Public Class AllDataStructues
         ''' <summary>True, если может находиться только на воде</summary>
         Dim waterOnly As Boolean
         ''' <summary>0 - мили, 1 - лучники, 2 - маги, 3 - поддержка, 4 - особые (оборотень, сатир и т.д.), 
-        ''' 5 - обычный лидер, 6 - вор, 7 - саммон</summary>
+        ''' 5 - обычный лидер, 6 - вор, 7 - саммон, 8 - страж столицы</summary>
         Dim unitBranch As Integer
         ''' <summary>Цена найма юнита</summary>
         Dim unitCost As Cost

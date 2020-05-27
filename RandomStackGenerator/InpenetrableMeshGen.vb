@@ -6422,6 +6422,7 @@ Public Class VanillaSagaContentReplace
 
         Dim unit As AllDataStructues.Unit = RandStack.FindUnitStats(ID)
 
+        If unit.unitBranch = 8 Then Return unit.unitID
         If VanillaLoreUnits.Contains(unit.unitID) Then Return unit.unitID
 
         Dim selection As New List(Of Integer)
