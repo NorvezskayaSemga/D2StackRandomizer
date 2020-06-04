@@ -445,8 +445,12 @@ Public Class RandStack
                              ByRef pos As Point, _
                              Optional ByVal LogID As Integer = -1) As List(Of String)
         Call AddToLog(LogID, "----Loot creation started----" & vbNewLine & _
-                             "Gold sum: " & GoldCost & vbNewLine & _
-                             "Position: " & pos.X & " " & pos.Y)
+                             "Gold sum: " & GoldCost)
+        If Not IsNothing(pos) Then
+            Call AddToLog(LogID, "Position: " & pos.X & " " & pos.Y)
+        Else
+            Call AddToLog(LogID, "Position: unknown")
+        End If
         Call AddToLog(LogID, IGen)
 
         Dim DynTypeWeightMultiplier() As Double = ItemTypeDynWeight(pos)
@@ -504,15 +508,17 @@ Public Class RandStack
     ''' <param name="IGen">Настройки генерации предметов</param>
     ''' <param name="TypeCostRestriction">Ключ - тип предмета, Значение - ограничение стоимости. Игнорируется, если массив неинициализирован</param>
     ''' <param name="pos">Точка на карте, в которую добавляются предметы</param>
+    ''' <param name="CapPos">Положение столиц (угол с наименьшей координатой по X и Y)</param>
     '''<param name="LootCostMultiplier">Множитель стоимости предметов</param>
     ''' <param name="LogID">Номер задачи. От 0 до Size-1. Если меньше 0, запись будет сделана в общий лог</param>
     Public Function ItemsGen(ByVal GoldCost As Integer, _
                              ByRef IGen As AllDataStructues.LootGenSettings, _
                              ByRef TypeCostRestriction As Dictionary(Of Integer, AllDataStructues.Restriction), _
-                             ByRef pos As Point, _
+                             ByRef pos As Point, ByRef CapPos() As Point, _
                              ByVal LootCostMultiplier As Double, _
                              Optional ByVal LogID As Integer = -1) As List(Of String)
-        Return ItemsGen(CInt(GoldCost * LootCostMultiplier), IGen, TypeCostRestriction, pos, LogID)
+        Dim lcm As Double = RecalculateMultiplier(pos, CapPos, LootCostMultiplier)
+        Return ItemsGen(CInt(GoldCost * lcm), IGen, TypeCostRestriction, pos, LogID)
     End Function
     Private Function CostBarGen(ByRef minBar As Integer, ByRef maxBar As Integer, ByRef serialExecution As Boolean) As Integer
         'Return CInt(rndgen.Rand(CDbl(minBar), CDbl(maxBar), serialExecution))
@@ -539,8 +545,12 @@ Public Class RandStack
                              Optional ByVal LogID As Integer = -1) As String
 
         Call AddToLog(LogID, "----Single item creation started----" & vbNewLine & _
-                            "Max cost: " & GoldCost & vbNewLine & _
-                            "Position: " & pos.X & " " & pos.Y)
+                            "Max cost: " & GoldCost)
+        If Not IsNothing(pos) Then
+            Call AddToLog(LogID, "Position: " & pos.X & " " & pos.Y)
+        Else
+            Call AddToLog(LogID, "Position: unknown")
+        End If
         Call AddToLog(LogID, IGen)
 
         If Not IsNothing(IGen.PreserveItems) AndAlso IGen.PreserveItems.Count > 0 Then
@@ -583,15 +593,17 @@ Public Class RandStack
     ''' <param name="IGen">Настройки генерации предметов</param>
     ''' <param name="TypeCostRestriction">Ключ - тип предмета, Значение - ограничение стоимости. Игнорируется, если массив неинициализирован</param>
     ''' <param name="pos">Точка на карте, в которую добавляются предметы</param>
+    ''' <param name="CapPos">Положение столиц (угол с наименьшей координатой по X и Y)</param>
     ''' <param name="LootCostMultiplier">Множитель стоимости предметов</param>
     ''' <param name="LogID">Номер задачи. От 0 до Size-1. Если меньше 0, запись будет сделана в общий лог</param>
     Public Function ThingGen(ByVal GoldCost As Integer, _
                              ByRef IGen As AllDataStructues.LootGenSettings, _
                              ByRef TypeCostRestriction As Dictionary(Of Integer, AllDataStructues.Restriction), _
-                             ByRef pos As Point, _
+                             ByRef pos As Point, ByRef CapPos() As Point, _
                              ByVal LootCostMultiplier As Double, _
                              Optional ByVal LogID As Integer = -1) As String
-        Return ThingGen(CInt(GoldCost * LootCostMultiplier), IGen, TypeCostRestriction, pos, LogID)
+        Dim lcm As Double = RecalculateMultiplier(pos, CapPos, LootCostMultiplier)
+        Return ThingGen(CInt(GoldCost * lcm), IGen, TypeCostRestriction, pos, LogID)
     End Function
     Private Function GenItemSetDynIGen(ByRef IGen As AllDataStructues.LootGenSettings, ByRef GoldCost As Integer) As AllDataStructues.LootGenSettings
         Dim settings() As AllDataStructues.ItemGenSettings = AllDataStructues.LootGenSettings.ToArray(IGen)
@@ -696,13 +708,14 @@ Public Class RandStack
     End Sub
     Private Function ItemTypeDynWeight(ByRef pos As Point) As Double()
         Dim DynTypeWeightMultiplier(14) As Double
+        For i As Integer = 0 To UBound(DynTypeWeightMultiplier) Step 1
+            DynTypeWeightMultiplier(i) = 1
+        Next i
+        If IsNothing(pos) Then Return DynTypeWeightMultiplier
         Dim w, t As Double
         Dim d As Integer = 12
         Dim R2 As Integer = d * d
         Dim invD As Double = 1 / d
-        For i As Integer = 0 To UBound(DynTypeWeightMultiplier) Step 1
-            DynTypeWeightMultiplier(i) = 1
-        Next i
         For Each x As Integer In AddedItems.Keys
             If Math.Abs(pos.X - x) <= d Then
                 For Each y As Integer In AddedItems.Item(x).Keys
@@ -719,6 +732,7 @@ Public Class RandStack
         Return DynTypeWeightMultiplier
     End Function
     Private Sub AddToAddedItemList(ByRef item As AllDataStructues.Item, ByRef pos As Point)
+        If IsNothing(pos) Then Exit Sub
         If Not AddedItems.ContainsKey(pos.X) Then _
             AddedItems.Add(pos.X, New Dictionary(Of Integer, List(Of AllDataStructues.Item)))
         If Not AddedItems.Item(pos.X).ContainsKey(pos.Y) Then _
@@ -807,8 +821,12 @@ Public Class RandStack
         Next i
 
         Call log.Add(vbNewLine & "----Stack creation started----")
-        Call log.Add("DeltaLeadership: " & deltaLeadership & " GroundTile: " & GroundTile & " NoLeader: " & NoLeader & vbNewLine & _
-                     "Position: " & pos.X & " " & pos.Y)
+        Call log.Add("DeltaLeadership: " & deltaLeadership & " GroundTile: " & GroundTile & " NoLeader: " & NoLeader)
+        If Not IsNothing(pos) Then
+            Call log.Add("Position: " & pos.X & " " & pos.Y)
+        Else
+            Call log.Add("Position: unknown")
+        End If
         Call log.Add(DynStackStats, False)
 
         Dim result As AllDataStructues.Stack = GenStackMultithread(StackStats, DynStackStats, deltaLeadership, GroundTile, NoLeader)
@@ -843,15 +861,20 @@ Public Class RandStack
     ''' <param name="GroundTile">True, если на клетку нельзя ставить водных лидеров. Водной считается клетка с водой, окруженная со всех сторон клетками с водой</param>
     ''' <param name="NoLeader">True, если стэк находится внутри руин или города</param>
     ''' <param name="pos">Точка на карте, в которую добавляются предметы</param>
+    ''' <param name="CapPos">Положение столиц (угол с наименьшей координатой по X и Y)</param>
     ''' <param name="StackStrengthMultiplier">Множитель силы отряда: изменяем опыт за убийство и среднюю планку опыта</param>
     ''' <param name="LootCostMultiplier">Множитель стоимости предметов</param>
     Public Function Gen(ByRef StackStats As AllDataStructues.DesiredStats, ByVal deltaLeadership As Integer, _
                         ByVal GroundTile As Boolean, ByVal NoLeader As Boolean, ByRef pos As Point, _
+                        ByRef CapPos() As Point, _
                         ByVal StackStrengthMultiplier As Double, ByVal LootCostMultiplier As Double) As AllDataStructues.Stack
+        Dim ssm As Double = RecalculateMultiplier(pos, CapPos, StackStrengthMultiplier)
+        Dim lcm As Double = RecalculateMultiplier(pos, CapPos, LootCostMultiplier)
+
         Dim s As AllDataStructues.DesiredStats = AllDataStructues.DesiredStats.Copy(StackStats)
-        s.ExpStackKilled = Math.Max(CInt(s.ExpStackKilled * StackStrengthMultiplier), 5)
-        s.ExpBarAverage = Math.Max(CInt(s.ExpBarAverage * StackStrengthMultiplier), 25)
-        s.LootCost = CInt(s.LootCost * LootCostMultiplier)
+        s.ExpStackKilled = Math.Max(CInt(s.ExpStackKilled * ssm), 5)
+        s.ExpBarAverage = Math.Max(CInt(s.ExpBarAverage * ssm), 25)
+        s.LootCost = CInt(s.LootCost * lcm)
         Return Gen(s, deltaLeadership, GroundTile, NoLeader, pos)
     End Function
     ''' <summary>Создаст отряд  в соответствие с желаемыми параметрами. Не нужно пытаться создать отряд водных жителей на земле</summary>
@@ -863,14 +886,19 @@ Public Class RandStack
     ''' <param name="GroundTile">True, если на клетку нельзя ставить водных лидеров. Водной считается клетка с водой, окруженная со всех сторон клетками с водой</param>
     ''' <param name="NoLeader">True, если стэк находится внутри руин или города</param>
     ''' <param name="pos">Точка на карте, в которую добавляются предметы</param>
+    ''' <param name="CapPos">Положение столиц (угол с наименьшей координатой по X и Y)</param>
     ''' <param name="StackStrengthMultiplier">Множитель силы отряда: изменяем опыт за убийство и среднюю планку опыта</param>
     ''' <param name="LootCostMultiplier">Множитель стоимости предметов</param>
     Public Function Gen(ByVal ExpStackKilled As Integer, ByVal LootCost As Double, ByRef Races As List(Of Integer), _
                         ByRef IGen As AllDataStructues.LootGenSettings, ByVal deltaLeadership As Integer, _
                         ByVal GroundTile As Boolean, ByVal NoLeader As Boolean, ByRef pos As Point, _
+                        ByRef CapPos() As Point, _
                         ByVal StackStrengthMultiplier As Double, ByVal LootCostMultiplier As Double) As AllDataStructues.Stack
-        Dim esk As Integer = Math.Max(CInt(ExpStackKilled * StackStrengthMultiplier), 5)
-        Dim lc As Double = LootCost * LootCostMultiplier
+        Dim ssm As Double = RecalculateMultiplier(pos, CapPos, StackStrengthMultiplier)
+        Dim lcm As Double = RecalculateMultiplier(pos, CapPos, LootCostMultiplier)
+
+        Dim esk As Integer = Math.Max(CInt(ExpStackKilled * ssm), 5)
+        Dim lc As Double = LootCost * lcm
         Return Gen(esk, lc, Races, IGen, deltaLeadership, GroundTile, NoLeader, pos)
     End Function
     Private Function SelectPossibleLeader(ByRef leaderID As Integer, ByRef Tolerance As Double, _
@@ -898,6 +926,21 @@ Public Class RandStack
     End Function
     Private Function SigmaMultiplier(ByRef stat As AllDataStructues.DesiredStats) As Double
         Return comm.defValues.defaultSigma * (CDbl(stat.StackSize) + 1.25 * CDbl(stat.StackSize * stat.StackSize - 1) + 0.2 * CDbl(stat.MaxGiants))
+    End Function
+    Private Function RecalculateMultiplier(ByRef pos As Point, ByRef CapPos() As Point, ByRef inValue As Double) As Double
+        If inValue <= 1 Or IsNothing(pos) Then Return inValue
+        Dim r As Double = Double.MaxValue
+        Dim halfCapitalSize As Integer = 2
+        For i As Integer = 0 To UBound(CapPos) Step 1
+            r = Math.Min(r, pos.SqDist(New Point(CapPos(i).X + halfCapitalSize, CapPos(i).Y + halfCapitalSize)))
+        Next i
+        Dim maxR As Double = 12
+        If r < maxR * maxR Then
+            r = Math.Sqrt(r)
+            Return 1 + (inValue - 1) * r / maxR
+        Else
+            Return inValue
+        End If
     End Function
 
     Private Function GenStackMultithread(ByVal StackStats As AllDataStructues.DesiredStats, _
