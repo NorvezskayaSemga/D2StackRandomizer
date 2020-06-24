@@ -23,6 +23,55 @@ Friend Class StartForm
         MsgBox("Done")
     End Sub
 
+    Private Sub RndTest() Handles RndTestButton.Click
+        Dim r As New RndValueGen
+        Dim steps As Integer = 10 ^ 6
+        Dim result(steps) As Double
+
+        Dim t11 As Integer = Environment.TickCount
+        For i As Integer = 0 To steps Step 1
+            result(i) = r.PRand(0, 1)
+        Next i
+        Dim t12 As Integer = Environment.TickCount
+        Dim u1 As Double = CalcUniformity(makeDistribution(result))
+
+        Dim t21 As Integer = Environment.TickCount
+        For i As Integer = 0 To steps Step 1
+            result(i) = r.PRandTestOnly(0, 1)
+        Next i
+        Dim t22 As Integer = Environment.TickCount
+        Dim u2 As Double = CalcUniformity(makeDistribution(result))
+
+        Console.WriteLine("current rand: u= " & u1 & " t= " & t12 - t11)
+        Console.WriteLine("   test rand: u= " & u2 & " t= " & t22 - t21)
+    End Sub
+    Private Function makeDistribution(ByVal v() As Double) As Integer()
+        Dim dx As Double = 0.01
+        Dim result(1 / dx - 1) As Integer
+        For i As Integer = 0 To UBound(v) Step 1
+            For j As Integer = 0 To UBound(result) Step 1
+                If v(i) >= CDbl(j) * dx And v(i) < CDbl(j + 1) * dx Then
+                    result(j) += 1
+                    Exit For
+                End If
+            Next j
+        Next i
+        Return result
+    End Function
+    Private Function CalcUniformity(ByRef d() As Integer) As Double
+        Dim average As Integer
+        For j As Integer = 0 To UBound(d) Step 1
+            average += d(j)
+        Next j
+        average /= d.Length
+        Dim res As Double = 0
+        For j As Integer = 0 To UBound(d) Step 1
+            res += Math.Pow(d(j) - average, 2)
+        Next j
+        Return average / Math.Sqrt(res + 1)
+    End Function
+
+
     Private Sub GenButton_Click() Handles GenButton.Click
 
         'For Each r As Integer In {1, 2, 3, 4, 14}

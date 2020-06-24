@@ -1496,15 +1496,22 @@ Public Class RndValueGen
     '''<summary>Returns random value with uniform distribution. Use this to obtain more uniform distribution in the case of serial code.</summary>
     '''<param name="lower">Minimum value.</param>
     '''<param name="upper">Maximum value.</param>
-    Public Function PRand(ByVal lower As Double, ByVal upper As Double) As Double
-        Dim value(Environment.ProcessorCount - 1), l, u As Double
+    Public Function PRandTestOnly(ByVal lower As Double, ByVal upper As Double) As Double
+        Dim value(Environment.ProcessorCount - 1) As Double
         Dim n As Integer = CInt(Math.Round(Rand(0, Environment.ProcessorCount - 1), 0))
-        l = lower : u = upper
         Parallel.For(0, Environment.ProcessorCount, _
          Sub(i As Integer)
-             value(i) = Rand(l, u)
+             value(i) = Rand(lower, upper)
          End Sub)
         Return value(n)
+    End Function
+    Public Function PRand(ByVal lower As Double, ByVal upper As Double) As Double
+        Dim value(CInt(0.5 * Environment.ProcessorCount)) As Double
+        Parallel.For(0, value.Length, _
+         Sub(i As Integer)
+             value(i) = Rand(lower, upper)
+         End Sub)
+        Return value(UBound(value))
     End Function
 
     '''<summary>Returns random value with uniform distribution.</summary>
