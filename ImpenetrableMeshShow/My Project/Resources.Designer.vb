@@ -61,6 +61,16 @@ Namespace My.Resources
         End Property
         
         '''<summary>
+        '''  Looks up a localized resource of type System.Byte[].
+        '''</summary>
+        Friend ReadOnly Property randGeneratorData() As Byte()
+            Get
+                Dim obj As Object = ResourceManager.GetObject("randGeneratorData", resourceCulture)
+                Return CType(obj,Byte())
+            End Get
+        End Property
+        
+        '''<summary>
         '''  Looks up a localized string similar to ITEM_CAT	ITEM_ID	VALUE
         '''6	G000IG0001	g0400:r0000:y0000:e0000:w0000
         '''4	G000IG0002	g0200:r0000:y0000:e0000:w0000
@@ -73,7 +83,7 @@ Namespace My.Resources
         '''4	G000IG0009	g0450:r0000:y0000:e0000:w0000
         '''7	G000IG0010	g1500:r0000:y0000:e0000:w0000
         '''4	G000IG0011	g0200:r0000:y0000:e0000:w0000
-        '''4	G000IG0012	g04 [rest of string was truncated]&quot;;.
+        '''4	G0 [rest of string was truncated]&quot;;.
         '''</summary>
         Friend ReadOnly Property TestItemsTable() As String
             Get
@@ -169,7 +179,7 @@ Namespace My.Resources
         '''g000uu0005	0	3	1	0	True	g000aa0005	115	950	0	False	3
         '''g000uu0006	0	1	1	1	True	g000aa0006	20	70	0	False	2
         '''g000uu0007	0	2	1	1	True	g000aa0007	60	500	0	False	2
-        '''g000uu0008	0	1	1	2	True	g000aa0008	15	75	0	 [rest of string was truncated]&quot;;.
+        '''g000uu0008	0	1	1	2	True	g000aa0008	 [rest of string was truncated]&quot;;.
         '''</summary>
         Friend ReadOnly Property TestUnitsTable() As String
             Get

@@ -25,7 +25,10 @@ Friend Class StartForm
 
     Private Sub RndTest() Handles RndTestButton.Click
         Dim r As New RndValueGen
-        Dim steps As Integer = 10 ^ 6
+        Dim vanillaR As New OriginalRndGenerator
+        Dim maxInt As Integer = Short.MaxValue
+
+        Dim steps As Integer = 10 ^ 7
         Dim result(steps) As Double
 
         Dim t11 As Integer = Environment.TickCount
@@ -35,14 +38,24 @@ Friend Class StartForm
         Dim t12 As Integer = Environment.TickCount
         Dim u1 As Double = CalcUniformity(makeDistribution(result))
 
+        Dim t(8 * result.Length - 1) As Byte
+        For i As Integer = 0 To steps Step 1
+            Dim b() As Byte = BitConverter.GetBytes(result(i))
+            For j As Integer = 0 To UBound(b) Step 1
+                t(8 * i + j) = b(j)
+            Next j
+        Next i
+        IO.File.WriteAllBytes("./myRandomNumbers.txt", t)
+        Console.WriteLine("current rand: u= " & u1 & " t= " & t12 - t11)
+
+
         Dim t21 As Integer = Environment.TickCount
         For i As Integer = 0 To steps Step 1
-            result(i) = r.PRandTestOnly(0, 1)
+            result(i) = vanillaR.randomNumberUpTo(maxInt) / (maxInt - 1)
         Next i
         Dim t22 As Integer = Environment.TickCount
         Dim u2 As Double = CalcUniformity(makeDistribution(result))
 
-        Console.WriteLine("current rand: u= " & u1 & " t= " & t12 - t11)
         Console.WriteLine("   test rand: u= " & u2 & " t= " & t22 - t21)
     End Sub
     Private Function makeDistribution(ByVal v() As Double) As Integer()

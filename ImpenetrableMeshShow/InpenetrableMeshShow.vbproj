@@ -77,6 +77,7 @@
       <DesignTime>True</DesignTime>
       <DependentUpon>Resources.resx</DependentUpon>
     </Compile>
+    <Compile Include="OriginalRndGenerator.vb" />
     <Compile Include="StartForm.vb">
       <SubType>Form</SubType>
     </Compile>
@@ -124,6 +125,9 @@
     </ProjectReference>
   </ItemGroup>
   <ItemGroup>
+    <Resource Include="Resources\randGeneratorData.binary">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Resource>
     <None Include="Resources\TestSpellsRace.txt" />
   </ItemGroup>
   <ItemGroup>
