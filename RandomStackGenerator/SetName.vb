@@ -49,15 +49,17 @@
     End Sub
 
     Private Sub DownloadList()
-        Net.ServicePointManager.SecurityProtocol = CType(3072, Net.SecurityProtocolType) Or _
-                                                   CType(768, Net.SecurityProtocolType) Or _
-                                                   CType(192, Net.SecurityProtocolType) Or _
-                                                   CType(48, Net.SecurityProtocolType)
 
-        Dim w As New System.Net.WebClient With {.Proxy = Nothing}
+        Dim w As System.Net.WebClient
         Dim Tn() As String = Nothing
         Dim Tw() As Double = Nothing
         Try
+            Net.ServicePointManager.SecurityProtocol = CType(3072, Net.SecurityProtocolType) Or _
+                                                       CType(768, Net.SecurityProtocolType) Or _
+                                                       CType(192, Net.SecurityProtocolType) Or _
+                                                       CType(48, Net.SecurityProtocolType)
+
+            w = New System.Net.WebClient With {.Proxy = Nothing}
             Dim byteData() As Byte = w.DownloadData(link)
             Dim d As String = Text.Encoding.UTF8.GetString(byteData)
             Dim str() As String = d.Replace(Chr(10), vbNewLine).Split(CChar(vbNewLine))
@@ -132,7 +134,7 @@
             Next i
             ReDim Preserve name(added.Count - 1), weight(added.Count - 1)
         End If
-        w.Dispose()
+        If Not IsNothing(w) Then w.Dispose()
     End Sub
 
     Private Sub PrintNames()
