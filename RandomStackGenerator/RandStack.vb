@@ -1924,7 +1924,11 @@ Public Class Common
                 End If
                 WeightsSum += Weight(i)
             Next i
-            If smearing > maxSmearing Then Return -1
+            If smearing > maxSmearing AndAlso WeightsSum = 0 Then
+                For Each i As Integer In IDs
+                    Weight(i) = 1
+                Next i
+            End If
         Loop
         Return RandomSelection(IDs, Weight, serial)
     End Function
