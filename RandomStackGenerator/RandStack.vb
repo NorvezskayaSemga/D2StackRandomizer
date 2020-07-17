@@ -2009,6 +2009,15 @@ Public Class Common
             Call ReadFile(1, s, ExcludeLists(i), AddressOf ReadExcludedObjectsList, defaultKeys)
         Next i
     End Sub
+    ''' <summary>Читает список юнитов и предметов, которые не должен использовать генератор</summary>
+    ''' <param name="ExcludeLists">Файлы со списками исключенных объектов. Записи в них могут повторяться. 
+    ''' Допускается передача неинициализитрованного массива.
+    ''' Не воспринимает ключевые слова</param>
+    Public Sub ReadExcludedObjectsList(ByRef ExcludeLists As List(Of String))
+        If IsNothing(ExcludeLists) Then Exit Sub
+        Dim s() As String = ExcludeLists.ToArray
+        Call ReadFile(1, s, "", Nothing, Nothing)
+    End Sub
     ''' <summary>Читает множители шанса выпадения для отдельных предметов</summary>
     ''' <param name="MultipliersList">Файлы с множителями шанса появления определенных предметов.
     ''' Допускается передача неинициализитрованного массива.
@@ -2022,6 +2031,15 @@ Public Class Common
             s = prepareToFileRead(MultipliersList(i), defaultKeys, defaultVals)
             Call ReadFile(5, s, MultipliersList(i), AddressOf ReadLootItemChanceMultiplier, defaultKeys)
         Next i
+    End Sub
+    ''' <summary>Читает множители шанса выпадения для отдельных предметов</summary>
+    ''' <param name="MultipliersList">Множители шанса появления определенных предметов.
+    ''' Допускается передача неинициализитрованного массива.
+    ''' Не воспринимает ключевые слова</param>
+    Public Sub ReadLootItemChanceMultiplier(ByRef MultipliersList As List(Of String))
+        If IsNothing(MultipliersList) Then Exit Sub
+        Dim s() As String = MultipliersList.ToArray
+        Call ReadFile(5, s, "", Nothing, Nothing)
     End Sub
     ''' <summary>Читает список, переопределяющий расы нужных юнитов</summary>
     ''' <param name="CustomUnitRace">Файлы со списками рас юнитов. Записи в них могут повторяться, но записи с повторяющимся ID будут перезаписываться. 
@@ -2037,6 +2055,15 @@ Public Class Common
             Call ReadFile(2, s, CustomUnitRace(i), AddressOf ReadCustomUnitRace, defaultKeys)
         Next i
     End Sub
+    ''' <summary>Читает список, переопределяющий расы нужных юнитов</summary>
+    ''' <param name="CustomUnitRace">Список рас юнитов. Записи в них могут повторяться, но записи с повторяющимся ID будут перезаписываться. 
+    ''' Допускается передача неинициализитрованного списка.
+    ''' Не воспринимает ключевые слова</param>
+    Public Sub ReadCustomUnitRace(ByRef CustomUnitRace As List(Of String))
+        If IsNothing(CustomUnitRace) Then Exit Sub
+        Dim s() As String = CustomUnitRace.ToArray
+        Call ReadFile(2, s, "", Nothing, Nothing)
+    End Sub
     ''' <summary>Читает список юнитов, которые должны находиться в отряде в единственном экземпляре</summary>
     ''' <param name="SoleUnitsList">Файлы со списками юнитов. Записи в них могут повторяться, но записи с повторяющимся ID будут перезаписываться. 
     ''' Допускается передача неинициализитрованного массива.
@@ -2051,6 +2078,15 @@ Public Class Common
             Call ReadFile(6, s, SoleUnitsList(i), AddressOf ReadSoleUnits, defaultKeys)
         Next i
     End Sub
+    ''' <summary>Читает список юнитов, которые должны находиться в отряде в единственном экземпляре</summary>
+    ''' <param name="SoleUnitsList">Cписок юнитов. Записи в них могут повторяться, но записи с повторяющимся ID будут перезаписываться. 
+    ''' Допускается передача неинициализитрованного списка.
+    ''' Не воспринимает ключевые слова</param>
+    Public Sub ReadSoleUnits(ByRef SoleUnitsList As List(Of String))
+        If IsNothing(SoleUnitsList) Then Exit Sub
+        Dim s() As String = SoleUnitsList.ToArray
+        Call ReadFile(6, s, "", Nothing, Nothing)
+    End Sub
     ''' <summary>Читает список юнитов, которые могут находиться в отряде начиная с заданного количества слотов</summary>
     ''' <param name="BigStackUnitsList">Файлы со списками юнитов. Записи в них могут повторяться, но записи с повторяющимся ID будут перезаписываться.
     ''' Допускается передача неинициализитрованного массива.
@@ -2064,6 +2100,15 @@ Public Class Common
             s = prepareToFileRead(BigStackUnitsList(i), defaultKeys, defaultVals)
             Call ReadFile(7, s, BigStackUnitsList(i), AddressOf ReadBigStackUnits, defaultKeys)
         Next i
+    End Sub
+    ''' <summary>Читает список юнитов, которые могут находиться в отряде начиная с заданного количества слотов</summary>
+    ''' <param name="BigStackUnitsList">Список юнитов. Записи в них могут повторяться, но записи с повторяющимся ID будут перезаписываться.
+    ''' Допускается передача неинициализитрованного списка.
+    ''' Не воспринимает ключевые слова</param>
+    Public Sub ReadBigStackUnits(ByRef BigStackUnitsList As List(Of String))
+        If IsNothing(BigStackUnitsList) Then Exit Sub
+        Dim s() As String = BigStackUnitsList.ToArray
+        Call ReadFile(7, s, "", Nothing, Nothing)
     End Sub
     ''' <summary>Читает список, определяющий принадлежность непроходимых объектов</summary>
     ''' <param name="CustomBuildingRace">Файлы со списками рас и положений зданий. Записи в них могут повторяться, но записи с повторяющимся ID будут перезаписываться. 
@@ -2082,6 +2127,18 @@ Public Class Common
             Call ReadFile(3, s, CustomBuildingRace(i), AddressOf ReadCustomBuildingRace, defaultKeys)
         Next i
     End Sub
+    ''' <summary>Читает список, определяющий принадлежность непроходимых объектов</summary>
+    ''' <param name="CustomBuildingRace">Список рас и положений зданий. Записи в них могут повторяться, но записи с повторяющимся ID будут перезаписываться. 
+    ''' Допускается передача неинициализитрованного списка (будет прочтен дефолтный).
+    ''' Не воспринимает ключевые слова</param>
+    Public Sub ReadCustomBuildingRace(ByRef CustomBuildingRace As List(Of String))
+        If IsNothing(CustomBuildingRace) Then
+            Call ReadCustomBuildingRace(New String() {My.Resources.readDefaultFileKeyword})
+            Exit Sub
+        End If
+        Dim s() As String = CustomBuildingRace.ToArray
+        Call ReadFile(3, s, "", Nothing, Nothing)
+    End Sub
     ''' <summary>Читает описание того, как цеплять друг к другу "Плато" и "Водопады"</summary>
     ''' <param name="PlateauConstructionDescription">Файлы с описаниями.
     ''' Допускается передача неинициализитрованного массива (будет прочтен дефолтный).
@@ -2099,6 +2156,19 @@ Public Class Common
             Call ReadFile(4, s, PlateauConstructionDescription(i), AddressOf ReadPlateauConstructionDescription, defaultKeys)
         Next i
     End Sub
+    ''' <summary>Читает описание того, как цеплять друг к другу "Плато" и "Водопады"</summary>
+    ''' <param name="PlateauConstructionDescription">Описания.
+    ''' Допускается передача неинициализитрованного списка (будет прочтен дефолтный).
+    ''' Не воспринимает ключевые слова</param>
+    Public Sub ReadPlateauConstructionDescription(ByRef PlateauConstructionDescription As List(Of String))
+        If IsNothing(PlateauConstructionDescription) Then
+            Call ReadPlateauConstructionDescription(New String() {My.Resources.readDefaultFileKeyword})
+            Exit Sub
+        End If
+        Dim s() As String = PlateauConstructionDescription.ToArray
+        Call ReadFile(4, s, "", Nothing, Nothing)
+    End Sub
+
     Private Function prepareToFileRead(ByRef filePath As String, ByRef defaultKeywords() As String, ByRef defaultValues() As String) As String()
         If Not IsNothing(defaultKeywords) Then
             For i As Integer = 0 To UBound(defaultKeywords) Step 1
@@ -2119,13 +2189,15 @@ Public Class Common
         For j As Integer = 0 To UBound(s) Step 1
             srow = s(j).Split(CChar(" "))
             isKey = False
-            For Each key As String In defaultKeys
-                If srow(0).ToLower = key.ToLower And Not filepath.ToLower = key.ToLower Then
-                    Call f(New String() {key.ToLower})
-                    isKey = True
-                    Exit For
-                End If
-            Next key
+            If Not IsNothing(defaultKeys) AndAlso Not IsNothing(f) Then
+                For Each key As String In defaultKeys
+                    If srow(0).ToLower = key.ToLower And Not filepath.ToLower = key.ToLower Then
+                        Call f(New String() {key.ToLower})
+                        isKey = True
+                        Exit For
+                    End If
+                Next key
+            End If
             If Not isKey Then
                 If mode = 1 Then
                     If Not excludedObjects.Contains(srow(0).ToUpper) Then excludedObjects.Add(srow(0).ToUpper)

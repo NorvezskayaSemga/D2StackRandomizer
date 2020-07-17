@@ -50,7 +50,7 @@
 
     Private Sub DownloadList()
 
-        Dim w As System.Net.WebClient
+        Dim w As System.Net.WebClient = Nothing
         Dim Tn() As String = Nothing
         Dim Tw() As Double = Nothing
         Try
