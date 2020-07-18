@@ -1576,6 +1576,7 @@ Public Class Common
     Friend ItemTypesLists() As List(Of Integer)
 
     Public Sub New()
+        Call ReadingLog.Enable()
         defValues = New GenDefaultValues(ReadingLog)
         Dim splitedRace() As String = TxtSplit(defValues.Races)
         Dim srow() As String
@@ -1701,7 +1702,7 @@ Public Class Common
         Next item
         Call log.Add(result)
 
-        result = "----Reading files log----" & vbNewLine & ReadingLog.PrintAll
+        result = vbNewLine & "----Reading files log----" & vbNewLine & ReadingLog.PrintAll
         Call log.Add(result)
 
     End Sub
@@ -2933,7 +2934,7 @@ Public Class GenDefaultValues
 
     'default files
     Private Function ReadResources(ByRef name As String, ByRef defaultValue As String) As String
-        Dim path As String = ".\Resources\" & name & ".txt"
+        Dim path As String = Environment.CurrentDirectory & "\Resources\" & name & ".txt"
         If IO.File.Exists(path) Then
             If Not IsNothing(myLog) Then
                 Try

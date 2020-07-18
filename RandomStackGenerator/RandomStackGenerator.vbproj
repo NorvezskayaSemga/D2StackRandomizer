@@ -108,14 +108,14 @@
     </None>
   </ItemGroup>
   <ItemGroup>
-    <Resource Include="Resources\ExcludeIDs.txt">
+    <None Include="Resources\ExcludeIDs.txt">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-    </Resource>
+    </None>
   </ItemGroup>
   <ItemGroup>
-    <Resource Include="Resources\Races.txt">
+    <None Include="Resources\Races.txt">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-    </Resource>
+    </None>
   </ItemGroup>
   <ItemGroup>
     <None Include="Resources\UnitRace.txt">
@@ -133,36 +133,52 @@
     </None>
   </ItemGroup>
   <ItemGroup>
-    <None Include="Resources\ExcludeIDsForNames.txt" />
-  </ItemGroup>
-  <ItemGroup>
-    <None Include="Resources\MapObjectRace.txt" />
-  </ItemGroup>
-  <ItemGroup>
-    <None Include="Resources\PlateauConstructor.txt" />
-  </ItemGroup>
-  <ItemGroup>
-    <None Include="Resources\Lords.txt" />
-  </ItemGroup>
-  <ItemGroup>
-    <None Include="Resources\TestStackStats.txt">
+    <None Include="Resources\ExcludeIDsForNames.txt">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
   </ItemGroup>
   <ItemGroup>
-    <None Include="Resources\LootItemChanceMultiplier.txt" />
+    <None Include="Resources\MapObjectRace.txt">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
   </ItemGroup>
   <ItemGroup>
-    <None Include="Resources\SingleUnits.txt" />
+    <None Include="Resources\PlateauConstructor.txt">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
   </ItemGroup>
   <ItemGroup>
-    <None Include="Resources\ExcludeIDs_VanillaLore.txt" />
+    <None Include="Resources\Lords.txt">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
   </ItemGroup>
   <ItemGroup>
-    <None Include="Resources\ExcludeIDs_ModLore.txt" />
+    <None Include="Resources\TestStackStats.txt" />
   </ItemGroup>
   <ItemGroup>
-    <None Include="Resources\BigStackUnits.txt" />
+    <None Include="Resources\LootItemChanceMultiplier.txt">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="Resources\SingleUnits.txt">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="Resources\ExcludeIDs_VanillaLore.txt">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="Resources\ExcludeIDs_ModLore.txt">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="Resources\BigStackUnits.txt">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.VisualBasic.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
