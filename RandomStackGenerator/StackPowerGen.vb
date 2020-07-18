@@ -3,7 +3,7 @@
     Private rndgen As New RndValueGen
     Private imp As New ImpenetrableMeshGen
     Private valConv As New ValueConverter
-    Private defValues As New GenDefaultValues
+    Private defValues As New GenDefaultValues(Nothing)
 
     Private Structure StackLoc
         Dim pos As Point

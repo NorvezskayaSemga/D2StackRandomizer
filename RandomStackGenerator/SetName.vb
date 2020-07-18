@@ -22,6 +22,8 @@
     Public Sub New()
 
         log = New Log(comm)
+        comm.ReadingLog = log
+
         Call log.Enable()
         Call AddToLog(-1, "-----Names creator initialization started-----")
 
@@ -194,7 +196,7 @@
     End Function
     Private Sub ReadExclusions()
         excludeRace.Add(comm.RaceIdentifierToSubrace("Greenskins"))
-        Dim str() As String = comm.TxtSplit(My.Resources.ExcludeIDsForNames)
+        Dim str() As String = comm.TxtSplit(comm.defValues.ExcludeIDsForNames)
         For i As Integer = 0 To UBound(str) Step 1
             exclude.Add(str(i).ToUpper)
         Next i

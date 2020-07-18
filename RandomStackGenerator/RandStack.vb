@@ -1569,13 +1569,15 @@ Public Class Common
     Public itemTypeID As New Dictionary(Of String, Integer)
 
     Friend valConv As New ValueConverter
-    Friend defValues As New GenDefaultValues
+    Friend defValues As GenDefaultValues
+    Protected Friend ReadingLog As New Log(Me)
 
     Friend ConsumableItemsTypes, NonconsumableItemsTypes, JewelItemsTypes As New List(Of Integer)
     Friend ItemTypesLists() As List(Of Integer)
 
     Public Sub New()
-        Dim splitedRace() As String = TxtSplit(My.Resources.Races)
+        defValues = New GenDefaultValues(ReadingLog)
+        Dim splitedRace() As String = TxtSplit(defValues.Races)
         Dim srow() As String
         For Each item As String In splitedRace
             srow = item.Split(CChar(" "))
@@ -1584,11 +1586,11 @@ Public Class Common
             Next i
             RaceNumberToRaceChar.Add(CInt(srow(UBound(srow))), srow(1).ToUpper)
         Next item
-        Dim splitedFields() As String = TxtSplit(My.Resources.StackStatsFields)
+        Dim splitedFields() As String = TxtSplit(defValues.StackStatsFields)
         ReDim StatFields(CInt(splitedFields.Length / 2 - 1))
 
         Dim racesList As String = ""
-        splitedRace = My.Resources.Races.Replace(Chr(10), Chr(13)).Split(Chr(13))
+        splitedRace = defValues.Races.Replace(Chr(10), Chr(13)).Split(Chr(13))
         For i As Integer = 0 To UBound(splitedRace) Step 1
             If splitedRace(i).Length > 1 AndAlso Not splitedRace(i).Substring(0, 1) = "#" Then
                 racesList &= splitedRace(i) & vbNewLine
@@ -1606,7 +1608,7 @@ Public Class Common
             StatFields(k).description = StatFields(k).description.Replace("$newline$", vbNewLine)
         Next i
 
-        Dim lords() As String = TxtSplit(My.Resources.Lords)
+        Dim lords() As String = TxtSplit(defValues.Lords)
         For i As Integer = 0 To UBound(lords) Step 1
             Dim s() As String = lords(i).Split(CChar(" "))
             LordsRace.Add(s(0).ToUpper, RaceIdentifierToSubrace(s(1)))
@@ -1617,7 +1619,7 @@ Public Class Common
         JewelItemsTypes.AddRange(New Integer() {10})
         ItemTypesLists = {ConsumableItemsTypes, NonconsumableItemsTypes, JewelItemsTypes}
 
-        Dim splitedItemsTypes() As String = TxtSplit(My.Resources.Items)
+        Dim splitedItemsTypes() As String = TxtSplit(defValues.Items)
         For i As Integer = 0 To UBound(splitedItemsTypes) Step 1
             srow = splitedItemsTypes(i).Split(CChar(" "))
             itemType.Add(CInt(srow(0)), srow(1).ToUpper)
@@ -1633,7 +1635,7 @@ Public Class Common
         If Not log.IsEnabled Then Exit Sub
 
         Dim Races As New Dictionary(Of String, String)
-        Dim t() As String = TxtSplit(My.Resources.Races)
+        Dim t() As String = TxtSplit(defValues.Races)
         For Each s As String In t
             Dim r() As String = s.Split(CChar(" "))
             For i As Integer = 0 To UBound(r) Step 1
@@ -1698,6 +1700,10 @@ Public Class Common
             result &= vbNewLine & item & " - " & name & " - " & BigStackUnits.Item(item)
         Next item
         Call log.Add(result)
+
+        result = "----Reading files log----" & vbNewLine & ReadingLog.PrintAll
+        Call log.Add(result)
+
     End Sub
 
     ''' <summary>Читает и парсит файл с параметрами генерируемых отрядов.
@@ -2003,7 +2009,7 @@ Public Class Common
         If IsNothing(ExcludeLists) Then Exit Sub
         Dim s() As String
         Dim defaultKeys() As String = New String() {My.Resources.readDefaultFileKeyword, My.Resources.readMLoreFileKeyword, My.Resources.readVLoreFileKeyword}
-        Dim defaultVals() As String = New String() {My.Resources.ExcludeIDs, My.Resources.ExcludeIDs_ModLore, My.Resources.ExcludeIDs_VanillaLore}
+        Dim defaultVals() As String = New String() {defValues.ExcludedIDs, defValues.ExcludedIDs_ModLore, defValues.ExcludedIDs_VanillaLore}
         For i As Integer = 0 To UBound(ExcludeLists) Step 1
             s = prepareToFileRead(ExcludeLists(i), defaultKeys, defaultVals)
             Call ReadFile(1, s, ExcludeLists(i), AddressOf ReadExcludedObjectsList, defaultKeys)
@@ -2026,7 +2032,7 @@ Public Class Common
         If IsNothing(MultipliersList) Then Exit Sub
         Dim s() As String
         Dim defaultKeys() As String = New String() {My.Resources.readDefaultFileKeyword}
-        Dim defaultVals() As String = New String() {My.Resources.LootItemChanceMultiplier}
+        Dim defaultVals() As String = New String() {defValues.LootItemChanceMultiplier}
         For i As Integer = 0 To UBound(MultipliersList) Step 1
             s = prepareToFileRead(MultipliersList(i), defaultKeys, defaultVals)
             Call ReadFile(5, s, MultipliersList(i), AddressOf ReadLootItemChanceMultiplier, defaultKeys)
@@ -2049,7 +2055,7 @@ Public Class Common
         If IsNothing(CustomUnitRace) Then Exit Sub
         Dim s() As String
         Dim defaultKeys() As String = New String() {My.Resources.readDefaultFileKeyword}
-        Dim defaultVals() As String = New String() {My.Resources.UnitRace}
+        Dim defaultVals() As String = New String() {defValues.UnitRace}
         For i As Integer = 0 To UBound(CustomUnitRace) Step 1
             s = prepareToFileRead(CustomUnitRace(i), defaultKeys, defaultVals)
             Call ReadFile(2, s, CustomUnitRace(i), AddressOf ReadCustomUnitRace, defaultKeys)
@@ -2072,7 +2078,7 @@ Public Class Common
         If IsNothing(SoleUnitsList) Then Exit Sub
         Dim s() As String
         Dim defaultKeys() As String = New String() {My.Resources.readDefaultFileKeyword}
-        Dim defaultVals() As String = New String() {My.Resources.SingleUnits}
+        Dim defaultVals() As String = New String() {defValues.SingleUnits}
         For i As Integer = 0 To UBound(SoleUnitsList) Step 1
             s = prepareToFileRead(SoleUnitsList(i), defaultKeys, defaultVals)
             Call ReadFile(6, s, SoleUnitsList(i), AddressOf ReadSoleUnits, defaultKeys)
@@ -2095,7 +2101,7 @@ Public Class Common
         If IsNothing(BigStackUnitsList) Then Exit Sub
         Dim s() As String
         Dim defaultKeys() As String = New String() {My.Resources.readDefaultFileKeyword}
-        Dim defaultVals() As String = New String() {My.Resources.BigStackUnits}
+        Dim defaultVals() As String = New String() {defValues.BigStackUnits}
         For i As Integer = 0 To UBound(BigStackUnitsList) Step 1
             s = prepareToFileRead(BigStackUnitsList(i), defaultKeys, defaultVals)
             Call ReadFile(7, s, BigStackUnitsList(i), AddressOf ReadBigStackUnits, defaultKeys)
@@ -2121,7 +2127,7 @@ Public Class Common
         End If
         Dim s() As String
         Dim defaultKeys() As String = New String() {My.Resources.readDefaultFileKeyword}
-        Dim defaultVals() As String = New String() {My.Resources.MapObjectRace}
+        Dim defaultVals() As String = New String() {defValues.MapObjectRace}
         For i As Integer = 0 To UBound(CustomBuildingRace) Step 1
             s = prepareToFileRead(CustomBuildingRace(i), defaultKeys, defaultVals)
             Call ReadFile(3, s, CustomBuildingRace(i), AddressOf ReadCustomBuildingRace, defaultKeys)
@@ -2150,7 +2156,7 @@ Public Class Common
         End If
         Dim s() As String
         Dim defaultKeys() As String = New String() {My.Resources.readDefaultFileKeyword}
-        Dim defaultVals() As String = New String() {My.Resources.PlateauConstructor}
+        Dim defaultVals() As String = New String() {defValues.PlateauConstructor}
         For i As Integer = 0 To UBound(PlateauConstructionDescription) Step 1
             s = prepareToFileRead(PlateauConstructionDescription(i), defaultKeys, defaultVals)
             Call ReadFile(4, s, PlateauConstructionDescription(i), AddressOf ReadPlateauConstructionDescription, defaultKeys)
@@ -2789,7 +2795,14 @@ Public Class GenDefaultValues
     Private WeightMultiplicatorReplaced As String = ""
     Private AddedItemTypeWeightMultiplierArray() As Double = Nothing
 
-    Public Sub New()
+    Private myLog As Log
+    Private myOPwner As Common
+
+
+    Public Sub New(ByRef log As Log)
+
+        myLog = log
+
         ReDim AddedItemTypeWeightMultiplierArray(14)
         AddedItemTypeWeightMultiplierArray(ItemTypes.nonattack_artefact) = 0.65
         AddedItemTypeWeightMultiplierArray(ItemTypes.attack_artefact) = 0.65
@@ -2917,6 +2930,70 @@ Public Class GenDefaultValues
         boots = 13
         special = 14
     End Enum
+
+    'default files
+    Private Function ReadResources(ByRef name As String, ByRef defaultValue As String) As String
+        Dim path As String = ".\Resources\" & name & ".txt"
+        If IO.File.Exists(path) Then
+            If Not IsNothing(myLog) Then
+                Try
+                    myLog.Add("Reading " & name & " from .\Resources\")
+                Catch
+                End Try
+            End If
+            Return IO.File.ReadAllText(path)
+        Else
+            If Not IsNothing(myLog) Then
+                Try
+                    myLog.Add("Couldn't find " & path & " ; Reading " & name & " from internal resources")
+                Catch
+                End Try
+            End If
+            Return defaultValue
+        End If
+    End Function
+    Public Function BigStackUnits() As String
+        Return ReadResources("BigStackUnits", My.Resources.BigStackUnits)
+    End Function
+    Public Function ExcludedIDs() As String
+        Return ReadResources("ExcludeIDs", My.Resources.ExcludeIDs)
+    End Function
+    Public Function ExcludedIDs_ModLore() As String
+        Return ReadResources("ExcludeIDs_ModLore", My.Resources.ExcludeIDs_ModLore)
+    End Function
+    Public Function ExcludedIDs_VanillaLore() As String
+        Return ReadResources("ExcludeIDs_VanillaLore", My.Resources.ExcludeIDs_VanillaLore)
+    End Function
+    Public Function ExcludeIDsForNames() As String
+        Return ReadResources("ExcludeIDsForNames", My.Resources.ExcludeIDsForNames)
+    End Function
+    Public Function Items() As String
+        Return ReadResources("Items", My.Resources.Items)
+    End Function
+    Public Function LootItemChanceMultiplier() As String
+        Return ReadResources("LootItemChanceMultiplier", My.Resources.LootItemChanceMultiplier)
+    End Function
+    Public Function Lords() As String
+        Return ReadResources("Lords", My.Resources.Lords)
+    End Function
+    Public Function MapObjectRace() As String
+        Return ReadResources("MapObjectRace", My.Resources.MapObjectRace)
+    End Function
+    Public Function PlateauConstructor() As String
+        Return ReadResources("PlateauConstructor", My.Resources.PlateauConstructor)
+    End Function
+    Public Function Races() As String
+        Return ReadResources("Races", My.Resources.Races)
+    End Function
+    Public Function SingleUnits() As String
+        Return ReadResources("SingleUnits", My.Resources.SingleUnits)
+    End Function
+    Public Function StackStatsFields() As String
+        Return ReadResources("StackStatsFields", My.Resources.StackStatsFields)
+    End Function
+    Public Function UnitRace() As String
+        Return ReadResources("UnitRace", My.Resources.UnitRace)
+    End Function
 
 End Class
 

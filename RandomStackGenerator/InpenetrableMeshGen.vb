@@ -59,7 +59,7 @@ Public Class ImpenetrableMeshGen
     Public ActiveObjects() As AttendedObject
 
     Public Sub New()
-        minLocationRadiusAtAll = (New GenDefaultValues).minLocationRadiusAtAll
+        minLocationRadiusAtAll = (New GenDefaultValues(Nothing)).minLocationRadiusAtAll
 
         ActiveObjects = New AttendedObject() {Nothing, _
                                               New AttendedObject(5, DefMapObjects.Types.Capital), _
@@ -4623,7 +4623,7 @@ Public Class ImpenetrableObjects
         trainers = objList(5)
         objects = objList(6)
 
-        Dim races() As String = comm.TxtSplit(My.Resources.Races)
+        Dim races() As String = comm.TxtSplit(comm.defValues.Races)
         For Each s As String In races
             Dim splited() As String = s.Split(CChar(" "))
             raceIdToString.Add(CInt(splited(UBound(splited))), splited(1).ToUpper)
@@ -5078,7 +5078,7 @@ Public Class ImpenetrableObjects
         End If
     End Sub
     Private Function RacesManaUsing() As Dictionary(Of Integer, AllDataStructues.Cost())
-        Dim r() As String = comm.TxtSplit(My.Resources.Races)
+        Dim r() As String = comm.TxtSplit(comm.defValues.Races)
         Dim res As New Dictionary(Of Integer, AllDataStructues.Cost())
         For i As Integer = 0 To UBound(r) Step 1
             Dim s() As String = r(i).Split(CChar(" "))
