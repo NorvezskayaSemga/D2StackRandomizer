@@ -107,9 +107,9 @@ Public Class RandStack
                 If Not IsNothing(expKuilled) Then expKuilled(n) = units(n).EXPkilled
                 If Not IsNothing(mult) Then
                     If units(n).small Then
-                        mult(n) = comm.defValues.smallUnitsExpMultiplicator
+                        mult(n) = comm.defValues.smallUnitsExpMultiplier
                     Else
-                        mult(n) = comm.defValues.giantUnitsExpMultiplicator
+                        mult(n) = comm.defValues.giantUnitsExpMultiplier
                     End If
                 End If
             End If
@@ -135,7 +135,7 @@ Public Class RandStack
         ReDim items(n), itemCostSum(n), multiplierItemsWeight(n), excluded(m)
 
         Dim weight As New Dictionary(Of String, String)
-        For Each s As String In comm.defValues.WeightMultiplicator.Split(CChar(";"))
+        For Each s As String In comm.defValues.ItemTypeChanceMultiplier.Split(CChar(";"))
             Dim i As Integer = s.IndexOf("=")
             weight.Add(s.Substring(0, i).ToUpper, s.Substring(i + 1).ToUpper)
         Next s
@@ -480,8 +480,8 @@ Public Class RandStack
             If IDs.Count = 0 Then Exit Do
 
             selected = comm.RandomSelection(IDs, weight, serialExecution)
-            multiplierItemsWeight(selected) *= comm.defValues.AddedItemWeightMultiplier
-            DynTypeWeightMultiplier(MagicItem(selected).type) *= comm.defValues.AddedItemTypeWeightMultiplier(MagicItem(selected).type)
+            multiplierItemsWeight(selected) *= comm.defValues.AddedItemChanceMultiplier
+            DynTypeWeightMultiplier(MagicItem(selected).type) *= comm.defValues.AddedItemTypeChanceMultiplier(MagicItem(selected).type)
 
             Call AddToLog(LogID, "Selected item:" & MagicItem(selected).name & " id:" & MagicItem(selected).itemID & " cost:" & ItemCostSum(selected))
             result.Add(MagicItem(selected).itemID)
@@ -578,7 +578,7 @@ Public Class RandStack
         Next i
         If IDs.Count > 0 Then
             selected = comm.RandomSelection(IDs, New Double()() {ItemCostSum}, New Double() {GoldCost}, DynItemWeightMultiplier, itemGenSigma, serialExecution)
-            multiplierItemsWeight(selected) *= comm.defValues.AddedItemWeightMultiplier
+            multiplierItemsWeight(selected) *= comm.defValues.AddedItemChanceMultiplier
             Call AddToLog(LogID, "Selected item:" & MagicItem(selected).name & " id:" & MagicItem(selected).itemID & " cost:" & ItemCostSum(selected))
             result = MagicItem(selected).itemID
             Call AddToAddedItemList(MagicItem(selected), pos)
@@ -713,8 +713,8 @@ Public Class RandStack
         Next i
         If IsNothing(pos) Then Return DynTypeWeightMultiplier
         Dim w, t As Double
-        Dim d As Integer = 12
-        Dim R2 As Integer = d * d
+        Dim d As Double = comm.defValues.AddedItemTypeSearchRadius
+        Dim R2 As Double = d * d
         Dim invD As Double = 1 / d
         For Each x As Integer In AddedItems.Keys
             If Math.Abs(pos.X - x) <= d Then
@@ -722,7 +722,7 @@ Public Class RandStack
                     If pos.SqDist(x, y) <= R2 Then
                         w = pos.Dist(x, y) * invD
                         For Each item As AllDataStructues.Item In AddedItems.Item(x).Item(y)
-                            t = comm.defValues.AddedItemTypeWeightMultiplier(item.type)
+                            t = comm.defValues.AddedItemTypeChanceMultiplier(item.type)
                             DynTypeWeightMultiplier(item.type) *= t + Math.Max((1 - t) * w, 0)
                         Next item
                     End If
@@ -934,7 +934,7 @@ Public Class RandStack
         For i As Integer = 0 To UBound(CapPos) Step 1
             r = Math.Min(r, pos.SqDist(New Point(CapPos(i).X + halfCapitalSize, CapPos(i).Y + halfCapitalSize)))
         Next i
-        Dim maxR As Double = 12
+        Dim maxR As Double = comm.defValues.weakerUnitsRadius
         If r < maxR * maxR Then
             r = Math.Sqrt(r)
             Return 1 + (inValue - 1) * r / maxR
@@ -1577,21 +1577,16 @@ Public Class Common
 
     Public Sub New()
         Call ReadingLog.Enable()
+
         defValues = New GenDefaultValues(ReadingLog)
-        Dim splitedRace() As String = TxtSplit(defValues.Races)
-        Dim srow() As String
-        For Each item As String In splitedRace
-            srow = item.Split(CChar(" "))
-            For i As Integer = 0 To UBound(srow) Step 1
-                Races.Add(srow(i).ToUpper, CInt(srow(UBound(srow))))
-            Next i
-            RaceNumberToRaceChar.Add(CInt(srow(UBound(srow))), srow(1).ToUpper)
-        Next item
+
+        Call defValues.ParseRaces(Races, RaceNumberToRaceChar)
+
         Dim splitedFields() As String = TxtSplit(defValues.StackStatsFields)
         ReDim StatFields(CInt(splitedFields.Length / 2 - 1))
 
         Dim racesList As String = ""
-        splitedRace = defValues.Races.Replace(Chr(10), Chr(13)).Split(Chr(13))
+        Dim splitedRace() As String = defValues.Races.Replace(Chr(10), Chr(13)).Split(Chr(13))
         For i As Integer = 0 To UBound(splitedRace) Step 1
             If splitedRace(i).Length > 1 AndAlso Not splitedRace(i).Substring(0, 1) = "#" Then
                 racesList &= splitedRace(i) & vbNewLine
@@ -1604,7 +1599,7 @@ Public Class Common
             StatFields(k).description = splitedFields(i)
             StatFields(k).name = splitedFields(i + 1)
             StatFields(k).description = StatFields(k).description.Replace("$jm$", defValues.JewelItemsCostDevider.ToString)
-            StatFields(k).description = StatFields(k).description.Replace("$gm$", defValues.giantUnitsExpMultiplicator.ToString)
+            StatFields(k).description = StatFields(k).description.Replace("$gm$", defValues.giantUnitsExpMultiplier.ToString)
             StatFields(k).description = StatFields(k).description.Replace("$ri$", racesList)
             StatFields(k).description = StatFields(k).description.Replace("$newline$", vbNewLine)
         Next i
@@ -1620,12 +1615,7 @@ Public Class Common
         JewelItemsTypes.AddRange(New Integer() {10})
         ItemTypesLists = {ConsumableItemsTypes, NonconsumableItemsTypes, JewelItemsTypes}
 
-        Dim splitedItemsTypes() As String = TxtSplit(defValues.Items)
-        For i As Integer = 0 To UBound(splitedItemsTypes) Step 1
-            srow = splitedItemsTypes(i).Split(CChar(" "))
-            itemType.Add(CInt(srow(0)), srow(1).ToUpper)
-            itemTypeID.Add(srow(1).ToUpper, CInt(srow(0)))
-        Next i
+        Call defValues.ParseItemTypes(itemTypeID, itemType)
 
     End Sub
 
@@ -1830,37 +1820,13 @@ Public Class Common
     ''' <summary>Разбивает на строки текст по разделителям Chr(10) и Chr(13). Заменяет все табы на пробелы, удаляет повторяющиеся подряд пробелы, удаляет пробелы в начале и конце строки. Не добавляет в выходной массив строки, начинающиеся с #</summary>
     ''' <param name="TXT">Какой-нибудь текст</param>
     Public Function TxtSplit(ByVal TXT As String) As String()
-        Dim splited() As String = TXT.Replace(Chr(10), Chr(13)).Replace(vbTab, " ").Split(Chr(13))
-        Dim parseString(UBound(splited)) As Boolean
-        Dim nStrings As Integer = -1
-        For i As Integer = 0 To UBound(splited) Step 1
-            If splited(i).Length > 1 AndAlso Not splited(i).Substring(0, 1) = "#" Then
-                parseString(i) = True
-                nStrings += 1
-            End If
-        Next i
-        If nStrings = -1 Then Return Nothing
-        Dim result(nStrings) As String
-        nStrings = -1
-        Dim L0 As Integer
-        For i As Integer = 0 To UBound(splited) Step 1
-            If parseString(i) Then
-                L0 = 0
-                Do While Not L0 = splited(i).Length
-                    L0 = splited(i).Length
-                    splited(i) = splited(i).Replace("  ", " ")
-                Loop
-                If Not splited(i) = " " Then
-                    If splited(i).Substring(0, 1) = " " Then splited(i) = splited(i).Substring(1)
-                    If splited(i).Substring(splited(i).Length - 1) = " " Then splited(i) = splited(i).Substring(0, splited(i).Length - 1)
-                    nStrings += 1
-                    result(nStrings) = splited(i)
-                End If
-            End If
-        Next i
-        If nStrings = -1 Then Return Nothing
-        If Not nStrings = UBound(result) Then ReDim Preserve result(nStrings)
-        Return result
+        Return ValueConverter.TxtSplit(TXT)
+    End Function
+    ''' <summary>Разбивает на строки текст по разделителям Chr(10) и Chr(13). Заменяет все табы на пробелы, удаляет повторяющиеся подряд пробелы, удаляет пробелы в начале и конце строки. Не добавляет в выходной массив строки, начинающиеся с #</summary>
+    ''' <param name="TXT">Какой-нибудь текст</param>
+    ''' <param name="transferChar">Если строка заканчивается этой подстрокой, то подстрока удаляется, а текущая строка объединяется со следующей</param>
+    Public Function TxtSplit(ByVal TXT As String, ByRef transferChar As String) As String()
+        Return ValueConverter.TxtSplit(TXT, transferChar)
     End Function
 
     ''' <summary>Dыбирает случайным образом запись из списка</summary>
@@ -2348,7 +2314,7 @@ Public Class AllDataStructues
         ''' Примеры:
         ''' Наемник - g000uu0001 200 700
         ''' Волшебник - g000ss0005 g000ss0006 1RT 2CF (T - может быть глобальным, F - не может. H,L,C,U,E - раса, R - случайная раса)
-        ''' Торговец - g000ig0002 1200 750 attack_artefact sphere#300 6#400
+        ''' Торговец - g000ig0002 1200 750 attack_artifact sphere#300 6#400
         ''' </summary>
         Dim shopContent As List(Of String)
 
@@ -2767,8 +2733,12 @@ End Class
 Friend Class ValueConverter
 
     Friend Shared Function StrToDbl(ByRef s As String) As Double
-        Return CDbl(s.Replace(",", ".").Replace(".", System.Globalization.CultureInfo.CurrentCulture.NumberFormat.NumberDecimalSeparator))
+        Return CDbl(ValueConverter.StrToDblStr(s))
         'Return Convert.ToDouble(s, Globalization.NumberFormatInfo.InvariantInfo)
+    End Function
+
+    Friend Shared Function StrToDblStr(ByRef s As String) As String
+        Return s.Replace(",", ".").Replace(".", System.Globalization.CultureInfo.CurrentCulture.NumberFormat.NumberDecimalSeparator)
     End Function
 
     Friend Shared Function StrToInt(ByRef v As String, ByRef fullLine As String, ByRef fieldName As String) As Integer
@@ -2789,89 +2759,274 @@ Friend Class ValueConverter
         End If
     End Function
 
+    Protected Friend Shared Function TxtSplit(ByRef TXT As String) As String()
+        Dim splited() As String = TXT.Replace(Chr(10), Chr(13)).Replace(vbTab, " ").Split(Chr(13))
+        Dim parseString(UBound(splited)) As Boolean
+        Dim nStrings As Integer = -1
+        For i As Integer = 0 To UBound(splited) Step 1
+            If splited(i).Length > 1 AndAlso Not splited(i).Substring(0, 1) = "#" Then
+                parseString(i) = True
+                nStrings += 1
+            End If
+        Next i
+        If nStrings = -1 Then Return Nothing
+        Dim result(nStrings) As String
+        nStrings = -1
+        Dim L0 As Integer
+        For i As Integer = 0 To UBound(splited) Step 1
+            If parseString(i) Then
+                L0 = 0
+                Do While Not L0 = splited(i).Length
+                    L0 = splited(i).Length
+                    splited(i) = splited(i).Replace("  ", " ")
+                Loop
+                If Not splited(i) = " " Then
+                    If splited(i).Substring(0, 1) = " " Then splited(i) = splited(i).Substring(1)
+                    If splited(i).Substring(splited(i).Length - 1) = " " Then splited(i) = splited(i).Substring(0, splited(i).Length - 1)
+                    nStrings += 1
+                    result(nStrings) = splited(i)
+                End If
+            End If
+        Next i
+        If nStrings = -1 Then Return Nothing
+        If Not nStrings = UBound(result) Then ReDim Preserve result(nStrings)
+        Return result
+    End Function
+    Protected Friend Shared Function TxtSplit(ByRef TXT As String, ByRef transferChar As String) As String()
+        Dim t() As String = ValueConverter.TxtSplit(TXT)
+        Dim result(UBound(t)) As String
+        Dim n As Integer = 0
+        Dim m As Integer
+        Dim newline As Boolean = True
+        For i As Integer = 0 To UBound(t)
+            If newline Then
+                result(n) = t(i)
+                newline = False
+                m = n
+            Else
+                If result(n).EndsWith(transferChar) Then
+                    result(n) = result(n).Substring(0, result(n).Length - transferChar.Length) & t(i)
+                Else
+                    i -= 1
+                    n += 1
+                    newline = True
+                End If
+            End If
+        Next i
+        If m < UBound(result) Then ReDim Preserve result(m)
+        Return result
+    End Function
+
 End Class
 
 Public Class GenDefaultValues
 
-    Private WeightMultiplicatorReplaced As String = ""
-    Private AddedItemTypeWeightMultiplierArray() As Double = Nothing
-
     Private myLog As Log
-    Private myOPwner As Common
 
-
+    ''' <param name="log">Лог для записи отчета, можно nothing</param>
+    ''' <remarks></remarks>
     Public Sub New(ByRef log As Log)
 
         myLog = log
 
-        ReDim AddedItemTypeWeightMultiplierArray(14)
-        AddedItemTypeWeightMultiplierArray(ItemTypes.nonattack_artefact) = 0.65
-        AddedItemTypeWeightMultiplierArray(ItemTypes.attack_artefact) = 0.65
-        AddedItemTypeWeightMultiplierArray(ItemTypes.relic) = 0.5
-        AddedItemTypeWeightMultiplierArray(ItemTypes.banner) = 0.5
-        AddedItemTypeWeightMultiplierArray(ItemTypes.boots) = 0.25
-        AddedItemTypeWeightMultiplierArray(ItemTypes.elixir) = 0.9
-        AddedItemTypeWeightMultiplierArray(ItemTypes.healing_elixir) = 0.85
-        AddedItemTypeWeightMultiplierArray(ItemTypes.ressurection_elixir) = 0.9
-        AddedItemTypeWeightMultiplierArray(ItemTypes.permanent_elixir) = 0.6
-        AddedItemTypeWeightMultiplierArray(ItemTypes.scroll) = 0.8
-        AddedItemTypeWeightMultiplierArray(ItemTypes.stuff) = 0.35
-        AddedItemTypeWeightMultiplierArray(ItemTypes.jewel) = 0.95
-        AddedItemTypeWeightMultiplierArray(ItemTypes.sphere) = 0.85
-        AddedItemTypeWeightMultiplierArray(ItemTypes.talisman) = 0.7
-        AddedItemTypeWeightMultiplierArray(ItemTypes.special) = 1
+        Dim itemTypeID, RaceID As New Dictionary(Of String, Integer)
+        Dim itemTypeName, RaceName As New Dictionary(Of Integer, String)
+        Call ParseItemTypes(itemTypeID, itemTypeName)
+        Call ParseRaces(RaceID, RaceName)
+
+        Dim RConstants As Dictionary(Of String, String) = PropertiesArrayToDictionary(ValueConverter.TxtSplit(Constants(), "/"))
+        Dim DConstants As Dictionary(Of String, String) = PropertiesArrayToDictionary(ValueConverter.TxtSplit(My.Resources.Constants, "/"))
+
+        'common
+        Call SetProperty(defaultSigma, "defaultSigma", RConstants, DConstants)
+
+        'units
+        Call SetProperty(expBarDispersion, "expBarDispersion", RConstants, DConstants)
+        Call SetProperty(giantUnitsExpMultiplier, "giantUnitsExpMultiplier", RConstants, DConstants)
+        Call SetProperty(smallUnitsExpMultiplier, "smallUnitsExpMultiplier", RConstants, DConstants)
+        Call SetProperty(weakerUnitsRadius, "weakerUnitsRadius", RConstants, DConstants)
+
+        'loot
+        Call SetProperty(ItemTypeChanceMultiplier, "ItemTypeChanceMultiplier", RConstants, DConstants)
+        Call SetProperty(JewelItemsCostDevider, "JewelItemsCostDevider", RConstants, DConstants)
+        Call SetProperty(NonJewelItemsCostDevider, "NonJewelItemsCostDevider", RConstants, DConstants)
+        Call SetProperty(LootCostDispersion, "LootCostDispersion", RConstants, DConstants)
+        Call SetProperty(AddedItemChanceMultiplier, "AddedItemChanceMultiplier", RConstants, DConstants)
+        Call SetProperty(AddedItemTypeChanceMultiplier, "AddedItemTypeChanceMultiplier", RConstants, DConstants, itemTypeID, False)
+        Call SetProperty(AddedItemTypeSearchRadius, "AddedItemTypeSearchRadius", RConstants, DConstants)
+
+        'map
+        Call SetProperty(minLocationRadiusAtAll, "minLocationRadiusAtAll", RConstants, DConstants)
+
+        Dim commonRacesBlock As String = ""
+        Call SetProperty(commonRacesBlock, "commonRacesBlock", RConstants, DConstants)
+        Call SetProperty(LocRacesBlocks, "LocRacesBlocks", RConstants, DConstants)
+        Call SetProperty(StackRaceChance, "StackRaceChance", RConstants, DConstants, RaceID, True)
+
+        For i As Integer = 0 To UBound(LocRacesBlocks) Step 1
+            If Not LocRacesBlocks(i).EndsWith(":") Then LocRacesBlocks(i) &= ","
+            LocRacesBlocks(i) = (LocRacesBlocks(i) & commonRacesBlock).Replace("*", ",")
+        Next i
+
+        If Not IsNothing(log) AndAlso log.IsEnabled Then
+
+            Dim spaces As String = "       "
+
+            Dim AddedItemTypeChanceMultiplierStr As String = ""
+            For Each i As Integer In itemTypeName.Keys
+                AddedItemTypeChanceMultiplierStr &= vbNewLine & spaces & _
+                  itemTypeName.Item(i) & " = " & AddedItemTypeChanceMultiplier(i)
+            Next i
+            Dim StackRaceChanceStr As String = ""
+            For Each i As Integer In RaceName.Keys
+                StackRaceChanceStr &= vbNewLine & spaces & _
+                  RaceName.Item(i) & " (" & i & ") = " & StackRaceChance(i)
+            Next i
+
+            'common
+            log.Add("defaultSigma = " & defaultSigma)
+
+            'units                                                
+            log.Add("expBarDispersion = " & expBarDispersion)
+            log.Add("giantUnitsExpMultiplier = " & giantUnitsExpMultiplier)
+            log.Add("smallUnitsExpMultiplier = " & smallUnitsExpMultiplier)
+            log.Add("weakerUnitsRadius = " & weakerUnitsRadius)
+
+            'loot                                                 
+            log.Add("ItemTypeChanceMultiplier = " & vbNewLine & String.Join(vbNewLine & spaces, ItemTypeChanceMultiplier.Split(CChar(";"))))
+            log.Add("JewelItemsCostDevider = " & JewelItemsCostDevider)
+            log.Add("NonJewelItemsCostDevider = " & NonJewelItemsCostDevider)
+            log.Add("LootCostDispersion = " & LootCostDispersion)
+            log.Add("AddedItemChanceMultiplier = " & AddedItemChanceMultiplier)
+            log.Add("AddedItemTypeChanceMultiplier = " & AddedItemTypeChanceMultiplierStr)
+            log.Add("AddedItemTypeSearchRadius = " & AddedItemTypeSearchRadius)
+
+            'map                                                  
+            log.Add("minLocationRadiusAtAll = " & minLocationRadiusAtAll)
+            log.Add("LocRacesBlocks = " & vbNewLine & spaces & String.Join(vbNewLine & spaces, LocRacesBlocks))
+            log.Add("StackRaceChance = " & StackRaceChanceStr)
+
+        End If
+
+    End Sub
+    Private Function ChangeToSynonymicNames(ByRef input As Dictionary(Of String, String), _
+                                            ByRef synonyms As Dictionary(Of String, Integer)) As Dictionary(Of String, String)
+        Dim res As New Dictionary(Of String, String)
+        For Each key As String In input.Keys
+            Dim s As String = synonyms.Item(key).ToString.ToUpper
+            If res.ContainsKey(s) Then res.Remove(s)
+            res.Add(s, input.Item(key))
+        Next key
+        Return res
+    End Function
+    Private Function PropertiesArrayToDictionary(ByRef input() As String) As Dictionary(Of String, String)
+        Dim res As New Dictionary(Of String, String)
+        For Each line As String In input
+            Dim s() As String = line.Split(CChar(" "))
+            If s.Length = 2 Then res.Add(s(0).ToUpper, s(1))
+        Next line
+        Return res
+    End Function
+    Private Function GetProperty(ByRef name As String, ByRef readValues As Dictionary(Of String, String), _
+                                 ByRef defaultValues As Dictionary(Of String, String)) As String
+        name = name.ToUpper
+        If readValues.ContainsKey(name) Then
+            Return readValues.Item(name)
+        ElseIf defaultValues.ContainsKey(name) Then
+            Return defaultValues.Item(name)
+        Else
+            Throw New Exception("Unexpected property name " & name)
+        End If
+    End Function
+    Private Sub SetProperty(ByRef output As Double, ByRef name As String, ByRef readValues As Dictionary(Of String, String), ByRef defaultValues As Dictionary(Of String, String))
+        output = ValueConverter.StrToDbl(GetProperty(name, readValues, defaultValues))
+    End Sub
+    Private Sub SetProperty(ByRef output() As Double, ByRef name As String, ByRef readValues As Dictionary(Of String, String), _
+                            ByRef defaultValues As Dictionary(Of String, String), ByRef nameToID As Dictionary(Of String, Integer), _
+                            ByRef HasSynonyms As Boolean)
+        Dim r As Dictionary(Of String, String) = PropertiesArrayToDictionary(GetProperty(name, readValues, defaultValues).ToUpper.Replace("=", " ").Split(CChar(";")))
+        Dim d As Dictionary(Of String, String) = PropertiesArrayToDictionary(GetProperty(name, defaultValues, readValues).ToUpper.Replace("=", " ").Split(CChar(";")))
+
+        Dim nonsynomical As Dictionary(Of String, Integer)
+
+        If HasSynonyms Then
+            nonsynomical = New Dictionary(Of String, Integer)
+            For Each v As Integer In nameToID.Values
+                If Not nonsynomical.ContainsKey(v.ToString) Then nonsynomical.Add(v.ToString, v)
+            Next v
+            r = ChangeToSynonymicNames(r, nameToID)
+            d = ChangeToSynonymicNames(d, nameToID)
+        Else
+            nonsynomical = nameToID
+        End If
+
+        ReDim output(nonsynomical.Values.Max)
+        For Each key As String In nonsynomical.Keys
+            Dim v As Double = ValueConverter.StrToDbl(GetProperty(key, r, d))
+            output(nonsynomical.Item(key)) = v
+        Next key
+
+        If HasSynonyms Then
+            For i As Integer = 0 To UBound(output) Step 1
+                If output(i) = 0 AndAlso nameToID.ContainsKey(i.ToString) Then
+                    Dim source As Integer = CInt(nameToID.Item(i.ToString))
+                    output(i) = output(source)
+                End If
+            Next i
+        End If
+    End Sub
+    Private Sub SetProperty(ByRef output As String, ByRef name As String, ByRef readValues As Dictionary(Of String, String), ByRef defaultValues As Dictionary(Of String, String))
+        output = ValueConverter.StrToDblStr(GetProperty(name, readValues, defaultValues))
+    End Sub
+    Private Sub SetProperty(ByRef output() As String, ByRef name As String, ByRef readValues As Dictionary(Of String, String), ByRef defaultValues As Dictionary(Of String, String))
+        output = GetProperty(name, readValues, defaultValues).ToUpper.Split(CChar(";"))
     End Sub
 
-    Public Function defaultSigma() As Double
-        Return 0.1
-    End Function
+    Protected Friend Sub ParseRaces(ByRef outRaces As Dictionary(Of String, Integer), _
+                                    ByRef outRaceNumberToRaceChar As Dictionary(Of Integer, String))
+        Dim splitedRace() As String = ValueConverter.TxtSplit(Races)
+        Dim srow() As String
+        For Each item As String In splitedRace
+            srow = item.Split(CChar(" "))
+            For i As Integer = 0 To UBound(srow) Step 1
+                If Not IsNothing(outRaces) Then outRaces.Add(srow(i).ToUpper, CInt(srow(UBound(srow))))
+            Next i
+            If Not IsNothing(outRaceNumberToRaceChar) Then outRaceNumberToRaceChar.Add(CInt(srow(UBound(srow))), srow(1).ToUpper)
+        Next item
+    End Sub
+    Protected Friend Sub ParseItemTypes(ByRef outitemTypeID As Dictionary(Of String, Integer), _
+                                        ByRef outitemType As Dictionary(Of Integer, String))
+        Dim splitedItemsTypes() As String = ValueConverter.TxtSplit(Items)
+        Dim srow() As String
+        For i As Integer = 0 To UBound(splitedItemsTypes) Step 1
+            srow = splitedItemsTypes(i).Split(CChar(" "))
+            If Not IsNothing(outitemType) Then outitemType.Add(CInt(srow(0)), srow(1).ToUpper)
+            If Not IsNothing(outitemTypeID) Then outitemTypeID.Add(srow(1).ToUpper, CInt(srow(0)))
+        Next i
+    End Sub
+
+    'common
+    Public Property defaultSigma As Double
 
     'units
-    Public Function expBarDispersion() As Double
-        Return 1.3
-    End Function
-    Public Function giantUnitsExpMultiplicator() As Double
-        Return 2
-    End Function
-    Public Function smallUnitsExpMultiplicator() As Double
-        Return 1
-    End Function
+    Public Property expBarDispersion As Double
+    Public Property giantUnitsExpMultiplier As Double
+    Public Property smallUnitsExpMultiplier As Double
+    Public Property weakerUnitsRadius As Double
 
     'loot
-    Public Function WeightMultiplicator() As String
-        If WeightMultiplicatorReplaced = "" Then
-            WeightMultiplicatorReplaced = "talisman=0.1;" & _
-                                          "scroll=0.15;" & _
-                                          "sphere=0.5;" & _
-                                          "stuff=0.25;" & _
-                                          "healing_elixir=3#cost>100else1;" & _
-                                          "ressurection_elixir=3;" & _
-                                          "permanent_elixir=0.6;" & _
-                                          "elixir=0.75#cost>400else1.25"
-            WeightMultiplicatorReplaced = WeightMultiplicatorReplaced.Replace(",", ".").Replace(".", System.Globalization.CultureInfo.CurrentCulture.NumberFormat.NumberDecimalSeparator)
-        End If
-        Return WeightMultiplicatorReplaced
-    End Function
-    Public Function JewelItemsCostDevider() As Double
-        Return 2
-    End Function
-    Public Function NonJewelItemsCostDevider() As Double
-        Return 1
-    End Function
-    Public Function LootCostDispersion() As Double
-        Return 2
-    End Function
-    Public Function AddedItemWeightMultiplier() As Double
-        Return 0.8
-    End Function
-    Public Function AddedItemTypeWeightMultiplier(ByRef ItemType As Integer) As Double
-        Return AddedItemTypeWeightMultiplierArray(ItemType)
-    End Function
+    Public Property ItemTypeChanceMultiplier As String
+    Public Property JewelItemsCostDevider As Double
+    Public Property NonJewelItemsCostDevider As Double
+    Public Property LootCostDispersion As Double
+    Public Property AddedItemChanceMultiplier As Double
+    Public Property AddedItemTypeChanceMultiplier As Double()
+    Public Property AddedItemTypeSearchRadius As Double
 
     'map
-    Public Function minLocationRadiusAtAll() As Double
-        Return 7
-    End Function
+    Public Property minLocationRadiusAtAll As Double
+    Public Property LocRacesBlocks As String()
+    Public Property StackRaceChance As Double()
 
     'ключевые слова
     Public Function wMineTypeGold() As String
@@ -2915,9 +3070,9 @@ Public Class GenDefaultValues
     End Function
 
     Public Enum ItemTypes As Integer
-        nonattack_artefact = 0
+        nonattack_artifact = 0
         relic = 1
-        attack_artefact = 2
+        attack_artifact = 2
         banner = 3
         elixir = 4
         healing_elixir = 5
@@ -2938,8 +3093,9 @@ Public Class GenDefaultValues
         If IO.File.Exists(path) Then
             If Not IsNothing(myLog) Then
                 Try
-                    myLog.Add("Reading " & name & " from .\Resources\")
-                Catch
+                    myLog.Add("Reading " & name & " from " & path)
+                Catch ex As Exception
+                    Console.WriteLine("Reading " & name & "; external; " & ex.Message)
                 End Try
             End If
             Return IO.File.ReadAllText(path)
@@ -2947,7 +3103,8 @@ Public Class GenDefaultValues
             If Not IsNothing(myLog) Then
                 Try
                     myLog.Add("Couldn't find " & path & " ; Reading " & name & " from internal resources")
-                Catch
+                Catch ex As Exception
+                    Console.WriteLine("Reading " & name & "; internal; " & ex.Message)
                 End Try
             End If
             Return defaultValue
@@ -2955,6 +3112,9 @@ Public Class GenDefaultValues
     End Function
     Public Function BigStackUnits() As String
         Return ReadResources("BigStackUnits", My.Resources.BigStackUnits)
+    End Function
+    Public Function Constants() As String
+        Return ReadResources("Constants", My.Resources.Constants)
     End Function
     Public Function ExcludedIDs() As String
         Return ReadResources("ExcludeIDs", My.Resources.ExcludeIDs)

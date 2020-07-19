@@ -68,36 +68,63 @@ Namespace My.Resources
         '''g000uu8144	3
         '''g000uu8044	3
         '''
+        '''#ведьма
+        '''g000uu0067	2
+        '''#колдунья
+        '''g000uu0068	3
+        '''#суккуб
+        '''g000uu0173	4
+        '''#инкуб
+        '''g000uu0065	4
+        '''#якшини
+        '''g000uu8156	4
+        '''g000uu7532	4
+        '''#привидение
+        '''g000uu0078	2
+        '''#призрак
+        '''g000uu0079	2
+        '''g000uu5279	2
+        '''#эльф-призрак
+        '''g000uu8267	3
+        '''g001uu8267	3
+        '''#тень
+        '''g000uu0174	3
         '''
         '''#волхв
-        '''g000uu8218 g000uu8222
+        '''g000uu8218	4
+        '''g000uu8222	4
+        '''#травница
+        '''g000uu0033	2
+        '''#посвященная
+        '''g000uu0034	3
         '''#друид
-        '''g000uu0035
-        '''#архидруид
-        '''
-        '''#исса
-        '''
-        '''#хэйсса
-        '''
-        '''#ламия  g000uu0160 g000uu7558 g000uu7559 g000uu2022
-        '''
-        '''#верховный некромант
-        '''g000uu8219 g000uu8223
-        '''#длань мортис мумификатор
-        '''g000uu2008 g000uu2007 g000uu7528
-        '''#проповедник
-        '''g000uu2021
-        '''#элементаль воды
-        '''g000uu7536 g002uu5026
-        '''#йети
-        '''g000uu0043
-        '''#снежный волк
-        '''g000uu8296 g004uu5039
-        '''#ка [rest of string was truncated]&quot;;.
+        '''g000uu0035	3
+        '''#ар [rest of string was truncated]&quot;;.
         '''</summary>
         Friend ReadOnly Property BigStackUnits() As String
             Get
                 Return ResourceManager.GetString("BigStackUnits", resourceCulture)
+            End Get
+        End Property
+        
+        '''<summary>
+        '''  Looks up a localized string similar to #строка, начинающаяся с решетки, игнорируется
+        '''#файл, определяющий константы, используемые генератором
+        '''#Параметр, значение, разделитель таб или пробел
+        '''
+        '''#Множитель для Сигмы в распределении Гаусса. Сигма=Множитель*Желаемое_значение
+        '''defaultSigma				0.1
+        '''
+        '''#В заданном радиусе от столицы уменьшается множитель силы юнитов и стоимости лута, задаваемый в регенерторе
+        '''#в зависимости от расстояния до столицы (R)
+        '''1+(YourMultiplier-1)*R/weakerUnitsRadius
+        '''weakerUnitsRadius			12
+        '''
+        '''#При создании случайной карты ба [rest of string was truncated]&quot;;.
+        '''</summary>
+        Friend ReadOnly Property Constants() As String
+            Get
+                Return ResourceManager.GetString("Constants", resourceCulture)
             End Get
         End Property
         
@@ -265,9 +292,9 @@ Namespace My.Resources
         '''<summary>
         '''  Looks up a localized string similar to #строка, начинающаяся с решетки, игнорируется
         '''#Идентификаторы типов предметов.
-        '''0	nonattack_artefact
+        '''0	nonattack_artifact
         '''1	relic
-        '''2	attack_artefact
+        '''2	attack_artifact
         '''3	banner
         '''4	elixir
         '''5	healing_elixir
@@ -291,12 +318,14 @@ Namespace My.Resources
         '''<summary>
         '''  Looks up a localized string similar to #строка, начинающаяся с решетки, игнорируется
         '''#Идентификаторы предметов и множители шанса появления предмета.
-        '''#Сфера помрачения
-        '''G001IG0176	0.2
-        '''#Сфера последнего часа
-        '''G001IG0177	0.2
-        '''#Сфера пепла
-        '''G001IG0178	0.2
+        '''#эльфийские сапоги
+        '''G000IG1010	0.33
+        '''#мешочек трав
+        '''G001IG0180	0.2
+        '''#талисман скваера
+        '''G000IG9101	0.2
+        '''#клыкастая связка
+        '''G001IG0082	0.1
         '''.
         '''</summary>
         Friend ReadOnly Property LootItemChanceMultiplier() As String
@@ -541,8 +570,8 @@ Namespace My.Resources
         '''  Looks up a localized string similar to #строка, начинающаяся с решетки, игнорируется
         '''#ID юнитов, которых в отряде должно быть по одному.
         '''#В каждой строке список юнитов, которые не должны появляться в одном отряде
-        '''#волхв друид архидруид исса хэйсса ламия
-        '''g000uu8218 g000uu8222 g000uu0035 g000uu0160 g000uu7558 g000uu7559 g000uu2022
+        '''#волхв травница посвященная друид архидруид исса хэйсса ламия
+        '''g000uu8218 g000uu8222 g000uu0033 g000uu0034 g000uu0035 g000uu0160 g000uu7558 g000uu7559 g000uu2022
         '''#верховный некромант
         '''g000uu8219 g000uu8223
         '''#длань мортис мумификатор
@@ -550,11 +579,7 @@ Namespace My.Resources
         '''#проповедник
         '''g000uu2021
         '''#элементаль воды
-        '''g000uu7536 g002uu5026
-        '''#йети
-        '''g000uu0043
-        '''#снежный волк
-        '''g000uu82 [rest of string was truncated]&quot;;.
+        '''g000uu7536 g002uu5026        ''' [rest of string was truncated]&quot;;.
         '''</summary>
         Friend ReadOnly Property SingleUnits() As String
             Get

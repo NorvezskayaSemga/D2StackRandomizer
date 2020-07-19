@@ -1,8 +1,8 @@
 #строка, начинающаяся с решетки, игнорируется
 #Идентификаторы типов предметов.
-0	nonattack_artefact
+0	nonattack_artifact
 1	relic
-2	attack_artefact
+2	attack_artifact
 3	banner
 4	elixir
 5	healing_elixir

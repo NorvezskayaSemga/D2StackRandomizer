@@ -335,60 +335,43 @@ End Class
 
 Public Class RaceGen
 
-    'Humans			    H	6	1
-    'Undead			    U	2
-    'Legions			L	3
-    'Clans			    C	K	4
-    'Elves			    E	7	14
-    'Neutral			N	5
-    'Greenskins		    G	O	8
-    'Dragons			D	9
-    'Swamp			    S	10
-    'Water			    W	11
-    'Barbarians		    B	12
-    'Animals			A	13
-    'AnimalSpider	    AS	15
-    'AnimalSnowTerr 	AST	16
-    'AnimalWolf		    AW	18
-    'AnimalGriffin	    AG	19
-
     Dim comm As New Common
     Dim rndgen As New RndValueGen
     Dim symm As New SymmetryOperations
 
-    Private commonBlock As String = "D," & "W," & "A,AS,AW,A+AW+AG"
-    'Private commonBlock As String = "D,D+A+AW+AG," & "W," & "A,AS,AW,A+AW+AG"
-
-    Private LocRaces() As String = New String() {"H:2:H,H+AW," & commonBlock, _
-                                                 "U:2:U,U+AS," & commonBlock, _
-                                                 "L:2:L," & commonBlock, _
-                                                 "C:2:C,C+AST,AST,AST+AW," & commonBlock, _
-                                                 "E:2:E,E+A+AW+AG,E+AG," & commonBlock, _
-                                                 "N:3:N,G,B,G+AW+AS,B+AW," & commonBlock, _
-                                                 "S:1:S,S+A,S+AS," & commonBlock}
-    Dim StackRaceWeight() As Double = New Double() {0, 1, 1, 1, 1, 0.75, 1, 1, 2, 0.05, 1, 1, 1, 1, 1, 1, 0.75, 0, 1, 1}
-    '                                               -, H, U, L, C,    N, H, E, G,    D, S, W, B, A, E,AS,  AST, -. AW,AG 
+    'Private commonBlock As String = "D," & "W," & "A,AS,AW,A+AW+AG"
+    ''Private commonBlock As String = "D,D+A+AW+AG," & "W," & "A,AS,AW,A+AW+AG"
+    '
+    'Private LocRaces() As String = New String() {"H:2:H,H+AW," & commonBlock, _
+    '                                             "U:2:U,U+AS," & commonBlock, _
+    '                                             "L:2:L," & commonBlock, _
+    '                                             "C:2:C,C+AST,AST,AST+AW," & commonBlock, _
+    '                                             "E:2:E,E+A+AW+AG,E+AG," & commonBlock, _
+    '                                             "N:3:N,G,B,G+AW+AS,B+AW," & commonBlock, _
+    '                                             "S:1:S,S+A,S+AS," & commonBlock}
+    'Dim StackRaceWeight() As Double = New Double() {0, 1, 1, 1, 1, 0.75, 1, 1, 2, 0.05, 1, 1, 1, 1, 1, 1, 0.75, 0, 1, 1}
+    ''                                               -, H, U, L, C,    N, H, E, G,    D, S, W, B, A, E,AS,  AST, -. AW,AG 
     Dim LRaces() As Integer
     Dim LRacesWeight(), SRacesWeight()() As Double
     Dim SRaces()()() As Integer
     Dim neutralI As Integer = -1
 
     Public Sub New()
-        ReDim LRaces(UBound(LocRaces)), LRacesWeight(UBound(LocRaces))
+        ReDim LRaces(UBound(comm.defValues.LocRacesBlocks)), LRacesWeight(UBound(comm.defValues.LocRacesBlocks))
         Dim m As Integer = 0
         Dim tmpRaceWeight As New Dictionary(Of String, Double)
-        For i As Integer = 0 To UBound(LocRaces) Step 1
-            Dim ch As String = LocRaces(i).Split(CChar(":"))(0)
+        For i As Integer = 0 To UBound(comm.defValues.LocRacesBlocks) Step 1
+            Dim ch As String = comm.defValues.LocRacesBlocks(i).Split(CChar(":"))(0)
             LRaces(i) = comm.RaceIdentifierToSubrace(ch)
             m = Math.Max(m, LRaces(i))
             If ch.ToUpper = "N" Then neutralI = i
         Next i
-        For i As Integer = 0 To UBound(LocRaces) Step 1
-            LRacesWeight(i) = comm.RaceIdentifierToSubrace(LocRaces(i).Split(CChar(":"))(1))
+        For i As Integer = 0 To UBound(comm.defValues.LocRacesBlocks) Step 1
+            LRacesWeight(i) = comm.RaceIdentifierToSubrace(comm.defValues.LocRacesBlocks(i).Split(CChar(":"))(1))
         Next i
         ReDim SRaces(m), SRacesWeight(m)
-        For i As Integer = 0 To UBound(LocRaces) Step 1
-            Dim races() As String = LocRaces(i).Split(CChar(":"))(2).Split(CChar(","))
+        For i As Integer = 0 To UBound(comm.defValues.LocRacesBlocks) Step 1
+            Dim races() As String = comm.defValues.LocRacesBlocks(i).Split(CChar(":"))(2).Split(CChar(","))
             ReDim SRaces(LRaces(i))(UBound(races)), SRacesWeight(LRaces(i))(UBound(races))
             For j As Integer = 0 To UBound(races) Step 1
                 Dim s() As String = races(j).Split(CChar("+"))
@@ -396,8 +379,8 @@ Public Class RaceGen
                 For k As Integer = 0 To UBound(s) Step 1
                     Dim rI As Integer = comm.RaceIdentifierToSubrace(s(k))
                     SRaces(LRaces(i))(j)(k) = rI
-                    SRacesWeight(LRaces(i))(j) += StackRaceWeight(rI)
-                    If Not tmpRaceWeight.ContainsKey(s(k).ToUpper) Then tmpRaceWeight.Add(s(k).ToUpper, StackRaceWeight(rI))
+                    SRacesWeight(LRaces(i))(j) += comm.defValues.StackRaceChance(rI)
+                    If Not tmpRaceWeight.ContainsKey(s(k).ToUpper) Then tmpRaceWeight.Add(s(k).ToUpper, comm.defValues.StackRaceChance(rI))
                 Next k
                 SRacesWeight(LRaces(i))(j) /= SRaces(LRaces(i))(j).Length
                 Array.Sort(SRaces(LRaces(i))(j))
