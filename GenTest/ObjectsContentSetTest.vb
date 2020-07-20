@@ -238,6 +238,7 @@ Public Class ObjectsContentSetTest
         Dim rStack As New RandStack(rndtest.UnitsList, rndtest.ItemsList, rndtest.excludeList, rndtest.customLootChanceList, _
                                     rndtest.customRaceList, rndtest.soleUnitsList, rndtest.bigStackUnitsList)
 
+
         Dim target As New ObjectsContentSet(rStack, rndtest.AllSpells)
         Dim ok As Boolean = True
 
@@ -254,13 +255,13 @@ Public Class ObjectsContentSetTest
         Dim mode() As Integer = {3, 4}
 
         input.Clear()
-        For Each unit As AllDataStructues.Unit In rStack.AllFighters
+        For Each unit As AllDataStructues.Unit In rStack.AllUnits
             input.Add(unit.unitID)
         Next unit
         Dim s As List(Of String) = target.GetMercenariesListSettings(-1, input)
         Call target.MakeMercenariesList(New AllDataStructues.DesiredStats With {.shopContent = s}, log)
         input.Clear()
-        For Each item As AllDataStructues.Item In rStack.MagicItem
+        For Each item As AllDataStructues.Item In rStack.AllItems
             input.Add(item.itemID)
         Next item
         s = target.GetMerchantListSettings(-1, input)
@@ -275,15 +276,19 @@ Public Class ObjectsContentSetTest
 
         For i As Integer = 0 To 1 Step 1
             For Each m As Integer In mode
-                For Each unit As AllDataStructues.Unit In rStack.AllFighters
+                For Each unit As AllDataStructues.Unit In rStack.AllUnits
                     Dim r As List(Of String) = target.GetMercenariesListSettings(m, {unit.unitID})
-                    Dim result As String = target.MakeMercenariesList(New AllDataStructues.DesiredStats With {.shopContent = r}, log).Item(0)
+                    Dim L As List(Of String) = target.MakeMercenariesList(New AllDataStructues.DesiredStats With {.shopContent = r}, log)
+                    Dim result As String = l.Item(0)
                     If Not unit.race = rStack.FindUnitStats(result).race Then ok = False
                 Next unit
-                For Each item As AllDataStructues.Item In rStack.MagicItem
-                    Dim r As List(Of String) = target.GetMerchantListSettings(m, {item.itemID})
-                    Dim result As String = target.MakeMerchantItemsList(New AllDataStructues.DesiredStats With {.shopContent = r}, Nothing, log).Item(0)
-                    If Not item.type = rStack.FindItemStats(result).type Then ok = False
+                For Each item As AllDataStructues.Item In rStack.AllItems
+                    If item.itemCost.Gold > 0 Then
+                        Dim r As List(Of String) = target.GetMerchantListSettings(m, {item.itemID})
+                        Dim L As List(Of String) = target.MakeMerchantItemsList(New AllDataStructues.DesiredStats With {.shopContent = r}, Nothing, log)
+                        Dim result As String = L.Item(0)
+                        If Not item.type = rStack.FindItemStats(result).type Then ok = False
+                    End If
                 Next item
                 For Each spell As AllDataStructues.Spell In rndtest.AllSpells
                     Dim r As List(Of String) = target.GetSpellsListSettings(m, {spell.spellID})

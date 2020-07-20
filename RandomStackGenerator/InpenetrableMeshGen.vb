@@ -5971,20 +5971,22 @@ Public Class ObjectsContentSet
             If IsNumeric(v) Then
                 Dim bar As Integer = CInt(v)
                 Dim selected As Integer = SelectMercenary(bar, -1, res)
-                If selected > -1 Then res.Add(randStack.AllFighters(selected).unitID)
+                If selected > -1 Then res.Add(randStack.AllUnits(selected).unitID)
                 If log.IsEnabled Then txt &= msgToLog(selected)
             ElseIf randStack.comm.RaceIdentifierToSubrace(v, False) > -1 Then
                 selection.Clear()
                 Dim selected As Integer = -1
                 Dim race As Integer = randStack.comm.RaceIdentifierToSubrace(v)
-                For u As Integer = 0 To UBound(randStack.AllFighters) Step 1
-                    If Not res.Contains(randStack.AllFighters(u).unitID) Then
-                        If race = randStack.AllFighters(u).race Then selection.Add(u)
+                For u As Integer = 0 To UBound(randStack.AllUnits) Step 1
+                    If randStack.comm.IsAppropriateFighter(randStack.AllUnits(u)) Then
+                        If Not res.Contains(randStack.AllUnits(u).unitID) Then
+                            If race = randStack.AllUnits(u).race Then selection.Add(u)
+                        End If
                     End If
                 Next u
                 If selection.Count > 0 Then
                     selected = selection.Item(randStack.comm.rndgen.RndPos(selection.Count, True) - 1)
-                    res.Add(randStack.AllFighters(selected).unitID)
+                    res.Add(randStack.AllUnits(selected).unitID)
                 End If
                 If log.IsEnabled Then txt &= msgToLog(selected)
             ElseIf v.Contains("#") Then
@@ -5997,7 +5999,7 @@ Public Class ObjectsContentSet
                 End If
                 Dim bar As Integer = CInt(s(1))
                 Dim selected As Integer = SelectMercenary(bar, race, res)
-                If selected > -1 Then res.Add(randStack.AllFighters(selected).unitID)
+                If selected > -1 Then res.Add(randStack.AllUnits(selected).unitID)
                 If log.IsEnabled Then txt &= msgToLog(selected)
             Else
                 If Not res.Contains(v.ToUpper) Then
@@ -6016,7 +6018,7 @@ Public Class ObjectsContentSet
     End Function
     Private Function msgToLog(ByRef unitID As Integer) As String
         If unitID > 0 Then
-            Dim unit As AllDataStructues.Unit = randStack.AllFighters(unitID)
+            Dim unit As AllDataStructues.Unit = randStack.AllUnits(unitID)
             Dim txt As String = unit.unitID & " - " & unit.name & " - " & randStack.comm.RaceNumberToRaceChar(unit.race) & " - " & unit.EXPnext
             If unit.small Then
                 txt &= " (small)"
@@ -6039,18 +6041,20 @@ Public Class ObjectsContentSet
 
         Do While (selection.Count = 0 Or oneMore) And tolerance <= 10000
             tolerance += dtolerance
-            For u As Integer = 0 To UBound(randStack.AllFighters) Step 1
-                If Not added.Contains(randStack.AllFighters(u).unitID) Then
-                    add = False
-                    If randStack.AllFighters(u).small Then
-                        If Math.Abs(randStack.AllFighters(u).EXPnext - bar) <= tolerance Then add = True
-                    Else
-                        If Math.Abs(randStack.AllFighters(u).EXPnext - 2 * bar) <= 2 * tolerance Then add = True
+            For u As Integer = 0 To UBound(randStack.AllUnits) Step 1
+                If randStack.comm.IsAppropriateFighter(randStack.AllUnits(u)) Then
+                    If Not added.Contains(randStack.AllUnits(u).unitID) Then
+                        add = False
+                        If randStack.AllUnits(u).small Then
+                            If Math.Abs(randStack.AllUnits(u).EXPnext - bar) <= tolerance Then add = True
+                        Else
+                            If Math.Abs(randStack.AllUnits(u).EXPnext - 2 * bar) <= 2 * tolerance Then add = True
+                        End If
+                        If add And race > -1 Then
+                            If Not race = randStack.AllUnits(u).race Then add = False
+                        End If
+                        If add Then selection.Add(u)
                     End If
-                    If add And race > -1 Then
-                        If Not race = randStack.AllFighters(u).race Then add = False
-                    End If
-                    If add Then selection.Add(u)
                 End If
             Next u
             If selection.Count > 0 Then oneMore = Not oneMore
@@ -6086,24 +6090,30 @@ Public Class ObjectsContentSet
             If IsNumeric(v) Then
                 Dim bar As Integer = CInt(v)
                 itemID = SelectItem(bar, -1, dCost, d, res.Count, TypeCostRestriction)
-                If itemID > -1 Then res.Add(randStack.MagicItem(itemID).itemID)
+                If itemID > -1 Then res.Add(randStack.AllItems(itemID).itemID)
                 If Log.IsEnabled Then txt &= msgToLog(itemID, dCost, True)
             ElseIf randStack.comm.itemTypeID.ContainsKey(v.ToUpper) Then
                 selection.Clear()
                 Dim type As Integer = randStack.comm.itemTypeID.Item(v.ToUpper)
-                For u As Integer = 0 To UBound(randStack.MagicItem) Step 1
-                    'If Not excludedItemType.Contains(type) Then
-                    If type = randStack.MagicItem(u).type AndAlso randStack.ItemFilter(d.IGen, randStack.MagicItem(u)) Then
-                        If randStack.ItemFilter(TypeCostRestriction, randStack.MagicItem(u)) Then
-                            selection.Add(u)
+                For u As Integer = 0 To UBound(randStack.AllItems) Step 1
+                    If randStack.comm.IsAppropriateItem(randStack.AllItems(u)) Then
+                        If randStack.AllItems(u).itemCost.Gold > 0 AndAlso randStack.LootCost(randStack.AllItems(u)).Gold = randStack.AllItems(u).itemCostSum Then
+                            If type = randStack.AllItems(u).type AndAlso randStack.ItemFilter(d.IGen, randStack.AllItems(u)) Then
+                                If randStack.ItemFilter(TypeCostRestriction, randStack.AllItems(u)) Then
+                                    selection.Add(u)
+                                End If
+                            End If
                         End If
                     End If
-                    'End If
                 Next u
-                If selection.Count = 0 Then Throw New Exception("Не могу выбрать предмет в качестве товара. Тип: " & v)
-                itemID = randStack.comm.RandomSelection(selection, randStack.multiplierItemsWeight, True)
-                res.Add(randStack.MagicItem(itemID).itemID)
-                If Log.IsEnabled Then txt &= msgToLog(itemID, dCost, False)
+                'If selection.Count = 0 Then Throw New Exception("Не могу выбрать предмет в качестве товара. Тип: " & v)
+                If selection.Count > 0 Then
+                    itemID = randStack.comm.RandomSelection(selection, randStack.multiplierItemsWeight, True)
+                    res.Add(randStack.AllItems(itemID).itemID)
+                Else
+                    itemID = -1
+                End If
+                If log.IsEnabled Then txt &= msgToLog(itemID, dCost, False)
             ElseIf v.Contains("#") Then
                 Dim s() As String = v.Split(CChar("#"))
                 Dim type As Integer
@@ -6114,13 +6124,17 @@ Public Class ObjectsContentSet
                 End If
                 Dim bar As Integer = CInt(s(1))
                 itemID = SelectItem(bar, type, dCost, d, res.Count, TypeCostRestriction)
-                If itemID > -1 Then res.Add(randStack.MagicItem(itemID).itemID)
+                If itemID = -1 Then
+                    If log.IsEnabled Then txt &= " (ignore type) "
+                    itemID = SelectItem(bar, -1, dCost, d, res.Count, TypeCostRestriction)
+                End If
+                If itemID > -1 Then res.Add(randStack.AllItems(itemID).itemID)
                 txt &= msgToLog(itemID, dCost, True)
             Else
                 res.Add(v.ToUpper)
-                If Log.IsEnabled Then txt &= " -> " & v.ToUpper
+                If log.IsEnabled Then txt &= " -> " & v.ToUpper
             End If
-            Call AddToLog(Log, LogID, txt)
+            Call AddToLog(log, LogID, txt)
         Next v
 
         Call AddToLog(Log, LogID, "----Alternative loot creation ended----")
@@ -6132,7 +6146,7 @@ Public Class ObjectsContentSet
         If addDeltaCost Then txt &= " deltaCost: " & dCost
         txt &= " -> "
         If itemID > -1 Then
-            txt &= randStack.MagicItem(itemID).itemID & " - " & randStack.MagicItem(itemID).name & " - " & randStack.MagicItem(itemID).itemCost.Gold
+            txt &= randStack.AllItems(itemID).itemID & " - " & randStack.AllItems(itemID).name & " - " & randStack.AllItems(itemID).itemCost.Gold
         Else
             txt &= "nothong"
         End If
@@ -6156,20 +6170,20 @@ Public Class ObjectsContentSet
         Do While (selection.Count = 0 Or oneMore) And tolerance <= 10000
             tolerance += dtolerance
             selection.Clear()
-            For u As Integer = 0 To UBound(randStack.MagicItem) Step 1
-                If Math.Abs(randStack.LootCost(randStack.MagicItem(u)).Gold - correctedBar) <= tolerance Then
-                    If type < 0 Then
-                        add = Not excludedItemType.Contains(randStack.MagicItem(u).type)
-                        If add Then add = randStack.ItemFilter(d.IGen, randStack.MagicItem(u))
-                    Else
-                        If type = randStack.MagicItem(u).type Then
-                            add = True
-                        Else
-                            add = False
+            For u As Integer = 0 To UBound(randStack.AllItems) Step 1
+                If randStack.comm.IsAppropriateItem(randStack.AllItems(u)) Then
+                    If randStack.AllItems(u).itemCost.Gold > 0 AndAlso randStack.LootCost(randStack.AllItems(u)).Gold = randStack.AllItems(u).itemCostSum Then
+                        If Math.Abs(randStack.LootCost(randStack.AllItems(u)).Gold - correctedBar) <= tolerance Then
+                            If type < 0 Then
+                                add = Not excludedItemType.Contains(randStack.AllItems(u).type)
+                                If add Then add = randStack.ItemFilter(d.IGen, randStack.AllItems(u))
+                            Else
+                                add = (type = randStack.AllItems(u).type)
+                            End If
+                            If add AndAlso Not randStack.ItemFilter(TypeCostRestriction, randStack.AllItems(u)) Then add = False
+                            If add Then selection.Add(u)
                         End If
                     End If
-                    If add AndAlso Not randStack.ItemFilter(TypeCostRestriction, randStack.MagicItem(u)) Then add = False
-                    If add Then selection.Add(u)
                 End If
             Next u
             If selection.Count > 0 Then oneMore = Not oneMore
@@ -6177,7 +6191,7 @@ Public Class ObjectsContentSet
         dCost += bar
         If selection.Count > 0 Then
             Dim r As Integer = randStack.comm.RandomSelection(selection, randStack.multiplierItemsWeight, True)
-            dCost -= randStack.MagicItem(r).itemCost.Gold
+            dCost -= randStack.AllItems(r).itemCost.Gold
             Return r
         Else
             'Throw New Exception("Не могу выбрать предмет в качестве товара. Планка цены: " & bar.ToString)
@@ -6371,13 +6385,13 @@ End Class
 
 Public Class VanillaSagaContentReplace
 
-    Dim RandStack As RandStack
+    Dim RndStack As RandStack
 
     Dim VanillaLoreUnits As List(Of String)
 
     ''' <param name="RStack">Инициализированный класс</param>
     Public Sub New(ByRef RStack As RandStack)
-        RandStack = RStack
+        RndStack = RStack
         Dim c As New Common
         c.ReadExcludedObjectsList(New String() {My.Resources.readVLoreFileKeyword})
         VanillaLoreUnits = c.excludedObjects
@@ -6385,7 +6399,7 @@ Public Class VanillaSagaContentReplace
 
     Public Function ReplaceItem(ByRef ID As String) As String
 
-        Dim item As AllDataStructues.Item = RandStack.FindItemStats(ID)
+        Dim item As AllDataStructues.Item = RndStack.FindItemStats(ID)
 
         If item.type = GenDefaultValues.ItemTypes.special Then Return ID
 
@@ -6398,31 +6412,34 @@ Public Class VanillaSagaContentReplace
         Do While (selection.Count = 0 Or oneMore) And tolerance <= 10000
             tolerance += dtolerance
             selection.Clear()
-            For u As Integer = 0 To UBound(RandStack.MagicItem) Step 1
-                If Math.Abs(RandStack.LootCost(RandStack.MagicItem(u)).Gold - RandStack.LootCost(item).Gold) <= tolerance Then
-                    If item.type = RandStack.MagicItem(u).type Then
-                        add = True
-                    Else
-                        add = False
+            For u As Integer = 0 To UBound(RndStack.AllItems) Step 1
+                If RndStack.comm.IsAppropriateItem(RndStack.AllItems(u)) Then
+                    If Math.Abs(RndStack.LootCost(RndStack.AllItems(u)).Gold - RndStack.LootCost(item).Gold) <= tolerance Then
+                        If item.type = RndStack.AllItems(u).type Then
+                            add = True
+                        Else
+                            add = False
+                        End If
+                        If add Then selection.Add(u)
                     End If
-                    If add Then selection.Add(u)
                 End If
             Next u
             If selection.Count > 0 Then oneMore = Not oneMore
         Loop
         If selection.Count > 0 Then
-            Dim r As Integer = RandStack.comm.RandomSelection(selection, True)
-            Return RandStack.MagicItem(r).itemID
+            Dim r As Integer = RndStack.comm.RandomSelection(selection, True)
+            Return RndStack.AllItems(r).itemID
         Else
             Return ID
         End If
     End Function
 
+    Private Delegate Function UnitFilter(ByRef unit As AllDataStructues.Unit) As Boolean
     Public Function ReplaceUnit(ByRef ID As String) As String
 
-        Dim unit As AllDataStructues.Unit = RandStack.FindUnitStats(ID)
+        Dim unit As AllDataStructues.Unit = RndStack.FindUnitStats(ID)
 
-        If unit.unitBranch = 8 Then Return unit.unitID
+        If unit.unitBranch = GenDefaultValues.UnitClass.capitalGuard Then Return unit.unitID
         If VanillaLoreUnits.Contains(unit.unitID) Then Return unit.unitID
 
         Dim selection As New List(Of Integer)
@@ -6431,39 +6448,40 @@ Public Class VanillaSagaContentReplace
         Dim oneMore As Boolean = False
         Dim add As Boolean
 
-        Dim items() As AllDataStructues.Unit
-
-        If unit.unitBranch = 5 Then
-            items = RandStack.AllLeaders
+        Dim f As UnitFilter
+        If unit.unitBranch = GenDefaultValues.UnitClass.leader Then
+            f = AddressOf RndStack.comm.IsAppropriateLeader
         Else
-            items = RandStack.AllFighters
+            f = AddressOf RndStack.comm.IsAppropriateFighter
         End If
 
         Do While (selection.Count = 0 Or oneMore) And tolerance <= 10000
             tolerance += dtolerance
             selection.Clear()
-            For u As Integer = 0 To UBound(items) Step 1
-                If Math.Abs(items(u).EXPkilled - unit.EXPkilled) <= tolerance Then
-                    add = True
-                    If add Then add = (items(u).small = unit.small)
-                    If add Then add = (items(u).waterOnly = unit.waterOnly)
-                    If add Then add = (items(u).leadership = unit.leadership)
-                    If add Then
-                        If items(u).reach = 3 Then
-                            add = (items(u).reach = unit.reach)
-                        Else
-                            add = (items(u).reach < 3)
+            For u As Integer = 0 To UBound(RndStack.AllUnits) Step 1
+                If f(RndStack.AllUnits(u)) Then
+                    If Math.Abs(RndStack.AllUnits(u).EXPkilled - unit.EXPkilled) <= tolerance Then
+                        add = True
+                        If add Then add = (RndStack.AllUnits(u).small = unit.small)
+                        If add Then add = (RndStack.AllUnits(u).waterOnly = unit.waterOnly)
+                        If add Then add = (RndStack.AllUnits(u).leadership = unit.leadership)
+                        If add Then
+                            If RndStack.AllUnits(u).reach = GenDefaultValues.UnitAttackReach.melee Then
+                                add = (RndStack.AllUnits(u).reach = unit.reach)
+                            Else
+                                add = Not (RndStack.AllUnits(u).reach = GenDefaultValues.UnitAttackReach.melee)
+                            End If
                         End If
+                        If add Then add = (RndStack.AllUnits(u).race = unit.race)
+                        If add Then selection.Add(u)
                     End If
-                    If add Then add = (items(u).race = unit.race)
-                    If add Then selection.Add(u)
                 End If
             Next u
             If selection.Count > 0 Then oneMore = Not oneMore
         Loop
         If selection.Count > 0 Then
-            Dim r As Integer = RandStack.comm.RandomSelection(selection, True)
-            Return items(r).unitID
+            Dim r As Integer = RndStack.comm.RandomSelection(selection, True)
+            Return RndStack.AllUnits(r).unitID
         Else
             Return unit.unitID
         End If

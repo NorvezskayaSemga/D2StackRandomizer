@@ -10,15 +10,16 @@ Public Class RandStack
     Private itemGenSigma As Double = 0.5
     Private multiItemGenSigmaMultiplier As Double = 1.5
 
-    Private ExcludedUnits() As AllDataStructues.Unit
-    Friend AllLeaders(), AllFighters() As AllDataStructues.Unit
-    Friend MagicItem() As AllDataStructues.Item
-    Private ExcludedItems() As AllDataStructues.Item
-    Public rndgen As RndValueGen
-    Public comm As New Common
+    Private UnitsArrayPos As New Dictionary(Of String, Integer)
+    Friend AllUnits() As AllDataStructues.Unit
 
-    Private ExpBarLeaders(), ExpKilledLeaders(), multiplierLeadersDesiredStats() As Double
-    Friend ExpBarFighters(), ExpKilledFighters(), multiplierFightersDesiredStats() As Double
+    Private ItemsArrayPos As New Dictionary(Of String, Integer)
+    Friend AllItems() As AllDataStructues.Item
+    Public rndgen As RndValueGen
+    Public comm As New Common With {.onExcludedListChanged = AddressOf ResetExclusions}
+
+    Private ExpBar(), ExpKilled(), multiplierUnitDesiredStats() As Double
+
     Friend ItemCostSum(), multiplierItemsWeight() As Double
     Private minItemGoldCost As Integer
     Private bak_multiplierItemsWeight() As Double
@@ -62,102 +63,48 @@ Public Class RandStack
         Call comm.ReadSoleUnits(SoleUnitsList)
         Call comm.ReadBigStackUnits(BigStackUnits)
 
-        Dim cat(UBound(AllUnitsList)) As Integer
+        ReDim AllUnits(UBound(AllUnitsList)), ExpBar(UBound(AllUnitsList)), ExpKilled(UBound(AllUnitsList)), multiplierUnitDesiredStats(UBound(AllUnitsList))
         For i As Integer = 0 To UBound(AllUnitsList) Step 1
-            If Not comm.excludedObjects.Contains(AllUnitsList(i).unitID.ToUpper) Then
-                If AllUnitsList(i).unitBranch < 5 Then
-                    cat(i) = 1
-                ElseIf AllUnitsList(i).unitBranch = 5 Then
-                    cat(i) = 2
-                Else
-                    cat(i) = 0
-                End If
-            End If
-        Next i
+            AllUnits(i) = AllDataStructues.Unit.Copy(AllUnitsList(i))
+            UnitsArrayPos.Add(AllUnits(i).unitID.ToUpper, i)
 
-        Call MakeAccessoryArrays(AllUnitsList, comm.customRace, AllFighters, cat, 1, ExpBarFighters, ExpKilledFighters, multiplierFightersDesiredStats)
-        Call MakeAccessoryArrays(AllUnitsList, comm.customRace, AllLeaders, cat, 2, ExpBarLeaders, ExpKilledLeaders, multiplierLeadersDesiredStats)
-        Call MakeAccessoryArrays(AllUnitsList, comm.customRace, ExcludedUnits, cat, 0, Nothing, Nothing, Nothing)
-
-        Call MakeAccessoryArrays(AllItemsList, MagicItem, ExcludedItems, ItemCostSum, multiplierItemsWeight)
-
-        bak_multiplierItemsWeight = CType(multiplierItemsWeight.Clone, Double())
-
-    End Sub
-    Private Sub MakeAccessoryArrays(ByRef allunits() As AllDataStructues.Unit, ByRef customRace As Dictionary(Of String, String), _
-                                    ByRef units() As AllDataStructues.Unit, ByRef cat() As Integer, ByRef addcat As Integer, _
-                                    ByRef expBar() As Double, ByRef expKuilled() As Double, ByRef mult() As Double)
-        Dim n As Integer = -1
-        For i As Integer = 0 To UBound(allunits) Step 1
-            If cat(i) = addcat Then n += 1
-        Next i
-        ReDim units(n), expBar(n), expKuilled(n), mult(n)
-
-        n = -1
-        For i As Integer = 0 To UBound(allunits) Step 1
-            If cat(i) = addcat Then
-                n += 1
-                units(n) = AllDataStructues.Unit.Copy(allunits(i))
-                If customRace.ContainsKey(units(n).unitID) Then
-                    units(n).race = comm.RaceIdentifierToSubrace(customRace.Item(units(n).unitID))
-                Else
-                    units(n).race = comm.RaceIdentifierToSubrace(units(n).race)
-                End If
-                If Not IsNothing(expBar) Then expBar(n) = units(n).EXPnext
-                If Not IsNothing(expKuilled) Then expKuilled(n) = units(n).EXPkilled
-                If Not IsNothing(mult) Then
-                    If units(n).small Then
-                        mult(n) = comm.defValues.smallUnitsExpMultiplier
-                    Else
-                        mult(n) = comm.defValues.giantUnitsExpMultiplier
-                    End If
-                End If
-            End If
-        Next i
-    End Sub
-    Private Sub MakeAccessoryArrays(ByRef allitems() As AllDataStructues.Item, _
-                                    ByRef items() As AllDataStructues.Item, _
-                                    ByRef excluded() As AllDataStructues.Item, _
-                                    ByRef itemCostSum() As Double, ByRef mult() As Double)
-        Dim n As Integer = -1
-        Dim m As Integer = -1
-        Dim add(UBound(allitems)) As Boolean
-        For i As Integer = 0 To UBound(allitems) Step 1
-            If Not comm.excludedObjects.Contains(allitems(i).itemID.ToUpper) _
-            And Not comm.excludedObjects.Contains(comm.itemType.Item(allitems(i).type)) _
-            And allitems(i).itemCost.Gold > 0 Then
-                add(i) = True
-                n += 1
+            If comm.customRace.ContainsKey(AllUnits(i).unitID) Then
+                AllUnits(i).race = comm.RaceIdentifierToSubrace(comm.customRace.Item(AllUnits(i).unitID))
             Else
-                m += 1
+                AllUnits(i).race = comm.RaceIdentifierToSubrace(AllUnits(i).race)
+            End If
+            ExpBar(i) = AllUnits(i).EXPnext
+            ExpKilled(i) = AllUnits(i).EXPkilled
+            If AllUnits(i).small Then
+                multiplierUnitDesiredStats(i) = comm.defValues.smallUnitsExpMultiplier
+            Else
+                multiplierUnitDesiredStats(i) = comm.defValues.giantUnitsExpMultiplier
             End If
         Next i
-        ReDim items(n), itemCostSum(n), multiplierItemsWeight(n), excluded(m)
+
+        ReDim AllItems(UBound(AllItemsList)), ItemCostSum(UBound(AllItemsList)), multiplierItemsWeight(UBound(AllItemsList))
 
         Dim weight As New Dictionary(Of String, String)
         For Each s As String In comm.defValues.ItemTypeChanceMultiplier.Split(CChar(";"))
             Dim i As Integer = s.IndexOf("=")
             weight.Add(s.Substring(0, i).ToUpper, s.Substring(i + 1).ToUpper)
         Next s
-
         minItemGoldCost = Integer.MaxValue
-        n = -1
-        m = -1
-        For i As Integer = 0 To UBound(allitems) Step 1
-            If add(i) Then
-                n += 1
-                items(n) = AllDataStructues.Item.Copy(allitems(i))
-                itemCostSum(n) = AllDataStructues.Cost.Sum(LootCost(items(n)))
-                mult(n) = ItemTypeWeight(weight, comm.itemType.Item(items(n).type), itemCostSum(n))
-                If comm.LootItemChanceMultiplier.ContainsKey(items(n).itemID.ToUpper) Then
-                    mult(n) *= comm.LootItemChanceMultiplier.Item(items(n).itemID.ToUpper)
-                End If
-                minItemGoldCost = Math.Min(minItemGoldCost, CInt(items(n).itemCost.Gold))
-            Else
-                m += 1
-                excluded(m) = AllDataStructues.Item.Copy(allitems(i))
+        For i As Integer = 0 To UBound(AllItems) Step 1
+            AllItems(i) = AllDataStructues.Item.Copy(AllItemsList(i))
+            ItemsArrayPos.Add(AllItems(i).itemID.ToUpper, i)
+
+            ItemCostSum(i) = AllDataStructues.Cost.Sum(LootCost(AllItems(i)))
+            AllItems(i).itemCostSum = ItemCostSum(i)
+            multiplierItemsWeight(i) = ItemTypeWeight(weight, comm.itemType.Item(AllItems(i).type), ItemCostSum(i))
+            If comm.LootItemChanceMultiplier.ContainsKey(AllItems(i).itemID.ToUpper) Then
+                multiplierItemsWeight(i) *= comm.LootItemChanceMultiplier.Item(AllItems(i).itemID.ToUpper)
             End If
+            If AllItems(i).itemCost.Gold > 0 Then minItemGoldCost = Math.Min(minItemGoldCost, CInt(AllItems(i).itemCost.Gold))
         Next i
+        bak_multiplierItemsWeight = CType(multiplierItemsWeight.Clone, Double())
+
+        Call ResetExclusions()
     End Sub
     Private Function ItemTypeWeight(ByRef wList As Dictionary(Of String, String), ByRef itemType As String, ByRef cost As Double) As Double
         If Not wList.ContainsKey(itemType) Then Return 1
@@ -205,34 +152,46 @@ Public Class RandStack
     Public Sub ResetAddedItems()
         AddedItems.Clear()
     End Sub
+    Private Sub ResetExclusions()
+        If Not IsNothing(AllUnits) Then
+            For i As Integer = 0 To UBound(AllUnits) Step 1
+                If comm.IsExcluded(AllUnits(i).unitID) Then
+                    AllUnits(i).useState = GenDefaultValues.ExclusionState.excluded
+                Else
+                    AllUnits(i).useState = GenDefaultValues.ExclusionState.canUse
+                End If
+            Next i
+        End If
+        If Not IsNothing(AllItems) Then
+            For i As Integer = 0 To UBound(AllItems) Step 1
+                If comm.IsExcluded(AllItems(i).itemID) Then
+                    AllItems(i).useState = GenDefaultValues.ExclusionState.excluded
+                Else
+                    AllItems(i).useState = GenDefaultValues.ExclusionState.canUse
+                End If
+            Next i
+        End If
+    End Sub
 
     ''' <summary>Найдет статы юнита по ID (нечувствительно к регистру)</summary>
     ''' <param name="ID">GxxxUUxxxx</param>
     Public Function FindUnitStats(ByVal ID As String) As AllDataStructues.Unit
         Dim f As String = ID.ToUpper
-        Dim a()() As AllDataStructues.Unit = New AllDataStructues.Unit()() {AllFighters, AllLeaders, ExcludedUnits}
-        For u As Integer = 0 To UBound(a) Step 1
-            If Not IsNothing(a(u)) Then
-                For i As Integer = 0 To UBound(a(u)) Step 1
-                    If f = a(u)(i).unitID Then Return AllDataStructues.Unit.Copy(a(u)(i))
-                Next i
-            End If
-        Next u
-        Return Nothing
+        If UnitsArrayPos.ContainsKey(f) Then
+            Return AllDataStructues.Unit.Copy(AllUnits(UnitsArrayPos.Item(f)))
+        Else
+            Return Nothing
+        End If
     End Function
     ''' <summary>Найдет статы предмета по ID (нечувствительно к регистру)</summary>
     ''' <param name="ID">GxxxIGxxxx</param>
     Public Function FindItemStats(ByVal ID As String) As AllDataStructues.Item
         Dim f As String = ID.ToUpper
-        Dim a()() As AllDataStructues.Item = New AllDataStructues.Item()() {MagicItem, ExcludedItems}
-        For u As Integer = 0 To UBound(a) Step 1
-            If Not IsNothing(a(u)) Then
-                For i As Integer = 0 To UBound(a(u)) Step 1
-                    If f = a(u)(i).itemID Then Return AllDataStructues.Item.Copy(a(u)(i))
-                Next i
-            End If
-        Next u
-        Return Nothing
+        If ItemsArrayPos.ContainsKey(f) Then
+            Return AllDataStructues.Item.Copy(AllItems(ItemsArrayPos.Item(f)))
+        Else
+            Return Nothing
+        End If
     End Function
 
     ''' <summary>Вычисляет параметры отряда по составу. Цена предмета в мане прибавится к стоимости лута в золоте</summary>
@@ -253,7 +212,7 @@ Public Class RandStack
                     result.StackSize += 2
                     result.MaxGiants += 1
                 End If
-                If Not unit.small Or unit.reach = 3 Then result.MeleeCount += 1
+                If Not unit.small Or unit.reach = GenDefaultValues.UnitAttackReach.melee Then result.MeleeCount += 1
                 If unit.level < stack.level(i) Then
                     Dim d As Integer = stack.level(i) - unit.level
                     If d < unit.dynUpgradeLevel Then
@@ -458,7 +417,7 @@ Public Class RandStack
         Dim DynIGen As AllDataStructues.LootGenSettings = GenItemSetDynIGen(IGen, GoldCost)
         Dim serialExecution As Boolean = (LogID < 0)
         Dim costBar(), maxCost(), selected As Integer
-        Dim weight(UBound(MagicItem)) As Double
+        Dim weight(UBound(AllItems)) As Double
         Dim DynCost As Integer = GoldCost
         Dim IDs As New List(Of Integer)
         Dim result As New List(Of String)
@@ -469,10 +428,10 @@ Public Class RandStack
                                  " Selected cost bar:" & costBar(0) & "|" & costBar(1) & "|" & costBar(2) & _
                                  " max item cost:" & maxCost(0) & "|" & maxCost(1) & "|" & maxCost(2))
             IDs.Clear()
-            For i As Integer = 0 To UBound(MagicItem) Step 1
-                If ItemFilter(DynIGen, MagicItem(i), costBar) AndAlso ItemFilter(TypeCostRestriction, MagicItem(i)) Then
+            For i As Integer = 0 To UBound(AllItems) Step 1
+                If ItemFilter(DynIGen, AllItems(i), costBar) AndAlso ItemFilter(TypeCostRestriction, AllItems(i)) Then
                     IDs.Add(i)
-                    weight(i) = GenItemWeight(MagicItem(i), costBar) * multiplierItemsWeight(i) * DynTypeWeightMultiplier(MagicItem(i).type)
+                    weight(i) = GenItemWeight(AllItems(i), costBar) * multiplierItemsWeight(i) * DynTypeWeightMultiplier(AllItems(i).type)
                 Else
                     weight(i) = 0
                 End If
@@ -481,12 +440,12 @@ Public Class RandStack
 
             selected = comm.RandomSelection(IDs, weight, serialExecution)
             multiplierItemsWeight(selected) *= comm.defValues.AddedItemChanceMultiplier
-            DynTypeWeightMultiplier(MagicItem(selected).type) *= comm.defValues.AddedItemTypeChanceMultiplier(MagicItem(selected).type)
+            DynTypeWeightMultiplier(AllItems(selected).type) *= comm.defValues.AddedItemTypeChanceMultiplier(AllItems(selected).type)
 
-            Call AddToLog(LogID, "Selected item:" & MagicItem(selected).name & " id:" & MagicItem(selected).itemID & " cost:" & ItemCostSum(selected))
-            result.Add(MagicItem(selected).itemID)
-            Call AddToAddedItemList(MagicItem(selected), pos)
-            Call GenItemIGenChange(DynIGen, MagicItem(selected), DynCost)
+            Call AddToLog(LogID, "Selected item:" & AllItems(selected).name & " id:" & AllItems(selected).itemID & " cost:" & ItemCostSum(selected))
+            result.Add(AllItems(selected).itemID)
+            Call AddToAddedItemList(AllItems(selected), pos)
+            Call GenItemIGenChange(DynIGen, AllItems(selected), DynCost)
             DynCost = CInt(DynCost - ItemCostSum(selected))
         Loop
 
@@ -566,22 +525,22 @@ Public Class RandStack
         Dim IDs As New List(Of Integer)
         Dim result As String = ""
 
-        Dim DynTypeWeightMultiplier(), DynItemWeightMultiplier(UBound(MagicItem)) As Double
+        Dim DynTypeWeightMultiplier(), DynItemWeightMultiplier(UBound(AllItems)) As Double
         DynTypeWeightMultiplier = ItemTypeDynWeight(pos)
 
         IDs.Clear()
-        For i As Integer = 0 To UBound(MagicItem) Step 1
-            DynItemWeightMultiplier(i) = multiplierItemsWeight(i) * DynTypeWeightMultiplier(MagicItem(i).type)
+        For i As Integer = 0 To UBound(AllItems) Step 1
+            DynItemWeightMultiplier(i) = multiplierItemsWeight(i) * DynTypeWeightMultiplier(AllItems(i).type)
 
-            If ItemCostSum(i) <= GoldCost AndAlso ItemFilter(IGen, MagicItem(i)) _
-            AndAlso ItemFilter(TypeCostRestriction, MagicItem(i)) Then IDs.Add(i)
+            If ItemCostSum(i) <= GoldCost AndAlso ItemFilter(IGen, AllItems(i)) _
+            AndAlso ItemFilter(TypeCostRestriction, AllItems(i)) Then IDs.Add(i)
         Next i
         If IDs.Count > 0 Then
             selected = comm.RandomSelection(IDs, New Double()() {ItemCostSum}, New Double() {GoldCost}, DynItemWeightMultiplier, itemGenSigma, serialExecution)
             multiplierItemsWeight(selected) *= comm.defValues.AddedItemChanceMultiplier
-            Call AddToLog(LogID, "Selected item:" & MagicItem(selected).name & " id:" & MagicItem(selected).itemID & " cost:" & ItemCostSum(selected))
-            result = MagicItem(selected).itemID
-            Call AddToAddedItemList(MagicItem(selected), pos)
+            Call AddToLog(LogID, "Selected item:" & AllItems(selected).name & " id:" & AllItems(selected).itemID & " cost:" & ItemCostSum(selected))
+            result = AllItems(selected).itemID
+            Call AddToAddedItemList(AllItems(selected), pos)
         End If
 
         Call AddToLog(LogID, "----Single item creation ended----")
@@ -635,15 +594,29 @@ Public Class RandStack
     Private Function GenItemCostBar(ByRef IGen As AllDataStructues.LootGenSettings, ByRef MaxCost() As Integer, _
                                     ByRef serialExecution As Boolean) As Integer()
         Dim settings() As AllDataStructues.ItemGenSettings = AllDataStructues.LootGenSettings.ToArray(IGen)
-        Dim result(UBound(settings)), min, max As Integer
+        Dim result(UBound(settings)), min, max, n As Integer
         Dim upCost As Integer = CInt(0.75 * minItemGoldCost)
+        Dim minN As Integer = 4
         For i As Integer = 0 To UBound(settings) Step 1
             If Not settings(i).exclude Then
+                If settings(i).amount > minN Then
+                    Dim n1, n2 As Integer
+                    If settings(i).amount > 2 * minN Then
+                        n1 = settings(i).amount - minN
+                        n2 = settings(i).amount
+                    Else
+                        n1 = minN
+                        n2 = settings(i).amount
+                    End If
+                    n = n1 - 1 + rndgen.RndPos(n2 - n1 + 1, True)
+                Else
+                    n = settings(i).amount
+                End If
                 If settings(i).amount > 0 And settings(i).dynCostPart > 0 Then
-                    max = CInt(Math.Max(minItemGoldCost, (settings(i).dynCostPart + upCost) / settings(i).amount))
+                    max = CInt(Math.Max(minItemGoldCost, (settings(i).dynCostPart + upCost) / n))
                     min = minItemGoldCost + CInt(0.75 * (max - minItemGoldCost))
                 ElseIf settings(i).amount > 0 Then
-                    max = CInt(Math.Max(minItemGoldCost, (MaxCost(i) + upCost) / settings(i).amount))
+                    max = CInt(Math.Max(minItemGoldCost, (MaxCost(i) + upCost) / n))
                     min = minItemGoldCost + CInt(0.75 * (max - minItemGoldCost))
                 Else
                     max = Math.Max(minItemGoldCost, MaxCost(i) + upCost)
@@ -741,6 +714,7 @@ Public Class RandStack
     End Sub
 
     Friend Function ItemFilter(ByRef IGen As AllDataStructues.LootGenSettings, ByRef item As AllDataStructues.Item) As Boolean
+        If Not comm.IsAppropriateItem(item) Then Return False
         Dim settings() As AllDataStructues.ItemGenSettings = AllDataStructues.LootGenSettings.ToArray(IGen)
         For i As Integer = 0 To UBound(settings) Step 1
             If comm.ItemTypesLists(i).Contains(item.type) Then
@@ -755,6 +729,7 @@ Public Class RandStack
     End Function
     Friend Function ItemFilter(ByRef IGen As AllDataStructues.LootGenSettings, ByRef item As AllDataStructues.Item, _
                                ByRef CostBar() As Integer) As Boolean
+        If Not comm.IsAppropriateItem(item) Then Return False
         Dim settings() As AllDataStructues.ItemGenSettings = AllDataStructues.LootGenSettings.ToArray(IGen)
         For i As Integer = 0 To UBound(settings) Step 1
             If comm.ItemTypesLists(i).Contains(item.type) Then
@@ -770,6 +745,7 @@ Public Class RandStack
     End Function
     Friend Function ItemFilter(ByRef TypeCostRestriction As Dictionary(Of Integer, AllDataStructues.Restriction), _
                                ByRef item As AllDataStructues.Item) As Boolean
+        If Not comm.IsAppropriateItem(item) Then Return False
         If IsNothing(TypeCostRestriction) Then Return True
         If AllDataStructues.Restriction.CheckValue(AllDataStructues.Cost.Sum(LootCost(item)), _
                                                    TypeCostRestriction.Item(item.type)) Then
@@ -903,15 +879,16 @@ Public Class RandStack
     End Function
     Private Function SelectPossibleLeader(ByRef leaderID As Integer, ByRef Tolerance As Double, _
                                           ByRef StackStats As AllDataStructues.DesiredStats, ByRef GroundTile As Boolean) As Boolean
+        If Not comm.IsAppropriateLeader(AllUnits(leaderID)) Then Return False
         If Not setting_IgnoreUnitRace Then
-            If Not StackStats.Race.Contains(AllLeaders(leaderID).race) Then Return False
+            If Not StackStats.Race.Contains(AllUnits(leaderID).race) Then Return False
         End If
 
-        If Not AllLeaders(leaderID).small And StackStats.MaxGiants = 0 Then Return False
-        If AllLeaders(leaderID).waterOnly And GroundTile Then Return False
+        If Not AllUnits(leaderID).small And StackStats.MaxGiants = 0 Then Return False
+        If AllUnits(leaderID).waterOnly And GroundTile Then Return False
 
-        If comm.BigStackUnits.ContainsKey(AllLeaders(leaderID).unitID) _
-        AndAlso StackStats.StackSize < comm.BigStackUnits.Item(AllLeaders(leaderID).unitID) Then Return False
+        If comm.BigStackUnits.ContainsKey(AllUnits(leaderID).unitID) _
+        AndAlso StackStats.StackSize < comm.BigStackUnits.Item(AllUnits(leaderID).unitID) Then Return False
 
         'Dim mult As Double
         'If AllLeaders(leaderID).small Then
@@ -921,7 +898,7 @@ Public Class RandStack
         'End If
         'If Math.Abs(AllLeaders(leaderID).EXPnext - mult * StackStats.ExpBarAverage) _
         '    > mult * Tolerance * StackStats.ExpBarAverage Then Return False
-        If AllLeaders(leaderID).EXPkilled > (1 + Tolerance) * StackStats.ExpStackKilled Then Return False
+        If AllUnits(leaderID).EXPkilled > (1 + Tolerance) * StackStats.ExpStackKilled Then Return False
         Return True
     End Function
     Private Function SigmaMultiplier(ByRef stat As AllDataStructues.DesiredStats) As Double
@@ -962,7 +939,7 @@ Public Class RandStack
                                                        GroundTile, NoLeader, CDbl(jobID / units.Length), jobID)
              BaseStackSize = DynStackStats(jobID).StackSize
              If Not NoLeader Then
-                 If AllLeaders(SelectedLeader).small Then
+                 If AllUnits(SelectedLeader).small Then
                      BaseStackSize += 1
                  Else
                      BaseStackSize += 2
@@ -1019,7 +996,7 @@ Public Class RandStack
         Dim Tolerance As Double = 0.02 * (DynStackStats.StackSize - 1)
         Do While PossibleLeaders.Count < 3
             PossibleLeaders.Clear()
-            For i As Integer = 0 To UBound(AllLeaders) Step 1
+            For i As Integer = 0 To UBound(AllUnits) Step 1
                 If SelectPossibleLeader(i, Tolerance, DynStackStats, GroundTile) Then PossibleLeaders.Add(i)
             Next i
             If Tolerance > 2 And PossibleLeaders.Count > 0 Then Exit Do
@@ -1040,10 +1017,10 @@ Public Class RandStack
             Tolerance += 0.2
         Loop
 
-        Call AddToLog(LogID, AddressOf PrintSelectionList, AllLeaders, PossibleLeaders)
-        Dim bar() As Double = SelectBar({DynStackStats.ExpBarAverage}, PossibleLeaders, {ExpBarLeaders}, Bias)
-        SelectedLeader = comm.RandomSelection(PossibleLeaders, {ExpBarLeaders}, bar, _
-                                              multiplierLeadersDesiredStats, SigmaMultiplier(DynStackStats), serialExecution)
+        Call AddToLog(LogID, AddressOf PrintSelectionList, AllUnits, PossibleLeaders)
+        Dim bar() As Double = SelectBar({DynStackStats.ExpBarAverage}, PossibleLeaders, {ExpBar}, Bias)
+        SelectedLeader = comm.RandomSelection(PossibleLeaders, {ExpBar}, bar, _
+                                              multiplierUnitDesiredStats, SigmaMultiplier(DynStackStats), serialExecution)
 
         If SelectedLeader = -1 Then
             Throw New Exception("Возможно, бесконечный цикл в случайном выборе из массива возможных лидеров" & vbNewLine & _
@@ -1054,15 +1031,15 @@ Public Class RandStack
 
         'теперь нужно добрать воинов в отряд
         Dim R As Double = rndgen.Rand(0, 1, serialExecution)
-        Dim leadershipCap As Integer = Math.Min(AllLeaders(SelectedLeader).leadership + deltaLeadership, 6)
-        If AllLeaders(SelectedLeader).small Then
+        Dim leadershipCap As Integer = Math.Min(AllUnits(SelectedLeader).leadership + deltaLeadership, 6)
+        If AllUnits(SelectedLeader).small Then
             leadershipCap = Math.Max(leadershipCap, 1)
         Else
             leadershipCap = Math.Max(leadershipCap, 2)
         End If
         If R < 0.1 Then
-            If comm.BigStackUnits.ContainsKey(AllLeaders(SelectedLeader).unitID) Then
-                If DynStackStats.StackSize > comm.BigStackUnits.Item(AllLeaders(SelectedLeader).unitID) Then
+            If comm.BigStackUnits.ContainsKey(AllUnits(SelectedLeader).unitID) Then
+                If DynStackStats.StackSize > comm.BigStackUnits.Item(AllUnits(SelectedLeader).unitID) Then
                     DynStackStats.StackSize -= 1
                 End If
             Else
@@ -1072,7 +1049,7 @@ Public Class RandStack
             DynStackStats.StackSize += 1
             If DynStackStats.StackSize - DynStackStats.MeleeCount < secondrow.Length Then DynStackStats.MeleeCount += 1
         End If
-        If AllLeaders(SelectedLeader).small Then
+        If AllUnits(SelectedLeader).small Then
             DynStackStats.StackSize = Math.Max(DynStackStats.StackSize, 1)
         Else
             DynStackStats.StackSize = Math.Max(DynStackStats.StackSize, 2)
@@ -1082,7 +1059,7 @@ Public Class RandStack
         DynStackStats.MaxGiants = Math.Min(DynStackStats.MaxGiants, 3)
         DynStackStats.ExpBarAverage = CInt((DynStackStats.ExpBarAverage * StackStats.StackSize) / DynStackStats.StackSize)
 
-        Call ChangeLimit(AllLeaders, SelectedLeader, DynStackStats, FreeMeleeSlots, LogID)
+        Call ChangeLimit(AllUnits, SelectedLeader, DynStackStats, FreeMeleeSlots, LogID)
 
         Return SelectedLeader
     End Function
@@ -1127,7 +1104,7 @@ Public Class RandStack
         Else
             ReDim SelectedUnits(SelectedFighters.Count)
         End If
-        If Not NoLeader Then SelectedUnits(0) = AllDataStructues.Unit.Copy(AllLeaders(SelectedLeader))
+        If Not NoLeader Then SelectedUnits(0) = AllDataStructues.Unit.Copy(AllUnits(SelectedLeader))
         Dim n As Integer
         If NoLeader Then
             n = -1
@@ -1136,7 +1113,7 @@ Public Class RandStack
         End If
         For Each i As Integer In SelectedFighters
             n += 1
-            SelectedUnits(n) = AllDataStructues.Unit.Copy(AllFighters(i))
+            SelectedUnits(n) = AllDataStructues.Unit.Copy(AllUnits(i))
         Next i
         Return SelectedUnits
     End Function
@@ -1155,12 +1132,12 @@ Public Class RandStack
             End If
         Next i
         For i As Integer = 0 To UBound(SelectedUnits) Step 1
-            If Not unitIsUsed(i) And SelectedUnits(i).reach = 3 Then
+            If Not unitIsUsed(i) And SelectedUnits(i).reach = GenDefaultValues.UnitAttackReach.melee Then
                 unitIsUsed(i) = SetUnitPosition(i, SelectedUnits, firstRowSlots, secondRowSlots, False, result)
             End If
         Next i
         For i As Integer = 0 To UBound(SelectedUnits) Step 1
-            If Not unitIsUsed(i) And Not SelectedUnits(i).reach = 3 Then
+            If Not unitIsUsed(i) And Not SelectedUnits(i).reach = GenDefaultValues.UnitAttackReach.melee Then
                 unitIsUsed(i) = SetUnitPosition(i, SelectedUnits, firstRowSlots, secondRowSlots, False, result)
             End If
         Next i
@@ -1251,7 +1228,7 @@ Public Class RandStack
         Dim SelectedFighter As Integer
         'Dim nloops As Integer = 0
         'Do While PossibleFighters.Count = 0 'And TExpStack < 1.1 * DynStackStats.ExpStackKilled
-        For j As Integer = 0 To UBound(AllFighters) Step 1
+        For j As Integer = 0 To UBound(AllUnits) Step 1
             If SelectPossibleFighter(skipfilter1, skipfilter2, j, DynStackStats, FreeMeleeSlots, _
                                      SelectedLeader, SelectedFighters, BaseStackSize) Then PossibleFighters.Add(j)
         Next j
@@ -1260,14 +1237,14 @@ Public Class RandStack
         '    If nloops > 10 Then Exit Do
         'Loop
         If PossibleFighters.Count > 0 Then
-            Call AddToLog(LogID, AddressOf PrintSelectionList, AllFighters, PossibleFighters)
+            Call AddToLog(LogID, AddressOf PrintSelectionList, AllUnits, PossibleFighters)
 
             Dim bar() As Double = SelectBar({DynStackStats.ExpBarAverage, CDbl(DynStackStats.ExpStackKilled) / CDbl(DynStackStats.StackSize)}, _
-                                            PossibleFighters, {ExpBarFighters, ExpKilledFighters}, Bias)
-            SelectedFighter = comm.RandomSelection(PossibleFighters, {ExpBarFighters, ExpKilledFighters}, _
-                                                   bar, multiplierFightersDesiredStats, SigmaMultiplier(DynStackStats), serialExecution)
+                                            PossibleFighters, {ExpBar, ExpKilled}, Bias)
+            SelectedFighter = comm.RandomSelection(PossibleFighters, {ExpBar, ExpKilled}, _
+                                                   bar, multiplierUnitDesiredStats, SigmaMultiplier(DynStackStats), serialExecution)
             If SelectedFighter = -1 Then Return -2
-            Call ChangeLimit(AllFighters, SelectedFighter, DynStackStats, FreeMeleeSlots, LogID)
+            Call ChangeLimit(AllUnits, SelectedFighter, DynStackStats, FreeMeleeSlots, LogID)
         Else
             SelectedFighter = -1
         End If
@@ -1281,20 +1258,21 @@ Public Class RandStack
                                            ByRef SelectedLeader As Integer, _
                                            ByRef SelectedFighters As List(Of Integer), _
                                            ByRef BaseStackSize As Integer) As Boolean
-        If comm.SoleUnits.ContainsKey(AllFighters(fighterID).unitID) Then
-            Dim sole As List(Of String) = comm.SoleUnits.Item(AllFighters(fighterID).unitID)
-            If SelectedLeader > -1 AndAlso sole.Contains(AllLeaders(SelectedLeader).unitID) Then Return False
+        If Not comm.IsAppropriateFighter(AllUnits(fighterID)) Then Return False
+        If comm.SoleUnits.ContainsKey(AllUnits(fighterID).unitID) Then
+            Dim sole As List(Of String) = comm.SoleUnits.Item(AllUnits(fighterID).unitID)
+            If SelectedLeader > -1 AndAlso sole.Contains(AllUnits(SelectedLeader).unitID) Then Return False
             For Each id As Integer In SelectedFighters
-                If sole.Contains(AllFighters(id).unitID) Then Return False
+                If sole.Contains(AllUnits(id).unitID) Then Return False
             Next id
         End If
 
         If Not setting_IgnoreUnitRace Then
-            If Not DynStackStats.Race.Contains(AllFighters(fighterID).race) Then Return False
+            If Not DynStackStats.Race.Contains(AllUnits(fighterID).race) Then Return False
         End If
 
-        If comm.BigStackUnits.ContainsKey(AllFighters(fighterID).unitID) _
-        AndAlso BaseStackSize < comm.BigStackUnits.Item(AllFighters(fighterID).unitID) Then Return False
+        If comm.BigStackUnits.ContainsKey(AllUnits(fighterID).unitID) _
+        AndAlso BaseStackSize < comm.BigStackUnits.Item(AllUnits(fighterID).unitID) Then Return False
 
         'Dim mult As Double
         'If AllFighters(fighterID).small Then
@@ -1304,14 +1282,14 @@ Public Class RandStack
         'End If
         'If AllFighters(fighterID).EXPkilled > mult * DynStackStats.ExpStackKilled / DynStackStats.StackSize Then Return False
         If DynStackStats.ExpStackKilled <= 0 Then Return False
-        If AllFighters(fighterID).EXPkilled > 1.15 * DynStackStats.ExpStackKilled + 15 Then Return False
-        If Not AllFighters(fighterID).small Then
+        If AllUnits(fighterID).EXPkilled > 1.15 * DynStackStats.ExpStackKilled + 15 Then Return False
+        If Not AllUnits(fighterID).small Then
             If DynStackStats.MaxGiants = 0 And Not skipMaxGiantsFilter Then Return False
             If DynStackStats.StackSize < 2 Then Return False
             If FreeMeleeSlots = 0 Then Return False
         End If
 
-        If AllFighters(fighterID).reach = 3 Then
+        If AllUnits(fighterID).reach = GenDefaultValues.UnitAttackReach.melee Then
             If DynStackStats.MeleeCount = 0 Then Return False
             If FreeMeleeSlots = 0 Then Return False
         Else
@@ -1338,7 +1316,7 @@ Public Class RandStack
         Dim t As Integer
         Dim m As Integer = 0
         For k As Integer = 0 To UBound(firstrow) Step 1
-            If Not units(i).small Or units(i).reach = 3 Then
+            If Not units(i).small Or units(i).reach = GenDefaultValues.UnitAttackReach.melee Then
                 If result.pos(firstrow(k)) = "" Then
                     m += 1
                     If m = n1 Then
@@ -1413,7 +1391,7 @@ Public Class RandStack
             DynStackStats.MaxGiants -= 1
             DynStackStats.StackSize -= 2
             FreeMeleeSlots -= 1
-        ElseIf List(id).reach = 3 Then
+        ElseIf List(id).reach = GenDefaultValues.UnitAttackReach.melee Then
             DynStackStats.StackSize -= 1
             DynStackStats.MeleeCount = Math.Max(0, DynStackStats.MeleeCount - 1)
             FreeMeleeSlots = Math.Max(0, FreeMeleeSlots - 1)
@@ -1575,6 +1553,10 @@ Public Class Common
     Friend ConsumableItemsTypes, NonconsumableItemsTypes, JewelItemsTypes As New List(Of Integer)
     Friend ItemTypesLists() As List(Of Integer)
 
+    Protected Friend Delegate Sub RefreshExcluded()
+
+    Protected Friend onExcludedListChanged As RefreshExcluded = Nothing
+
     Public Sub New()
         Call ReadingLog.Enable()
 
@@ -1618,6 +1600,42 @@ Public Class Common
         Call defValues.ParseItemTypes(itemTypeID, itemType)
 
     End Sub
+
+    Friend Function IsAppropriateFighter(ByRef unit As AllDataStructues.Unit) As Boolean
+        If unit.useState = GenDefaultValues.ExclusionState.unknown Then
+            If IsExcluded(unit.unitID) Then Return False
+        Else
+            If unit.useState = GenDefaultValues.ExclusionState.excluded Then Return False
+        End If
+        If unit.unitBranch > GenDefaultValues.UnitClass.special Then Return False
+        Return True
+    End Function
+    Friend Function IsAppropriateLeader(ByRef unit As AllDataStructues.Unit) As Boolean
+        If unit.useState = GenDefaultValues.ExclusionState.unknown Then
+            If IsExcluded(unit.unitID) Then Return False
+        Else
+            If unit.useState = GenDefaultValues.ExclusionState.excluded Then Return False
+        End If
+        If Not unit.unitBranch = GenDefaultValues.UnitClass.leader Then Return False
+        Return True
+    End Function
+    Friend Function IsAppropriateItem(ByRef item As AllDataStructues.Item) As Boolean
+        If item.useState = GenDefaultValues.ExclusionState.unknown Then
+            If IsExcluded(item.itemID) Then Return False
+            If IsExcluded(itemType.Item(item.type).ToUpper) Then Return False
+        Else
+            If item.useState = GenDefaultValues.ExclusionState.excluded Then Return False
+        End If
+        If item.type = GenDefaultValues.ItemTypes.jewel Then
+            If item.itemCost.Gold = 0 Then Return False
+        Else
+            If item.itemCostSum = 0 Then Return False
+        End If
+        Return True
+    End Function
+    Protected Friend Function IsExcluded(ByRef ID As String) As Boolean
+        Return excludedObjects.Contains(ID.ToUpper)
+    End Function
 
     ''' <summary>Передаст в лог содержимое excludedObjects, customRace, objectRace, LootItemChanceMultiplier, SoleUnits</summary>
     ''' <param name="log">Сюда будем писать данные</param>
@@ -1981,6 +1999,7 @@ Public Class Common
             s = prepareToFileRead(ExcludeLists(i), defaultKeys, defaultVals)
             Call ReadFile(1, s, ExcludeLists(i), AddressOf ReadExcludedObjectsList, defaultKeys)
         Next i
+        If Not IsNothing(onExcludedListChanged) Then Call onExcludedListChanged()
     End Sub
     ''' <summary>Читает список юнитов и предметов, которые не должен использовать генератор</summary>
     ''' <param name="ExcludeLists">Файлы со списками исключенных объектов. Записи в них могут повторяться. 
@@ -1990,12 +2009,13 @@ Public Class Common
         If IsNothing(ExcludeLists) Then Exit Sub
         Dim s() As String = ExcludeLists.ToArray
         Call ReadFile(1, s, "", Nothing, Nothing)
+        If Not IsNothing(onExcludedListChanged) Then Call onExcludedListChanged()
     End Sub
     ''' <summary>Читает множители шанса выпадения для отдельных предметов</summary>
     ''' <param name="MultipliersList">Файлы с множителями шанса появления определенных предметов.
     ''' Допускается передача неинициализитрованного массива.
     ''' Для чтения из дефолтного листа в массив нужно добавить строчку %default% (наличие этого ключевого в файле запустит чтение дефолтного файла)</param>
-    Public Sub ReadLootItemChanceMultiplier(ByRef MultipliersList() As String)
+    Protected Friend Sub ReadLootItemChanceMultiplier(ByRef MultipliersList() As String)
         If IsNothing(MultipliersList) Then Exit Sub
         Dim s() As String
         Dim defaultKeys() As String = New String() {My.Resources.readDefaultFileKeyword}
@@ -2009,7 +2029,7 @@ Public Class Common
     ''' <param name="MultipliersList">Множители шанса появления определенных предметов.
     ''' Допускается передача неинициализитрованного массива.
     ''' Не воспринимает ключевые слова</param>
-    Public Sub ReadLootItemChanceMultiplier(ByRef MultipliersList As List(Of String))
+    Protected Friend Sub ReadLootItemChanceMultiplier(ByRef MultipliersList As List(Of String))
         If IsNothing(MultipliersList) Then Exit Sub
         Dim s() As String = MultipliersList.ToArray
         Call ReadFile(5, s, "", Nothing, Nothing)
@@ -2018,7 +2038,7 @@ Public Class Common
     ''' <param name="CustomUnitRace">Файлы со списками рас юнитов. Записи в них могут повторяться, но записи с повторяющимся ID будут перезаписываться. 
     ''' Допускается передача неинициализитрованного массива.
     ''' Для чтения из дефолтного листа в массив нужно добавить строчку %default% (наличие этого ключевого в файле запустит чтение дефолтного файла)</param>
-    Public Sub ReadCustomUnitRace(ByRef CustomUnitRace() As String)
+    Protected Friend Sub ReadCustomUnitRace(ByRef CustomUnitRace() As String)
         If IsNothing(CustomUnitRace) Then Exit Sub
         Dim s() As String
         Dim defaultKeys() As String = New String() {My.Resources.readDefaultFileKeyword}
@@ -2032,7 +2052,7 @@ Public Class Common
     ''' <param name="CustomUnitRace">Список рас юнитов. Записи в них могут повторяться, но записи с повторяющимся ID будут перезаписываться. 
     ''' Допускается передача неинициализитрованного списка.
     ''' Не воспринимает ключевые слова</param>
-    Public Sub ReadCustomUnitRace(ByRef CustomUnitRace As List(Of String))
+    Protected Friend Sub ReadCustomUnitRace(ByRef CustomUnitRace As List(Of String))
         If IsNothing(CustomUnitRace) Then Exit Sub
         Dim s() As String = CustomUnitRace.ToArray
         Call ReadFile(2, s, "", Nothing, Nothing)
@@ -2041,7 +2061,7 @@ Public Class Common
     ''' <param name="SoleUnitsList">Файлы со списками юнитов. Записи в них могут повторяться, но записи с повторяющимся ID будут перезаписываться. 
     ''' Допускается передача неинициализитрованного массива.
     ''' Для чтения из дефолтного листа в массив нужно добавить строчку %default% (наличие этого ключевого в файле запустит чтение дефолтного файла)</param>
-    Public Sub ReadSoleUnits(ByRef SoleUnitsList() As String)
+    Protected Friend Sub ReadSoleUnits(ByRef SoleUnitsList() As String)
         If IsNothing(SoleUnitsList) Then Exit Sub
         Dim s() As String
         Dim defaultKeys() As String = New String() {My.Resources.readDefaultFileKeyword}
@@ -2055,7 +2075,7 @@ Public Class Common
     ''' <param name="SoleUnitsList">Cписок юнитов. Записи в них могут повторяться, но записи с повторяющимся ID будут перезаписываться. 
     ''' Допускается передача неинициализитрованного списка.
     ''' Не воспринимает ключевые слова</param>
-    Public Sub ReadSoleUnits(ByRef SoleUnitsList As List(Of String))
+    Protected Friend Sub ReadSoleUnits(ByRef SoleUnitsList As List(Of String))
         If IsNothing(SoleUnitsList) Then Exit Sub
         Dim s() As String = SoleUnitsList.ToArray
         Call ReadFile(6, s, "", Nothing, Nothing)
@@ -2064,7 +2084,7 @@ Public Class Common
     ''' <param name="BigStackUnitsList">Файлы со списками юнитов. Записи в них могут повторяться, но записи с повторяющимся ID будут перезаписываться.
     ''' Допускается передача неинициализитрованного массива.
     ''' Для чтения из дефолтного листа в массив нужно добавить строчку %default% (наличие этого ключевого в файле запустит чтение дефолтного файла)</param>
-    Public Sub ReadBigStackUnits(ByRef BigStackUnitsList() As String)
+    Protected Friend Sub ReadBigStackUnits(ByRef BigStackUnitsList() As String)
         If IsNothing(BigStackUnitsList) Then Exit Sub
         Dim s() As String
         Dim defaultKeys() As String = New String() {My.Resources.readDefaultFileKeyword}
@@ -2078,7 +2098,7 @@ Public Class Common
     ''' <param name="BigStackUnitsList">Список юнитов. Записи в них могут повторяться, но записи с повторяющимся ID будут перезаписываться.
     ''' Допускается передача неинициализитрованного списка.
     ''' Не воспринимает ключевые слова</param>
-    Public Sub ReadBigStackUnits(ByRef BigStackUnitsList As List(Of String))
+    Protected Friend Sub ReadBigStackUnits(ByRef BigStackUnitsList As List(Of String))
         If IsNothing(BigStackUnitsList) Then Exit Sub
         Dim s() As String = BigStackUnitsList.ToArray
         Call ReadFile(7, s, "", Nothing, Nothing)
@@ -2087,7 +2107,7 @@ Public Class Common
     ''' <param name="CustomBuildingRace">Файлы со списками рас и положений зданий. Записи в них могут повторяться, но записи с повторяющимся ID будут перезаписываться. 
     ''' Допускается передача неинициализитрованного массива (будет прочтен дефолтный).
     ''' Для чтения из дефолтного листа в массив нужно добавить строчку %default% (наличие этого ключевого в файле запустит чтение дефолтного файла)</param>
-    Public Sub ReadCustomBuildingRace(ByRef CustomBuildingRace() As String)
+    Protected Friend Sub ReadCustomBuildingRace(ByRef CustomBuildingRace() As String)
         If IsNothing(CustomBuildingRace) Then
             Call ReadCustomBuildingRace(New String() {My.Resources.readDefaultFileKeyword})
             Exit Sub
@@ -2104,7 +2124,7 @@ Public Class Common
     ''' <param name="CustomBuildingRace">Список рас и положений зданий. Записи в них могут повторяться, но записи с повторяющимся ID будут перезаписываться. 
     ''' Допускается передача неинициализитрованного списка (будет прочтен дефолтный).
     ''' Не воспринимает ключевые слова</param>
-    Public Sub ReadCustomBuildingRace(ByRef CustomBuildingRace As List(Of String))
+    Protected Friend Sub ReadCustomBuildingRace(ByRef CustomBuildingRace As List(Of String))
         If IsNothing(CustomBuildingRace) Then
             Call ReadCustomBuildingRace(New String() {My.Resources.readDefaultFileKeyword})
             Exit Sub
@@ -2116,7 +2136,7 @@ Public Class Common
     ''' <param name="PlateauConstructionDescription">Файлы с описаниями.
     ''' Допускается передача неинициализитрованного массива (будет прочтен дефолтный).
     ''' Для чтения из дефолтного листа в массив нужно добавить строчку %default% (наличие этого ключевого в файле запустит чтение дефолтного файла)</param>
-    Public Sub ReadPlateauConstructionDescription(ByRef PlateauConstructionDescription() As String)
+    Protected Friend Sub ReadPlateauConstructionDescription(ByRef PlateauConstructionDescription() As String)
         If IsNothing(PlateauConstructionDescription) Then
             Call ReadPlateauConstructionDescription(New String() {My.Resources.readDefaultFileKeyword})
             Exit Sub
@@ -2133,7 +2153,7 @@ Public Class Common
     ''' <param name="PlateauConstructionDescription">Описания.
     ''' Допускается передача неинициализитрованного списка (будет прочтен дефолтный).
     ''' Не воспринимает ключевые слова</param>
-    Public Sub ReadPlateauConstructionDescription(ByRef PlateauConstructionDescription As List(Of String))
+    Protected Friend Sub ReadPlateauConstructionDescription(ByRef PlateauConstructionDescription As List(Of String))
         If IsNothing(PlateauConstructionDescription) Then
             Call ReadPlateauConstructionDescription(New String() {My.Resources.readDefaultFileKeyword})
             Exit Sub
@@ -2239,7 +2259,7 @@ Public Class Common
         If itemType.Item(item.type) = "JEWEL" Then
             Return item.itemCost / defValues.JewelItemsCostDevider
         Else
-            Return item.itemCost / defValues.nonJewelItemsCostDevider
+            Return item.itemCost / defValues.NonJewelItemsCostDevider
         End If
     End Function
 End Class
@@ -2417,7 +2437,7 @@ Public Class AllDataStructues
         Dim EXPnext As Integer
         ''' <summary>Лидерство от 0 до 6</summary>
         Dim leadership As Integer
-        ''' <summary>Область атаки. 1 – все цели; 2 – любая цель; 3 – ближайшая цель.</summary>
+        ''' <summary>Область атаки.</summary>
         Dim reach As Integer
         ''' <summary>GxxxUUxxxx</summary>
         Dim unitID As String
@@ -2425,8 +2445,7 @@ Public Class AllDataStructues
         Dim small As Boolean
         ''' <summary>True, если может находиться только на воде</summary>
         Dim waterOnly As Boolean
-        ''' <summary>0 - мили, 1 - лучники, 2 - маги, 3 - поддержка, 4 - особые (оборотень, сатир и т.д.), 
-        ''' 5 - обычный лидер, 6 - вор, 7 - саммон, 8 - страж столицы</summary>
+        ''' <summary>Класс юнита</summary>
         Dim unitBranch As Integer
         ''' <summary>Цена найма юнита</summary>
         Dim unitCost As Cost
@@ -2436,6 +2455,8 @@ Public Class AllDataStructues
         Dim dynUpgrade1 As DynUpgrade
         ''' <summary>Рост статов после dynUpgradeLevel</summary>
         Dim dynUpgrade2 As DynUpgrade
+        ''' <summary>Можно ли использовать юнита. 0 - неизвестно, -1 - нет, 1 - да</summary>
+        Friend useState As Integer
 
         Public Shared Function Copy(ByVal v As Unit) As Unit
             Return New Unit With {.name = v.name, _
@@ -2452,7 +2473,8 @@ Public Class AllDataStructues
                                   .unitCost = Cost.Copy(v.unitCost), _
                                   .dynUpgradeLevel = v.dynUpgradeLevel, _
                                   .dynUpgrade1 = DynUpgrade.Copy(v.dynUpgrade1), _
-                                  .dynUpgrade2 = DynUpgrade.Copy(v.dynUpgrade2)}
+                                  .dynUpgrade2 = DynUpgrade.Copy(v.dynUpgrade2), _
+                                  .useState = v.useState}
         End Function
     End Structure
 
@@ -2606,12 +2628,18 @@ Public Class AllDataStructues
         Dim type As Integer
         ''' <summary>Цена покупки предмета. При продаже цена в пять раз меньше</summary>
         Dim itemCost As Cost
+        ''' <summary>Сумма полей itemCost</summary>
+        Friend itemCostSum As Double
+        ''' <summary>Можно ли использовать предмет. 0 - неизвестно, -1 - нет, 1 - да</summary>
+        Friend useState As Integer
 
         Public Shared Function Copy(ByVal v As Item) As Item
             Return New Item With {.name = v.name, _
                                   .itemID = v.itemID, _
                                   .type = v.type, _
-                                  .itemCost = Cost.Copy(v.itemCost)}
+                                  .itemCost = Cost.Copy(v.itemCost), _
+                                  .itemCostSum = v.itemCostSum, _
+                                  .useState = v.useState}
         End Function
     End Structure
 
@@ -3085,6 +3113,30 @@ Public Class GenDefaultValues
         talisman = 12
         boots = 13
         special = 14
+    End Enum
+
+    Public Enum UnitAttackReach
+        mage = 1
+        archer = 2
+        melee = 3
+    End Enum
+
+    Public Enum UnitClass
+        fighter = 0
+        archer = 1
+        mage = 2
+        support = 3
+        special = 4
+        leader = 5
+        thief = 6
+        summon = 7
+        capitalGuard = 8
+    End Enum
+
+    Public Enum ExclusionState
+        unknown = 0
+        excluded = -1
+        canUse = 1
     End Enum
 
     'default files

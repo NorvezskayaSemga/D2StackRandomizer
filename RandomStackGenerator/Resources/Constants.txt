@@ -39,7 +39,7 @@ LootCostDispersion			2.0
 
 #ћножитель шанса по€влени€ каждого типа предметов, не завис€щий от того, какие предметы уже есть на карте
 #есть условие по цене.
-#Ќапример elixir=0.75#cost>400else1.25 значит, что дл€ обычных эликсиров стоимостью больше 400 множитель равен 1.25, дл€ тех, что дешевле - 0.75
+#Ќапример elixir=0.75#cost>400else1.25 значит, что дл€ обычных эликсиров стоимостью больше 400 множитель равен 0.75, дл€ тех, что дешевле 401 - 1.25
 ItemTypeChanceMultiplier	talisman=0.1;/
 							scroll=0.15;/
 							sphere=0.5;/
@@ -58,7 +58,8 @@ AddedItemTypeSearchRadius	12.0
 #AddedItemTypeChanceMultiplier+(1-AddedItemTypeChanceMultiplier)*R/AddedItemTypeSearchRadius
 AddedItemTypeChanceMultiplier	nonattack_artifact=0.65;/
 								attack_artifact=0.65;/
-								relic=0.5;banner=0.5;/
+								relic=0.5;/
+								banner=0.5;/
 								boots=0.25;/
 								elixir=0.9;/
 								healing_elixir=0.85;/
@@ -68,31 +69,31 @@ AddedItemTypeChanceMultiplier	nonattack_artifact=0.65;/
 								stuff=0.35;/
 								jewel=0.95;/
 								sphere=0.85;/
-								talisman=0.7;/
+								talisman=0.35;/
 								special=1
 
 # аждый раз, когда какой-то предмет добавл€етс€ на карту, шанс добавлени€ такого же предмета умножаетс€ на это число
-AddedItemChanceMultiplier	0.8
+AddedItemChanceMultiplier	0.75
 
 #√енератор случайных карт нее будет пытатьс€ создавать локации с радиусом меньше minLocationRadiusAtAll
 minLocationRadiusAtAll		7.0
 
-#Humans			    H	6	1
-#Undead			    U	2
-#Legions			L	3
-#Clans			    C	K	4
-#Elves			    E	7	14
-#Neutral			N	5
-#Greenskins		    G	O	8
-#Dragons			D	9
-#Swamp			    S	10
-#Water			    W	11
-#Barbarians		    B	12
-#Animals			A	13
-#AnimalSpider	    AS	15
-#AnimalSnowTerr 	AST	16
-#AnimalWolf		    AW	18
-#AnimalGriffin	    AG	19
+#Humans			    H
+#Undead			    U
+#Legions			L
+#Clans			    C
+#Elves			    E
+#Neutral			N
+#Greenskins		    G
+#Dragons			D
+#Swamp			    S
+#Water			    W
+#Barbarians		    B
+#Animals			A
+#AnimalSpider	    AS
+#AnimalSnowTerr 	AST
+#AnimalWolf		    AW
+#AnimalGriffin	    AG
 
 #эти составы отр€дов по расам будут присутствовать на всех локаци€х, разделитель составов - звездочка, расы объединены с помощью плюса
 commonRacesBlock				D*W*A*AS*AW*A+AW+AG
