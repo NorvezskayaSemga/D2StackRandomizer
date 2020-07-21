@@ -73,7 +73,7 @@ AddedItemTypeChanceMultiplier nonattack_artifact=0.65;/
                               special=1
 
 # аждый раз, когда какой-то предмет добавл€етс€ на карту, шанс добавлени€ такого же предмета умножаетс€ на это число
-AddedItemChanceMultiplier	0.75
+AddedItemChanceMultiplier	0.8
 
 #√енератор случайных карт нее будет пытатьс€ создавать локации с радиусом меньше minLocationRadiusAtAll
 minLocationRadiusAtAll		7.0
