@@ -329,39 +329,55 @@ Public Class RandStack
         Return LootCost(m)
     End Function
 
-    ''' <summary>Может быть преобразует часть золота в ману. Результат будет кратен 50</summary>
+    ''' <summary>Может быть преобразует часть золота в ману. Результат будет кратен 25</summary>
     ''' <param name="input">Начальные ресурсы. При конвертации начальная мана не пропадет</param>
     ''' <param name="conversionChance">Шанс сконвертировать (от 0 до 1)</param>
     ''' <param name="conversionAmount">Какую часть золота сконвертировать (от 0 до 1)</param>
-    ''' <param name="outputMana">1 - black, 2 - blue, 3 - green, 4 - red, 5 - white</param>
+    ''' <param name="outputManaRelationsips">Соотношение, в котором золото будет преобразовано в разные типы маны (поле gold игнорируется)</param>
     Public Function GoldToMana(ByRef input As AllDataStructues.Cost, ByVal conversionChance As Double, _
-                               ByVal conversionAmount As Double, ByRef outputMana As List(Of Integer)) As AllDataStructues.Cost
+                               ByVal conversionAmount As Double, ByRef outputManaRelationsips As AllDataStructues.Cost) As AllDataStructues.Cost
         Dim output As AllDataStructues.Cost = AllDataStructues.Cost.Copy(input)
-        If conversionChance > 0 AndAlso outputMana.Count > 0 AndAlso rndgen.Rand(0, 1, True) <= conversionChance Then
-            Dim dAmount As Integer = 50
-            Dim amount As Integer = 0
-            Do While (amount + dAmount) * outputMana.Count <= Math.Floor(input.Gold * Math.Min(conversionAmount, 1))
-                amount += dAmount
+        If conversionChance > 0 AndAlso AllDataStructues.Cost.Sum(outputManaRelationsips) - outputManaRelationsips.Gold > 0 AndAlso rndgen.Rand(0, 1, True) <= conversionChance Then
+            Dim relationships As New AllDataStructues.Cost
+            Do While AllDataStructues.Cost.Sum(relationships) = 0
+                If outputManaRelationsips.Black > 0 Then relationships.Black = rndgen.RndPos(outputManaRelationsips.Black + 1, True) - 1
+                If outputManaRelationsips.Blue > 0 Then relationships.Blue = rndgen.RndPos(outputManaRelationsips.Blue + 1, True) - 1
+                If outputManaRelationsips.Green > 0 Then relationships.Green = rndgen.RndPos(outputManaRelationsips.Green + 1, True) - 1
+                If outputManaRelationsips.Red > 0 Then relationships.Red = rndgen.RndPos(outputManaRelationsips.Red + 1, True) - 1
+                If outputManaRelationsips.White > 0 Then relationships.White = rndgen.RndPos(outputManaRelationsips.White + 1, True) - 1
             Loop
-            output.Gold -= amount * outputMana.Count
-            For Each manaID As Integer In outputMana
-                If manaID = 1 Then
-                    output.Black += amount
-                ElseIf manaID = 2 Then
-                    output.Blue += amount
-                ElseIf manaID = 3 Then
-                    output.Green += amount
-                ElseIf manaID = 4 Then
-                    output.Red += amount
-                ElseIf manaID = 5 Then
-                    output.White += amount
-                Else
-                    Throw New Exception("Unknown mana ID: " & manaID)
-                End If
-            Next manaID
+
+            Dim manaPiece As Double = input.Gold * Math.Max(Math.Min(conversionAmount, 1), 0) / AllDataStructues.Cost.Sum(relationships)
+
+            Dim roundBy As Integer = 25
+            Dim dGold As Double = 0
+            
+            Call GoldToManaRound(relationships.Black * manaPiece, roundBy, output, output.Black, dGold)
+            Call GoldToManaRound(relationships.Blue * manaPiece, roundBy, output, output.Blue, dGold)
+            Call GoldToManaRound(relationships.Green * manaPiece, roundBy, output, output.Green, dGold)
+            Call GoldToManaRound(relationships.Red * manaPiece, roundBy, output, output.Red, dGold)
+            Call GoldToManaRound(relationships.White * manaPiece, roundBy, output, output.White, dGold)
+
         End If
         Return output
     End Function
+    Private Sub GoldToManaRound(ByRef input As Double, ByRef roundBy As Integer, ByRef output As AllDataStructues.Cost, ByRef field As Integer, ByRef dGold As Double)
+        If input <= 0 Then Exit Sub
+        input = Math.Min(input, output.Gold)
+        Dim modulo As Double = input Mod roundBy
+        Dim convet As Integer = CInt(input - modulo)
+        output.Gold -= convet
+        field += convet
+        dGold += modulo
+        If dGold > 0 And output.Gold >= roundBy Then
+            Dim r As Double = rndgen.Rand(0, CDbl(roundBy), True)
+            If r < dGold Then
+                output.Gold -= roundBy
+                field += roundBy
+                dGold -= roundBy
+            End If
+        End If
+    End Sub
 
     Private Sub AddToLog(ByRef LogID As Integer, ByRef Msg As String)
         If LogID > -1 Then
@@ -2530,18 +2546,19 @@ Public Class AllDataStructues
                     Throw New Exception("Количество ресурса не является числом: " & costString & " , ресурс: " & s1)
                     Return Nothing
                 End If
+                Dim convertedValue As Integer = Math.Max(Math.Min(ValueConverter.StrToInt(v, costString, s1), 9999), 0)
                 If s1 = "g" Then
-                    res.Gold = ValueConverter.StrToInt(v, costString, s1)
+                    res.Gold = convertedValue
                 ElseIf s1 = "r" Then
-                    res.Red = ValueConverter.StrToInt(v, costString, s1)
+                    res.Red = convertedValue
                 ElseIf s1 = "y" Then
-                    res.Blue = ValueConverter.StrToInt(v, costString, s1)
+                    res.Blue = convertedValue
                 ElseIf s1 = "e" Then
-                    res.Black = ValueConverter.StrToInt(v, costString, s1)
+                    res.Black = convertedValue
                 ElseIf s1 = "w" Then
-                    res.White = ValueConverter.StrToInt(v, costString, s1)
+                    res.White = convertedValue
                 ElseIf s1 = "b" Then
-                    res.Green = ValueConverter.StrToInt(v, costString, s1)
+                    res.Green = convertedValue
                 Else
                     Throw New Exception("Неожиданный формат стоимости: " & costString)
                     Return Nothing
@@ -2557,6 +2574,7 @@ Public Class AllDataStructues
             Dim s As String = ""
             For i As Integer = 0 To UBound(ch) Step 1
                 s &= ch(i)
+                If val(i) < 0 Then val(i) = 0
                 If val(i) > 9999 Then
                     'Throw New Exception("Too great value of " & ch(i) & " : " & val(i))
                     val(i) = 9999
