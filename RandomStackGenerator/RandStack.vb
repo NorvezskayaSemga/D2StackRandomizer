@@ -963,6 +963,8 @@ Public Class RandStack
         Dim units(11)() As AllDataStructues.Unit
         Dim DynStackStats(UBound(units)) As AllDataStructues.DesiredStats
         Call log.MRedim(units.Length)
+        Dim leaderExpKilled() As Integer = Nothing
+        If Not NoLeader Then ReDim leaderExpKilled(UBound(units))
 
         Parallel.For(0, units.Length, _
          Sub(jobID As Integer)
@@ -985,13 +987,16 @@ Public Class RandStack
                                                                     SelectedLeader, GroundTile, BaseStackSize, _
                                                                     CDbl(jobID / units.Length), jobID)
              units(jobID) = GenUnitsList(SelectedFighters, SelectedLeader, NoLeader)
+
+             If Not NoLeader Then leaderExpKilled(jobID) = AllUnits(SelectedLeader).EXPkilled
+
              log.MAdd(jobID, "--------Attempt " & jobID + 1 & " ended--------")
          End Sub)
 
         Call log.Add(log.MPrintAll())
         Call log.MRedim(0)
 
-        Dim selected As Integer = SelectStack(StackStats, DynStackStats)
+        Dim selected As Integer = SelectStack(StackStats, DynStackStats, leaderExpKilled)
 
         If log.IsEnabled Then
             Dim txt As String = ""
@@ -1223,7 +1228,8 @@ Public Class RandStack
         Return result
     End Function
     Private Function SelectStack(ByRef StackStats As AllDataStructues.DesiredStats, _
-                                 ByRef DynStackStats() As AllDataStructues.DesiredStats) As Integer
+                                 ByRef DynStackStats() As AllDataStructues.DesiredStats, _
+                                 ByRef leaderExpKilled() As Integer) As Integer
         Dim possible1, possible2 As New List(Of Integer)
         Dim SizeTolerance As Integer = 0
         Do While possible1.Count < 0.5 * DynStackStats.Length
@@ -1243,9 +1249,27 @@ Public Class RandStack
             If possible2.Count >= 0.2 * DynStackStats.Length Then Exit Do
             If possible2.Count > 0 And ExpTolerance >= 0.1 Then Exit Do
         Loop
+        Dim leaderExpKilledMaxValue As Integer = 0
+        Dim maxExpDelta As Integer = 0
+        If Not IsNothing(leaderExpKilled) Then
+            For Each i As Integer In possible2
+                leaderExpKilledMaxValue = Math.Max(leaderExpKilledMaxValue, leaderExpKilled(i))
+            Next i
+        End If
+        For Each i As Integer In possible2
+            maxExpDelta = Math.Max(maxExpDelta, Math.Abs(DynStackStats(i).ExpStackKilled))
+        Next i
+
         Dim weight(UBound(DynStackStats)) As Double
         For Each i As Integer In possible2
-            weight(i) = 1 / (1 + Math.Abs(DynStackStats(i).ExpStackKilled))
+            Dim m As Double
+            If Not IsNothing(leaderExpKilled) Then
+                m = leaderExpKilled(i) / leaderExpKilledMaxValue
+            Else
+                m = 1
+            End If
+            'weight(i) = m / (1 + Math.Abs(DynStackStats(i).ExpStackKilled)) 'old
+            weight(i) = m / (1 + (1 + Math.Abs(DynStackStats(i).ExpStackKilled)) / (1 + maxExpDelta)) 'new
         Next i
         Dim selected As Integer = comm.RandomSelection(possible2, weight, False)
         Return selected
