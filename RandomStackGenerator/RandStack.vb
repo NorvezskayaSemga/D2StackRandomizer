@@ -437,6 +437,7 @@ Public Class RandStack
         Dim DynCost As Integer = GoldCost
         Dim IDs As New List(Of Integer)
         Dim result As New List(Of String)
+        Dim sameAddedCount(UBound(AllItems)) As Integer
         Do While DynCost >= minItemGoldCost
             maxCost = GenItemMaxCost(DynIGen, DynCost)
             costBar = GenItemCostBar(DynIGen, maxCost, serialExecution)
@@ -445,12 +446,26 @@ Public Class RandStack
                                  " max item cost:" & maxCost(0) & "|" & maxCost(1) & "|" & maxCost(2))
             IDs.Clear()
             For i As Integer = 0 To UBound(AllItems) Step 1
-                If ItemFilter(DynIGen, AllItems(i), costBar) AndAlso ItemFilter(TypeCostRestriction, AllItems(i)) Then
+                'new filter
+                If ItemFilter(IGen, AllItems(i)) AndAlso ItemFilter(TypeCostRestriction, AllItems(i)) Then
                     IDs.Add(i)
                     weight(i) = GenItemWeight(AllItems(i), costBar) * multiplierItemsWeight(i) * DynTypeWeightMultiplier(AllItems(i).type)
+                    If Not ItemFilter(DynIGen, AllItems(i), costBar) Then weight(i) *= 0.001
+                    If result.Contains(AllItems(i).itemID) Then
+                        Dim d As Integer = 1 + sameAddedCount(i) - comm.defValues.SameItemsAmountRestriction(AllItems(i).type)
+                        If d > 0 Then weight(i) *= comm.defValues.SameItemsAmountRestrictionMultiplier(AllItems(i).type) ^ d
+                    End If
                 Else
                     weight(i) = 0
                 End If
+
+                'old filter
+                'If ItemFilter(DynIGen, AllItems(i), costBar) AndAlso ItemFilter(TypeCostRestriction, AllItems(i)) Then
+                '    IDs.Add(i)
+                '    weight(i) = GenItemWeight(AllItems(i), costBar) * multiplierItemsWeight(i) * DynTypeWeightMultiplier(AllItems(i).type)
+                'Else
+                '    weight(i) = 0
+                'End If
             Next i
             If IDs.Count = 0 Then Exit Do
 
@@ -463,6 +478,7 @@ Public Class RandStack
             Call AddToAddedItemList(AllItems(selected), pos)
             Call GenItemIGenChange(DynIGen, AllItems(selected), DynCost)
             DynCost = CInt(DynCost - ItemCostSum(selected))
+            sameAddedCount(selected) += 1
         Loop
 
         If Not IsNothing(IGen.PreserveItems) AndAlso IGen.PreserveItems.Count > 0 Then
@@ -729,6 +745,7 @@ Public Class RandStack
         AddedItems.Item(pos.X).Item(pos.Y).Add(item)
     End Sub
 
+    ''' <summary>Фильтр предметов по назначению: расходники, надеваемые артефакты или драгоценности</summary>
     Friend Function ItemFilter(ByRef IGen As AllDataStructues.LootGenSettings, ByRef item As AllDataStructues.Item) As Boolean
         If Not comm.IsAppropriateItem(item) Then Return False
         Dim settings() As AllDataStructues.ItemGenSettings = AllDataStructues.LootGenSettings.ToArray(IGen)
@@ -743,6 +760,7 @@ Public Class RandStack
         Next i
         Return True
     End Function
+    ''' <summary>Фильтр предметов по стоимости (стоимость не выше заданного значения)</summary>
     Friend Function ItemFilter(ByRef IGen As AllDataStructues.LootGenSettings, ByRef item As AllDataStructues.Item, _
                                ByRef CostBar() As Integer) As Boolean
         If Not comm.IsAppropriateItem(item) Then Return False
@@ -759,6 +777,7 @@ Public Class RandStack
         Next i
         Return True
     End Function
+    ''' <summary>Фильтр предметов по стоимости (стоимость находится в диапазоне)</summary>
     Friend Function ItemFilter(ByRef TypeCostRestriction As Dictionary(Of Integer, AllDataStructues.Restriction), _
                                ByRef item As AllDataStructues.Item) As Boolean
         If Not comm.IsAppropriateItem(item) Then Return False
@@ -2899,6 +2918,8 @@ Public Class GenDefaultValues
         Call SetProperty(LootCostDispersion, "LootCostDispersion", RConstants, DConstants)
         Call SetProperty(AddedItemChanceMultiplier, "AddedItemChanceMultiplier", RConstants, DConstants)
         Call SetProperty(AddedItemTypeChanceMultiplier, "AddedItemTypeChanceMultiplier", RConstants, DConstants, itemTypeID, False)
+        Call SetProperty(SameItemsAmountRestriction, "SameItemsAmountRestriction", RConstants, DConstants, itemTypeID, False)
+        Call SetProperty(SameItemsAmountRestrictionMultiplier, "SameItemsAmountRestrictionMultiplier", RConstants, DConstants, itemTypeID, False)
         Call SetProperty(AddedItemTypeSearchRadius, "AddedItemTypeSearchRadius", RConstants, DConstants)
 
         'map
@@ -2932,22 +2953,24 @@ Public Class GenDefaultValues
             'common
             log.Add("defaultSigma = " & defaultSigma)
 
-            'units                                                
+            'units
             log.Add("expBarDispersion = " & expBarDispersion)
             log.Add("giantUnitsExpMultiplier = " & giantUnitsExpMultiplier)
             log.Add("smallUnitsExpMultiplier = " & smallUnitsExpMultiplier)
             log.Add("weakerUnitsRadius = " & weakerUnitsRadius)
 
-            'loot                                                 
+            'loot
             log.Add("ItemTypeChanceMultiplier = " & vbNewLine & String.Join(vbNewLine & spaces, ItemTypeChanceMultiplier.Split(CChar(";"))))
             log.Add("JewelItemsCostDevider = " & JewelItemsCostDevider)
             log.Add("NonJewelItemsCostDevider = " & NonJewelItemsCostDevider)
             log.Add("LootCostDispersion = " & LootCostDispersion)
+            log.Add("SameItemsAmountRestriction = " & vbNewLine & spaces & String.Join(vbNewLine & spaces, SameItemsAmountRestriction))
+            log.Add("SameItemsAmountRestrictionMultiplier = " & vbNewLine & spaces & String.Join(vbNewLine & spaces, SameItemsAmountRestriction))
             log.Add("AddedItemChanceMultiplier = " & AddedItemChanceMultiplier)
             log.Add("AddedItemTypeChanceMultiplier = " & AddedItemTypeChanceMultiplierStr)
             log.Add("AddedItemTypeSearchRadius = " & AddedItemTypeSearchRadius)
 
-            'map                                                  
+            'map
             log.Add("minLocationRadiusAtAll = " & minLocationRadiusAtAll)
             log.Add("LocRacesBlocks = " & vbNewLine & spaces & String.Join(vbNewLine & spaces, LocRacesBlocks))
             log.Add("StackRaceChance = " & StackRaceChanceStr)
@@ -2990,21 +3013,11 @@ Public Class GenDefaultValues
     Private Sub SetProperty(ByRef output() As Double, ByRef name As String, ByRef readValues As Dictionary(Of String, String), _
                             ByRef defaultValues As Dictionary(Of String, String), ByRef nameToID As Dictionary(Of String, Integer), _
                             ByRef HasSynonyms As Boolean)
-        Dim r As Dictionary(Of String, String) = PropertiesArrayToDictionary(GetProperty(name, readValues, defaultValues).ToUpper.Replace("=", " ").Split(CChar(";")))
-        Dim d As Dictionary(Of String, String) = PropertiesArrayToDictionary(GetProperty(name, defaultValues, readValues).ToUpper.Replace("=", " ").Split(CChar(";")))
 
-        Dim nonsynomical As Dictionary(Of String, Integer)
-
-        If HasSynonyms Then
-            nonsynomical = New Dictionary(Of String, Integer)
-            For Each v As Integer In nameToID.Values
-                If Not nonsynomical.ContainsKey(v.ToString) Then nonsynomical.Add(v.ToString, v)
-            Next v
-            r = ChangeToSynonymicNames(r, nameToID)
-            d = ChangeToSynonymicNames(d, nameToID)
-        Else
-            nonsynomical = nameToID
-        End If
+        Dim r, d As Dictionary(Of String, String)
+        r = Nothing : d = Nothing
+        Dim nonsynomical As Dictionary(Of String, Integer) = Nothing
+        Call SetPropertyMakeIn(nonsynomical, r, d, name, readValues, defaultValues, nameToID, HasSynonyms)
 
         ReDim output(nonsynomical.Values.Max)
         For Each key As String In nonsynomical.Keys
@@ -3019,6 +3032,48 @@ Public Class GenDefaultValues
                     output(i) = output(source)
                 End If
             Next i
+        End If
+    End Sub
+    Private Sub SetProperty(ByRef output() As Integer, ByRef name As String, ByRef readValues As Dictionary(Of String, String), _
+                            ByRef defaultValues As Dictionary(Of String, String), ByRef nameToID As Dictionary(Of String, Integer), _
+                            ByRef HasSynonyms As Boolean)
+
+        Dim r, d As Dictionary(Of String, String)
+        r = Nothing : d = Nothing
+        Dim nonsynomical As Dictionary(Of String, Integer) = Nothing
+        Call SetPropertyMakeIn(nonsynomical, r, d, name, readValues, defaultValues, nameToID, HasSynonyms)
+
+        ReDim output(nonsynomical.Values.Max)
+        For Each key As String In nonsynomical.Keys
+            Dim v As Integer = ValueConverter.StrToInt(GetProperty(key, r, d), name, key)
+            output(nonsynomical.Item(key)) = v
+        Next key
+
+        If HasSynonyms Then
+            For i As Integer = 0 To UBound(output) Step 1
+                If output(i) = 0 AndAlso nameToID.ContainsKey(i.ToString) Then
+                    Dim source As Integer = CInt(nameToID.Item(i.ToString))
+                    output(i) = output(source)
+                End If
+            Next i
+        End If
+    End Sub
+    Private Sub SetPropertyMakeIn(ByRef nonsynomical As Dictionary(Of String, Integer), ByRef r As Dictionary(Of String, String), ByRef d As Dictionary(Of String, String), _
+                                  ByRef name As String, ByRef readValues As Dictionary(Of String, String), _
+                                  ByRef defaultValues As Dictionary(Of String, String), ByRef nameToID As Dictionary(Of String, Integer), _
+                                  ByRef HasSynonyms As Boolean)
+        r = PropertiesArrayToDictionary(GetProperty(name, readValues, defaultValues).ToUpper.Replace("=", " ").Split(CChar(";")))
+        d = PropertiesArrayToDictionary(GetProperty(name, defaultValues, readValues).ToUpper.Replace("=", " ").Split(CChar(";")))
+
+        If HasSynonyms Then
+            nonsynomical = New Dictionary(Of String, Integer)
+            For Each v As Integer In nameToID.Values
+                If Not nonsynomical.ContainsKey(v.ToString) Then nonsynomical.Add(v.ToString, v)
+            Next v
+            r = ChangeToSynonymicNames(r, nameToID)
+            d = ChangeToSynonymicNames(d, nameToID)
+        Else
+            nonsynomical = nameToID
         End If
     End Sub
     Private Sub SetProperty(ByRef output As String, ByRef name As String, ByRef readValues As Dictionary(Of String, String), ByRef defaultValues As Dictionary(Of String, String))
@@ -3068,6 +3123,8 @@ Public Class GenDefaultValues
     Public Property AddedItemChanceMultiplier As Double
     Public Property AddedItemTypeChanceMultiplier As Double()
     Public Property AddedItemTypeSearchRadius As Double
+    Public Property SameItemsAmountRestriction As Integer()
+    Public Property SameItemsAmountRestrictionMultiplier As Double()
 
     'map
     Public Property minLocationRadiusAtAll As Double

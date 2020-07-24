@@ -53,7 +53,7 @@ ItemTypeChanceMultiplier    talisman=0.1;/
 #уменьшают шанс добавления новых предметов того же типа
 AddedItemTypeSearchRadius	12.0
 
-#Для каждого типа предметов шанс появления предмета того же тапа умножается на некоторое число
+#Для каждого типа предметов шанс появления предмета того же тапа умножается на число из списка ниже
 #за каждый предмет в радиусе AddedItemTypeSearchRadius (для каждого типа свое) в зависимости от расстояния (R)
 #AddedItemTypeChanceMultiplier+(1-AddedItemTypeChanceMultiplier)*R/AddedItemTypeSearchRadius
 AddedItemTypeChanceMultiplier nonattack_artifact=0.65;/
@@ -74,6 +74,44 @@ AddedItemTypeChanceMultiplier nonattack_artifact=0.65;/
 
 #Каждый раз, когда какой-то предмет добавляется на карту, шанс добавления такого же предмета умножается на это число
 AddedItemChanceMultiplier	0.8
+
+#Для каждого типа предметов задан порог количества одинаковых предметов в награде
+#Например "sphere=2" означает, что если в нагде уже есть две сферы огня, то шанс появления третьей сферы огня будет снижен
+#множителем из SameItemsAmountRestrictionMultiplier
+SameItemsAmountRestriction nonattack_artifact=1;/
+                           attack_artifact=1;/
+                           relic=1;/
+                           banner=1;/
+                           boots=1;/
+                           elixir=3;/
+                           healing_elixir=2;/
+                           ressurection_elixir=3;/
+                           permanent_elixir=1;/
+                           scroll=2;/
+                           stuff=1;/
+                           jewel=3;/
+                           sphere=2;/
+                           talisman=1;/
+                           special=1
+						   
+#Для каждого типа предметов задан порог количества одинаковых предметов в награде (SameItemsAmountRestriction)
+#Если награда уже содежит количество предметов (n), равное или больше, чем SameItemsAmountRestriction (например, три сферы огня),
+#то шанс появления предмета (сферы огня) умножается на SameItemsAmountRestrictionMultiplier^SameItemsAmountRestriction
+SameItemsAmountRestrictionMultiplier nonattack_artifact=0.01;/
+                                     attack_artifact=0.01;/
+                                     relic=0.01;/
+                                     banner=0.01;/
+                                     boots=0.01;/
+                                     elixir=0.05;/
+                                     healing_elixir=0.075;/
+                                     ressurection_elixir=0.05;/
+                                     permanent_elixir=0.025;/
+                                     scroll=0.05;/
+                                     stuff=0.01;/
+                                     jewel=0.1;/
+                                     sphere=0.05;/
+                                     talisman=0.01;/
+                                     special=1
 
 #Генератор случайных карт нее будет пытаться создавать локации с радиусом меньше minLocationRadiusAtAll
 minLocationRadiusAtAll		7.0
