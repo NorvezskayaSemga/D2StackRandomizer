@@ -85,7 +85,7 @@ Public Class RandStack
         ReDim AllItems(UBound(AllItemsList)), ItemCostSum(UBound(AllItemsList)), multiplierItemsWeight(UBound(AllItemsList))
 
         Dim weight As New Dictionary(Of String, String)
-        For Each s As String In comm.defValues.ItemTypeChanceMultiplier.Split(CChar(";"))
+        For Each s As String In comm.defValues.Global_ItemType_ChanceMultiplier.Split(CChar(";"))
             Dim i As Integer = s.IndexOf("=")
             weight.Add(s.Substring(0, i).ToUpper, s.Substring(i + 1).ToUpper)
         Next s
@@ -351,7 +351,7 @@ Public Class RandStack
 
             Dim roundBy As Integer = 25
             Dim dGold As Double = 0
-            
+
             Call GoldToManaRound(relationships.Black * manaPiece, roundBy, output, output.Black, dGold)
             Call GoldToManaRound(relationships.Blue * manaPiece, roundBy, output, output.Blue, dGold)
             Call GoldToManaRound(relationships.Green * manaPiece, roundBy, output, output.Green, dGold)
@@ -438,6 +438,10 @@ Public Class RandStack
         Dim IDs As New List(Of Integer)
         Dim result As New List(Of String)
         Dim sameAddedCount(UBound(AllItems)) As Integer
+
+        Dim Local_SameItemCount() As Integer = SameItemsCounter(pos)
+        Dim DynSameItemWeightMultiplier() As Double = SameItemDynWeight(pos, Local_SameItemCount)
+
         Do While DynCost >= minItemGoldCost
             maxCost = GenItemMaxCost(DynIGen, DynCost)
             costBar = GenItemCostBar(DynIGen, maxCost, serialExecution)
@@ -449,11 +453,11 @@ Public Class RandStack
                 'new filter
                 If ItemFilter(IGen, AllItems(i)) AndAlso ItemFilter(TypeCostRestriction, AllItems(i)) Then
                     IDs.Add(i)
-                    weight(i) = GenItemWeight(AllItems(i), costBar) * multiplierItemsWeight(i) * DynTypeWeightMultiplier(AllItems(i).type)
+                    weight(i) = GenItemWeight(AllItems(i), costBar) * multiplierItemsWeight(i) * DynTypeWeightMultiplier(AllItems(i).type) * DynSameItemWeightMultiplier(i)
                     If Not ItemFilter(DynIGen, AllItems(i), costBar) Then weight(i) *= 0.001
                     If result.Contains(AllItems(i).itemID) Then
                         Dim d As Integer = 1 + sameAddedCount(i) - comm.defValues.SameItemsAmountRestriction(AllItems(i).type)
-                        If d > 0 Then weight(i) *= comm.defValues.SameItemsAmountRestrictionMultiplier(AllItems(i).type) ^ d
+                        If d > 0 Then weight(i) *= comm.defValues.ThisBag_SameItems_ChanceMultiplier(AllItems(i).type) ^ d
                     End If
                 Else
                     weight(i) = 0
@@ -470,8 +474,8 @@ Public Class RandStack
             If IDs.Count = 0 Then Exit Do
 
             selected = comm.RandomSelection(IDs, weight, serialExecution)
-            multiplierItemsWeight(selected) *= comm.defValues.AddedItemChanceMultiplier
-            DynTypeWeightMultiplier(AllItems(selected).type) *= comm.defValues.AddedItemTypeChanceMultiplier(AllItems(selected).type)
+            multiplierItemsWeight(selected) *= comm.defValues.Global_AddedItem_ChanceMultiplier
+            DynTypeWeightMultiplier(AllItems(selected).type) *= comm.defValues.Local_AddedItemType_ChanceMultiplier(AllItems(selected).type)
 
             Call AddToLog(LogID, "Selected item:" & AllItems(selected).name & " id:" & AllItems(selected).itemID & " cost:" & ItemCostSum(selected))
             result.Add(AllItems(selected).itemID)
@@ -479,6 +483,11 @@ Public Class RandStack
             Call GenItemIGenChange(DynIGen, AllItems(selected), DynCost)
             DynCost = CInt(DynCost - ItemCostSum(selected))
             sameAddedCount(selected) += 1
+
+            Local_SameItemCount(selected) += 1
+            If Local_SameItemCount(selected) >= comm.defValues.SameItemsAmountRestriction(AllItems(selected).type) Then
+                DynSameItemWeightMultiplier(selected) *= comm.defValues.Local_SameItem_ChanceMultiplier(AllItems(selected).type)
+            End If
         Loop
 
         If Not IsNothing(IGen.PreserveItems) AndAlso IGen.PreserveItems.Count > 0 Then
@@ -557,19 +566,20 @@ Public Class RandStack
         Dim IDs As New List(Of Integer)
         Dim result As String = ""
 
-        Dim DynTypeWeightMultiplier(), DynItemWeightMultiplier(UBound(AllItems)) As Double
+        Dim DynTypeWeightMultiplier(), DynItemWeightMultiplier(UBound(AllItems)), DynSameItemWeightMultiplier() As Double
+
         DynTypeWeightMultiplier = ItemTypeDynWeight(pos)
+        DynSameItemWeightMultiplier = SameItemDynWeight(pos, SameItemsCounter(pos))
 
         IDs.Clear()
         For i As Integer = 0 To UBound(AllItems) Step 1
-            DynItemWeightMultiplier(i) = multiplierItemsWeight(i) * DynTypeWeightMultiplier(AllItems(i).type)
-
+            DynItemWeightMultiplier(i) = multiplierItemsWeight(i) * DynTypeWeightMultiplier(AllItems(i).type) * DynSameItemWeightMultiplier(i)
             If ItemCostSum(i) <= GoldCost AndAlso ItemFilter(IGen, AllItems(i)) _
             AndAlso ItemFilter(TypeCostRestriction, AllItems(i)) Then IDs.Add(i)
         Next i
         If IDs.Count > 0 Then
             selected = comm.RandomSelection(IDs, New Double()() {ItemCostSum}, New Double() {GoldCost}, DynItemWeightMultiplier, itemGenSigma, serialExecution)
-            multiplierItemsWeight(selected) *= comm.defValues.AddedItemChanceMultiplier
+            multiplierItemsWeight(selected) *= comm.defValues.Global_AddedItem_ChanceMultiplier
             Call AddToLog(LogID, "Selected item:" & AllItems(selected).name & " id:" & AllItems(selected).itemID & " cost:" & ItemCostSum(selected))
             result = AllItems(selected).itemID
             Call AddToAddedItemList(AllItems(selected), pos)
@@ -727,8 +737,57 @@ Public Class RandStack
                     If pos.SqDist(x, y) <= R2 Then
                         w = pos.Dist(x, y) * invD
                         For Each item As AllDataStructues.Item In AddedItems.Item(x).Item(y)
-                            t = comm.defValues.AddedItemTypeChanceMultiplier(item.type)
+                            t = comm.defValues.Local_AddedItemType_ChanceMultiplier(item.type)
                             DynTypeWeightMultiplier(item.type) *= t + Math.Max((1 - t) * w, 0)
+                        Next item
+                    End If
+                Next y
+            End If
+        Next x
+        Return DynTypeWeightMultiplier
+    End Function
+    Private Function SameItemsCounter(ByRef pos As Point) As Integer()
+        Dim result(UBound(AllItems)) As Integer
+        If IsNothing(pos) Then Return result
+        Dim d As Double = comm.defValues.AddedItemTypeSearchRadius
+        Dim R2 As Double = d * d
+        For Each x As Integer In AddedItems.Keys
+            If Math.Abs(pos.X - x) <= d Then
+                For Each y As Integer In AddedItems.Item(x).Keys
+                    If pos.SqDist(x, y) <= R2 Then
+                        For Each item As AllDataStructues.Item In AddedItems.Item(x).Item(y)
+                            result(ItemsArrayPos.Item(item.itemID)) += 1
+                        Next item
+                    End If
+                Next y
+            End If
+        Next x
+        Return result
+    End Function
+    Private Function SameItemDynWeight(ByRef pos As Point, ByRef SameItemsCount() As Integer) As Double()
+        Dim DynTypeWeightMultiplier(UBound(AllItems)) As Double
+        For i As Integer = 0 To UBound(DynTypeWeightMultiplier) Step 1
+            DynTypeWeightMultiplier(i) = 1
+        Next i
+        If IsNothing(pos) Then Return DynTypeWeightMultiplier
+        Dim itemI As Integer
+        Dim w, t, a, r As Double
+        Dim d As Double = comm.defValues.AddedItemTypeSearchRadius
+        Dim R2 As Double = d * d
+        Dim invD As Double = 1 / d
+        For Each x As Integer In AddedItems.Keys
+            If Math.Abs(pos.X - x) <= d Then
+                For Each y As Integer In AddedItems.Item(x).Keys
+                    If pos.SqDist(x, y) <= R2 Then
+                        w = pos.Dist(x, y) * invD
+                        For Each item As AllDataStructues.Item In AddedItems.Item(x).Item(y)
+                            itemI = ItemsArrayPos.Item(item.itemID)
+                            a = SameItemsCount(itemI)
+                            r = comm.defValues.SameItemsAmountRestriction(item.type)
+                            If a >= r Then
+                                t = comm.defValues.Local_SameItem_ChanceMultiplier(item.type)
+                                DynTypeWeightMultiplier(itemI) *= (t + Math.Max((1 - t) * w, 0)) ^ ((a - r + 1) / (a + 1))
+                            End If
                         Next item
                     End If
                 Next y
@@ -2936,14 +2995,15 @@ Public Class GenDefaultValues
         Call SetProperty(weakerUnitsRadius, "weakerUnitsRadius", RConstants, DConstants)
 
         'loot
-        Call SetProperty(ItemTypeChanceMultiplier, "ItemTypeChanceMultiplier", RConstants, DConstants)
+        Call SetProperty(Global_ItemType_ChanceMultiplier, "Global_ItemType_ChanceMultiplier", RConstants, DConstants)
         Call SetProperty(JewelItemsCostDevider, "JewelItemsCostDevider", RConstants, DConstants)
         Call SetProperty(NonJewelItemsCostDevider, "NonJewelItemsCostDevider", RConstants, DConstants)
         Call SetProperty(LootCostDispersion, "LootCostDispersion", RConstants, DConstants)
-        Call SetProperty(AddedItemChanceMultiplier, "AddedItemChanceMultiplier", RConstants, DConstants)
-        Call SetProperty(AddedItemTypeChanceMultiplier, "AddedItemTypeChanceMultiplier", RConstants, DConstants, itemTypeID, False)
+        Call SetProperty(Global_AddedItem_ChanceMultiplier, "Global_AddedItem_ChanceMultiplier", RConstants, DConstants)
+        Call SetProperty(Local_AddedItemType_ChanceMultiplier, "Local_AddedItemType_ChanceMultiplier", RConstants, DConstants, itemTypeID, False)
         Call SetProperty(SameItemsAmountRestriction, "SameItemsAmountRestriction", RConstants, DConstants, itemTypeID, False)
-        Call SetProperty(SameItemsAmountRestrictionMultiplier, "SameItemsAmountRestrictionMultiplier", RConstants, DConstants, itemTypeID, False)
+        Call SetProperty(ThisBag_SameItems_ChanceMultiplier, "ThisBag_SameItems_ChanceMultiplier", RConstants, DConstants, itemTypeID, False)
+        Call SetProperty(Local_SameItem_ChanceMultiplier, "Local_SameItem_ChanceMultiplier", RConstants, DConstants, itemTypeID, False)
         Call SetProperty(AddedItemTypeSearchRadius, "AddedItemTypeSearchRadius", RConstants, DConstants)
 
         'map
@@ -2966,7 +3026,7 @@ Public Class GenDefaultValues
             Dim AddedItemTypeChanceMultiplierStr As String = ""
             For Each i As Integer In itemTypeName.Keys
                 AddedItemTypeChanceMultiplierStr &= vbNewLine & spaces & _
-                  itemTypeName.Item(i) & " = " & AddedItemTypeChanceMultiplier(i)
+                  itemTypeName.Item(i) & " = " & Local_AddedItemType_ChanceMultiplier(i)
             Next i
             Dim StackRaceChanceStr As String = ""
             For Each i As Integer In RaceName.Keys
@@ -2984,13 +3044,15 @@ Public Class GenDefaultValues
             log.Add("weakerUnitsRadius = " & weakerUnitsRadius)
 
             'loot
-            log.Add("ItemTypeChanceMultiplier = " & vbNewLine & String.Join(vbNewLine & spaces, ItemTypeChanceMultiplier.Split(CChar(";"))))
+            log.Add("Global_ItemTypeChanceMultiplier = " & vbNewLine & String.Join(vbNewLine & spaces, Global_ItemType_ChanceMultiplier.Split(CChar(";"))))
             log.Add("JewelItemsCostDevider = " & JewelItemsCostDevider)
             log.Add("NonJewelItemsCostDevider = " & NonJewelItemsCostDevider)
             log.Add("LootCostDispersion = " & LootCostDispersion)
             log.Add("SameItemsAmountRestriction = " & vbNewLine & spaces & String.Join(vbNewLine & spaces, SameItemsAmountRestriction))
             log.Add("SameItemsAmountRestrictionMultiplier = " & vbNewLine & spaces & String.Join(vbNewLine & spaces, SameItemsAmountRestriction))
-            log.Add("AddedItemChanceMultiplier = " & AddedItemChanceMultiplier)
+            log.Add("Local_SameItem_ChanceMultiplier = " & vbNewLine & spaces & String.Join(vbNewLine & spaces, Local_SameItem_ChanceMultiplier))
+            log.Add("ThisBag_SameItems_ChanceMultiplier = " & vbNewLine & spaces & String.Join(vbNewLine & spaces, ThisBag_SameItems_ChanceMultiplier))
+            log.Add("Global_AddedItem_ChanceMultiplier = " & Global_AddedItem_ChanceMultiplier)
             log.Add("AddedItemTypeChanceMultiplier = " & AddedItemTypeChanceMultiplierStr)
             log.Add("AddedItemTypeSearchRadius = " & AddedItemTypeSearchRadius)
 
@@ -3140,15 +3202,16 @@ Public Class GenDefaultValues
     Public Property weakerUnitsRadius As Double
 
     'loot
-    Public Property ItemTypeChanceMultiplier As String
     Public Property JewelItemsCostDevider As Double
     Public Property NonJewelItemsCostDevider As Double
     Public Property LootCostDispersion As Double
-    Public Property AddedItemChanceMultiplier As Double
-    Public Property AddedItemTypeChanceMultiplier As Double()
+    Public Property Global_ItemType_ChanceMultiplier As String
+    Public Property Global_AddedItem_ChanceMultiplier As Double
+    Public Property Local_AddedItemType_ChanceMultiplier As Double()
     Public Property AddedItemTypeSearchRadius As Double
     Public Property SameItemsAmountRestriction As Integer()
-    Public Property SameItemsAmountRestrictionMultiplier As Double()
+    Public Property ThisBag_SameItems_ChanceMultiplier As Double()
+    Public Property Local_SameItem_ChanceMultiplier As Double()
 
     'map
     Public Property minLocationRadiusAtAll As Double

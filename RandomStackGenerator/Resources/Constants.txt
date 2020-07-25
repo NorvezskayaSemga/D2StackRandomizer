@@ -40,14 +40,14 @@ LootCostDispersion			2.0
 #Множитель шанса появления каждого типа предметов, не зависящий от того, какие предметы уже есть на карте
 #есть условие по цене.
 #Например elixir=0.75#cost>400else1.25 значит, что для обычных эликсиров стоимостью больше 400 множитель равен 0.75, для тех, что дешевле 401 - 1.25
-ItemTypeChanceMultiplier    talisman=0.1;/
-                            scroll=0.15;/
-                            sphere=0.5;/
-                            stuff=0.25;/
-                            healing_elixir=3#cost>100else1;/
-                            ressurection_elixir=3;/
-                            permanent_elixir=0.6;/
-                            elixir=0.75#cost>400else1.25
+Global_ItemType_ChanceMultiplier    talisman=0.1;/
+                                   scroll=0.15;/
+                                   sphere=0.5;/
+                                   stuff=0.25;/
+                                   healing_elixir=3#cost>100else1;/
+                                   ressurection_elixir=3;/
+                                   permanent_elixir=0.6;/
+                                   elixir=0.75#cost>400else1.25
 
 #Предметы, удаленные от текущей точки добавления лута на расстояние, не более чем на AddedItemTypeSearchRadius,
 #уменьшают шанс добавления новых предметов того же типа
@@ -56,28 +56,48 @@ AddedItemTypeSearchRadius	12.0
 #Для каждого типа предметов шанс появления предмета того же тапа умножается на число из списка ниже
 #за каждый предмет в радиусе AddedItemTypeSearchRadius (для каждого типа свое) в зависимости от расстояния (R)
 #AddedItemTypeChanceMultiplier+(1-AddedItemTypeChanceMultiplier)*R/AddedItemTypeSearchRadius
-AddedItemTypeChanceMultiplier nonattack_artifact=0.65;/
-                              attack_artifact=0.65;/
-                              relic=0.5;/
-                              banner=0.5;/
-                              boots=0.25;/
-                              elixir=0.9;/
-                              healing_elixir=0.85;/
-                              ressurection_elixir=0.9;/
-                              permanent_elixir=0.6;/
-                              scroll=0.8;/
-                              stuff=0.35;/
-                              jewel=0.95;/
-                              sphere=0.85;/
-                              talisman=0.35;/
-                              special=1
+Local_AddedItemType_ChanceMultiplier nonattack_artifact=0.65;/
+                                     attack_artifact=0.65;/
+                                     relic=0.5;/
+                                     banner=0.5;/
+                                     boots=0.25;/
+                                     elixir=0.9;/
+                                     healing_elixir=0.85;/
+                                     ressurection_elixir=0.9;/
+                                     permanent_elixir=0.6;/
+                                     scroll=0.8;/
+                                     stuff=0.35;/
+                                     jewel=0.95;/
+                                     sphere=0.85;/
+                                     talisman=0.35;/
+                                     special=1
+
+#Для каждого предмета при привышении порога количества таких же предметов (SameItemsAmountRestriction)
+#шанс появления такого же предмета умножается на число из списка ниже
+#за каждый предмет в радиусе AddedItemTypeSearchRadius (для каждого типа свое) в зависимости от расстояния (R)
+#Local_SameItem_ChanceMultiplier+(1-Local_SameItem_ChanceMultiplier)*R/AddedItemTypeSearchRadius
+Local_SameItem_ChanceMultiplier nonattack_artifact=0.01;/
+                                attack_artifact=0.01;/
+                                relic=0.01;/
+                                banner=0.01;/
+                                boots=0.01;/
+                                elixir=0.9;/
+                                healing_elixir=0.95;/
+                                ressurection_elixir=1.0;/
+                                permanent_elixir=0.75;/
+                                scroll=0.5;/
+                                stuff=0.05;/
+                                jewel=0.95;/
+                                sphere=0.85;/
+                                talisman=0.05;/
+                                special=1
 
 #Каждый раз, когда какой-то предмет добавляется на карту, шанс добавления такого же предмета умножается на это число
-AddedItemChanceMultiplier	0.8
+Global_AddedItem_ChanceMultiplier	0.8
 
 #Для каждого типа предметов задан порог количества одинаковых предметов в награде
 #Например "sphere=2" означает, что если в нагде уже есть две сферы огня, то шанс появления третьей сферы огня будет снижен
-#множителем из SameItemsAmountRestrictionMultiplier
+#множителем из ThisBag_SameItems_ChanceMultiplier
 SameItemsAmountRestriction nonattack_artifact=1;/
                            attack_artifact=1;/
                            relic=1;/
@@ -96,22 +116,22 @@ SameItemsAmountRestriction nonattack_artifact=1;/
 						   
 #Для каждого типа предметов задан порог количества одинаковых предметов в награде (SameItemsAmountRestriction)
 #Если награда уже содежит количество предметов (n), равное или больше, чем SameItemsAmountRestriction (например, три сферы огня),
-#то шанс появления предмета (сферы огня) умножается на SameItemsAmountRestrictionMultiplier^SameItemsAmountRestriction
-SameItemsAmountRestrictionMultiplier nonattack_artifact=0.01;/
-                                     attack_artifact=0.01;/
-                                     relic=0.01;/
-                                     banner=0.01;/
-                                     boots=0.01;/
-                                     elixir=0.05;/
-                                     healing_elixir=0.075;/
-                                     ressurection_elixir=0.05;/
-                                     permanent_elixir=0.025;/
-                                     scroll=0.05;/
-                                     stuff=0.01;/
-                                     jewel=0.1;/
-                                     sphere=0.05;/
-                                     talisman=0.01;/
-                                     special=1
+#то шанс появления предмета (сферы огня) умножается на ThisBag_SameItems_ChanceMultiplier^(n-SameItemsAmountRestriction+1)
+ThisBag_SameItems_ChanceMultiplier nonattack_artifact=0.01;/
+                                   attack_artifact=0.01;/
+                                   relic=0.01;/
+                                   banner=0.01;/
+                                   boots=0.01;/
+                                   elixir=0.05;/
+                                   healing_elixir=0.075;/
+                                   ressurection_elixir=0.05;/
+                                   permanent_elixir=0.025;/
+                                   scroll=0.05;/
+                                   stuff=0.01;/
+                                   jewel=0.1;/
+                                   sphere=0.05;/
+                                   talisman=0.01;/
+                                   special=1
 
 #Генератор случайных карт нее будет пытаться создавать локации с радиусом меньше minLocationRadiusAtAll
 minLocationRadiusAtAll		7.0
