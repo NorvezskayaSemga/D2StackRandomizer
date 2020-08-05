@@ -85,7 +85,7 @@ Public Class RandStack
         ReDim AllItems(UBound(AllItemsList)), ItemCostSum(UBound(AllItemsList)), multiplierItemsWeight(UBound(AllItemsList))
 
         Dim weight As New Dictionary(Of String, String)
-        For Each s As String In comm.defValues.ItemTypeChanceMultiplier.Split(CChar(";"))
+        For Each s As String In comm.defValues.Global_ItemType_ChanceMultiplier.Split(CChar(";"))
             Dim i As Integer = s.IndexOf("=")
             weight.Add(s.Substring(0, i).ToUpper, s.Substring(i + 1).ToUpper)
         Next s
@@ -329,39 +329,55 @@ Public Class RandStack
         Return LootCost(m)
     End Function
 
-    ''' <summary>Может быть преобразует часть золота в ману. Результат будет кратен 50</summary>
+    ''' <summary>Может быть преобразует часть золота в ману. Результат будет кратен 25</summary>
     ''' <param name="input">Начальные ресурсы. При конвертации начальная мана не пропадет</param>
     ''' <param name="conversionChance">Шанс сконвертировать (от 0 до 1)</param>
     ''' <param name="conversionAmount">Какую часть золота сконвертировать (от 0 до 1)</param>
-    ''' <param name="outputMana">1 - black, 2 - blue, 3 - green, 4 - red, 5 - white</param>
+    ''' <param name="outputManaRelationsips">Соотношение, в котором золото будет преобразовано в разные типы маны (поле gold игнорируется)</param>
     Public Function GoldToMana(ByRef input As AllDataStructues.Cost, ByVal conversionChance As Double, _
-                               ByVal conversionAmount As Double, ByRef outputMana As List(Of Integer)) As AllDataStructues.Cost
+                               ByVal conversionAmount As Double, ByRef outputManaRelationsips As AllDataStructues.Cost) As AllDataStructues.Cost
         Dim output As AllDataStructues.Cost = AllDataStructues.Cost.Copy(input)
-        If conversionChance > 0 AndAlso outputMana.Count > 0 AndAlso rndgen.Rand(0, 1, True) <= conversionChance Then
-            Dim dAmount As Integer = 50
-            Dim amount As Integer = 0
-            Do While (amount + dAmount) * outputMana.Count <= Math.Floor(input.Gold * Math.Min(conversionAmount, 1))
-                amount += dAmount
+        If conversionChance > 0 AndAlso AllDataStructues.Cost.Sum(outputManaRelationsips) - outputManaRelationsips.Gold > 0 AndAlso rndgen.Rand(0, 1, True) <= conversionChance Then
+            Dim relationships As New AllDataStructues.Cost
+            Do While AllDataStructues.Cost.Sum(relationships) = 0
+                If outputManaRelationsips.Black > 0 Then relationships.Black = rndgen.RndPos(outputManaRelationsips.Black + 1, True) - 1
+                If outputManaRelationsips.Blue > 0 Then relationships.Blue = rndgen.RndPos(outputManaRelationsips.Blue + 1, True) - 1
+                If outputManaRelationsips.Green > 0 Then relationships.Green = rndgen.RndPos(outputManaRelationsips.Green + 1, True) - 1
+                If outputManaRelationsips.Red > 0 Then relationships.Red = rndgen.RndPos(outputManaRelationsips.Red + 1, True) - 1
+                If outputManaRelationsips.White > 0 Then relationships.White = rndgen.RndPos(outputManaRelationsips.White + 1, True) - 1
             Loop
-            output.Gold -= amount * outputMana.Count
-            For Each manaID As Integer In outputMana
-                If manaID = 1 Then
-                    output.Black += amount
-                ElseIf manaID = 2 Then
-                    output.Blue += amount
-                ElseIf manaID = 3 Then
-                    output.Green += amount
-                ElseIf manaID = 4 Then
-                    output.Red += amount
-                ElseIf manaID = 5 Then
-                    output.White += amount
-                Else
-                    Throw New Exception("Unknown mana ID: " & manaID)
-                End If
-            Next manaID
+
+            Dim manaPiece As Double = input.Gold * Math.Max(Math.Min(conversionAmount, 1), 0) / AllDataStructues.Cost.Sum(relationships)
+
+            Dim roundBy As Integer = 25
+            Dim dGold As Double = 0
+
+            Call GoldToManaRound(relationships.Black * manaPiece, roundBy, output, output.Black, dGold)
+            Call GoldToManaRound(relationships.Blue * manaPiece, roundBy, output, output.Blue, dGold)
+            Call GoldToManaRound(relationships.Green * manaPiece, roundBy, output, output.Green, dGold)
+            Call GoldToManaRound(relationships.Red * manaPiece, roundBy, output, output.Red, dGold)
+            Call GoldToManaRound(relationships.White * manaPiece, roundBy, output, output.White, dGold)
+
         End If
         Return output
     End Function
+    Private Sub GoldToManaRound(ByRef input As Double, ByRef roundBy As Integer, ByRef output As AllDataStructues.Cost, ByRef field As Integer, ByRef dGold As Double)
+        If input <= 0 Then Exit Sub
+        input = Math.Min(input, output.Gold)
+        Dim modulo As Double = input Mod roundBy
+        Dim convet As Integer = CInt(input - modulo)
+        output.Gold -= convet
+        field += convet
+        dGold += modulo
+        If dGold > 0 And output.Gold >= roundBy Then
+            Dim r As Double = rndgen.Rand(0, CDbl(roundBy), True)
+            If r < dGold Then
+                output.Gold -= roundBy
+                field += roundBy
+                dGold -= roundBy
+            End If
+        End If
+    End Sub
 
     Private Sub AddToLog(ByRef LogID As Integer, ByRef Msg As String)
         If LogID > -1 Then
@@ -421,6 +437,11 @@ Public Class RandStack
         Dim DynCost As Integer = GoldCost
         Dim IDs As New List(Of Integer)
         Dim result As New List(Of String)
+        Dim sameAddedCount(UBound(AllItems)) As Integer
+
+        Dim Local_SameItemCount() As Integer = SameItemsCounter(pos)
+        Dim DynSameItemWeightMultiplier() As Double = SameItemDynWeight(pos, Local_SameItemCount)
+
         Do While DynCost >= minItemGoldCost
             maxCost = GenItemMaxCost(DynIGen, DynCost)
             costBar = GenItemCostBar(DynIGen, maxCost, serialExecution)
@@ -429,24 +450,44 @@ Public Class RandStack
                                  " max item cost:" & maxCost(0) & "|" & maxCost(1) & "|" & maxCost(2))
             IDs.Clear()
             For i As Integer = 0 To UBound(AllItems) Step 1
-                If ItemFilter(DynIGen, AllItems(i), costBar) AndAlso ItemFilter(TypeCostRestriction, AllItems(i)) Then
+                'new filter
+                If ItemFilter(IGen, AllItems(i)) AndAlso ItemFilter(TypeCostRestriction, AllItems(i)) Then
                     IDs.Add(i)
-                    weight(i) = GenItemWeight(AllItems(i), costBar) * multiplierItemsWeight(i) * DynTypeWeightMultiplier(AllItems(i).type)
+                    weight(i) = GenItemWeight(AllItems(i), costBar) * multiplierItemsWeight(i) * DynTypeWeightMultiplier(AllItems(i).type) * DynSameItemWeightMultiplier(i)
+                    If Not ItemFilter(DynIGen, AllItems(i), costBar) Then weight(i) *= 0.001
+                    If result.Contains(AllItems(i).itemID) Then
+                        Dim d As Integer = 1 + sameAddedCount(i) - comm.defValues.SameItemsAmountRestriction(AllItems(i).type)
+                        If d > 0 Then weight(i) *= comm.defValues.ThisBag_SameItems_ChanceMultiplier(AllItems(i).type) ^ d
+                    End If
                 Else
                     weight(i) = 0
                 End If
+
+                'old filter
+                'If ItemFilter(DynIGen, AllItems(i), costBar) AndAlso ItemFilter(TypeCostRestriction, AllItems(i)) Then
+                '    IDs.Add(i)
+                '    weight(i) = GenItemWeight(AllItems(i), costBar) * multiplierItemsWeight(i) * DynTypeWeightMultiplier(AllItems(i).type)
+                'Else
+                '    weight(i) = 0
+                'End If
             Next i
             If IDs.Count = 0 Then Exit Do
 
             selected = comm.RandomSelection(IDs, weight, serialExecution)
-            multiplierItemsWeight(selected) *= comm.defValues.AddedItemChanceMultiplier
-            DynTypeWeightMultiplier(AllItems(selected).type) *= comm.defValues.AddedItemTypeChanceMultiplier(AllItems(selected).type)
+            multiplierItemsWeight(selected) *= comm.defValues.Global_AddedItem_ChanceMultiplier
+            DynTypeWeightMultiplier(AllItems(selected).type) *= comm.defValues.Local_AddedItemType_ChanceMultiplier(AllItems(selected).type)
 
             Call AddToLog(LogID, "Selected item:" & AllItems(selected).name & " id:" & AllItems(selected).itemID & " cost:" & ItemCostSum(selected))
             result.Add(AllItems(selected).itemID)
             Call AddToAddedItemList(AllItems(selected), pos)
             Call GenItemIGenChange(DynIGen, AllItems(selected), DynCost)
             DynCost = CInt(DynCost - ItemCostSum(selected))
+            sameAddedCount(selected) += 1
+
+            Local_SameItemCount(selected) += 1
+            If Local_SameItemCount(selected) >= comm.defValues.SameItemsAmountRestriction(AllItems(selected).type) Then
+                DynSameItemWeightMultiplier(selected) *= comm.defValues.Local_SameItem_ChanceMultiplier(AllItems(selected).type)
+            End If
         Loop
 
         If Not IsNothing(IGen.PreserveItems) AndAlso IGen.PreserveItems.Count > 0 Then
@@ -525,19 +566,20 @@ Public Class RandStack
         Dim IDs As New List(Of Integer)
         Dim result As String = ""
 
-        Dim DynTypeWeightMultiplier(), DynItemWeightMultiplier(UBound(AllItems)) As Double
+        Dim DynTypeWeightMultiplier(), DynItemWeightMultiplier(UBound(AllItems)), DynSameItemWeightMultiplier() As Double
+
         DynTypeWeightMultiplier = ItemTypeDynWeight(pos)
+        DynSameItemWeightMultiplier = SameItemDynWeight(pos, SameItemsCounter(pos))
 
         IDs.Clear()
         For i As Integer = 0 To UBound(AllItems) Step 1
-            DynItemWeightMultiplier(i) = multiplierItemsWeight(i) * DynTypeWeightMultiplier(AllItems(i).type)
-
+            DynItemWeightMultiplier(i) = multiplierItemsWeight(i) * DynTypeWeightMultiplier(AllItems(i).type) * DynSameItemWeightMultiplier(i)
             If ItemCostSum(i) <= GoldCost AndAlso ItemFilter(IGen, AllItems(i)) _
             AndAlso ItemFilter(TypeCostRestriction, AllItems(i)) Then IDs.Add(i)
         Next i
         If IDs.Count > 0 Then
             selected = comm.RandomSelection(IDs, New Double()() {ItemCostSum}, New Double() {GoldCost}, DynItemWeightMultiplier, itemGenSigma, serialExecution)
-            multiplierItemsWeight(selected) *= comm.defValues.AddedItemChanceMultiplier
+            multiplierItemsWeight(selected) *= comm.defValues.Global_AddedItem_ChanceMultiplier
             Call AddToLog(LogID, "Selected item:" & AllItems(selected).name & " id:" & AllItems(selected).itemID & " cost:" & ItemCostSum(selected))
             result = AllItems(selected).itemID
             Call AddToAddedItemList(AllItems(selected), pos)
@@ -695,8 +737,57 @@ Public Class RandStack
                     If pos.SqDist(x, y) <= R2 Then
                         w = pos.Dist(x, y) * invD
                         For Each item As AllDataStructues.Item In AddedItems.Item(x).Item(y)
-                            t = comm.defValues.AddedItemTypeChanceMultiplier(item.type)
+                            t = comm.defValues.Local_AddedItemType_ChanceMultiplier(item.type)
                             DynTypeWeightMultiplier(item.type) *= t + Math.Max((1 - t) * w, 0)
+                        Next item
+                    End If
+                Next y
+            End If
+        Next x
+        Return DynTypeWeightMultiplier
+    End Function
+    Private Function SameItemsCounter(ByRef pos As Point) As Integer()
+        Dim result(UBound(AllItems)) As Integer
+        If IsNothing(pos) Then Return result
+        Dim d As Double = comm.defValues.AddedItemTypeSearchRadius
+        Dim R2 As Double = d * d
+        For Each x As Integer In AddedItems.Keys
+            If Math.Abs(pos.X - x) <= d Then
+                For Each y As Integer In AddedItems.Item(x).Keys
+                    If pos.SqDist(x, y) <= R2 Then
+                        For Each item As AllDataStructues.Item In AddedItems.Item(x).Item(y)
+                            result(ItemsArrayPos.Item(item.itemID)) += 1
+                        Next item
+                    End If
+                Next y
+            End If
+        Next x
+        Return result
+    End Function
+    Private Function SameItemDynWeight(ByRef pos As Point, ByRef SameItemsCount() As Integer) As Double()
+        Dim DynTypeWeightMultiplier(UBound(AllItems)) As Double
+        For i As Integer = 0 To UBound(DynTypeWeightMultiplier) Step 1
+            DynTypeWeightMultiplier(i) = 1
+        Next i
+        If IsNothing(pos) Then Return DynTypeWeightMultiplier
+        Dim itemI As Integer
+        Dim w, t, a, r As Double
+        Dim d As Double = comm.defValues.AddedItemTypeSearchRadius
+        Dim R2 As Double = d * d
+        Dim invD As Double = 1 / d
+        For Each x As Integer In AddedItems.Keys
+            If Math.Abs(pos.X - x) <= d Then
+                For Each y As Integer In AddedItems.Item(x).Keys
+                    If pos.SqDist(x, y) <= R2 Then
+                        w = pos.Dist(x, y) * invD
+                        For Each item As AllDataStructues.Item In AddedItems.Item(x).Item(y)
+                            itemI = ItemsArrayPos.Item(item.itemID)
+                            a = SameItemsCount(itemI)
+                            r = comm.defValues.SameItemsAmountRestriction(item.type)
+                            If a >= r Then
+                                t = comm.defValues.Local_SameItem_ChanceMultiplier(item.type)
+                                DynTypeWeightMultiplier(itemI) *= (t + Math.Max((1 - t) * w, 0)) ^ ((a - r + 1) / (a + 1))
+                            End If
                         Next item
                     End If
                 Next y
@@ -713,6 +804,7 @@ Public Class RandStack
         AddedItems.Item(pos.X).Item(pos.Y).Add(item)
     End Sub
 
+    ''' <summary>Фильтр предметов по назначению: расходники, надеваемые артефакты или драгоценности</summary>
     Friend Function ItemFilter(ByRef IGen As AllDataStructues.LootGenSettings, ByRef item As AllDataStructues.Item) As Boolean
         If Not comm.IsAppropriateItem(item) Then Return False
         Dim settings() As AllDataStructues.ItemGenSettings = AllDataStructues.LootGenSettings.ToArray(IGen)
@@ -727,6 +819,7 @@ Public Class RandStack
         Next i
         Return True
     End Function
+    ''' <summary>Фильтр предметов по стоимости (стоимость не выше заданного значения)</summary>
     Friend Function ItemFilter(ByRef IGen As AllDataStructues.LootGenSettings, ByRef item As AllDataStructues.Item, _
                                ByRef CostBar() As Integer) As Boolean
         If Not comm.IsAppropriateItem(item) Then Return False
@@ -743,6 +836,7 @@ Public Class RandStack
         Next i
         Return True
     End Function
+    ''' <summary>Фильтр предметов по стоимости (стоимость находится в диапазоне)</summary>
     Friend Function ItemFilter(ByRef TypeCostRestriction As Dictionary(Of Integer, AllDataStructues.Restriction), _
                                ByRef item As AllDataStructues.Item) As Boolean
         If Not comm.IsAppropriateItem(item) Then Return False
@@ -928,6 +1022,8 @@ Public Class RandStack
         Dim units(11)() As AllDataStructues.Unit
         Dim DynStackStats(UBound(units)) As AllDataStructues.DesiredStats
         Call log.MRedim(units.Length)
+        Dim leaderExpKilled() As Integer = Nothing
+        If Not NoLeader Then ReDim leaderExpKilled(UBound(units))
 
         Parallel.For(0, units.Length, _
          Sub(jobID As Integer)
@@ -950,13 +1046,16 @@ Public Class RandStack
                                                                     SelectedLeader, GroundTile, BaseStackSize, _
                                                                     CDbl(jobID / units.Length), jobID)
              units(jobID) = GenUnitsList(SelectedFighters, SelectedLeader, NoLeader)
+
+             If Not NoLeader Then leaderExpKilled(jobID) = AllUnits(SelectedLeader).EXPkilled
+
              log.MAdd(jobID, "--------Attempt " & jobID + 1 & " ended--------")
          End Sub)
 
         Call log.Add(log.MPrintAll())
         Call log.MRedim(0)
 
-        Dim selected As Integer = SelectStack(StackStats, DynStackStats)
+        Dim selected As Integer = SelectStack(StackStats, DynStackStats, leaderExpKilled)
 
         If log.IsEnabled Then
             Dim txt As String = ""
@@ -1188,7 +1287,8 @@ Public Class RandStack
         Return result
     End Function
     Private Function SelectStack(ByRef StackStats As AllDataStructues.DesiredStats, _
-                                 ByRef DynStackStats() As AllDataStructues.DesiredStats) As Integer
+                                 ByRef DynStackStats() As AllDataStructues.DesiredStats, _
+                                 ByRef leaderExpKilled() As Integer) As Integer
         Dim possible1, possible2 As New List(Of Integer)
         Dim SizeTolerance As Integer = 0
         Do While possible1.Count < 0.5 * DynStackStats.Length
@@ -1208,9 +1308,27 @@ Public Class RandStack
             If possible2.Count >= 0.2 * DynStackStats.Length Then Exit Do
             If possible2.Count > 0 And ExpTolerance >= 0.1 Then Exit Do
         Loop
+        Dim leaderExpKilledMaxValue As Integer = 0
+        Dim maxExpDelta As Integer = 0
+        If Not IsNothing(leaderExpKilled) Then
+            For Each i As Integer In possible2
+                leaderExpKilledMaxValue = Math.Max(leaderExpKilledMaxValue, leaderExpKilled(i))
+            Next i
+        End If
+        For Each i As Integer In possible2
+            maxExpDelta = Math.Max(maxExpDelta, Math.Abs(DynStackStats(i).ExpStackKilled))
+        Next i
+
         Dim weight(UBound(DynStackStats)) As Double
         For Each i As Integer In possible2
-            weight(i) = 1 / (1 + Math.Abs(DynStackStats(i).ExpStackKilled))
+            Dim m As Double
+            If Not IsNothing(leaderExpKilled) Then
+                m = leaderExpKilled(i) / leaderExpKilledMaxValue
+            Else
+                m = 1
+            End If
+            'weight(i) = m / (1 + Math.Abs(DynStackStats(i).ExpStackKilled)) 'old
+            weight(i) = m / (1 + (1 + Math.Abs(DynStackStats(i).ExpStackKilled)) / (1 + maxExpDelta)) 'new
         Next i
         Dim selected As Integer = comm.RandomSelection(possible2, weight, False)
         Return selected
@@ -2530,18 +2648,19 @@ Public Class AllDataStructues
                     Throw New Exception("Количество ресурса не является числом: " & costString & " , ресурс: " & s1)
                     Return Nothing
                 End If
+                Dim convertedValue As Integer = Math.Max(Math.Min(ValueConverter.StrToInt(v, costString, s1), 9999), 0)
                 If s1 = "g" Then
-                    res.Gold = ValueConverter.StrToInt(v, costString, s1)
+                    res.Gold = convertedValue
                 ElseIf s1 = "r" Then
-                    res.Red = ValueConverter.StrToInt(v, costString, s1)
+                    res.Red = convertedValue
                 ElseIf s1 = "y" Then
-                    res.Blue = ValueConverter.StrToInt(v, costString, s1)
+                    res.Blue = convertedValue
                 ElseIf s1 = "e" Then
-                    res.Black = ValueConverter.StrToInt(v, costString, s1)
+                    res.Black = convertedValue
                 ElseIf s1 = "w" Then
-                    res.White = ValueConverter.StrToInt(v, costString, s1)
+                    res.White = convertedValue
                 ElseIf s1 = "b" Then
-                    res.Green = ValueConverter.StrToInt(v, costString, s1)
+                    res.Green = convertedValue
                 Else
                     Throw New Exception("Неожиданный формат стоимости: " & costString)
                     Return Nothing
@@ -2557,6 +2676,7 @@ Public Class AllDataStructues
             Dim s As String = ""
             For i As Integer = 0 To UBound(ch) Step 1
                 s &= ch(i)
+                If val(i) < 0 Then val(i) = 0
                 If val(i) > 9999 Then
                     'Throw New Exception("Too great value of " & ch(i) & " : " & val(i))
                     val(i) = 9999
@@ -2875,12 +2995,15 @@ Public Class GenDefaultValues
         Call SetProperty(weakerUnitsRadius, "weakerUnitsRadius", RConstants, DConstants)
 
         'loot
-        Call SetProperty(ItemTypeChanceMultiplier, "ItemTypeChanceMultiplier", RConstants, DConstants)
+        Call SetProperty(Global_ItemType_ChanceMultiplier, "Global_ItemType_ChanceMultiplier", RConstants, DConstants)
         Call SetProperty(JewelItemsCostDevider, "JewelItemsCostDevider", RConstants, DConstants)
         Call SetProperty(NonJewelItemsCostDevider, "NonJewelItemsCostDevider", RConstants, DConstants)
         Call SetProperty(LootCostDispersion, "LootCostDispersion", RConstants, DConstants)
-        Call SetProperty(AddedItemChanceMultiplier, "AddedItemChanceMultiplier", RConstants, DConstants)
-        Call SetProperty(AddedItemTypeChanceMultiplier, "AddedItemTypeChanceMultiplier", RConstants, DConstants, itemTypeID, False)
+        Call SetProperty(Global_AddedItem_ChanceMultiplier, "Global_AddedItem_ChanceMultiplier", RConstants, DConstants)
+        Call SetProperty(Local_AddedItemType_ChanceMultiplier, "Local_AddedItemType_ChanceMultiplier", RConstants, DConstants, itemTypeID, False)
+        Call SetProperty(SameItemsAmountRestriction, "SameItemsAmountRestriction", RConstants, DConstants, itemTypeID, False)
+        Call SetProperty(ThisBag_SameItems_ChanceMultiplier, "ThisBag_SameItems_ChanceMultiplier", RConstants, DConstants, itemTypeID, False)
+        Call SetProperty(Local_SameItem_ChanceMultiplier, "Local_SameItem_ChanceMultiplier", RConstants, DConstants, itemTypeID, False)
         Call SetProperty(AddedItemTypeSearchRadius, "AddedItemTypeSearchRadius", RConstants, DConstants)
 
         'map
@@ -2903,7 +3026,7 @@ Public Class GenDefaultValues
             Dim AddedItemTypeChanceMultiplierStr As String = ""
             For Each i As Integer In itemTypeName.Keys
                 AddedItemTypeChanceMultiplierStr &= vbNewLine & spaces & _
-                  itemTypeName.Item(i) & " = " & AddedItemTypeChanceMultiplier(i)
+                  itemTypeName.Item(i) & " = " & Local_AddedItemType_ChanceMultiplier(i)
             Next i
             Dim StackRaceChanceStr As String = ""
             For Each i As Integer In RaceName.Keys
@@ -2914,22 +3037,26 @@ Public Class GenDefaultValues
             'common
             log.Add("defaultSigma = " & defaultSigma)
 
-            'units                                                
+            'units
             log.Add("expBarDispersion = " & expBarDispersion)
             log.Add("giantUnitsExpMultiplier = " & giantUnitsExpMultiplier)
             log.Add("smallUnitsExpMultiplier = " & smallUnitsExpMultiplier)
             log.Add("weakerUnitsRadius = " & weakerUnitsRadius)
 
-            'loot                                                 
-            log.Add("ItemTypeChanceMultiplier = " & vbNewLine & String.Join(vbNewLine & spaces, ItemTypeChanceMultiplier.Split(CChar(";"))))
+            'loot
+            log.Add("Global_ItemTypeChanceMultiplier = " & vbNewLine & String.Join(vbNewLine & spaces, Global_ItemType_ChanceMultiplier.Split(CChar(";"))))
             log.Add("JewelItemsCostDevider = " & JewelItemsCostDevider)
             log.Add("NonJewelItemsCostDevider = " & NonJewelItemsCostDevider)
             log.Add("LootCostDispersion = " & LootCostDispersion)
-            log.Add("AddedItemChanceMultiplier = " & AddedItemChanceMultiplier)
+            log.Add("SameItemsAmountRestriction = " & vbNewLine & spaces & String.Join(vbNewLine & spaces, SameItemsAmountRestriction))
+            log.Add("SameItemsAmountRestrictionMultiplier = " & vbNewLine & spaces & String.Join(vbNewLine & spaces, SameItemsAmountRestriction))
+            log.Add("Local_SameItem_ChanceMultiplier = " & vbNewLine & spaces & String.Join(vbNewLine & spaces, Local_SameItem_ChanceMultiplier))
+            log.Add("ThisBag_SameItems_ChanceMultiplier = " & vbNewLine & spaces & String.Join(vbNewLine & spaces, ThisBag_SameItems_ChanceMultiplier))
+            log.Add("Global_AddedItem_ChanceMultiplier = " & Global_AddedItem_ChanceMultiplier)
             log.Add("AddedItemTypeChanceMultiplier = " & AddedItemTypeChanceMultiplierStr)
             log.Add("AddedItemTypeSearchRadius = " & AddedItemTypeSearchRadius)
 
-            'map                                                  
+            'map
             log.Add("minLocationRadiusAtAll = " & minLocationRadiusAtAll)
             log.Add("LocRacesBlocks = " & vbNewLine & spaces & String.Join(vbNewLine & spaces, LocRacesBlocks))
             log.Add("StackRaceChance = " & StackRaceChanceStr)
@@ -2972,21 +3099,11 @@ Public Class GenDefaultValues
     Private Sub SetProperty(ByRef output() As Double, ByRef name As String, ByRef readValues As Dictionary(Of String, String), _
                             ByRef defaultValues As Dictionary(Of String, String), ByRef nameToID As Dictionary(Of String, Integer), _
                             ByRef HasSynonyms As Boolean)
-        Dim r As Dictionary(Of String, String) = PropertiesArrayToDictionary(GetProperty(name, readValues, defaultValues).ToUpper.Replace("=", " ").Split(CChar(";")))
-        Dim d As Dictionary(Of String, String) = PropertiesArrayToDictionary(GetProperty(name, defaultValues, readValues).ToUpper.Replace("=", " ").Split(CChar(";")))
 
-        Dim nonsynomical As Dictionary(Of String, Integer)
-
-        If HasSynonyms Then
-            nonsynomical = New Dictionary(Of String, Integer)
-            For Each v As Integer In nameToID.Values
-                If Not nonsynomical.ContainsKey(v.ToString) Then nonsynomical.Add(v.ToString, v)
-            Next v
-            r = ChangeToSynonymicNames(r, nameToID)
-            d = ChangeToSynonymicNames(d, nameToID)
-        Else
-            nonsynomical = nameToID
-        End If
+        Dim r, d As Dictionary(Of String, String)
+        r = Nothing : d = Nothing
+        Dim nonsynomical As Dictionary(Of String, Integer) = Nothing
+        Call SetPropertyMakeIn(nonsynomical, r, d, name, readValues, defaultValues, nameToID, HasSynonyms)
 
         ReDim output(nonsynomical.Values.Max)
         For Each key As String In nonsynomical.Keys
@@ -3001,6 +3118,48 @@ Public Class GenDefaultValues
                     output(i) = output(source)
                 End If
             Next i
+        End If
+    End Sub
+    Private Sub SetProperty(ByRef output() As Integer, ByRef name As String, ByRef readValues As Dictionary(Of String, String), _
+                            ByRef defaultValues As Dictionary(Of String, String), ByRef nameToID As Dictionary(Of String, Integer), _
+                            ByRef HasSynonyms As Boolean)
+
+        Dim r, d As Dictionary(Of String, String)
+        r = Nothing : d = Nothing
+        Dim nonsynomical As Dictionary(Of String, Integer) = Nothing
+        Call SetPropertyMakeIn(nonsynomical, r, d, name, readValues, defaultValues, nameToID, HasSynonyms)
+
+        ReDim output(nonsynomical.Values.Max)
+        For Each key As String In nonsynomical.Keys
+            Dim v As Integer = ValueConverter.StrToInt(GetProperty(key, r, d), name, key)
+            output(nonsynomical.Item(key)) = v
+        Next key
+
+        If HasSynonyms Then
+            For i As Integer = 0 To UBound(output) Step 1
+                If output(i) = 0 AndAlso nameToID.ContainsKey(i.ToString) Then
+                    Dim source As Integer = CInt(nameToID.Item(i.ToString))
+                    output(i) = output(source)
+                End If
+            Next i
+        End If
+    End Sub
+    Private Sub SetPropertyMakeIn(ByRef nonsynomical As Dictionary(Of String, Integer), ByRef r As Dictionary(Of String, String), ByRef d As Dictionary(Of String, String), _
+                                  ByRef name As String, ByRef readValues As Dictionary(Of String, String), _
+                                  ByRef defaultValues As Dictionary(Of String, String), ByRef nameToID As Dictionary(Of String, Integer), _
+                                  ByRef HasSynonyms As Boolean)
+        r = PropertiesArrayToDictionary(GetProperty(name, readValues, defaultValues).ToUpper.Replace("=", " ").Split(CChar(";")))
+        d = PropertiesArrayToDictionary(GetProperty(name, defaultValues, readValues).ToUpper.Replace("=", " ").Split(CChar(";")))
+
+        If HasSynonyms Then
+            nonsynomical = New Dictionary(Of String, Integer)
+            For Each v As Integer In nameToID.Values
+                If Not nonsynomical.ContainsKey(v.ToString) Then nonsynomical.Add(v.ToString, v)
+            Next v
+            r = ChangeToSynonymicNames(r, nameToID)
+            d = ChangeToSynonymicNames(d, nameToID)
+        Else
+            nonsynomical = nameToID
         End If
     End Sub
     Private Sub SetProperty(ByRef output As String, ByRef name As String, ByRef readValues As Dictionary(Of String, String), ByRef defaultValues As Dictionary(Of String, String))
@@ -3043,13 +3202,16 @@ Public Class GenDefaultValues
     Public Property weakerUnitsRadius As Double
 
     'loot
-    Public Property ItemTypeChanceMultiplier As String
     Public Property JewelItemsCostDevider As Double
     Public Property NonJewelItemsCostDevider As Double
     Public Property LootCostDispersion As Double
-    Public Property AddedItemChanceMultiplier As Double
-    Public Property AddedItemTypeChanceMultiplier As Double()
+    Public Property Global_ItemType_ChanceMultiplier As String
+    Public Property Global_AddedItem_ChanceMultiplier As Double
+    Public Property Local_AddedItemType_ChanceMultiplier As Double()
     Public Property AddedItemTypeSearchRadius As Double
+    Public Property SameItemsAmountRestriction As Integer()
+    Public Property ThisBag_SameItems_ChanceMultiplier As Double()
+    Public Property Local_SameItem_ChanceMultiplier As Double()
 
     'map
     Public Property minLocationRadiusAtAll As Double

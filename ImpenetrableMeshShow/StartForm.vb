@@ -16,6 +16,8 @@ Friend Class StartForm
     Dim ObjectsSize As New Dictionary(Of String, Size)
 
     Private Sub GenMany_click() Handles GenManyButton.Click
+        Call itemGenTest()
+        Exit Sub
         For i As Integer = 1 To 300 Step 1
             GenButton.PerformClick()
             Me.Refresh()
@@ -389,5 +391,18 @@ again:
         Next i
         Return ItemsList
     End Function
+
+    Private Sub itemGenTest()
+
+        Dim d As New GenDefaultValues(Nothing)
+        Dim r As New RandStack(ReadTestUnits, ReadTestItems, {d.wReadDefaultFileKeyword}, {d.wReadDefaultFileKeyword}, {d.wReadDefaultFileKeyword}, {d.wReadDefaultFileKeyword}, {d.wReadDefaultFileKeyword})
+
+        Dim items As New List(Of String)
+        items.Add("G000IG0004")
+
+        Dim lcost As AllDataStructues.Cost = r.LootCost(items)
+        Dim igen As AllDataStructues.LootGenSettings = r.GetItemsGenSettings(items)
+        Dim result As List(Of String) = r.ItemsGen(AllDataStructues.Cost.Sum(lcost), igen, Nothing, New Point(0, 0))
+    End Sub
 
 End Class
