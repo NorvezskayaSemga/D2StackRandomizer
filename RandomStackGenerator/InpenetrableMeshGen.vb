@@ -1326,7 +1326,7 @@ Public Class ImpenetrableMeshGen
     ''' .board(,).LocID - как минимум одно значение (можно больше, если по соседству с тайлом есть тайлы других локаций (но тот, что первый в списке - основной).
     ''' остальные записи в board(,) могут быть пустыми, неинициализированными и всё такое.
     ''' </summary>
-    Private Sub PlaceActiveObjects(ByRef m As Map, ByVal settMap As Map.SettingsMap, _
+    Public Sub PlaceActiveObjects(ByRef m As Map, ByVal settMap As Map.SettingsMap, _
                                   ByRef settRaceLoc As Map.SettingsLoc, ByVal settCommLoc As Map.SettingsLoc, _
                                   ByRef ObjectBlank()(,) As Map.Cell, ByRef Term As TerminationCondition)
         Dim tmpm As Map = m
@@ -1952,7 +1952,7 @@ Public Class ImpenetrableMeshGen
     End Sub
 
     ''' <summary>Запускаем сразу после PlaceActiveObjects. После выполнения идем как в примере</summary>
-    Private Sub MakeLabyrinth(ByRef m As Map, ByVal settMap As Map.SettingsMap, ByRef Term As TerminationCondition)
+    Public Sub MakeLabyrinth(ByRef m As Map, ByVal settMap As Map.SettingsMap, ByRef Term As TerminationCondition)
         If Term.ExitFromLoops Then Exit Sub
         Dim tmpm As Map = m
         Dim TT(UBound(tmpm.Loc)) As TerminationCondition
