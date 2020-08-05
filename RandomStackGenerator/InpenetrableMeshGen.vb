@@ -229,7 +229,7 @@ Public Class ImpenetrableMeshGen
         For x As Integer = b.minX To b.maxX Step 1
             For y As Integer = b.minY To b.maxY Step 1
                 If loc.IsInside(x, y) Then
-                    m.board(x, y).locID.Add(loc.ID)
+                    m.board(x, y).AddToLocIDArray(loc.ID)
                     plist.Add(New Point(x, y))
                 End If
             Next y
@@ -557,7 +557,7 @@ Public Class ImpenetrableMeshGen
         ReDim m.board(m.xSize, m.ySize)
         For x As Integer = 0 To m.xSize Step 1
             For y As Integer = 0 To m.ySize Step 1
-                m.board(x, y).locID = New List(Of Integer)
+                m.board(x, y).ClearLocIDArray() 'New List(Of Integer)
                 m.board(x, y).groupID = 0
                 m.board(x, y).isAttended = False
                 m.board(x, y).isBorder = False
@@ -566,7 +566,7 @@ Public Class ImpenetrableMeshGen
             Next y
         Next x
         For Each Loc As Location In m.Loc
-            m.board(Loc.pos.X, Loc.pos.Y).locID.Add(Loc.ID)
+            m.board(Loc.pos.X, Loc.pos.Y).AddToLocIDArray(Loc.ID)
         Next Loc
         ReDim allPoints(m.ySize)
         ReDim pID(UBound(allPoints)), Weight(UBound(allPoints)), _
@@ -596,11 +596,11 @@ Public Class ImpenetrableMeshGen
                         Dim pl() As Point = symm.ApplySymm(m.Loc(pID(s)(selectedIDs(s)) - 1).pos, settMap.nRaces, m, 1)
                         If pl.Length = pp.Length Then
                             For i As Integer = 0 To UBound(pl) Step 1
-                                m.board(pp(i).X, pp(i).Y).locID.Add(m.Loc(Location.FindLocIDByPosition(m, pl(i))).ID)
+                                m.board(pp(i).X, pp(i).Y).AddToLocIDArray(m.Loc(Location.FindLocIDByPosition(m, pl(i))).ID)
                             Next i
                         ElseIf pl.Length = 1 Then
                             For i As Integer = 0 To UBound(pp) Step 1
-                                m.board(pp(i).X, pp(i).Y).locID.Add(pID(s)(selectedIDs(s)))
+                                m.board(pp(i).X, pp(i).Y).AddToLocIDArray(pID(s)(selectedIDs(s)))
                             Next i
                         Else
                             Dim possibleLocs As New List(Of Integer)
@@ -613,7 +613,7 @@ Public Class ImpenetrableMeshGen
                                     For i As Integer = b.minX To b.maxX Step 1
                                         For j As Integer = b.minY To b.maxY Step 1
                                             If m.board(i, j).locID.Count > 0 Then
-                                                Dim locID As Integer = m.board(i, j).locID.Item(0) - 1
+                                                Dim locID As Integer = m.board(i, j).locID(0) - 1
                                                 If locID > -1 AndAlso Not usedLocs.Contains(locID) Then
                                                     For L As Integer = 0 To UBound(pl) Step 1
                                                         If Math.Abs(m.Loc(locID).pos.X - pl(L).X) < 2 _
@@ -637,12 +637,12 @@ Public Class ImpenetrableMeshGen
                                 Loop
                                 If possibleLocs.Count = 0 Then Throw New Exception("Не могу найти подходящую локацию")
                                 Dim sel As Integer = comm.RandomSelection(possibleLocs, True)
-                                m.board(p.X, p.Y).locID.Add(m.Loc(sel).ID)
+                                m.board(p.X, p.Y).AddToLocIDArray(m.Loc(sel).ID)
                                 usedLocs.Add(sel)
                             Next p
                         End If
                     Else
-                        m.board(pp(0).X, pp(0).Y).locID.Add(pID(s)(selectedIDs(s)))
+                        m.board(pp(0).X, pp(0).Y).AddToLocIDArray(pID(s)(selectedIDs(s)))
                     End If
                 End If
             Loop
@@ -658,7 +658,7 @@ Public Class ImpenetrableMeshGen
                                                         .miny = Integer.MaxValue, .maxy = Integer.MinValue}
                     For y As Integer = 0 To tmpm.ySize Step 1
                         For x As Integer = 0 To tmpm.xSize Step 1
-                            If tmpm.board(x, y).locID.Item(0) = tmpm.Loc(i).ID Then
+                            If tmpm.board(x, y).locID(0) = tmpm.Loc(i).ID Then
                                 b.minX = Math.Min(b.minX, x)
                                 b.minY = Math.Min(b.minY, y)
                                 b.maxX = Math.Max(b.maxX, x)
@@ -681,8 +681,8 @@ Public Class ImpenetrableMeshGen
                                     ReDim n1(UBound(tmpm.Loc))
                                     For q As Integer = t.minY To t.maxY Step 1
                                         For p As Integer = t.minX To t.maxX Step 1
-                                            If Not tmpm.board(p, q).locID.Item(0) = tmpm.Loc(i).ID Then
-                                                n1(tmpm.board(p, q).locID.Item(0) - 1) += 1
+                                            If Not tmpm.board(p, q).locID(0) = tmpm.Loc(i).ID Then
+                                                n1(tmpm.board(p, q).locID(0) - 1) += 1
                                             End If
                                         Next p
                                     Next q
@@ -695,12 +695,12 @@ Public Class ImpenetrableMeshGen
                                             t = NearestXY(symmPoints(x, y)(j).X, symmPoints(x, y)(j).Y, tmpm.xSize, tmpm.ySize, 1)
                                             For q As Integer = t.minY To t.maxY Step 1
                                                 For p As Integer = t.minX To t.maxX Step 1
-                                                    If tmpm.board(p, q).locID.Item(0) = tmpm.Loc(i).ID Then
+                                                    If tmpm.board(p, q).locID(0) = tmpm.Loc(i).ID Then
                                                         n2 += 1
                                                     End If
                                                 Next p
                                             Next q
-                                            If n2 > 0 And n2 = n1(tmpm.board(symmPoints(x, y)(j).X, symmPoints(x, y)(j).Y).locID.Item(0) - 1) Then
+                                            If n2 > 0 And n2 = n1(tmpm.board(symmPoints(x, y)(j).X, symmPoints(x, y)(j).Y).locID(0) - 1) Then
                                                 Dim d As Integer = n2
                                                 If maxDiff < d Then
                                                     maxDiff = d
@@ -713,12 +713,12 @@ Public Class ImpenetrableMeshGen
                                     Next j
                                     If sel > -1 Then
                                         Dim tID1, tID2 As Integer
-                                        tID1 = tmpm.board(symmPoints(x, y)(myj).X, symmPoints(x, y)(myj).Y).locID.Item(0)
-                                        tID2 = tmpm.board(symmPoints(x, y)(sel).X, symmPoints(x, y)(sel).Y).locID.Item(0)
-                                        tmpm.board(symmPoints(x, y)(myj).X, symmPoints(x, y)(myj).Y).locID.Clear()
-                                        tmpm.board(symmPoints(x, y)(sel).X, symmPoints(x, y)(sel).Y).locID.Clear()
-                                        tmpm.board(symmPoints(x, y)(myj).X, symmPoints(x, y)(myj).Y).locID.Add(tID2)
-                                        tmpm.board(symmPoints(x, y)(sel).X, symmPoints(x, y)(sel).Y).locID.Add(tID1)
+                                        tID1 = tmpm.board(symmPoints(x, y)(myj).X, symmPoints(x, y)(myj).Y).locID(0)
+                                        tID2 = tmpm.board(symmPoints(x, y)(sel).X, symmPoints(x, y)(sel).Y).locID(0)
+                                        tmpm.board(symmPoints(x, y)(myj).X, symmPoints(x, y)(myj).Y).ClearLocIDArray()
+                                        tmpm.board(symmPoints(x, y)(sel).X, symmPoints(x, y)(sel).Y).ClearLocIDArray
+                                        tmpm.board(symmPoints(x, y)(myj).X, symmPoints(x, y)(myj).Y).AddToLocIDArray(tID2)
+                                        tmpm.board(symmPoints(x, y)(sel).X, symmPoints(x, y)(sel).Y).AddToLocIDArray(tID1)
                                         b.minX = Math.Min(b.minX, symmPoints(x, y)(sel).X)
                                         b.minY = Math.Min(b.minY, symmPoints(x, y)(sel).Y)
                                         b.maxX = Math.Max(b.maxX, symmPoints(x, y)(sel).X)
@@ -738,12 +738,12 @@ Public Class ImpenetrableMeshGen
                                                     Exit For
                                                 End If
                                             Next j
-                                            tID1 = tmpm.board(symmPoints(x, y)(tj1).X, symmPoints(x, y)(tj1).Y).locID.Item(0)
-                                            tID2 = tmpm.board(symmPoints(x, y)(tj2).X, symmPoints(x, y)(tj2).Y).locID.Item(0)
-                                            tmpm.board(symmPoints(x, y)(tj1).X, symmPoints(x, y)(tj1).Y).locID.Clear()
-                                            tmpm.board(symmPoints(x, y)(tj2).X, symmPoints(x, y)(tj2).Y).locID.Clear()
-                                            tmpm.board(symmPoints(x, y)(tj1).X, symmPoints(x, y)(tj1).Y).locID.Add(tID2)
-                                            tmpm.board(symmPoints(x, y)(tj2).X, symmPoints(x, y)(tj2).Y).locID.Add(tID1)
+                                            tID1 = tmpm.board(symmPoints(x, y)(tj1).X, symmPoints(x, y)(tj1).Y).locID(0)
+                                            tID2 = tmpm.board(symmPoints(x, y)(tj2).X, symmPoints(x, y)(tj2).Y).locID(0)
+                                            tmpm.board(symmPoints(x, y)(tj1).X, symmPoints(x, y)(tj1).Y).ClearLocIDArray()
+                                            tmpm.board(symmPoints(x, y)(tj2).X, symmPoints(x, y)(tj2).Y).ClearLocIDArray()
+                                            tmpm.board(symmPoints(x, y)(tj1).X, symmPoints(x, y)(tj1).Y).AddToLocIDArray(tID2)
+                                            tmpm.board(symmPoints(x, y)(tj2).X, symmPoints(x, y)(tj2).Y).AddToLocIDArray(tID1)
                                         End If
                                         x = b.maxX
                                         y = b.maxY
@@ -763,7 +763,7 @@ Public Class ImpenetrableMeshGen
                 If idlist.Count > 0 Then
                     Dim s As Integer = comm.RandomSelection(idlist, selectedWeight, True)
                     m.board(allPoints(s)(selectedIDs(s)).X, _
-                            allPoints(s)(selectedIDs(s)).Y).locID.Add(pID(s)(selectedIDs(s)))
+                            allPoints(s)(selectedIDs(s)).Y).AddToLocIDArray(pID(s)(selectedIDs(s)))
                 End If
             Loop
         End If
@@ -797,7 +797,7 @@ Public Class ImpenetrableMeshGen
                                      ReDim Preserve tmp_allPoints(y)(u), tmp_pID(y)(u), tmp_Weight(y)(u)
                                  End If
                                  tmp_allPoints(y)(n) = New Point(x, y)
-                                 tmp_pID(y)(n) = tmp_m.board(i, j).locID.Item(0)
+                                 tmp_pID(y)(n) = tmp_m.board(i, j).locID(0)
                                  If tmp_calculatedWeights(x, y, tmp_pID(y)(n) - 1) > -1 Then
                                      tmp_Weight(y)(n) = tmp_calculatedWeights(x, y, tmp_pID(y)(n) - 1)
                                  Else
@@ -850,11 +850,11 @@ Public Class ImpenetrableMeshGen
             For x As Integer = 0 To tmpm.xSize Step 1
                 If borderRadius(x, y) = -1 Then
                     Dim b As Location.Borders = NearestXY(x, y, tmpm.xSize, tmpm.ySize, 1)
-                    Dim id As Integer = tmpm.board(x, y).locID.Item(0)
+                    Dim id As Integer = tmpm.board(x, y).locID(0)
                     Dim isBorder As Boolean = False
                     For i As Integer = b.minX To b.maxX Step 1
                         For j As Integer = b.minY To b.maxY Step 1
-                            If Not id = tmpm.board(i, j).locID.Item(0) Then
+                            If Not id = tmpm.board(i, j).locID(0) Then
                                 isBorder = True
                                 i = b.maxX
                                 Exit For
@@ -876,13 +876,13 @@ Public Class ImpenetrableMeshGen
         For y As Integer = 0 To tmpm.ySize Step 1
             For x As Integer = 0 To tmpm.xSize Step 1
                 If borderRadius(x, y) > -1 Then
-                    Dim id As Integer = tmpm.board(x, y).locID.Item(0)
+                    Dim id As Integer = tmpm.board(x, y).locID(0)
                     freeze(x, y) = True
                     Dim b As Location.Borders = NearestXY(x, y, tmpm.xSize, tmpm.ySize, borderRadius(x, y))
                     For i As Integer = b.minX To b.maxX Step 1
                         For j As Integer = b.minY To b.maxY Step 1
                             tmpm.board(i, j).isBorder = True
-                            If Not tmpm.board(i, j).locID.Contains(id) Then tmpm.board(i, j).locID.Add(id)
+                            If Not tmpm.board(i, j).locID.Contains(id) Then tmpm.board(i, j).AddToLocIDArray(id)
                         Next j
                     Next i
                 End If
@@ -950,11 +950,11 @@ Public Class ImpenetrableMeshGen
         For y As Integer = 0 To tmpm.ySize Step 1
             For x As Integer = 0 To tmpm.xSize Step 1
                 If tmpm.board(x, y).isBorder Then
-                    Dim id As Integer = tmpm.board(x, y).locID.Item(0)
+                    Dim id As Integer = tmpm.board(x, y).locID(0)
                     Dim b As Location.Borders = NearestXY(x, y, tmpm.xSize, tmpm.ySize, 1)
                     For i As Integer = b.minX To b.maxX Step 1
                         For j As Integer = b.minY To b.maxY Step 1
-                            Dim n As Integer = tmpm.board(i, j).locID.Item(0)
+                            Dim n As Integer = tmpm.board(i, j).locID(0)
                             If Not id = n Then
                                 Dim s As String = i & "_" & j
                                 Dim LID1 As Integer = Math.Min(id, n) - 1
@@ -991,7 +991,7 @@ Public Class ImpenetrableMeshGen
                         nearRLocs.Clear()
                         For x As Integer = b.minX To b.maxX Step 1
                             For y As Integer = b.minY To b.maxY Step 1
-                                Dim id As Integer = tmpm.board(x, y).locID.Item(0) - 1
+                                Dim id As Integer = tmpm.board(x, y).locID(0) - 1
                                 If (i >= settMap.nRaces And Not id = i And Not id = j AndAlso Not nearRLocs.Contains(id)) _
                                 OrElse (i < settMap.nRaces And id < settMap.nRaces AndAlso Not nearRLocs.Contains(id)) Then
                                     If CDbl(p.SqDist(x, y)) <= minD Then
@@ -1138,9 +1138,9 @@ Public Class ImpenetrableMeshGen
          Sub(y As Integer)
              For x As Integer = 0 To tmpm.xSize Step 1
                  If Not tmpm.board(x, y).isBorder And tmpm.board(x, y).locID.Count > 1 Then
-                     Dim n As Integer = tmpm.board(x, y).locID.Item(0)
-                     tmpm.board(x, y).locID.Clear()
-                     tmpm.board(x, y).locID.Add(n)
+                     Dim n As Integer = tmpm.board(x, y).locID(0)
+                     tmpm.board(x, y).ClearLocIDArray()
+                     tmpm.board(x, y).AddToLocIDArray(n)
                  End If
              Next x
          End Sub)
@@ -1316,9 +1316,19 @@ Public Class ImpenetrableMeshGen
         Return FindDisconnected(free, c)
     End Function
 
+    ''' <summary>
+    ''' Расставит посещаемые объекты. К этому моменту в Map должны быть 
+    ''' присвоены значения переменным .xSize и .ySize (например, для карты 96x48 значения 95 и 47, соответственно)
+    ''' присвоено значение для symmID - ID примененной операции симметрии (см. класс SymmetryOperations) (-1 - без симметрии)
+    ''' инициализированы массивы.
+    ''' .Loc(from 0 to "количество локаций-1") и .board(from 0 to xSize, from 0 to ySize).
+    ''' .Loc() - внутри инициализированные локации.
+    ''' .board(,).LocID - как минимум одно значение (можно больше, если по соседству с тайлом есть тайлы других локаций (но тот, что первый в списке - основной).
+    ''' остальные записи в board(,) могут быть пустыми, неинициализированными и всё такое.
+    ''' </summary>
     Private Sub PlaceActiveObjects(ByRef m As Map, ByVal settMap As Map.SettingsMap, _
-                                   ByRef settRaceLoc As Map.SettingsLoc, ByVal settCommLoc As Map.SettingsLoc, _
-                                   ByRef ObjectBlank()(,) As Map.Cell, ByRef Term As TerminationCondition)
+                                  ByRef settRaceLoc As Map.SettingsLoc, ByVal settCommLoc As Map.SettingsLoc, _
+                                  ByRef ObjectBlank()(,) As Map.Cell, ByRef Term As TerminationCondition)
         Dim tmpm As Map = m
         Dim LocsPlacing(UBound(tmpm.Loc)) As Location.Borders
         Dim LocArea(UBound(tmpm.Loc))() As Integer
@@ -1333,7 +1343,7 @@ Public Class ImpenetrableMeshGen
              LocArea(id - 1) = New Integer() {0, 0}
              For y As Integer = 0 To tmpm.ySize Step 1
                  For x As Integer = 0 To tmpm.xSize Step 1
-                     If tmpm.board(x, y).locID.Item(0) = id Then
+                     If tmpm.board(x, y).locID(0) = id Then
                          LocsPlacing(Li).minX = Math.Min(LocsPlacing(Li).minX, x)
                          LocsPlacing(Li).minY = Math.Min(LocsPlacing(Li).minY, y)
                          LocsPlacing(Li).maxX = Math.Max(LocsPlacing(Li).maxX, x)
@@ -1349,7 +1359,7 @@ Public Class ImpenetrableMeshGen
                  For x As Integer = LocsPlacing(id - 1).minX To LocsPlacing(id - 1).maxX Step 1
                      If Not tmpm.board(x, y).isBorder _
                       And Not tmpm.board(x, y).isAttended _
-                      AndAlso tmpm.board(x, y).locID.Item(0) = id Then
+                      AndAlso tmpm.board(x, y).locID(0) = id Then
                          LocArea(id - 1)(0) += 1
                          freeCells(x - dx, y - dy) = True
                      End If
@@ -1879,7 +1889,7 @@ Public Class ImpenetrableMeshGen
         If b.minX < 0 Or b.minY < 0 Or b.maxX > m.xSize Or b.maxY > m.ySize Then Return False
         For j As Integer = b.minY To b.maxY Step 1
             For i As Integer = b.minX To b.maxX Step 1
-                If m.board(i, j).isBorder Or m.board(i, j).isAttended Or Not m.board(i, j).locID.Item(0) = id Then Return False
+                If m.board(i, j).isBorder Or m.board(i, j).isAttended Or Not m.board(i, j).locID(0) = id Then Return False
             Next i
         Next j
         Return True
@@ -1941,6 +1951,7 @@ Public Class ImpenetrableMeshGen
         Next j
     End Sub
 
+    ''' <summary>Запускаем сразу после PlaceActiveObjects. После выполнения идем как в примере</summary>
     Private Sub MakeLabyrinth(ByRef m As Map, ByVal settMap As Map.SettingsMap, ByRef Term As TerminationCondition)
         If Term.ExitFromLoops Then Exit Sub
         Dim tmpm As Map = m
@@ -1968,7 +1979,7 @@ Public Class ImpenetrableMeshGen
                                             .maxX = Integer.MinValue, .maxY = Integer.MinValue}
         For y As Integer = 0 To m.ySize Step 1
             For x As Integer = 0 To m.xSize Step 1
-                If m.board(x, y).locID.Item(0) = LocId Then
+                If m.board(x, y).locID(0) = LocId Then
                     b.minX = Math.Min(b.minX, x)
                     b.minY = Math.Min(b.minY, y)
                     b.maxX = Math.Max(b.maxX, x)
@@ -1978,7 +1989,7 @@ Public Class ImpenetrableMeshGen
                         Dim n As Location.Borders = NearestXY(x, y, m.xSize, m.ySize, 1)
                         For j As Integer = n.minY To n.maxY Step 1
                             For i As Integer = n.minX To n.maxX Step 1
-                                If Not m.board(i, j).locID.Item(0) = LocId Then
+                                If Not m.board(i, j).locID(0) = LocId Then
                                     m.board(x, y).Penetrable = True
                                     m.board(x, y).isPass = True
                                     i = n.maxX
@@ -1992,7 +2003,7 @@ Public Class ImpenetrableMeshGen
         Next y
         For y As Integer = b.minY To b.maxY Step 1
             For x As Integer = b.minX To b.maxX Step 1
-                If m.board(x, y).locID.Item(0) = LocId Then
+                If m.board(x, y).locID(0) = LocId Then
                     m.board(x, y).isPass = m.board(x, y).isPass And m.board(x, y).Penetrable
                     If symmID > -1 Then
                         Dim p() As Point = symm.ApplySymm(New Point(x, y), settMap.nRaces, m, 1)
@@ -2007,7 +2018,7 @@ Public Class ImpenetrableMeshGen
         Dim free(b.maxX - b.minX, b.maxY - b.minY) As Boolean
         For y As Integer = 0 To b.maxY - b.minY Step 1
             For x As Integer = 0 To b.maxX - b.minX Step 1
-                If m.board(x + b.minX, y + b.minY).locID.Item(0) = LocId _
+                If m.board(x + b.minX, y + b.minY).locID(0) = LocId _
                 And Not m.board(x + b.minX, y + b.minY).isAttended _
                 And Not m.board(x + b.minX, y + b.minY).isBorder Then
                     free(x, y) = True
@@ -2591,10 +2602,11 @@ Public Class Location
     End Function
 
     ''' <param name="p">Положение локации</param>
-    ''' <param name="a">Половина ширины</param>
-    ''' <param name="b">Половина высоты</param>
-    ''' <param name="angle">Угол наклона</param>
+    ''' <param name="a">Половина ширины (если локация создается вне моего генератора, то можно ставить любое число > 0)</param>
+    ''' <param name="b">Половина высоты (если локация создается вне моего генератора, то можно ставить любое число > 0)</param>
+    ''' <param name="angle">Угол наклона (если локация создается вне моего генератора, то можно ставить любое число)</param>
     ''' <param name="i">Номер локации, больше ноля</param>
+    ''' <param name="symmetred">Получено ли положение локации с помощью операции симметрии</param>
     Public Sub New(ByRef p As Point, ByVal a As Double, ByVal b As Double, ByVal angle As Double, ByVal i As Integer, Optional ByVal symmetred As Boolean = False)
         pos = New Point(p.X, p.Y)
         invSigmaA = Math.Sqrt(0.5) * 0.5 / a
@@ -2898,14 +2910,16 @@ Public Class ColorSelector
 
 End Class
 
-Class TerminationCondition
+Public Class TerminationCondition
     Friend maxTime As Long
     Dim startTime As Long
     Public ExitFromLoops As Boolean
 
+    ''' <param name="maxT">время на работу</param>
     Public Sub New(ByVal maxT As Integer)
         Call init(CLng(maxT))
     End Sub
+    ''' <param name="maxT">время на работу</param>
     Public Sub New(ByVal maxT As Long)
         Call init(maxT)
     End Sub
@@ -2915,6 +2929,7 @@ Class TerminationCondition
         ExitFromLoops = False
     End Sub
 
+    ''' <summary>Установит ExitFromLoops=True, если время истекло</summary>
     Public Sub CheckTime()
         Dim T As Long = CLng(Environment.TickCount)
         Dim d As Long = DeltaTime(startTime, T)
@@ -2985,14 +3000,14 @@ Public Class Map
         ReDim board(xSize, ySize)
         For x As Integer = 0 To xSize Step 1
             For y As Integer = 0 To ySize Step 1
-                board(x, y).locID = New List(Of Integer)
+                board(x, y).ClearLocIDArray() 'New List(Of Integer)
             Next y
         Next x
     End Sub
 
     Public Structure Cell
         ''' <summary>ID локаций, с которыми связана эта клетка</summary>
-        Dim locID As List(Of Integer)
+        Dim locID() As Integer 'List(Of Integer)
         ''' <summary>True, если на клетке должен стоять непроходимый непосещаемый объект</summary>
         Dim isBorder As Boolean
         ''' <summary>True, если клетка обязательно должна быть проходимой</summary>
@@ -3026,6 +3041,18 @@ Public Class Map
         Dim isRoad As Boolean
         ''' <summary>True, если на клетке лес</summary>
         Dim isForest As Boolean
+
+        Public Sub AddToLocIDArray(ByRef value As Integer)
+            If locID.Count = 0 Then
+                ReDim locID(0)
+            Else
+                ReDim Preserve locID(locID.Length)
+            End If
+            locID(UBound(locID)) = value
+        End Sub
+        Public Sub ClearLocIDArray()
+            ReDim locID(-1)
+        End Sub
     End Structure
 
     Public Structure ComplitedSteps
@@ -3541,7 +3568,7 @@ Public Class StackLocationsGen
             For x As Integer = 0 To m.xSize Step 1
                 If m.board(x, y).GuardLoc Then
                     Dim d1, d2 As Double
-                    If m.board(x, y).locID.Item(0) <= settMap.nRaces Then
+                    If m.board(x, y).locID(0) <= settMap.nRaces Then
                         d1 = mDistR
                     Else
                         d1 = mDistC
@@ -3551,7 +3578,7 @@ Public Class StackLocationsGen
                         For i As Integer = t.minX To t.maxX Step 1
                             If m.board(i, j).GuardLoc And (Not x = i Or Not y = j) Then
                                 Dim d As Double = New Point(x, y).SqDist(i, j)
-                                If m.board(i, j).locID.Item(0) <= settMap.nRaces Then
+                                If m.board(i, j).locID(0) <= settMap.nRaces Then
                                     d2 = mDistR
                                 Else
                                     d2 = mDistC
@@ -3599,7 +3626,7 @@ Public Class StackLocationsGen
                                             .miny = Integer.MaxValue, .maxy = Integer.MinValue}
         For y As Integer = 0 To m.ySize Step 1
             For x As Integer = 0 To m.xSize Step 1
-                If m.board(x, y).locID.Item(0) = LocID Then
+                If m.board(x, y).locID(0) = LocID Then
                     b.minX = Math.Min(b.minX, x)
                     b.minY = Math.Min(b.minY, y)
                     b.maxX = Math.Max(b.maxX, x)
@@ -3615,7 +3642,7 @@ Public Class StackLocationsGen
 
         For y As Integer = 0 To ySize Step 1
             For x As Integer = 0 To xSize Step 1
-                If m.board(x + LPos.X, y + LPos.Y).locID.Item(0) = LocID _
+                If m.board(x + LPos.X, y + LPos.Y).locID(0) = LocID _
                 And Not m.board(x + LPos.X, y + LPos.Y).Penetrable _
                 And Not m.board(x + LPos.X, y + LPos.Y).isPass _
                 And Not m.board(x + LPos.X, y + LPos.Y).isAttended _
@@ -3759,16 +3786,16 @@ Public Class StackLocationsGen
         Dim passes, gag As New List(Of String)
         For y As Integer = 0 To m.ySize Step 1
             For x As Integer = 0 To m.xSize Step 1
-                If m.board(x, y).locID.Item(0) = LocID And m.board(x, y).isPass Then
+                If m.board(x, y).locID(0) = LocID And m.board(x, y).isPass Then
                     Dim b As Location.Borders = ImpenetrableMeshGen.NearestXY(x, y, m.xSize, m.ySize, 1)
                     For j As Integer = b.minY To b.maxY Step 1
                         For i As Integer = b.minX To b.maxX Step 1
-                            If m.board(i, j).locID.Item(0) > LocID And m.board(i, j).isPass Then
+                            If m.board(i, j).locID(0) > LocID And m.board(i, j).isPass Then
                                 Dim s As String = i & "_" & j
                                 If Not passes.Contains(s) Then passes.Add(s)
                                 s = x & "_" & y
                                 If Not passes.Contains(s) Then passes.Add(s)
-                            ElseIf m.board(i, j).locID.Item(0) < LocID And m.board(i, j).isPass Then
+                            ElseIf m.board(i, j).locID(0) < LocID And m.board(i, j).isPass Then
                                 Dim s As String = i & "_" & j
                                 If Not gag.Contains(s) Then gag.Add(s)
                                 s = x & "_" & y
@@ -4848,7 +4875,7 @@ Public Class ImpenetrableObjects
         If cityGroup.Count > 0 Then
             For Each L As List(Of Point) In cityGroup.Values
                 Dim town As String
-                If m.board(L.Item(0).X, L.Item(0).Y).locID.Item(0) <= settMap.nRaces Then
+                If m.board(L.Item(0).X, L.Item(0).Y).locID(0) <= settMap.nRaces Then
                     town = DefMapObjects.townT1
                 Else
                     Dim r As Double = comm.rndgen.PRand(0, 1)
@@ -4976,7 +5003,7 @@ Public Class ImpenetrableObjects
         Dim capitalPos As Point = Nothing
         For y As Integer = 0 To m.ySize Step 1
             For x As Integer = 0 To m.xSize Step 1
-                If m.board(x, y).locID.Item(0) = Loc.ID Then
+                If m.board(x, y).locID(0) = Loc.ID Then
                     If m.board(x, y).objectID = DefMapObjects.Types.Mine Then
                         ListPos.Add(New Point(x, y))
                     ElseIf m.board(x, y).objectID = DefMapObjects.Types.Capital Then
@@ -5024,7 +5051,7 @@ Public Class ImpenetrableObjects
         Dim ListPos As New List(Of Point)
         For y As Integer = 0 To m.ySize Step 1
             For x As Integer = 0 To m.xSize Step 1
-                If m.board(x, y).locID.Item(0) = Loc.ID And m.board(x, y).objectID = DefMapObjects.Types.Mine Then ListPos.Add(New Point(x, y))
+                If m.board(x, y).locID(0) = Loc.ID And m.board(x, y).objectID = DefMapObjects.Types.Mine Then ListPos.Add(New Point(x, y))
             Next x
         Next y
         Dim goldLimit As Double = CDbl(ListPos.Count) * settCommLoc.maxGoldMines / (settCommLoc.maxGoldMines + settCommLoc.maxManaSources + 0.001)
@@ -5672,7 +5699,7 @@ Public Class ImpenetrableObjects
         Return min - 1 + comm.rndgen.RndPos(max - min + 1, True)
     End Function
     Private Function pointLoc(ByRef m As Map, ByRef p As Point) As Integer
-        Return m.board(p.X, p.Y).locID.Item(0)
+        Return m.board(p.X, p.Y).locID(0)
     End Function
 
     Private Sub AddMercenaries(ByRef m As Map, ByRef settMap As Map.SettingsMap, ByRef settRaceLoc As Map.SettingsLoc, ByRef settCommLoc As Map.SettingsLoc)

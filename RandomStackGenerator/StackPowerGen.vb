@@ -72,8 +72,8 @@
                                                    .isPassGuard = m.board(x, y).PassGuardLoc, _
                                                    .isObjectGuard = m.board(x, y).isObjectGuard, _
                                                    .pos = New Point(x, y), _
-                                                   .LocID = m.board(x, y).locID.Item(0)})
-                    If m.board(x, y).objectID = 2 And m.board(x, y).locID.Item(0) > settMap.nRaces Then
+                                                   .LocID = m.board(x, y).locID(0)})
+                    If m.board(x, y).objectID = 2 And m.board(x, y).locID(0) > settMap.nRaces Then
                         If g = 0 Then Throw New Exception("Unexpected group ID of city guards")
                         locs.Add(-g, locs.Item(g))
                     End If
@@ -111,7 +111,7 @@
         For y As Integer = 0 To m.ySize Step 1
             For x As Integer = 0 To m.xSize Step 1
                 If Not m.board(x, y).isBorder And Not m.board(x, y).isAttended Then
-                    Dim id As Integer = m.board(x, y).locID.Item(0) - 1
+                    Dim id As Integer = m.board(x, y).locID(0) - 1
                     Area(id) += 1
                     Lpos(id).X += x
                     Lpos(id).Y += y
@@ -492,7 +492,7 @@ Public Class RaceGen
         For NLoop As Integer = 0 To 1 Step 1
             For y As Integer = 0 To m.ySize Step 1
                 For x As Integer = 0 To m.xSize Step 1
-                    If IsNothing(m.board(x, y).stackRace) And (Not m.Loc(m.board(x, y).locID.Item(0) - 1).IsObtainedBySymmery Or NLoop = 1) Then
+                    If IsNothing(m.board(x, y).stackRace) And (Not m.Loc(m.board(x, y).locID(0) - 1).IsObtainedBySymmery Or NLoop = 1) Then
                         Call SetCellRace(m, LocR, nRaces, races, weight, x, y)
                     End If
                 Next x
@@ -519,7 +519,7 @@ Public Class RaceGen
             For Each r As Integer In m.board(x, y).locID
                 If Not rO.Contains(LocR(r - 1)) Then rO.Add(LocR(r - 1))
             Next r
-            If m.board(x, y).locID.Item(0) > nRaces Then
+            If m.board(x, y).locID(0) > nRaces Then
                 For Each r As Integer In rO
                     For i As Integer = 0 To UBound(SRaces(r)) Step 1
                         Dim str As String = ""

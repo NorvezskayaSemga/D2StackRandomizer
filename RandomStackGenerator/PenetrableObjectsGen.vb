@@ -185,7 +185,7 @@
         Dim skip As Boolean
         For y As Integer = 0 To m.ySize Step 1
             For x As Integer = 0 To m.xSize Step 1
-                If Not m.Loc(m.board(x, y).locID.Item(0) - 1).IsObtainedBySymmery And m.board(x, y).objectID = DefMapObjects.Types.Mine Then
+                If Not m.Loc(m.board(x, y).locID(0) - 1).IsObtainedBySymmery And m.board(x, y).objectID = DefMapObjects.Types.Mine Then
                     skip = False
                     pos.Clear()
                     Dim b As Location.Borders = ImpenetrableMeshGen.NearestXY(x, y, m.xSize, m.ySize, 1)
@@ -223,7 +223,7 @@
     Private Function isPossiblePos(ByRef m As Map, ByRef x As Integer, ByRef y As Integer, ByRef mustBeFree(,) As Boolean) As Boolean
         Dim c As Map.Cell = m.board(x, y)
 
-        If m.Loc(c.locID.Item(0) - 1).IsObtainedBySymmery Then Return False
+        If m.Loc(c.locID(0) - 1).IsObtainedBySymmery Then Return False
 
         If c.isAttended Then Return False
         If c.isBorder Then Return False
