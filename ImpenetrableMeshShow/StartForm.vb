@@ -16,8 +16,6 @@ Friend Class StartForm
     Dim ObjectsSize As New Dictionary(Of String, Size)
 
     Private Sub GenMany_click() Handles GenManyButton.Click
-        Call itemGenTest()
-        Exit Sub
         For i As Integer = 1 To 300 Step 1
             GenButton.PerformClick()
             Me.Refresh()

@@ -510,7 +510,7 @@ Public Class ImpenetrableMeshGen
                 Dim pid As Integer = comm.RandomSelection(IDs, True)
                 loc.pos = New Point(possiblePoints(pid).X, possiblePoints(pid).Y)
                 If m.symmID > -1 Then
-                    Dim minR As Integer = CInt((0.9 * Math.Min(loc.gASize, loc.gBSize)) ^ 2)
+                    Dim minR As Integer = MinimalDistanceForLocationsObtainedBySymmetry(loc)
                     sLocs = symm.ApplySymm(loc, settMap.nRaces, m, minR)
                     ReDim Preserve m.Loc(m.Loc.Length + UBound(sLocs))
                     For i As Integer = 0 To UBound(sLocs) Step 1
@@ -542,8 +542,18 @@ Public Class ImpenetrableMeshGen
             End If
         Loop
     End Sub
+    Friend Function MinimalDistanceForLocationsObtainedBySymmetry(ByRef loc As Location) As Integer
+        Return CInt((0.9 * Math.Min(Loc.gASize, Loc.gBSize)) ^ 2)
+    End Function
 
-    Private Sub SetLocIdToCells(ByRef m As Map, ByVal settMap As Map.SettingsMap)
+    ''' <summary>В зависимости от расположения и параметров локаций присвоит тайлам ID локаци</summary>
+    ''' <param name="m">Хранилище данных о карте. К этому моменту должны быть 
+    ''' присвоены значения переменным .xSize и .ySize (например, для карты 96x48 значения 95 и 47, соответственно)
+    ''' присвоено значение для symmID - ID примененной операции симметрии (см. класс SymmetryOperations) (-1 - без симметрии)
+    ''' инициализирован массив .Loc(from 0 to "количество локаций-1").
+    ''' .Loc() - внутри инициализированные локации</param>
+    ''' <param name="settMap">Общие настройки для карты</param>
+    Public Sub SetLocIdToCells(ByRef m As Map, ByVal settMap As Map.SettingsMap)
 
         Dim allPoints()() As Point = Nothing
         Dim pID()() As Integer = Nothing
@@ -716,7 +726,7 @@ Public Class ImpenetrableMeshGen
                                         tID1 = tmpm.board(symmPoints(x, y)(myj).X, symmPoints(x, y)(myj).Y).locID(0)
                                         tID2 = tmpm.board(symmPoints(x, y)(sel).X, symmPoints(x, y)(sel).Y).locID(0)
                                         tmpm.board(symmPoints(x, y)(myj).X, symmPoints(x, y)(myj).Y).ClearLocIDArray()
-                                        tmpm.board(symmPoints(x, y)(sel).X, symmPoints(x, y)(sel).Y).ClearLocIDArray
+                                        tmpm.board(symmPoints(x, y)(sel).X, symmPoints(x, y)(sel).Y).ClearLocIDArray()
                                         tmpm.board(symmPoints(x, y)(myj).X, symmPoints(x, y)(myj).Y).AddToLocIDArray(tID2)
                                         tmpm.board(symmPoints(x, y)(sel).X, symmPoints(x, y)(sel).Y).AddToLocIDArray(tID1)
                                         b.minX = Math.Min(b.minX, symmPoints(x, y)(sel).X)
@@ -833,7 +843,17 @@ Public Class ImpenetrableMeshGen
     End Sub
     ''' <summary>Returns value from 0 To UBound(m.Loc)</summary>
 
-    Private Sub SetBorders(ByRef m As Map, ByVal settMap As Map.SettingsMap, ByRef Term As TerminationCondition)
+    ''' <summary>Выполняется после SetLocIdToCells. В зависимости от того, какие ID локаци присвоены тайлам, расставит проходы стенки между локациями</summary>
+    ''' <param name="m">Хранилище данных о карте. К этому моменту должны быть 
+    ''' присвоены значения переменным .xSize и .ySize (например, для карты 96x48 значения 95 и 47, соответственно)
+    ''' присвоено значение для symmID - ID примененной операции симметрии (см. класс SymmetryOperations) (-1 - без симметрии)
+    ''' инициализированы массивы.
+    ''' .Loc(from 0 to "количество локаций-1") и .board(from 0 to xSize, from 0 to ySize).
+    ''' .Loc() - внутри инициализированные локации.
+    ''' .board(,).LocID - как минимум одно значение (можно больше, если по соседству с тайлом есть тайлы других локаций (но тот, что первый в списке - основной)</param>
+    ''' <param name="settMap">Общие настройки для карты</param>
+    ''' <param name="Term">Нужно инициализировать экземпляр этого класса до начала генерации</param>
+    Public Sub SetBorders(ByRef m As Map, ByVal settMap As Map.SettingsMap, ByRef Term As TerminationCondition)
 
         Dim tmpm As Map = m
         Dim del(tmpm.xSize, tmpm.ySize), freeze(tmpm.xSize, tmpm.ySize) As Boolean
@@ -1316,7 +1336,7 @@ Public Class ImpenetrableMeshGen
         Return FindDisconnected(free, c)
     End Function
 
-    ''' <summary>Расставит посещаемые объекты</summary>
+    ''' <summary>Выполняется после SetBorders. Расставит посещаемые объекты</summary>
     ''' <param name="m">Хранилище данных о карте. К этому моменту должны быть 
     ''' присвоены значения переменным .xSize и .ySize (например, для карты 96x48 значения 95 и 47, соответственно)
     ''' присвоено значение для symmID - ID примененной операции симметрии (см. класс SymmetryOperations) (-1 - без симметрии)
@@ -2643,7 +2663,7 @@ Public Class Location
     ''' <param name="p">Положение локации</param>
     ''' <param name="a">Половина ширины (если локация создается вне моего генератора, то можно ставить любое число > 0)</param>
     ''' <param name="b">Половина высоты (если локация создается вне моего генератора, то можно ставить любое число > 0)</param>
-    ''' <param name="angle">Угол наклона (если локация создается вне моего генератора, то можно ставить любое число)</param>
+    ''' <param name="angle">Угол наклона от 0 до Пи (если локация создается вне моего генератора, то можно ставить любое число)</param>
     ''' <param name="i">Номер локации, больше ноля</param>
     ''' <param name="symmetred">Получено ли положение локации с помощью операции симметрии</param>
     Public Sub New(ByRef p As Point, ByVal a As Double, ByVal b As Double, ByVal angle As Double, ByVal i As Integer, Optional ByVal symmetred As Boolean = False)
