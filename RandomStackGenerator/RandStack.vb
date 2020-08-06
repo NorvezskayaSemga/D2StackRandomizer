@@ -352,12 +352,26 @@ Public Class RandStack
             Dim roundBy As Integer = 25
             Dim dGold As Double = 0
 
-            Call GoldToManaRound(relationships.Black * manaPiece, roundBy, output, output.Black, dGold)
-            Call GoldToManaRound(relationships.Blue * manaPiece, roundBy, output, output.Blue, dGold)
-            Call GoldToManaRound(relationships.Green * manaPiece, roundBy, output, output.Green, dGold)
-            Call GoldToManaRound(relationships.Red * manaPiece, roundBy, output, output.Red, dGold)
-            Call GoldToManaRound(relationships.White * manaPiece, roundBy, output, output.White, dGold)
-
+            Dim order() As Integer = New Integer() {0, 1, 2, 3, 4}
+            For n As Integer = 1 To UBound(order) Step 1
+                Dim r As Integer = rndgen.RndPos(order.Length, True) - 1
+                Dim t As Integer = order(r)
+                order(r) = order(0)
+                order(0) = t
+            Next n
+            For n As Integer = 0 To UBound(order) Step 1
+                If order(n) = 0 Then
+                    Call GoldToManaRound(relationships.Black * manaPiece, roundBy, output, output.Black, dGold)
+                ElseIf order(n) = 1 Then
+                    Call GoldToManaRound(relationships.Blue * manaPiece, roundBy, output, output.Blue, dGold)
+                ElseIf order(n) = 2 Then
+                    Call GoldToManaRound(relationships.Green * manaPiece, roundBy, output, output.Green, dGold)
+                ElseIf order(n) = 3 Then
+                    Call GoldToManaRound(relationships.Red * manaPiece, roundBy, output, output.Red, dGold)
+                Else
+                    Call GoldToManaRound(relationships.White * manaPiece, roundBy, output, output.White, dGold)
+                End If
+            Next n
         End If
         Return output
     End Function
