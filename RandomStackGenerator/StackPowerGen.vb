@@ -25,10 +25,28 @@
                    ByRef settMap As Map.SettingsMap, _
                    ByRef settRaceLoc As Map.SettingsLoc, _
                    ByRef settCommLoc As Map.SettingsLoc)
-
-        If Not settMap.isChecked Then Throw New Exception("Check parameters via settMap.Check()")
         If Not settRaceLoc.isChecked Then Throw New Exception("Check parameters via settRaceLoc.Check()")
         If Not settCommLoc.isChecked Then Throw New Exception("Check parameters via settCommLoc.Check()")
+        Dim a() As Map.SettingsLoc = Map.SettingsLoc.ToArray(settRaceLoc, settCommLoc, settMap.nRaces, m.Loc.Length)
+        Call Gen(m, settMap, a)
+    End Sub
+    '''<summary>Заполнит m.groupStats, где ключ - ID группы, значение - параметры генерации без определенной расы отряда</summary>
+    ''' <param name="m">Заготовка карты после работы генератора положения отрядов</param>
+    ''' <param name="settMap">Общие настройки для карты</param>
+    ''' <param name="settLoc">Настройки для каждой локации. Первыми должны идти стартовые локации рас.
+    ''' Коментарий к настройкам стартовых локаций играбельных рас:
+    ''' дробная часть определяет шанс округления большую сторону.
+    ''' Комментарий к настройкам остальных локаций:
+    ''' Значение количества объектов для каждой локации будет умножаться на отношение площади локации к площади, заданной в настройках (Pi*AverageRadius^2).
+    ''' Дробная часть определяет шанс округления в большую сторону. В случае округления вниз дробная часть добавляется к максимальному количеству шахт </param>
+    Public Sub Gen(ByRef m As Map, _
+                   ByRef settMap As Map.SettingsMap, _
+                   ByRef settLoc() As Map.SettingsLoc)
+
+        If Not settMap.isChecked Then Throw New Exception("Check parameters via settMap.Check()")
+        For i As Integer = 0 To UBound(settLoc) Step 1
+            If Not settLoc(i).isChecked Then Throw New Exception("Check parameters via settLoc(" & i & ").Check()")
+        Next i
 
         If Not m.complited.StacksPlacing_Done Or Not m.complited.MeshTestII_Done Then
             Throw New Exception("Сначала нужно выполнить StackLocations.Gen " & _
@@ -37,7 +55,7 @@
 
         Dim t0 As Integer = Environment.TickCount
         Dim guards As Dictionary(Of Integer, StackLoc) = MakeGuardsList(m, settMap)
-        Dim LocTotalExp() As Double = MakeLocationsList(m, settMap, settRaceLoc, settCommLoc)
+        Dim LocTotalExp() As Double = MakeLocationsList(m, settMap, settLoc)
         m.groupStats = GenStacksStats(m, settMap, guards, LocTotalExp)
         m.complited.StacksDesiredStatsGen_Done = True
 
@@ -84,8 +102,7 @@
     End Function
     Private Function MakeLocationsList(ByRef m As Map, _
                                        ByRef settMap As Map.SettingsMap, _
-                                       ByRef settRaceLoc As Map.SettingsLoc, _
-                                       ByRef settCommLoc As Map.SettingsLoc) As Double()
+                                       ByRef settLoc() As Map.SettingsLoc) As Double()
 
         Dim CapPos As New List(Of Point)
         Dim centerX, centerY As Double
@@ -121,11 +138,13 @@
         For i As Integer = 0 To UBound(m.Loc) Step 1
             Lpos(i).X = CInt(Lpos(i).X / Area(i))
             Lpos(i).Y = CInt(Lpos(i).Y / Area(i))
-            If i < CapPos.Count Then
-                LExp(i) = settRaceLoc.expAmount
-            Else
-                LExp(i) = settCommLoc.expAmount * Area(i) / (Math.PI * Math.Pow(settCommLoc.AverageRadius - 1, 2))
-            End If
+            LExp(i) = settLoc(i).expAmount
+            If i >= CapPos.Count Then LExp(i) *= Area(i) / (Math.PI * Math.Pow(settLoc(i).AverageRadius - 1, 2))
+            'If i < CapPos.Count Then
+            '    LExp(i) = settRaceLoc.expAmount
+            'Else
+            '    LExp(i) = settCommLoc.expAmount * Area(i) / (Math.PI * Math.Pow(settCommLoc.AverageRadius - 1, 2))
+            'End If
         Next i
         minCapDist = Double.MaxValue : maxCapDist = Double.MinValue
         minCenDist = Double.MaxValue : maxCenDist = Double.MinValue
