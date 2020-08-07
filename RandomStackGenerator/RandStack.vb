@@ -340,11 +340,11 @@ Public Class RandStack
         If conversionChance > 0 AndAlso AllDataStructues.Cost.Sum(outputManaRelationsips) - outputManaRelationsips.Gold > 0 AndAlso rndgen.Rand(0, 1, True) <= conversionChance Then
             Dim relationships As New AllDataStructues.Cost
             Do While AllDataStructues.Cost.Sum(relationships) = 0
-                If outputManaRelationsips.Black > 0 Then relationships.Black = rndgen.RndPos(outputManaRelationsips.Black + 1, True) - 1
-                If outputManaRelationsips.Blue > 0 Then relationships.Blue = rndgen.RndPos(outputManaRelationsips.Blue + 1, True) - 1
-                If outputManaRelationsips.Green > 0 Then relationships.Green = rndgen.RndPos(outputManaRelationsips.Green + 1, True) - 1
-                If outputManaRelationsips.Red > 0 Then relationships.Red = rndgen.RndPos(outputManaRelationsips.Red + 1, True) - 1
-                If outputManaRelationsips.White > 0 Then relationships.White = rndgen.RndPos(outputManaRelationsips.White + 1, True) - 1
+                If outputManaRelationsips.Black > 0 Then relationships.Black = rndgen.RndInt(0, outputManaRelationsips.Black, True)
+                If outputManaRelationsips.Blue > 0 Then relationships.Blue = rndgen.RndInt(0, outputManaRelationsips.Blue, True)
+                If outputManaRelationsips.Green > 0 Then relationships.Green = rndgen.RndInt(0, outputManaRelationsips.Green, True)
+                If outputManaRelationsips.Red > 0 Then relationships.Red = rndgen.RndInt(0, outputManaRelationsips.Red, True)
+                If outputManaRelationsips.White > 0 Then relationships.White = rndgen.RndInt(0, outputManaRelationsips.White, True)
             Loop
 
             Dim manaPiece As Double = input.Gold * Math.Max(Math.Min(conversionAmount, 1), 0) / AllDataStructues.Cost.Sum(relationships)
@@ -664,7 +664,7 @@ Public Class RandStack
                         n1 = minN
                         n2 = settings(i).amount
                     End If
-                    n = n1 - 1 + rndgen.RndPos(n2 - n1 + 1, True)
+                    n = rndgen.RndInt(n1, n2, True)
                 Else
                     n = settings(i).amount
                 End If
@@ -1648,6 +1648,11 @@ Public Class RndValueGen
         Return n
     End Function
 
+    '''<summary>Returns random value with uniform distribution from min to max.</summary>
+    ''' <param name="serial">True, if use in serial code</param>
+    Public Function RndInt(ByRef min As Integer, ByRef max As Integer, ByRef serial As Boolean) As Integer
+        Return min - 1 + RndPos(max - min + 1, serial)
+    End Function
 End Class
 
 Public Class Common

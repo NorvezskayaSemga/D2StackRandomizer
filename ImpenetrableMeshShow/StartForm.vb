@@ -2,17 +2,9 @@
 
 Friend Class StartForm
 
-    Dim genmesh As New ImpenetrableMeshGen
     Dim zoom As New ArrayZoom
     Dim draw As New ColorSelector
-    Dim symm As New SymmetryOperations
-    Dim stackstats As New StackPowerGen
-    Dim racegen As New RaceGen
-    Dim names As New SetName
-    Dim watergenerator As New WaterGen
     Dim comm As New Common
-    Dim objplace As ImpenetrableObjects
-    Dim penOnjGen As New PenetrableObjectsGen
     Dim ObjectsSize As New Dictionary(Of String, Size)
 
     Private Sub GenMany_click() Handles GenManyButton.Click
@@ -87,20 +79,10 @@ Friend Class StartForm
 
     Private Sub GenButton_Click() Handles GenButton.Click
 
-        'For Each r As Integer In {1, 2, 3, 4, 14}
-        '    Console.WriteLine("------------ " & r)
-        '    Console.WriteLine(names.LordName(r, True))
-        '    For i As Integer = 0 To 2 Step 1
-        '        Console.WriteLine(names.LordName(r, False))
-        '    Next
-        'Next
-
-        Call ReadSpells()
-
         Call comm.ReadExcludedObjectsList({"%default%"})
-        Call ReadObjSize()
+        Dim objSizeArray() As ImpenetrableObjects.GlobalMapDecoration = ReadObjSize()
 
-        objplace = New ImpenetrableObjects(ObjectsSize, {"%default%"}, {"%default%"}, {"%default%"}, ReadSpells)
+        Dim objplace As New ImpenetrableObjects(objSizeArray, {"%default%"}, {"%default%"}, {"%default%"}, ReadSpells)
 
         Dim grid As Map
         Dim races As Integer
@@ -183,46 +165,85 @@ Friend Class StartForm
         sC.mercenariesMaxExpBar = 1700
         sC.mercenariesMinExpBar = 1000
 
-        Dim checkResult As String
-        checkResult = sM.Check
-        If checkResult.Length > 0 Then Console.WriteLine(checkResult)
-        checkResult = sR.Check
-        If checkResult.Length > 0 Then Console.WriteLine(checkResult)
-        checkResult = sC.Check
-        If checkResult.Length > 0 Then Console.WriteLine(checkResult)
 
-        Dim gt As Integer = 10000
-again:
-        If Not SymmCheckBox.Checked Then
-            grid = genmesh.UnsymmGen(sM, sR, sC, gt)
+        sM.ApplySymmetry = SymmCheckBox.Checked
+        sM.SymmetryClass = -1
+
+        Dim genTimeLimit As Integer = 10000
+
+        If Not UseTemplateCheckBox.Checked Then
+            grid = New MapGenWrapper(objplace).SimpleGen(sM, sR, sC, genTimeLimit)
         Else
-            grid = genmesh.SymmGen(sM, sR, sC, gt)
+            Dim sL() As ImpenetrableMeshGen.GenSettings.LocationGenSetting
+            If SymmCheckBox.Checked Then
+                sC.AverageRadius *= 1.3
+                ReDim sL(2)
+                sL(0).minValues = sR
+                sL(0).maxValues = sR
+                sL(0).posX.min = 0.1
+                sL(0).posX.max = 0.2
+                sL(0).posY.min = 0.1
+                sL(0).posY.max = 0.25
+
+                sL(1).minValues = sC
+                sL(1).maxValues = sC
+                sL(1).posX.min = 0.45
+                sL(1).posX.max = 0.55
+                sL(1).posY.min = 0.45
+                sL(1).posY.max = 0.55
+
+                sL(2).minValues = sC
+                sL(2).maxValues = sC
+                sL(2).posX.min = 0.01
+                sL(2).posX.max = 0.15
+                sL(2).posY.min = 0.45
+                sL(2).posY.max = 0.55
+            Else
+                sM.nRaces = 2
+                ReDim sL(4)
+                sL(0).minValues = sR
+                sL(0).maxValues = sR
+                sL(0).posX.min = 0.1
+                sL(0).posX.max = 0.9
+                sL(0).posY.min = 0.1
+                sL(0).posY.max = 0.25
+
+                sL(1).minValues = sR
+                sL(1).maxValues = sR
+                sL(1).posX.min = 0.1
+                sL(1).posX.max = 0.9
+                sL(1).posY.min = 0.75
+                sL(1).posY.max = 0.9
+
+                sL(2).minValues = sC
+                sL(2).maxValues = sC
+                sL(2).posX.min = 0.45
+                sL(2).posX.max = 0.55
+                sL(2).posY.min = 0.45
+                sL(2).posY.max = 0.55
+
+                sL(3).minValues = sC
+                sL(3).maxValues = sC
+                sL(3).posX.min = 0.01
+                sL(3).posX.max = 0.15
+                sL(3).posY.min = 0.45
+                sL(3).posY.max = 0.55
+
+                sL(4).minValues = sC
+                sL(4).maxValues = sC
+                sL(4).posX.min = 0.85
+                sL(4).posX.max = 0.99
+                sL(4).posY.min = 0.45
+                sL(4).posY.max = 0.55
+            End If
+            For i As Integer = 0 To UBound(sL) Step 1
+                sL(i).minValues.AverageRadius *= 0.9
+                sL(i).maxValues.AverageRadius *= 1.1
+                sL(i).minValues.maxGoldMines *= 0.9
+                sL(i).maxValues.maxGoldMines *= 1.1
+            Next i
+            grid = New MapGenWrapper(objplace).TemplateGen(sM, sL, genTimeLimit)
         End If
-
-        If Not grid.TestMap = "" Then
-            Console.WriteLine(grid.TestMap)
-            Exit Sub
-        End If
-
-        If Not IsNothing(grid) Then
-            Dim staclocgen As New StackLocationsGen
-            If Not staclocgen.Gen(grid, sM, sR, sC, gt) Then GoTo again
-        Else
-            Exit Sub
-        End If
-
-        If Not grid.TestMap = "" Then
-            Console.WriteLine(grid.TestMap)
-            Exit Sub
-        End If
-
-        Call stackstats.Gen(grid, sM, sR, sC)
-        Call watergenerator.Gen(grid, sM)
-        Call racegen.Gen(grid, Nothing)
-
-        Call objplace.Gen(grid, sM, sR, sC)
-
-        Call penOnjGen.Gen(grid, sM)
 
         'Dim randstack As New RandStack(ReadTestUnits, ReadTestItems, {"%default%"}, {"%default%"}, True)
         'Dim isnew As Boolean = True
@@ -262,7 +283,8 @@ again:
                     t(x, y) = 185
                 End If
                 If grid.board(x, y).isBorder Then
-                    t(x, y) = grid.board(x, y).objRace.Item(0)
+                    't(x, y) = grid.board(x, y).objRace.Item(0)
+                    t(x, y) = grid.board(x, y).locID(0)
                 ElseIf grid.board(x, y).isWater Then
                     't(x, y) += 200
                 End If
@@ -336,14 +358,16 @@ again:
         Return res
     End Function
 
-    Private Function ReadObjSize() As Dictionary(Of String, Size)
+    Private Function ReadObjSize() As ImpenetrableObjects.GlobalMapDecoration()
         Dim t() As String = comm.TxtSplit(My.Resources.TestObjectSize)
+        Dim result(UBound(t) - 1) As ImpenetrableObjects.GlobalMapDecoration
         ObjectsSize.Clear()
         For i As Integer = 1 To UBound(t) Step 1
             Dim r() As String = t(i).Split(CChar(" "))
             ObjectsSize.Add(r(0).ToUpper, New Size(CInt(r(1)), CInt(r(2))))
+            result(i - 1) = New ImpenetrableObjects.GlobalMapDecoration With {.ID = r(0).ToUpper, .Size = New Size(CInt(r(1)), CInt(r(2)))}
         Next i
-        Return ObjectsSize
+        Return result
     End Function
 
     Private Function ReadTestUnits() As AllDataStructues.Unit()

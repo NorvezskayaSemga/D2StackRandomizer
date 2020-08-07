@@ -286,7 +286,7 @@
                     Next k
                     e = expSum / nearest.Count
                 Else
-                    e = 200 + rndgen.RndPos(100, True)
+                    e = rndgen.RndInt(200, 300, True)
                 End If
                 expKilled.Add(id, e * settMap.PassGuardsPowerMultiplicator)
                 LootCost.Add(id, 0)

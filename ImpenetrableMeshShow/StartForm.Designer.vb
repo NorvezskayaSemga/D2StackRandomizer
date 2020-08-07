@@ -31,6 +31,7 @@ Partial Class StartForm
         Me.SymmCheckBox = New System.Windows.Forms.CheckBox()
         Me.GenManyButton = New System.Windows.Forms.Button()
         Me.RndTestButton = New System.Windows.Forms.Button()
+        Me.UseTemplateCheckBox = New System.Windows.Forms.CheckBox()
         CType(Me.PictureBox1, System.ComponentModel.ISupportInitialize).BeginInit()
         Me.Panel1.SuspendLayout()
         Me.SuspendLayout()
@@ -124,11 +125,24 @@ Partial Class StartForm
         Me.RndTestButton.Text = "TestRandomizer"
         Me.RndTestButton.UseVisualStyleBackColor = True
         '
+        'UseTemplateCheckBox
+        '
+        Me.UseTemplateCheckBox.AutoSize = True
+        Me.UseTemplateCheckBox.Checked = True
+        Me.UseTemplateCheckBox.CheckState = System.Windows.Forms.CheckState.Checked
+        Me.UseTemplateCheckBox.Location = New System.Drawing.Point(630, 211)
+        Me.UseTemplateCheckBox.Name = "UseTemplateCheckBox"
+        Me.UseTemplateCheckBox.Size = New System.Drawing.Size(88, 17)
+        Me.UseTemplateCheckBox.TabIndex = 6
+        Me.UseTemplateCheckBox.Text = "Use template"
+        Me.UseTemplateCheckBox.UseVisualStyleBackColor = True
+        '
         'StartForm
         '
         Me.AutoScaleDimensions = New System.Drawing.SizeF(6.0!, 13.0!)
         Me.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font
         Me.ClientSize = New System.Drawing.Size(773, 606)
+        Me.Controls.Add(Me.UseTemplateCheckBox)
         Me.Controls.Add(Me.RndTestButton)
         Me.Controls.Add(Me.GenManyButton)
         Me.Controls.Add(Me.SymmCheckBox)
@@ -153,5 +167,6 @@ Partial Class StartForm
     Friend WithEvents SymmCheckBox As System.Windows.Forms.CheckBox
     Friend WithEvents GenManyButton As System.Windows.Forms.Button
     Friend WithEvents RndTestButton As System.Windows.Forms.Button
+    Friend WithEvents UseTemplateCheckBox As System.Windows.Forms.CheckBox
 
 End Class
