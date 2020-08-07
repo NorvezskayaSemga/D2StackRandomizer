@@ -139,7 +139,8 @@
             Lpos(i).X = CInt(Lpos(i).X / Area(i))
             Lpos(i).Y = CInt(Lpos(i).Y / Area(i))
             LExp(i) = settLoc(i).expAmount
-            If i >= CapPos.Count Then LExp(i) *= Area(i) / (Math.PI * Math.Pow(settLoc(i).AverageRadius - 1, 2))
+            If settLoc(i).scaleContent Then LExp(i) *= Area(i) / (Math.PI * Math.Pow(settLoc(i).AverageRadius - 1, 2))
+            'If i >= CapPos.Count Then LExp(i) *= Area(i) / (Math.PI * Math.Pow(settLoc(i).AverageRadius - 1, 2))
             'If i < CapPos.Count Then
             '    LExp(i) = settRaceLoc.expAmount
             'Else
@@ -373,7 +374,7 @@ Public Class RaceGen
     Dim LRaces() As Integer
     Dim LRacesWeight(), SRacesWeight()() As Double
     Dim SRaces()()() As Integer
-    Dim neutralI As Integer = -1
+    ReadOnly neutralI As Integer = -1
 
     Public Sub New()
         ReDim LRaces(UBound(comm.defValues.LocRacesBlocks)), LRacesWeight(UBound(comm.defValues.LocRacesBlocks))

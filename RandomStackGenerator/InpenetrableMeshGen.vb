@@ -112,6 +112,7 @@ Public Class ImpenetrableMeshGen
                 res.merchMaxItemCost = RandomValue(min.merchMaxItemCost, max.merchMaxItemCost, randomizer)
                 res.merchMinItemCost = RandomValue(min.merchMinItemCost, max.merchMinItemCost, randomizer)
                 res.merchItemsCost = RandomValue(min.merchItemsCost, max.merchItemsCost, randomizer)
+                res.scaleContent = RandomValue(min.scaleContent, max.scaleContent, randomizer)
 
                 res.mageSpellsMinLevel = Math.Min(res.mageSpellsMinLevel, res.mageSpellsMaxLevel)
                 res.mercenariesMinExpBar = Math.Min(res.mercenariesMinExpBar, res.mercenariesMaxExpBar)
@@ -234,18 +235,13 @@ Public Class ImpenetrableMeshGen
                                ByRef symmId As Integer) As Map
 
         If Not settGen.common_settMap.isChecked Then Throw New Exception("Check parameters via settGen.common_settMap.Check()")
-
-        Dim scaleRaceLocationContent As Boolean
-
         If settGen.genMode = GenSettings.genModes.simple Then
             If Not settGen.simple_settRaceLoc.isChecked Then Throw New Exception("Check parameters via settGen.simple_settRaceLoc.Check()")
             If Not settGen.simple_settCommLoc.isChecked Then Throw New Exception("Check parameters via settGen.simple_settCommLoc.Check()")
-            scaleRaceLocationContent = False
         ElseIf settGen.genMode = GenSettings.genModes.template Then
             '    For i As Integer = 0 To UBound(settGen.template_settLoc) Step 1
             '        If Not settGen.template_settLoc(i).isChecked Then Throw New Exception("Check parameters via settGen.template_settLoc(" & i & ").Check()")
             '    Next i
-            scaleRaceLocationContent = True
         Else
             Throw New Exception("Unknown gen mode")
         End If
@@ -288,7 +284,7 @@ newtry:
             Dim t3 As Integer = Environment.TickCount
             Call SetBorders(m, settGen.common_settMap, term)
             Dim t4 As Integer = Environment.TickCount
-            Call PlaceActiveObjects(m, settGen.common_settMap, copiedSettings, scaleRaceLocationContent, term)
+            Call PlaceActiveObjects(m, settGen.common_settMap, copiedSettings, term)
             Dim t5 As Integer = Environment.TickCount
             Call MakeLabyrinth(m, settGen.common_settMap, term)
             Dim t6 As Integer = Environment.TickCount
@@ -1568,14 +1564,12 @@ newtry:
     ''' <param name="settCommLoc">Настройки для остальных локаций. 
     ''' Значение количества объектов для каждой локации будет умножаться на отношение площади локации к площади средней локации (Pi*AverageRadius^2).
     ''' Дробная часть определяет шанс округления в большую сторону. В случае округления вниз дробная часть добавляется к максимальному количеству шахт</param>
-    ''' <param name="scaleRaceLocationContent">Будет ли зависеть количество посещаемых объектов в стартовых локациях от их размера</param>
     ''' <param name="Term">Нужно инициализировать экземпляр этого класса до начала генерации</param>
     Public Sub PlaceActiveObjects(ByRef m As Map, ByVal settMap As Map.SettingsMap, _
                                   ByRef settRaceLoc As Map.SettingsLoc, ByVal settCommLoc As Map.SettingsLoc, _
-                                  ByRef scaleRaceLocationContent As Boolean, _
                                   ByRef Term As TerminationCondition)
         Dim a() As Map.SettingsLoc = Map.SettingsLoc.ToArray(settRaceLoc, settCommLoc, settMap.nRaces, m.Loc.Length)
-        Call PlaceActiveObjects(m, settMap, a, scaleRaceLocationContent, Term)
+        Call PlaceActiveObjects(m, settMap, a, Term)
     End Sub
     ''' <summary>Расставит посещаемые объекты</summary>
     ''' <param name="m">Хранилище данных о карте. К этому моменту должны быть 
@@ -1595,11 +1589,9 @@ newtry:
     ''' Комментарий к настройкам остальных локаций:
     ''' Значение количества объектов для каждой локации будет умножаться на отношение площади локации к площади, заданной в настройках (Pi*AverageRadius^2).
     ''' Дробная часть определяет шанс округления в большую сторону. В случае округления вниз дробная часть добавляется к максимальному количеству шахт </param>
-    ''' <param name="scaleRaceLocationContent">Будет ли зависеть количество посещаемых объектов в стартовых локациях от их размера</param>
-    ''' <param name="Term">Нужно инициализировать экземпляр этого класса до начала генерации</param>
+   ''' <param name="Term">Нужно инициализировать экземпляр этого класса до начала генерации</param>
     Public Sub PlaceActiveObjects(ByRef m As Map, ByVal settMap As Map.SettingsMap, _
                                   ByRef settLoc() As Map.SettingsLoc, _
-                                  ByRef scaleRaceLocationContent As Boolean, _
                                   ByRef Term As TerminationCondition)
         Dim ObjectBlank()(,) As Map.Cell = ActiveObjectsSet(settMap, m.symmID)
         Dim tmpm As Map = m
@@ -1735,7 +1727,7 @@ newtry:
         Dim GroupID As Integer = 1
         Term = New TerminationCondition(Term.maxTime)
         Call FillLocation(GroupID, 1, tmpm, LocsPlacing, LocArea, settMap, settLoc, _
-                          tmpm.symmID, True, LocSymmMult, LocFreeCells, scaleRaceLocationContent, Term)
+                          tmpm.symmID, True, LocSymmMult, LocFreeCells, Term)
         If Term.ExitFromLoops Then Exit Sub
         Dim TT(UBound(tmpm.Loc)) As TerminationCondition
         Dim maxTime As Long = Term.maxTime
@@ -1750,7 +1742,7 @@ newtry:
                 Next j
                 If TT(i).ExitFromLoops Then Exit Sub
                 Call FillLocation(GroupID, tmpm.Loc(i).ID, tmpm, LocsPlacing, LocArea, settMap, settLoc, _
-                                  tmpm.symmID, False, LocSymmMult, LocFreeCells, True, TT(i))
+                                  tmpm.symmID, False, LocSymmMult, LocFreeCells, TT(i))
             End If
         Next i
         ' End Sub)
@@ -1932,10 +1924,10 @@ newtry:
     Private Sub MakeLocObjectsList(ByRef places() As Integer, ByRef nearWith() As Integer, _
                                    ByRef sett As Map.SettingsLoc, ByRef isRaceLoc As Boolean, _
                                    ByRef LocArea() As Integer, ByRef symmID As Integer, _
-                                   ByRef LocSymmMult As Double, ByRef scaleLocationContent As Boolean)
+                                   ByRef LocSymmMult As Double)
         Dim nCapital, nMinMines As Integer
         Dim mult As Double
-        If scaleLocationContent Then
+        If sett.scaleContent Then
             mult = LocSymmMult * LocArea(0) / (Math.PI * (sett.AverageRadius - 2) ^ 2)
         Else
             mult = 1
@@ -2060,7 +2052,7 @@ newtry:
     Private Sub FillLocation(ByRef GroupID As Integer, ByRef LocId As Integer, ByRef m As Map, ByRef LocsPlacing() As Location.Borders, _
                              ByRef LocArea()() As Integer, ByVal settMap As Map.SettingsMap, ByRef settLoc() As Map.SettingsLoc, _
                              ByVal symmId As Integer, ByVal IsRaceLoc As Boolean, LocSymmMult() As Double, _
-                             ByRef LocFreeCells()(,) As Boolean, ByRef scaleLocationContent As Boolean, ByRef Term As TerminationCondition)
+                             ByRef LocFreeCells()(,) As Boolean, ByRef Term As TerminationCondition)
         Dim tmpm As Map = m
         Dim tmpLocsPlacing() As Location.Borders = LocsPlacing
         Dim tmpLocFreeCells()(,) As Boolean = LocFreeCells
@@ -2078,14 +2070,14 @@ newtry:
             If symmId > -1 Or Not IsRaceLoc Then
                 ReDim v(0), places(0), nearWith(0)
                 Call MakeLocObjectsList(places(0), nearWith(0), settLoc(LocId - 1), IsRaceLoc, LocArea(LocId - 1), _
-                                        symmId, LocSymmMult(LocId - 1), scaleLocationContent)
+                                        symmId, LocSymmMult(LocId - 1))
                 Call ObjectsPlacingVariants(places(0), LocId, tmpm, settMap, tmpLocsPlacing, _
                                             tmpLocFreeCells(LocId - 1), nearWith(0), symmId, v(0), TT)
             Else
                 ReDim v(settMap.nRaces - 1), places(settMap.nRaces - 1), nearWith(settMap.nRaces - 1)
                 For i As Integer = 0 To settMap.nRaces - 1 Step 1
                     Call MakeLocObjectsList(places(i), nearWith(i), settLoc(i), IsRaceLoc, LocArea(i), _
-                                            symmId, LocSymmMult(i), scaleLocationContent)
+                                            symmId, LocSymmMult(i))
                 Next i
                 Parallel.For(0, settMap.nRaces, _
                  Sub(i As Integer)
@@ -2108,7 +2100,7 @@ newtry:
                 End If
                 If minN > UBound(v(i)) Then minN = UBound(v(i))
             Next i
-            If Not scaleLocationContent Then
+            If Not symmId > -1 And IsRaceLoc Then
                 For i As Integer = 0 To UBound(v) Step 1
                     If minN < UBound(v(i)) Then ReDim Preserve v(i)(minN)
                 Next i
@@ -3427,6 +3419,9 @@ Public Class Map
         '''<summary>Полная стоимость лута у торговца</summary>
         Dim merchItemsCost As Integer
 
+        ''' <summary>Масштабировать количество посещаемых объектов и опыт за убийство всех отрядовв в локации</summary>
+        Dim scaleContent As Boolean
+
         Private Checked As Boolean
         ''' <summary>Проверит корректность параметров. Вернет пустое сообщение, если все нормально</summary>
         Public Function Check() As String
@@ -3534,6 +3529,7 @@ Public Class Map
             .merchMaxItemCost = v.merchMaxItemCost, _
             .merchMinItemCost = v.merchMinItemCost, _
             .merchItemsCost = v.merchItemsCost, _
+            .scaleContent = v.scaleContent, _
             .Checked = v.Checked}
         End Function
         Public Shared Function Copy(ByRef v() As SettingsLoc) As SettingsLoc()

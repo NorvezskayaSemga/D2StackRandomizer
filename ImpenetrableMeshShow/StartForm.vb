@@ -137,6 +137,8 @@ Friend Class StartForm
         sR.mercenariesMaxExpBar = 900
         sR.mercenariesMinExpBar = 200
 
+        sR.scaleContent = False
+
         Dim sC As Map.SettingsLoc
         sC.AverageRadius = 17
         sC.maxEccentricityDispersion = 0.4
@@ -164,6 +166,8 @@ Friend Class StartForm
         sC.mercenariesCount = 5
         sC.mercenariesMaxExpBar = 1700
         sC.mercenariesMinExpBar = 1000
+
+        sC.scaleContent = True
 
 
         sM.ApplySymmetry = SymmCheckBox.Checked
@@ -199,6 +203,7 @@ Friend Class StartForm
                 sL(2).posY.min = 0.45
                 sL(2).posY.max = 0.55
             Else
+                sR.scaleContent = True
                 sM.nRaces = 2
                 ReDim sL(4)
                 sL(0).minValues = sR
