@@ -111,7 +111,7 @@ Friend Class StartForm
         sM.RoadsAmount = 0
         sM.ForestAmount = 0
 
-        Dim sR As Map.SettingsLoc
+        Dim sR As New Map.SettingsLoc With {.possibleRaces = {"N"}}
         sR.AverageRadius = 20
         sR.maxEccentricityDispersion = 0.15
         sR.maxRadiusDispersion = 0
@@ -139,7 +139,7 @@ Friend Class StartForm
 
         sR.scaleContent = False
 
-        Dim sC As Map.SettingsLoc
+        Dim sC As New Map.SettingsLoc With {.possibleRaces = {"H", "N", "S"}}
         sC.AverageRadius = 17
         sC.maxEccentricityDispersion = 0.4
         sC.maxRadiusDispersion = 0.3
@@ -290,8 +290,7 @@ Friend Class StartForm
                     t(x, y) = 185
                 End If
                 If grid.board(x, y).isBorder Then
-                    't(x, y) = grid.board(x, y).objRace.Item(0)
-                    t(x, y) = grid.board(x, y).locID(0)
+                    t(x, y) = grid.board(x, y).objRace.Item(0)
                 ElseIf grid.board(x, y).isWater Then
                     't(x, y) += 200
                 End If

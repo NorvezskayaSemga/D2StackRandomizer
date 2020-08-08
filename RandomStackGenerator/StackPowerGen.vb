@@ -412,7 +412,19 @@ Public Class RaceGen
     '''<summary>Сгенерирует для каждой локации и каждого отряда допустимые расы</summary>
     ''' <param name="m">Заготовка карты после работы генератора положения отрядов и их силы</param>
     ''' <param name="PlayableRaces">За какие расы будем играть. Если Nothing, то расы будут сгенерированы</param>
-    Public Sub Gen(ByRef m As Map, ByRef PlayableRaces() As Integer)
+    ''' <param name="settRaceLoc">Настройки для стартовых локаций играбельных рас</param>
+    ''' <param name="settCommLoc">Настройки для остальных локаций</param>
+    Public Sub Gen(ByRef m As Map, ByRef PlayableRaces() As Integer, _
+                   ByRef settRaceLoc As Map.SettingsLoc, ByVal settCommLoc As Map.SettingsLoc)
+        Dim a() As Map.SettingsLoc = Map.SettingsLoc.ToArray(settRaceLoc, settCommLoc, RacesAmount(m), m.Loc.Length)
+        Call Gen(m, PlayableRaces, a)
+    End Sub
+
+    '''<summary>Сгенерирует для каждой локации и каждого отряда допустимые расы</summary>
+    ''' <param name="m">Заготовка карты после работы генератора положения отрядов и их силы</param>
+    ''' <param name="PlayableRaces">За какие расы будем играть. Если Nothing, то расы будут сгенерированы</param>
+    ''' <param name="settLoc">Настройки для каждой локации. Первыми должны идти стартовые локации рас.</param>
+    Public Sub Gen(ByRef m As Map, ByRef PlayableRaces() As Integer, ByRef settLoc() As Map.SettingsLoc)
 
         If Not m.complited.WaterCreation_Done Then
             Throw New Exception("Сначала нужно выполнить WaterGen.Gen")
@@ -420,8 +432,8 @@ Public Class RaceGen
 
         Dim t0 As Integer = Environment.TickCount
         Dim nRaces As Integer = RacesAmount(m)
-        Dim LocR() As Integer = GenLocRace(m, nRaces, PlayableRaces)
-        Call SetLocRaceToCells(m, LocR, nRaces)
+        Dim LocR() As Integer = GenLocRace(m, nRaces, PlayableRaces, settLoc)
+        Call SetLocRaceToCells(m, LocR, nRaces, settLoc)
         For y As Integer = 0 To m.ySize Step 1
             For x As Integer = 0 To m.xSize Step 1
                 If m.board(x, y).GuardLoc Or m.board(x, y).PassGuardLoc Then
@@ -457,7 +469,8 @@ Public Class RaceGen
         Next y
         Return n
     End Function
-    Private Function GenLocRace(ByRef m As Map, ByRef nRaces As Integer, ByRef PlayableRaces() As Integer) As Integer()
+    Private Function GenLocRace(ByRef m As Map, ByRef nRaces As Integer, ByRef PlayableRaces() As Integer, ByRef settLoc() As Map.SettingsLoc) As Integer()
+        'выбор играбельных рас
         Dim selectedRaces As New List(Of Integer)
         If IsNothing(PlayableRaces) Then
             selectedRaces.AddRange(New Integer() {0, 1, 2, 3, 4})
@@ -478,12 +491,32 @@ Public Class RaceGen
             selectedRaces.Remove(s)
             LocR(i - 1) = LRaces(s)
         Next i
+
+        'выбор рас для обычных локаций
         Dim ids As New List(Of Integer)
-        For i As Integer = 0 To UBound(LRaces) Step 1
-            ids.Add(i)
-        Next i
         For i As Integer = nRaces To UBound(LocR) Step 1
             If Not m.Loc(i).IsObtainedBySymmery Then
+                ids.Clear()
+                If IsNothing(settLoc(i).possibleRaces) Then
+                    For j As Integer = 0 To UBound(LRaces) Step 1
+                        ids.Add(j)
+                    Next j
+                Else
+                    For Each race As String In settLoc(i).possibleRaces
+                        Dim rID As Integer = comm.RaceIdentifierToSubrace(race, False)
+                        For j As Integer = 0 To UBound(LRaces) Step 1
+                            If rID = LRaces(j) Then
+                                ids.Add(j)
+                                Exit For
+                            End If
+                        Next j
+                    Next race
+                    If ids.Count = 0 Then
+                        For j As Integer = 0 To UBound(LRaces) Step 1
+                            ids.Add(j)
+                        Next j
+                    End If
+                End If
                 Dim R As Integer = LRaces(comm.RandomSelection(ids, LRacesWeight, True))
                 If m.symmID > -1 Then
                     Dim pp() As Point = symm.ApplySymm(m.Loc(i).pos, nRaces, m, 1)
@@ -498,7 +531,7 @@ Public Class RaceGen
         Next i
         Return LocR
     End Function
-    Private Sub SetLocRaceToCells(ByRef m As Map, ByRef LocR() As Integer, ByRef nRaces As Integer)
+    Private Sub SetLocRaceToCells(ByRef m As Map, ByRef LocR() As Integer, ByRef nRaces As Integer, ByRef settLoc() As Map.SettingsLoc)
         Dim t As Integer = 0
         For Each item As Integer()() In SRaces
             If Not IsNothing(item) Then t += item.Length
@@ -513,7 +546,7 @@ Public Class RaceGen
             For y As Integer = 0 To m.ySize Step 1
                 For x As Integer = 0 To m.xSize Step 1
                     If IsNothing(m.board(x, y).stackRace) And (Not m.Loc(m.board(x, y).locID(0) - 1).IsObtainedBySymmery Or NLoop = 1) Then
-                        Call SetCellRace(m, LocR, nRaces, races, weight, x, y)
+                        Call SetCellRace(m, LocR, nRaces, races, weight, x, y, settLoc)
                     End If
                 Next x
             Next y
@@ -529,7 +562,7 @@ Public Class RaceGen
         Next y
     End Sub
     Private Sub SetCellRace(ByRef m As Map, ByRef LocR() As Integer, ByRef nRaces As Integer, ByRef races() As List(Of Integer), _
-                            ByRef weight() As Double, ByRef x As Integer, ByRef y As Integer)
+                            ByRef weight() As Double, ByRef x As Integer, ByRef y As Integer, ByRef settLoc() As Map.SettingsLoc)
         Dim rO, rS, IDs As New List(Of Integer)
         Dim added As New List(Of String)
         Dim t As Integer = -1
@@ -556,11 +589,33 @@ Public Class RaceGen
                     Next i
                 Next r
             Else
+                Dim baseNeutralStacksRace As Integer
+                If IsNothing(settLoc(m.board(x, y).locID(0) - 1).possibleRaces) Then
+                    baseNeutralStacksRace = neutralI
+                Else
+                    Dim possibleRacesList As New List(Of Integer)
+                    For Each race As String In settLoc(m.board(x, y).locID(0) - 1).possibleRaces
+                        Dim rID As Integer = comm.RaceIdentifierToSubrace(race, False)
+                        For j As Integer = 0 To UBound(LRaces) Step 1
+                            If rID = LRaces(j) Then
+                                possibleRacesList.Add(j)
+                                Exit For
+                            End If
+                        Next j
+                    Next race
+                    If possibleRacesList.Count = 0 Then
+                        For j As Integer = 0 To UBound(LRaces) Step 1
+                            possibleRacesList.Add(j)
+                        Next j
+                    End If
+                    baseNeutralStacksRace = comm.RandomSelection(possibleRacesList, LRacesWeight, True)
+                    possibleRacesList.Clear()
+                End If
                 Dim add As Boolean
-                For i As Integer = 0 To UBound(SRaces(neutralI)) Step 1
+                For i As Integer = 0 To UBound(SRaces(baseNeutralStacksRace)) Step 1
                     add = True
-                    If SRaces(neutralI)(i).Length = 1 AndAlso SRaces(neutralI)(i)(0) = 11 Then add = isWaterCell
-                    If add Then Call AddPossibleRace(t, neutralI, i, races, weight)
+                    If SRaces(baseNeutralStacksRace)(i).Length = 1 AndAlso SRaces(baseNeutralStacksRace)(i)(0) = 11 Then add = isWaterCell
+                    If add Then Call AddPossibleRace(t, baseNeutralStacksRace, i, races, weight)
                 Next i
             End If
             IDs.Clear()

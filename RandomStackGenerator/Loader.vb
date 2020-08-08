@@ -154,7 +154,7 @@ again:
 
         Call stackstats.Gen(grid, settGen.common_settMap, copiedSettings)
         Call watergenerator.Gen(grid, settGen.common_settMap)
-        Call racegen.Gen(grid, Nothing)
+        Call racegen.Gen(grid, Nothing, copiedSettings)
         Call objPlace.Gen(grid, settGen.common_settMap, copiedSettings)
         Call penOnjGen.Gen(grid, settGen.common_settMap)
 

@@ -118,6 +118,12 @@ Public Class ImpenetrableMeshGen
                 res.mercenariesMinExpBar = Math.Min(res.mercenariesMinExpBar, res.mercenariesMaxExpBar)
                 res.merchMinItemCost = Math.Min(res.merchMinItemCost, res.merchMaxItemCost)
 
+                If Not IsNothing(min.possibleRaces) Then
+                    res.possibleRaces = min.possibleRaces
+                Else
+                    res.possibleRaces = max.possibleRaces
+                End If
+
                 Return res
             End Function
 
@@ -1622,7 +1628,7 @@ newtry:
     ''' Комментарий к настройкам остальных локаций:
     ''' Значение количества объектов для каждой локации будет умножаться на отношение площади локации к площади, заданной в настройках (Pi*AverageRadius^2).
     ''' Дробная часть определяет шанс округления в большую сторону. В случае округления вниз дробная часть добавляется к максимальному количеству шахт </param>
-   ''' <param name="Term">Нужно инициализировать экземпляр этого класса до начала генерации</param>
+    ''' <param name="Term">Нужно инициализировать экземпляр этого класса до начала генерации</param>
     Public Sub PlaceActiveObjects(ByRef m As Map, ByVal settMap As Map.SettingsMap, _
                                   ByRef settLoc() As Map.SettingsLoc, _
                                   ByRef Term As TerminationCondition)
@@ -3468,6 +3474,12 @@ Public Class Map
         ''' <summary>Масштабировать количество посещаемых объектов и опыт за убийство всех отрядовв в локации</summary>
         Dim scaleContent As Boolean
 
+        ''' <summary>Список возможных базовых рас для локации.
+        ''' В случае с локациями играбельных рас определяет расы нейтральных отрядов в локации. 
+        ''' Список рас можно посмотреть в Resources\Constants.txt, параметр LocRacesBlocks.
+        ''' Nothing, если нужен случайный выбор</summary>
+        Dim possibleRaces() As String
+
         Private Checked As Boolean
         ''' <summary>Проверит корректность параметров. Вернет пустое сообщение, если все нормально</summary>
         Public Function Check() As String
@@ -3551,6 +3563,8 @@ Public Class Map
         End Function
 
         Public Shared Function Copy(ByRef v As SettingsLoc) As SettingsLoc
+            Dim r() As String = Nothing
+            If Not IsNothing(v.possibleRaces) Then r = CType(v.possibleRaces.Clone, String())
             Return New SettingsLoc With { _
             .AverageRadius = v.AverageRadius, _
             .maxEccentricityDispersion = v.maxEccentricityDispersion, _
@@ -3576,6 +3590,7 @@ Public Class Map
             .merchMinItemCost = v.merchMinItemCost, _
             .merchItemsCost = v.merchItemsCost, _
             .scaleContent = v.scaleContent, _
+            .possibleRaces = r, _
             .Checked = v.Checked}
         End Function
         Public Shared Function Copy(ByRef v() As SettingsLoc) As SettingsLoc()

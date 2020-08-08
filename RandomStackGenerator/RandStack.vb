@@ -1955,7 +1955,7 @@ Public Class Common
         End If
     End Sub
 
-    ''' <summary>Возвращает ID расы, соответствующее файлам игры</summary>
+    ''' <summary>Возвращает ID расы, соответствующее файлам игры. Если не найдет, то вернет -1</summary>
     ''' <param name="ID">Идентификатор расы (файл races.txt)</param>
     Public Function RaceIdentifierToSubrace(ByVal ID As String, Optional ByVal ThrowExceptionIfUnknownID As Boolean = True) As Integer
         Dim uID As String = ID.ToUpper
