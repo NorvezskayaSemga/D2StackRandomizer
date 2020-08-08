@@ -259,6 +259,8 @@ Friend Class StartForm
         '    Console.WriteLine(stack.name)
         'Next v
 
+        Console.WriteLine(grid.log.PrintAll)
+
         Call ShowResult(grid)
 
     End Sub

@@ -3474,7 +3474,7 @@ Public Class Log
     ''' <param name="contString">Будут добавлены поля этой переменной</param>
     Public Sub Add(ByRef contString As AllDataStructues.DesiredStats, ByVal shortOut As Boolean)
         If Not Enabled Then Exit Sub
-        Content.Add(AllDataStructues.DesiredStats.Print(contString, comm.RaceNumberToRaceChar, shortOut))
+        If IsNothing(comm) Then comm = New Common
     End Sub
     ''' <summary>Добавить запись в лог, если логирование включено</summary>
     ''' <param name="contString">Будут добавлены поля этой переменной</param>

@@ -59,7 +59,7 @@
         m.groupStats = GenStacksStats(m, settMap, guards, LocTotalExp)
         m.complited.StacksDesiredStatsGen_Done = True
 
-        Console.WriteLine("Stacks stats gen " & Environment.TickCount - t0)
+        Call m.log.Add("Stacks stats generation: " & Environment.TickCount - t0 & " ms")
     End Sub
 
     Private Function MakeGuardsList(ByRef m As Map, ByRef settMap As Map.SettingsMap) As Dictionary(Of Integer, StackLoc)
@@ -445,7 +445,7 @@ Public Class RaceGen
             End If
         Next key
         m.complited.StacksRaceGen_Done = True
-        Console.WriteLine("Stacks race gen " & Environment.TickCount - t0)
+        Call m.log.Add("Stacks race generation: " & Environment.TickCount - t0 & " ms")
     End Sub
 
     Private Function RacesAmount(ByRef m As Map) As Integer

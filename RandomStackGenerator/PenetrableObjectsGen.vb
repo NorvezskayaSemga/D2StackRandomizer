@@ -18,8 +18,7 @@
         Call GenRoads(m, settMap, mustBeFree)
         Call GenForest(m, settMap, mustBeFree)
 
-        Dim t1 As Integer = Environment.TickCount
-        Console.WriteLine("Penetrable objects placing: " & t1 - t0)
+        Call m.log.Add("Penetrable objects creation: " & Environment.TickCount - t0 & " ms")
 
         m.complited.PenetrableObjectsPlacing_Done = True
 

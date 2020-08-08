@@ -231,8 +231,14 @@ Public Class ImpenetrableMeshGen
         Return result
     End Function
 
-    Private Function CommonGen(ByRef settGen As GenSettings, ByRef maxGenTime As Integer, _
-                               ByRef symmId As Integer) As Map
+    ''' <summary>Генерирует заготовку ландшафта</summary>
+    ''' <param name="maxGenTime">Максимальное время на операцию расстановки объектов.
+    ''' Она обычно производится меньше чем за пару секунд, но бывает, что выполняется дольше минуты.
+    ''' В этом случае быстрее перегенерировать карту.
+    ''' Если не получится с пяти попыток, вернет Nothing</param>
+    Public Function GenMap(ByRef settGen As GenSettings, ByRef maxGenTime As Integer) As Map
+        settGen.common_settMap.xSize -= 1
+        settGen.common_settMap.ySize -= 1
 
         If Not settGen.common_settMap.isChecked Then Throw New Exception("Check parameters via settGen.common_settMap.Check()")
         If settGen.genMode = GenSettings.genModes.simple Then
@@ -250,100 +256,109 @@ Public Class ImpenetrableMeshGen
         Dim AttemptsN = 0
         Dim m As Map = Nothing
         Dim nTry As Integer = 0
-        Do While AttemptsN < 5
-            'Try
-newtry:
-            Dim copiedSettings() As Map.SettingsLoc
-
-            Dim t0, t1, t2 As Integer
-            Dim txt As String
-            If settGen.genMode = GenSettings.genModes.simple Then
-                t0 = Environment.TickCount
-                m = PlaceRaceLocations(settGen.common_settMap, settGen.simple_settRaceLoc, symmId)
-                t1 = Environment.TickCount
-                Call PlaceCommonLocs(m, settGen.common_settMap, settGen.simple_settCommLoc)
-                copiedSettings = Map.SettingsLoc.ToArray(settGen.simple_settRaceLoc, _
-                                                         settGen.simple_settCommLoc, _
-                                                         settGen.common_settMap.nRaces, _
-                                                         m.Loc.Length)
-                t2 = Environment.TickCount
-                txt = "ReaceLocs: " & t1 - t0 & vbTab & "CommonLocs: " & t2 - t1
-            ElseIf settGen.genMode = GenSettings.genModes.template Then
-                t1 = Environment.TickCount
-                m = PlaceLocationsByTemplate(settGen, symmId)
-                If IsNothing(m) Then GoTo newtry ' Exit Try
-                copiedSettings = Map.SettingsLoc.Copy(settGen.template_settLoc)
-                t2 = Environment.TickCount
-                txt = "TemplateLocs: " & t2 - t1
-            Else
-                txt = ""
-                copiedSettings = Nothing
-            End If
-
-            Call SetLocIdToCells(m, settGen.common_settMap)
-            Dim t3 As Integer = Environment.TickCount
-            Call SetBorders(m, settGen.common_settMap, term)
-            Dim t4 As Integer = Environment.TickCount
-            Call PlaceActiveObjects(m, settGen.common_settMap, copiedSettings, term)
-            Dim t5 As Integer = Environment.TickCount
-            Call MakeLabyrinth(m, settGen.common_settMap, term)
-            Dim t6 As Integer = Environment.TickCount
-            Console.WriteLine(txt & vbTab & "IDset: " & t3 - t2 & vbTab & "BordSet: " & t4 - t3 & vbTab & "PlaceActiveObjects: " & t5 - t4 & vbTab & "MakeMaze: " & t6 - t5)
-            AttemptsN += 1
-            If Not term.ExitFromLoops Then
-                m.complited.LoationsCreation_Done = True
-                Return m
-            End If
-            nTry = 0
-            'Catch ex As Exception
-            '    If nTry > 1 Then
-            '        Throw ex
-            '    Else
-            '        Console.WriteLine("Some error occured in ImpenetrableMeshGen: " & vbNewLine & ex.Message)
-            '        nTry += 1
-            '    End If
-            'End Try
-        Loop
-        Return Nothing
-    End Function
-    ''' <summary>Генерирует заготовку ландшафта</summary>
-    ''' <param name="maxGenTime">Максимальное время на операцию расстановки объектов.
-    ''' Она обычно производится меньше чем за пару секунд, но бывает, что выполняется дольше минуты.
-    ''' В этом случае быстрее перегенерировать карту.
-    ''' Если не получится с пяти попыток, вернет Nothing</param>
-    Public Function GenMap(ByRef settGen As GenSettings, ByRef maxGenTime As Integer) As Map
-        settGen.common_settMap.xSize -= 1
-        settGen.common_settMap.ySize -= 1
+        Dim logString As String = ""
         Dim selectedSymmetryClass As Integer
-        If settGen.common_settMap.ApplySymmetry Then
-            Dim slist As List(Of Integer) = symm.PossibleOperationsList(settGen.common_settMap.nRaces, _
-                                                                        settGen.common_settMap.xSize, _
-                                                                        settGen.common_settMap.ySize)
-            If settGen.common_settMap.SymmetryClass > -1 Then
-                selectedSymmetryClass = settGen.common_settMap.SymmetryClass
+        Dim copiedSettings() As Map.SettingsLoc
+
+        Do While AttemptsN < 5
+            Try
+newtry:
+                copiedSettings = Nothing
+                selectedSymmetryClass = SelectSymmetryClass(settGen.common_settMap)
+
+                Dim t0 As Integer
+                Dim txt As String
+                If Not IsNothing(m) Then logString = m.log.PrintAll & vbNewLine & vbNewLine
+                logString &= "Impenetrable mesh gen, attempt: " & AttemptsN + 1
+                If nTry > 0 Then logString &= " Try: " & nTry + 1
+
+                If settGen.genMode = GenSettings.genModes.simple Then
+                    t0 = Environment.TickCount
+                    m = PlaceRaceLocations(settGen.common_settMap, settGen.simple_settRaceLoc, selectedSymmetryClass, logString)
+                    Call m.log.Add("Playable races locations creating: " & Environment.TickCount - t0 & " ms")
+
+                    t0 = Environment.TickCount
+                    Call PlaceCommonLocs(m, settGen.common_settMap, settGen.simple_settCommLoc)
+                    copiedSettings = Map.SettingsLoc.ToArray(settGen.simple_settRaceLoc, _
+                                                             settGen.simple_settCommLoc, _
+                                                             settGen.common_settMap.nRaces, _
+                                                             m.Loc.Length)
+                    Call m.log.Add("Common locations creating: " & Environment.TickCount - t0 & " ms")
+                ElseIf settGen.genMode = GenSettings.genModes.template Then
+                    t0 = Environment.TickCount
+                    m = PlaceLocationsByTemplate(settGen, selectedSymmetryClass, logString)
+                    If IsNothing(m.board) Then Exit Try
+                    copiedSettings = Map.SettingsLoc.Copy(settGen.template_settLoc)
+                    Call m.log.Add("Locations creating with template: " & Environment.TickCount - t0 & " ms")
+                Else
+                    txt = ""
+                    copiedSettings = Nothing
+                End If
+
+                t0 = Environment.TickCount
+                Call SetLocIdToCells(m, settGen.common_settMap)
+                Call m.log.Add("Setting location ID to tiles: " & Environment.TickCount - t0 & " ms")
+                t0 = Environment.TickCount
+                Call SetBorders(m, settGen.common_settMap, term)
+                Call m.log.Add("Passages creating: " & Environment.TickCount - t0 & " ms")
+                t0 = Environment.TickCount
+                Call PlaceActiveObjects(m, settGen.common_settMap, copiedSettings, term)
+                Call m.log.Add("Active objects creating: " & Environment.TickCount - t0 & " ms")
+                t0 = Environment.TickCount
+                Call MakeLabyrinth(m, settGen.common_settMap, term)
+                Call m.log.Add("Impassable tiles creating: " & Environment.TickCount - t0 & " ms")
+                AttemptsN += 1
+                If Not term.ExitFromLoops Then
+                    m.complited.LoationsCreation_Done = True
+                    Return m
+                End If
+                nTry = 0
+            Catch ex As Exception
+                Call m.log.Add("Some error occured in ImpenetrableMeshGen: " & vbNewLine & ex.Message)
+                m.Clear()
+                If nTry > 1 Then
+                    Throw ex
+                Else
+                    nTry += 1
+                End If
+            End Try
+        Loop
+        m.Clear()
+        Return m
+    End Function
+    Private Function SelectSymmetryClass(ByRef settMap As Map.SettingsMap) As Integer
+        Dim selectedSymmetryClass As Integer
+        If settMap.ApplySymmetry Then
+            Dim slist As List(Of Integer) = symm.PossibleOperationsList(settMap.nRaces, _
+                                                                        settMap.xSize, _
+                                                                        settMap.ySize)
+            If settMap.SymmetryClass > -1 Then
+                selectedSymmetryClass = settMap.SymmetryClass
                 If Not slist.Contains(selectedSymmetryClass) Then
-                    Throw New Exception("Выбранная симметрия не подходит под выбранные параметры карты")
+                    Throw New Exception("Выбранная симметрия не подходит под выбранные параметры карты (соотношение сторон и количество рас")
                 End If
             Else
-                If IsNothing(slist) OrElse slist.Count = 0 Then Throw New Exception("Должно быть две или четыре расы")
+                If IsNothing(slist) OrElse slist.Count = 0 Then Throw New Exception("Должно быть две или четыре расы для возможности создать симметричную карту")
                 selectedSymmetryClass = comm.RandomSelection(slist, True)
             End If
-            slist = Nothing
         Else
-            settGen.common_settMap.SymmetryClass = -1
             selectedSymmetryClass = -1
         End If
-        Return CommonGen(settGen, maxGenTime, selectedSymmetryClass)
+        Return selectedSymmetryClass
     End Function
 
-    Public Function PlaceLocationsByTemplate(ByRef settGen As GenSettings, ByRef symmID As Integer) As Map
-        Dim res As New Map(settGen.common_settMap.xSize, settGen.common_settMap.ySize, symmID)
+    Public Function PlaceLocationsByTemplate(ByRef settGen As GenSettings, ByRef symmID As Integer, ByRef previousLogText As String) As Map
+        Dim res As New Map(settGen.common_settMap.xSize, settGen.common_settMap.ySize, symmID, comm)
+        Call res.log.Add(previousLogText)
+
         Dim loc(settGen.template_settGenLoc.Length - 1) As Location
         Dim usedPos As New List(Of String)
         Dim attempt1, attempt2 As Integer
         Dim exitLoop1, exitLoop2 As Boolean
         Dim lsett(UBound(loc)) As Map.SettingsLoc
         Dim checkResult As String
+        Dim invalidSettings As Boolean = False
+        Dim errortext As String = "It was not possible to properly place locations in accordance with the specified template"
 
         attempt2 = 0
         exitLoop2 = False
@@ -361,8 +376,16 @@ newtry:
                                                             settGen.template_settGenLoc(i).maxValues, _
                                                             rndgen)
                     checkResult = lsett(i).Check
-                    If checkResult.Length > 0 Then Console.WriteLine(checkResult)
+                    If checkResult.Length > 0 Then
+                        invalidSettings = True
+                        Call res.log.Add("Invalid settings detected in settings #" & i + 1 & ":")
+                        Call res.log.Add(checkResult)
+                    End If
                 Next i
+                If invalidSettings Then
+                    res.Clear()
+                    Return res
+                End If
 
                 usedPos.Clear()
                 Dim x, y As Integer
@@ -382,7 +405,11 @@ newtry:
                     End If
                 Next i
             Loop
-            If Not exitLoop1 Then Return Nothing
+            If Not exitLoop1 Then
+                Call res.log.Add(errortext)
+                res.Clear()
+                Return res
+            End If
 
             If symmID > -1 Then
                 exitLoop2 = True
@@ -427,7 +454,11 @@ newtry:
                 exitLoop2 = True
             End If
         Loop
-        If Not exitLoop2 Then Return Nothing
+        If Not exitLoop2 Then
+            Call res.log.Add(errortext)
+            res.Clear()
+            Return res
+        End If
 
         res.Loc = loc
         settGen.template_settLoc = lsett
@@ -471,8 +502,10 @@ newtry:
         Return NearestXY(P.X, P.Y, M.xSize, M.ySize, tolerance)
     End Function
 
-    Private Function PlaceRaceLocations(ByRef settMap As Map.SettingsMap, ByRef settRaceLoc As Map.SettingsLoc, ByRef symmID As Integer) As Map
-        Dim res As New Map(settMap.xSize, settMap.ySize, symmID)
+    Private Function PlaceRaceLocations(ByRef settMap As Map.SettingsMap, ByRef settRaceLoc As Map.SettingsLoc, ByRef symmID As Integer, ByRef previousLogText As String) As Map
+        Dim res As New Map(settMap.xSize, settMap.ySize, symmID, comm)
+        Call res.log.Add(previousLogText)
+
         Dim ok As Boolean = False
         Dim raceLocs() As Location
         Dim prepResult As PrepareToRaceLocGenResult = PrepareToRaceLocGen(settMap, settRaceLoc)
@@ -2826,11 +2859,16 @@ Public Class SymmetryOperations
     Public Function PossibleOperationsList(ByRef nRaces As Integer, ByRef xSize As Integer, ByRef ySize As Integer) As List(Of Integer)
         Dim res As New List(Of Integer)
         If nRaces = 2 Then
-            res.AddRange(New Integer() {0, 0, 1, 2})
-            If xSize = ySize Then res.AddRange(New Integer() {3, 4})
+            res.AddRange(New Integer() {TwoPlayersSymmetryModes.L2, _
+                                        TwoPlayersSymmetryModes.L2,
+                                        TwoPlayersSymmetryModes.xM,
+                                        TwoPlayersSymmetryModes.yM})
+            If xSize = ySize Then res.AddRange(New Integer() {TwoPlayersSymmetryModes.xy1M, _
+                                                              TwoPlayersSymmetryModes.xy2M})
         ElseIf nRaces = 4 Then
-            res.Add(1)
-            If xSize = ySize Then res.AddRange(New Integer() {0, 2})
+            res.Add(FourPlayersSymmetryModes.xMyM)
+            If xSize = ySize Then res.AddRange(New Integer() {FourPlayersSymmetryModes.L4, _
+                                                              FourPlayersSymmetryModes.xy1Mxy2M})
         End If
         Return res
     End Function
@@ -3287,10 +3325,14 @@ Public Class Map
     ''' <summary>Какие этапы закончены</summary>
     Public complited As ComplitedSteps
 
+    ''' <summary>Запись о ходе генерации карты</summary>
+    Public log As Log
+
     ''' <param name="xDim">Правая граница карты (например, если генерируем карту 24x48, то сюда пишем 23)</param>
     ''' <param name="yDim">Верхняя граница карты (например, если генерируем карту 24x48, то сюда пишем 47)</param>
     ''' <param name="SymmApplied">Идентификатор симметрии, применяемой при генерации</param>
-    Public Sub New(ByVal xDim As Integer, ByVal yDim As Integer, ByVal SymmApplied As Integer)
+    ''' <param name="comm">Пекредаем инициализированный класс только если нужно что-то писать в лог</param>
+    Public Sub New(ByVal xDim As Integer, ByVal yDim As Integer, ByVal SymmApplied As Integer, Optional ByRef comm As Common = Nothing)
         xSize = xDim
         ySize = yDim
         symmID = SymmApplied
@@ -3300,6 +3342,10 @@ Public Class Map
                 board(x, y).ClearLocIDArray() 'New List(Of Integer)
             Next y
         Next x
+        If Not IsNothing(comm) Then
+            log = New Log(comm)
+            log.Enable()
+        End If
     End Sub
 
     Public Structure Cell
@@ -3658,6 +3704,8 @@ Public Class Map
         If Not complited.LoationsCreation_Done Then
             Throw New Exception("Сначала нужно выполнить ImpenetrableMeshGen.SymmGen или ImpenetrableMeshGen.UnsymmGen")
         End If
+        If IsNothing(board) Then Return "Occured some error. Change creation parameters"
+
         For x As Integer = 0 To xSize Step 1
             For y As Integer = 0 To ySize Step 1
                 If board(x, y).isBorder And board(x, y).isAttended Then
@@ -3786,6 +3834,13 @@ Public Class Map
         Return res
     End Function
 
+    Public Sub Clear()
+        Loc = Nothing
+        board = Nothing
+        groupStats = Nothing
+        complited = Nothing
+    End Sub
+
 End Class
 
 Public Class StackLocationsGen
@@ -3870,8 +3925,8 @@ Public Class StackLocationsGen
             Call PlacePassGuards(tmpm, gList, GroupID, settMap)
         End If
         m = tmpm
-        Dim t1 As Integer = Environment.TickCount
-        Console.WriteLine("Stacks locations " & t1 - t0)
+
+        Call m.log.Add("Stacks positions creation: " & Environment.TickCount - t0 & " ms")
         m.complited.StacksPlacing_Done = True
         Return True
     End Function
@@ -4585,7 +4640,7 @@ Public Class WaterGen
         Next i
         Call Extend(m, settMap, HaveToBeGround)
         m.complited.WaterCreation_Done = True
-        Console.WriteLine("Water gen " & Environment.TickCount - t0)
+        Call m.log.Add("Water creation: " & Environment.TickCount - t0 & " ms")
     End Sub
 
     Private Sub PlaceWater(ByRef m As Map, ByRef loc As Location, ByRef settMap As Map.SettingsMap, ByRef HaveToBeGround(,) As Boolean)
@@ -5109,9 +5164,8 @@ Public Class ImpenetrableObjects
         Call AddMercenaries(m, settMap, settLoc)
         Call AddMerchantItems(m, settMap, settLoc)
 
-        Dim t1 As Integer = Environment.TickCount
-        Console.WriteLine("Objects types definition: " & t1 - t0)
-
+        Call m.log.Add("Objects types definition: " & Environment.TickCount - t0 & " ms")
+        
         m.complited.ImpenetrableObjectsPlacing_Done = True
     End Sub
 
