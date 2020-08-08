@@ -423,7 +423,9 @@ Friend Class StartForm
     Private Sub itemGenTest()
 
         Dim d As New GenDefaultValues(Nothing)
-        Dim r As New RandStack(ReadTestUnits, ReadTestItems, {d.wReadDefaultFileKeyword}, {d.wReadDefaultFileKeyword}, {d.wReadDefaultFileKeyword}, {d.wReadDefaultFileKeyword}, {d.wReadDefaultFileKeyword})
+        Dim r As New RandStack(ReadTestUnits, ReadTestItems, {d.wReadDefaultFileKeyword}, {d.wReadDefaultFileKeyword}, _
+                               {d.wReadDefaultFileKeyword}, {d.wReadDefaultFileKeyword}, {d.wReadDefaultFileKeyword}, _
+                               {d.wReadDefaultFileKeyword})
 
         Dim items As New List(Of String)
         items.Add("G000IG0004")

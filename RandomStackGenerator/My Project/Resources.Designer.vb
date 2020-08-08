@@ -110,17 +110,15 @@ Namespace My.Resources
         '''<summary>
         '''  Looks up a localized string similar to #строка, начинающаяся с решетки, игнорируется
         '''#файл, определяющий константы, используемые генератором
-        '''#Параметр, значение, разделитель таб или пробел
+        '''#Параметр (без пробелов), значение (без пробелов), разделитель таб или пробел
+        '''#слэш - перенос строки
+        '''#если параметр не найден, используется заданный по умолчанию
         '''
         '''#Множитель для Сигмы в распределении Гаусса. Сигма=Множитель*Желаемое_значение
         '''defaultSigma				0.1
         '''
         '''#В заданном радиусе от столицы уменьшается множитель силы юнитов и стоимости лута, задаваемый в регенерторе
-        '''#в зависимости от расстояния до столицы (R)
-        '''1+(YourMultiplier-1)*R/weakerUnitsRadius
-        '''weakerUnitsRadius			12
-        '''
-        '''#При создании случайной карты ба [rest of string was truncated]&quot;;.
+        '''#в зависимости от расстояния  [rest of string was truncated]&quot;;.
         '''</summary>
         Friend ReadOnly Property Constants() As String
             Get
@@ -250,6 +248,18 @@ Namespace My.Resources
         '''#псина
         '''g000uu7533
         '''g006uu1030
+        '''#снежный волк
+        '''g000uu8296
+        '''g004uu5039
+        '''#белый волк
+        '''g000uu7571
+        '''g001uu7571
+        '''#чумной волк
+        '''g000uu8279
+        '''g001uu8279
+        '''#дух волка
+        '''g000uu8005
+        '''g000uu8105
         '''#вор
         '''g000uu0023
         '''g000uu0048
@@ -275,13 +285,7 @@ Namespace My.Resources
         '''#крестьянин
         '''g000uu5001
         '''g000uu5101
-        '''#толстый бес
-        '''g000uu6004
-        '''g000uu6104
-        '''#ведьмино отродье
-        '''g000uu8300
-        '''g004uu6120
-        '''.
+        '''#тол [rest of string was truncated]&quot;;.
         '''</summary>
         Friend ReadOnly Property ExcludeIDsForNames() As String
             Get
@@ -508,6 +512,23 @@ Namespace My.Resources
         Friend ReadOnly Property PlateauConstructor() As String
             Get
                 Return ResourceManager.GetString("PlateauConstructor", resourceCulture)
+            End Get
+        End Property
+        
+        '''<summary>
+        '''  Looks up a localized string similar to #строка, начинающаяся с решетки, игнорируется
+        '''#ID предметов, которые генератор должен оставлять на месте
+        '''
+        '''#Ржавые кандалы
+        '''G000IG2007
+        '''
+        '''#Лютня очарования
+        '''G000IG3022
+        '''.
+        '''</summary>
+        Friend ReadOnly Property PreservedItems() As String
+            Get
+                Return ResourceManager.GetString("PreservedItems", resourceCulture)
             End Get
         End Property
         

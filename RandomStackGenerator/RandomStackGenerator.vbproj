@@ -109,6 +109,9 @@
     </None>
   </ItemGroup>
   <ItemGroup>
+    <Content Include="Resources\PreservedItems.txt">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
     <Content Include="Resources\ExcludeIDs.txt">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>

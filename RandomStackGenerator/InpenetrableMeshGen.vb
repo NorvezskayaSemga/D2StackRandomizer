@@ -6805,7 +6805,7 @@ Public Class ObjectsContentSet
         ElseIf mode = 2 Then
             For Each item In input
                 thing = randStack.FindItemStats(item)
-                If thing.type = GenDefaultValues.ItemTypes.special Then
+                If thing.type = GenDefaultValues.ItemTypes.special Or randStack.comm.IsPreserved(thing) Then
                     output.Add(item.ToUpper)
                 Else
                     output.Add(AllDataStructues.Cost.Sum(thing.itemCost).ToString)
@@ -6814,7 +6814,7 @@ Public Class ObjectsContentSet
         ElseIf mode = 3 Then
             For Each item In input
                 thing = randStack.FindItemStats(item)
-                If thing.type = GenDefaultValues.ItemTypes.special Then
+                If thing.type = GenDefaultValues.ItemTypes.special Or randStack.comm.IsPreserved(thing) Then
                     output.Add(item.ToUpper)
                 Else
                     output.Add(randStack.comm.itemType.Item(thing.type))
@@ -6823,7 +6823,7 @@ Public Class ObjectsContentSet
         ElseIf mode = 4 Then
             For Each item In input
                 thing = randStack.FindItemStats(item)
-                If thing.type = GenDefaultValues.ItemTypes.special Then
+                If thing.type = GenDefaultValues.ItemTypes.special Or randStack.comm.IsPreserved(thing) Then
                     output.Add(item.ToUpper)
                 Else
                     output.Add(randStack.comm.itemType.Item(thing.type) & _

@@ -50,9 +50,12 @@ Public Class RandStack
     ''' <param name="BigStackUnits">Файлы со списками юнитов, которые должны находиться в отряде начиная с заданного количества слотов. Записи в них могут повторяться, но записи с повторяющимся ID будут перезаписываться. 
     ''' Допускается передача неинициализитрованного массива.
     ''' Для чтения из дефолтного листа в массив нужно добавить строчку %default% (наличие этого ключевого в файле запустит чтение дефолтного файла)</param>
+    ''' <param name="PreservedItemsList">Файлы со списками предметов, которые нельзя перегенерировать. Записи в них могут повторяться. 
+    ''' Допускается передача неинициализитрованного массива.
+    ''' Для чтения из дефолтного листа в массив нужно добавить строчку %default% (наличие этого ключевого в файле запустит чтение дефолтного файла)</param>
     Public Sub New(ByRef AllUnitsList() As AllDataStructues.Unit, ByRef AllItemsList() As AllDataStructues.Item, _
                    ByRef ExcludeLists() As String, ByRef LootChanceMultiplierLists() As String, ByRef CustomUnitRace() As String, _
-                   ByRef SoleUnitsList() As String, ByRef BigStackUnits() As String)
+                   ByRef SoleUnitsList() As String, ByRef BigStackUnits() As String, ByRef PreservedItemsList() As String)
         rndgen = comm.rndgen
         log = New Log(comm)
         If IsNothing(AllUnitsList) Or IsNothing(AllItemsList) Then Exit Sub
@@ -62,6 +65,7 @@ Public Class RandStack
         Call comm.ReadLootItemChanceMultiplier(LootChanceMultiplierLists)
         Call comm.ReadSoleUnits(SoleUnitsList)
         Call comm.ReadBigStackUnits(BigStackUnits)
+        Call comm.ReadPreservedItemsList(PreservedItemsList)
 
         ReDim AllUnits(UBound(AllUnitsList)), ExpBar(UBound(AllUnitsList)), ExpKilled(UBound(AllUnitsList)), multiplierUnitDesiredStats(UBound(AllUnitsList))
         For i As Integer = 0 To UBound(AllUnitsList) Step 1
@@ -247,7 +251,7 @@ Public Class RandStack
         Dim item As AllDataStructues.Item
         For Each id As String In items
             item = FindItemStats(id)
-            If Not item.type = GenDefaultValues.ItemTypes.special Then
+            If Not (item.type = GenDefaultValues.ItemTypes.special Or comm.IsPreserved(item)) Then
                 If comm.ConsumableItemsTypes.Contains(item.type) Then
                     result.ConsumableItems.exclude = False
                     result.ConsumableItems.amount += 1
@@ -1662,6 +1666,8 @@ Public Class Common
     Friend RaceNumberToRaceChar As New Dictionary(Of Integer, String)
     ''' <summary>Список исключаемых объектов</summary>
     Public excludedObjects As New List(Of String)
+    ''' <summary>Список предметов, которые нельзя перегенерировать</summary>
+    Public preservedItems As New List(Of String)
     ''' <summary>Список параметров отрядов с описанием</summary>
     Public StatFields() As AllDataStructues.StackStatsField
     ''' <summary>Расы юнитов, назначаемые независимо от ресурсов игры</summary>
@@ -1772,6 +1778,12 @@ Public Class Common
     End Function
     Protected Friend Function IsExcluded(ByRef ID As String) As Boolean
         Return excludedObjects.Contains(ID.ToUpper)
+    End Function
+
+    Friend Function IsPreserved(ByRef item As AllDataStructues.Item) As Boolean
+        If preservedItems.Contains(item.itemID.ToUpper) Then Return True
+        If preservedItems.Contains(itemType.Item(item.type).ToUpper) Then Return True
+        Return False
     End Function
 
     ''' <summary>Передаст в лог содержимое excludedObjects, customRace, objectRace, LootItemChanceMultiplier, SoleUnits</summary>
@@ -2298,7 +2310,29 @@ Public Class Common
         Dim s() As String = PlateauConstructionDescription.ToArray
         Call ReadFile(4, s, "", Nothing, Nothing)
     End Sub
-
+    ''' <summary>Читает список юнитов и предметов, которые не должен использовать генератор</summary>
+    ''' <param name="PreservedLists">Файлы со списками предметов, которые нельзя перегенерировать. Записи в них могут повторяться. 
+    ''' Допускается передача неинициализитрованного массива.
+    ''' Для чтения из дефолтного листа в массив нужно добавить строчку %default% (наличие этого ключевого в файле запустит чтение дефолтного файла)</param>
+    Public Sub ReadPreservedItemsList(ByRef PreservedLists() As String)
+        If IsNothing(PreservedLists) Then Exit Sub
+        Dim s() As String
+        Dim defaultKeys() As String = New String() {My.Resources.readDefaultFileKeyword}
+        Dim defaultVals() As String = New String() {defValues.PreservedItems}
+        For i As Integer = 0 To UBound(PreservedLists) Step 1
+            s = prepareToFileRead(PreservedLists(i), defaultKeys, defaultVals)
+            Call ReadFile(8, s, PreservedLists(i), AddressOf ReadPreservedItemsList, defaultKeys)
+        Next i
+    End Sub
+    ''' <summary>Читает список юнитов и предметов, которые не должен использовать генератор</summary>
+    ''' <param name="PreservedLists">Файлы со списками предметов, которые нельзя перегенерировать. Записи в них могут повторяться. 
+    ''' Допускается передача неинициализитрованного массива.
+    ''' Не воспринимает ключевые слова</param>
+    Public Sub ReadPreservedItemsList(ByRef PreservedLists As List(Of String))
+        If IsNothing(PreservedLists) Then Exit Sub
+        Dim s() As String = PreservedLists.ToArray
+        Call ReadFile(8, s, "", Nothing, Nothing)
+    End Sub
     Private Function prepareToFileRead(ByRef filePath As String, ByRef defaultKeywords() As String, ByRef defaultValues() As String) As String()
         If Not IsNothing(defaultKeywords) Then
             For i As Integer = 0 To UBound(defaultKeywords) Step 1
@@ -2369,6 +2403,8 @@ Public Class Common
                         If BigStackUnits.ContainsKey(srow(0).ToUpper) Then BigStackUnits.Remove(srow(0).ToUpper)
                         BigStackUnits.Add(srow(0).ToUpper, CInt(srow(1)))
                     End If
+                ElseIf mode = 8 Then
+                    If Not preservedItems.Contains(srow(0).ToUpper) Then preservedItems.Add(srow(0).ToUpper)
                 Else
                     Throw New Exception("Invalid read mode: " & mode)
                 End If
@@ -3387,6 +3423,9 @@ Public Class GenDefaultValues
     End Function
     Public Function UnitRace() As String
         Return ReadResources("UnitRace", My.Resources.UnitRace)
+    End Function
+    Public Function PreservedItems() As String
+        Return ReadResources("PreservedItems", My.Resources.PreservedItems)
     End Function
 
 End Class
