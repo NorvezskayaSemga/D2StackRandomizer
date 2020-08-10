@@ -436,8 +436,6 @@ newtry:
         Dim lsett() As Map.SettingsLoc = Nothing
         Dim checkResult As String
         Dim invalidSettings As Boolean = False
-        Dim appear As Boolean
-        Dim appearChance As Double
         Dim errortext As String = "It was not possible to properly place locations in accordance with the specified template"
         Dim deltaI As Integer
 
@@ -453,20 +451,7 @@ newtry:
                 deltaI = 0
                 ReDim lsett(UBound(settGen.template_settGenLoc))
                 For i As Integer = 0 To UBound(settGen.template_settGenLoc) Step 1
-                    appearChance = settGen.template_settGenLoc(i).AppearanceChance.RandomValue(rndgen)
-                    If appearChance <= 0 Then
-                        appear = False
-                    ElseIf appearChance >= 1 Then
-                        appear = True
-                    Else
-                        If rndgen.Rand(0, 1) > appearChance Then
-                            appear = False
-                        Else
-                            appear = True
-                        End If
-                    End If
-
-                    If appear Then
+                    If TestChance(settGen.template_settGenLoc(i).AppearanceChance.RandomValue(rndgen)) Then
                         lsett(i - deltaI) = GenSettings.LocationGenSetting.RandomizeSettings( _
                                                               settGen.template_settGenLoc(i).minValues, _
                                                               settGen.template_settGenLoc(i).maxValues, _
@@ -566,6 +551,19 @@ newtry:
         settGen.template_settLoc = lsett
 
         Return res
+    End Function
+    Private Function TestChance(ByRef chance As Double) As Boolean
+        If chance <= 0 Then
+            Return False
+        ElseIf chance >= 1 Then
+            Return True
+        Else
+            If rndgen.Rand(0, 1) > chance Then
+                Return False
+            Else
+                Return True
+            End If
+        End If
     End Function
 
     Private Sub PlaceLoc(ByRef m As Map, ByRef loc As Location)
@@ -1510,6 +1508,9 @@ newtry:
                  End If
              Next x
          End Sub)
+
+        Call DisconnectRandomLocations(tmpm, settMap)
+
         m = tmpm
     End Sub
     Private Sub ConnectDisconnectedAreas(ByRef m As Map, ByRef settMap As Map.SettingsMap, _
@@ -1681,6 +1682,127 @@ newtry:
         Next i
         Return FindDisconnected(free, c)
     End Function
+    Private Sub DisconnectRandomLocations(ByRef m As Map, ByVal settMap As Map.SettingsMap)
+
+        Dim init As Point = Nothing
+        For x As Integer = 0 To m.xSize Step 1
+            For y As Integer = 0 To m.ySize Step 1
+                If Not m.board(x, y).isBorder Then
+                    init = New Point(x, y)
+                    Dim b As Location.Borders = NearestXY(x, y, m.xSize, m.ySize, 1)
+
+                    For i As Integer = b.minX To b.maxX Step 1
+                        For j As Integer = b.minY To b.maxY Step 1
+                            If Not m.board(x, y).locID(0) = m.board(i, j).locID(0) Then
+                                init = Nothing
+                                i = b.maxX
+                                j = b.maxY
+                            End If
+                        Next j
+                    Next i
+                    If Not IsNothing(init) Then
+                        x = m.xSize
+                        y = m.ySize
+                    End If
+                End If
+            Next y
+        Next x
+
+        Dim borders(UBound(m.Loc), UBound(m.Loc)) As List(Of Point)
+        For j As Integer = 0 To UBound(m.Loc) Step 1
+            For i As Integer = 0 To UBound(m.Loc) Step 1
+                borders(i, j) = New List(Of Point)
+            Next i
+        Next j
+        Dim addedTo As New List(Of Integer)
+        Dim d1, d2 As Integer
+        For x As Integer = 0 To m.xSize Step 1
+            For y As Integer = 0 To m.ySize Step 1
+                If Not m.board(x, y).isBorder Then
+                    If Not m.Loc(m.board(x, y).locID(0) - 1).IsObtainedBySymmery Then
+                        addedTo.Clear()
+                        Dim b As Location.Borders = NearestXY(x, y, m.xSize, m.ySize, 1)
+                        For i As Integer = b.minX To b.maxX Step 1
+                            For j As Integer = b.minY To b.maxY Step 1
+                                If Not m.board(x, y).locID(0) = m.board(i, j).locID(0) Then
+                                    If Not addedTo.Contains(m.board(i, j).locID(0)) Then
+                                        If m.board(x, y).locID(0) < m.board(i, j).locID(0) Then
+                                            d1 = m.board(x, y).locID(0)
+                                            d2 = m.board(i, j).locID(0)
+                                        Else
+                                            d1 = m.board(i, j).locID(0)
+                                            d2 = m.board(x, y).locID(0)
+                                        End If
+                                        addedTo.Add(m.board(i, j).locID(0))
+                                        borders(d1 - 1, d2 - 1).Add(New Point(x, y))
+                                    End If
+                                End If
+                            Next j
+                        Next i
+                    End If
+                End If
+            Next y
+        Next x
+        For j As Integer = 0 To UBound(m.Loc) Step 1
+            For i As Integer = 0 To UBound(m.Loc) Step 1
+                If borders(i, j).Count > 0 And i < j Then
+                    borders(j, i).AddRange(borders(i, j))
+                    borders(i, j).Clear()
+                End If
+            Next i
+        Next j
+
+        Dim nonEmpty(borders.Length - 1)() As Integer
+        Dim IDs As New List(Of Integer)
+        Dim n As Integer = -1
+        For j As Integer = 0 To UBound(m.Loc) Step 1
+            For i As Integer = 0 To UBound(m.Loc) Step 1
+                If borders(i, j).Count > 0 Then
+                    n += 1
+                    nonEmpty(n) = {i, j}
+                    IDs.Add(n)
+                End If
+            Next i
+        Next j
+        Dim tmpM As New Map(m.xSize, m.ySize, m.symmID)
+        Dim s() As Point
+        For i As Integer = 0 To n Step 1
+            Dim selected As Integer = comm.RandomSelection(IDs, True)
+            IDs.Remove(selected)
+            If TestChance(settMap.PassageCreationChance) Then
+                For x As Integer = 0 To m.xSize Step 1
+                    For y As Integer = 0 To m.ySize Step 1
+                        tmpM.board(x, y).isBorder = m.board(x, y).isBorder
+                    Next y
+                Next x
+                For Each p As Point In borders(nonEmpty(selected)(0), nonEmpty(selected)(1))
+                    If m.symmID > -1 Then
+                        s = symm.ApplySymm(p, settMap.nRaces, m, 1)
+                        For Each item As Point In s
+                            tmpM.board(item.X, item.Y).isBorder = True
+                        Next item
+                    Else
+                        tmpM.board(p.X, p.Y).isBorder = True
+                    End If
+                Next p
+                If IsNothing(FindDisconnected(tmpM, FindConnected(tmpM, init))) Then
+                    For Each p As Point In borders(nonEmpty(selected)(0), nonEmpty(selected)(1))
+                        If m.symmID > -1 Then
+                            s = symm.ApplySymm(p, settMap.nRaces, m, 1)
+                            For Each item As Point In s
+                                m.board(item.X, item.Y).isBorder = True
+                                m.board(item.X, item.Y).isPass = False
+                            Next item
+                        Else
+                            m.board(p.X, p.Y).isBorder = True
+                            m.board(p.X, p.Y).isPass = False
+                        End If
+                    Next p
+                End If
+            End If
+        Next i
+
+    End Sub
 
     ''' <summary>Выполняется после SetBorders. Расставит посещаемые объекты</summary>
     ''' <param name="m">Хранилище данных о карте. К этому моменту должны быть 

@@ -101,6 +101,7 @@ Friend Class StartForm
 
         Dim gsettings As ImpenetrableMeshGen.GenSettings = ImpenetrableMeshGen.GenSettings.Read(path)
 
+        '### можно внести какие-то ихменения в шаблон типа размера карты, количества леса/воды и т.д.
         If Not UseTemplateCheckBox.Checked Then
             Dim races As Integer
             If sel1.Checked Then
@@ -114,18 +115,12 @@ Friend Class StartForm
             gsettings.common_settMap.ApplySymmetry = SymmCheckBox.Checked
             gsettings.common_settMap.SymmetryClass = -1
         End If
+        gsettings.common_settMap.RoadsAmount = 0
+        gsettings.common_settMap.WaterAmount = 0
+        gsettings.common_settMap.ForestAmount = 0
+        '###
 
         grid = New MapGenWrapper(objplace).CommonGen(gsettings, genTimeLimit)
-
-
-        'Dim randstack As New RandStack(ReadTestUnits, ReadTestItems, {"%default%"}, {"%default%"}, True)
-        'Dim isnew As Boolean = True
-        'For Each v As AllDataStructues.DesiredStats In grid.groupStats.Values
-        '    Dim stack As AllDataStructues.Stack = randstack.Gen(v, False, False)
-        '    Call names.GenName(stack, randstack, isnew)
-        '    isnew = False
-        '    Console.WriteLine(stack.name)
-        'Next v
 
         Console.WriteLine(grid.log.PrintAll)
 
@@ -141,10 +136,6 @@ Friend Class StartForm
                 End If
                 If grid.board(x, y).isAttended Then
                     t(x, y) = 51 + 2 * grid.board(x, y).objectID
-                    Dim objname As String = grid.board(x, y).objectName
-                    If grid.board(x, y).objectID = DefMapObjects.Types.Mine Then
-                        x = x
-                    End If
                 ElseIf grid.board(x, y).isPass Then
                     't(x, y) = 90
                 End If
@@ -152,10 +143,10 @@ Friend Class StartForm
                     't(x, y) = 100
                 End If
                 If grid.board(x, y).GuardLoc Then
-                    t(x, y) = 125
+                    t(x, y) = 185
                 End If
                 If grid.board(x, y).PassGuardLoc Then
-                    t(x, y) = 185
+                    t(x, y) = 23
                 End If
                 If grid.board(x, y).isBorder Then
                     t(x, y) = grid.board(x, y).objRace.Item(0)
