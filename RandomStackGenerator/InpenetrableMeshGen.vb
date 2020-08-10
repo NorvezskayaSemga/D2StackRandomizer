@@ -1769,7 +1769,7 @@ newtry:
         For i As Integer = 0 To n Step 1
             Dim selected As Integer = comm.RandomSelection(IDs, True)
             IDs.Remove(selected)
-            If TestChance(settMap.PassageCreationChance) Then
+            If Not TestChance(settMap.PassageCreationChance) Then
                 For x As Integer = 0 To m.xSize Step 1
                     For y As Integer = 0 To m.ySize Step 1
                         tmpM.board(x, y).isBorder = m.board(x, y).isBorder
