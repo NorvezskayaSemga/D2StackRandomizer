@@ -429,14 +429,17 @@ newtry:
         Dim res As New Map(settGen.common_settMap.xSize, settGen.common_settMap.ySize, symmID, comm)
         Call res.log.Add(previousLogText)
 
-        Dim loc(settGen.template_settGenLoc.Length - 1) As Location
+        Dim loc() As Location = Nothing
         Dim usedPos As New List(Of String)
         Dim attempt1, attempt2 As Integer
         Dim exitLoop1, exitLoop2 As Boolean
-        Dim lsett(UBound(loc)) As Map.SettingsLoc
+        Dim lsett() As Map.SettingsLoc = Nothing
         Dim checkResult As String
         Dim invalidSettings As Boolean = False
+        Dim appear As Boolean
+        Dim appearChance As Double
         Dim errortext As String = "It was not possible to properly place locations in accordance with the specified template"
+        Dim deltaI As Integer
 
         attempt2 = 0
         exitLoop2 = False
@@ -447,19 +450,40 @@ newtry:
             Do While attempt1 < 10 And Not exitLoop1
                 attempt1 += 1
                 exitLoop1 = True
-
+                deltaI = 0
+                ReDim lsett(UBound(settGen.template_settGenLoc))
                 For i As Integer = 0 To UBound(settGen.template_settGenLoc) Step 1
-                    lsett(i) = GenSettings.LocationGenSetting.RandomizeSettings( _
-                                                            settGen.template_settGenLoc(i).minValues, _
-                                                            settGen.template_settGenLoc(i).maxValues, _
-                                                            rndgen)
-                    checkResult = lsett(i).Check
-                    If checkResult.Length > 0 Then
-                        invalidSettings = True
-                        Call res.log.Add("Invalid settings detected in settings #" & i + 1 & ":")
-                        Call res.log.Add(checkResult)
+                    appearChance = settGen.template_settGenLoc(i).AppearanceChance.RandomValue(rndgen)
+                    If appearChance <= 0 Then
+                        appear = False
+                    ElseIf appearChance >= 1 Then
+                        appear = True
+                    Else
+                        If rndgen.Rand(0, 1) > appearChance Then
+                            appear = False
+                        Else
+                            appear = True
+                        End If
+                    End If
+
+                    If appear Then
+                        lsett(i - deltaI) = GenSettings.LocationGenSetting.RandomizeSettings( _
+                                                              settGen.template_settGenLoc(i).minValues, _
+                                                              settGen.template_settGenLoc(i).maxValues, _
+                                                              rndgen)
+                        checkResult = lsett(i - deltaI).Check
+                        If checkResult.Length > 0 Then
+                            invalidSettings = True
+                            Call res.log.Add("Invalid settings detected in settings #" & i + 1 & ":")
+                            Call res.log.Add(checkResult)
+                        End If
+                    Else
+                        deltaI += 1
                     End If
                 Next i
+                ReDim Preserve lsett(UBound(settGen.template_settGenLoc) - deltaI)
+                ReDim loc(UBound(lsett))
+
                 If invalidSettings Then
                     res.Clear()
                     Return res
@@ -467,7 +491,7 @@ newtry:
 
                 usedPos.Clear()
                 Dim x, y As Integer
-                For i As Integer = 0 To UBound(settGen.template_settGenLoc) Step 1
+                For i As Integer = 0 To UBound(lsett) Step 1
                     loc(i) = Location.GenLocSize(lsett(i), i + 1, rndgen, 1)
 
                     x = CInt(settGen.template_settGenLoc(i).posX.RandomValue(rndgen) * settGen.common_settMap.xSize)
@@ -495,7 +519,7 @@ newtry:
                 Dim outSett(UBound(outLocs)) As Map.SettingsLoc
                 Dim n As Integer = -1
 
-                For i As Integer = 0 To UBound(settGen.template_settGenLoc) Step 1
+                For i As Integer = 0 To UBound(loc) Step 1
                     Dim d As Integer = MinimalSqDistanceForLocationsObtainedBySymmetry(loc(i))
                     symmLocs = symm.ApplySymm(loc(i), settGen.common_settMap.nRaces, res, d)
                     If i = 0 And Not symmLocs.Length = settGen.common_settMap.nRaces Then
