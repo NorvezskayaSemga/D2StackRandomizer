@@ -109,6 +109,15 @@
     </None>
   </ItemGroup>
   <ItemGroup>
+    <Content Include="Resources\example_template_1.txt">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
+    <Content Include="Resources\example_template_2_symm.txt">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
+    <Content Include="Resources\example_template_2_unsymm.txt">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
     <Content Include="Resources\PreservedItems.txt">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>

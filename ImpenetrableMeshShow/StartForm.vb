@@ -85,170 +85,38 @@ Friend Class StartForm
         Dim objplace As New ImpenetrableObjects(objSizeArray, {"%default%"}, {"%default%"}, {"%default%"}, ReadSpells)
 
         Dim grid As Map
-        Dim races As Integer
-        If sel1.Checked Then
-            races = 2
-        ElseIf sel2.Checked Then
-            races = 3
-        Else
-            races = 4
-        End If
-
-        Dim sM As Map.SettingsMap
-        sM.xSize = 96
-        sM.ySize = 96
-        sM.RaceLocsDistTolerance = 0.2
-        sM.nRaces = races
-        sM.minPassDist = 7
-        sM.minPassWidth = 1.1
-        sM.AddGuardsBetweenLocations = True
-        sM.LocExpRatio = 2
-        sM.PassGuardsPowerMultiplicator = 2
-        sM.ObjectGuardsPowerMultiplicator = 1.2
-        sM.Wealth = 0.8
-        sM.WaterAmount = 0
-        sM.SpellsMaxLevel = 5
-        sM.RoadsAmount = 0
-        sM.ForestAmount = 0
-
-        Dim sR As New Map.SettingsLoc With {.possibleRaces = {"N"}}
-        sR.AverageRadius = 20
-        sR.maxEccentricityDispersion = 0.15
-        sR.maxRadiusDispersion = 0
-        sR.maxGoldMines = 1
-        sR.maxManaSources = 1
-        sR.maxCities = 1
-        sR.maxMages = 1
-        sR.maxMercenaries = 0
-        sR.maxRuins = 3
-        sR.maxTrainers = 0
-        sR.maxVendors = 0
-        sR.minStackToStackDist = 4
-        sR.expAmount = 6000
-
-        sR.mageGlobalSpellsEnabled = False
-        sR.mageSpellsCount = 5
-        sR.mageSpellsMaxLevel = 2
-        sR.mageSpellsMinLevel = 1
-        sR.merchItemsCost = 2000
-        sR.merchMaxItemCost = 1000
-        sR.merchMinItemCost = 10
-        sR.mercenariesCount = 3
-        sR.mercenariesMaxExpBar = 900
-        sR.mercenariesMinExpBar = 200
-
-        sR.scaleContent = False
-
-        Dim sC As New Map.SettingsLoc With {.possibleRaces = {"H", "N", "S"}}
-        sC.AverageRadius = 17
-        sC.maxEccentricityDispersion = 0.4
-        sC.maxRadiusDispersion = 0.3
-
-        sC.maxGoldMines = 1
-        sC.maxManaSources = 1
-        sC.maxCities = 1
-        sC.maxMages = 0
-        sC.maxMercenaries = 0
-        sC.maxRuins = 3
-        sC.maxTrainers = 0
-        sC.maxVendors = 0
-
-        sC.minStackToStackDist = 5
-        sC.expAmount = 15000
-
-        sC.mageGlobalSpellsEnabled = True
-        sC.mageSpellsCount = 4
-        sC.mageSpellsMaxLevel = 4
-        sC.mageSpellsMinLevel = 2
-        sC.merchItemsCost = 4000
-        sC.merchMaxItemCost = 1500
-        sC.merchMinItemCost = 100
-        sC.mercenariesCount = 5
-        sC.mercenariesMaxExpBar = 1700
-        sC.mercenariesMinExpBar = 1000
-
-        sC.scaleContent = True
-
-
-        sM.ApplySymmetry = SymmCheckBox.Checked
-        sM.SymmetryClass = -1
-
         Dim genTimeLimit As Integer = 10000
 
+        Dim path As String = ".\Resources\"
+
         If Not UseTemplateCheckBox.Checked Then
-            grid = New MapGenWrapper(objplace).SimpleGen(sM, sR, sC, genTimeLimit)
+            path &= "example_template_1.txt"
         Else
-            Dim sL() As ImpenetrableMeshGen.GenSettings.LocationGenSetting
             If SymmCheckBox.Checked Then
-                sC.AverageRadius *= 1.3
-                ReDim sL(2)
-                sL(0).minValues = sR
-                sL(0).maxValues = sR
-                sL(0).posX.min = 0.1
-                sL(0).posX.max = 0.2
-                sL(0).posY.min = 0.1
-                sL(0).posY.max = 0.25
-
-                sL(1).minValues = sC
-                sL(1).maxValues = sC
-                sL(1).posX.min = 0.45
-                sL(1).posX.max = 0.55
-                sL(1).posY.min = 0.45
-                sL(1).posY.max = 0.55
-
-                sL(2).minValues = sC
-                sL(2).maxValues = sC
-                sL(2).posX.min = 0.01
-                sL(2).posX.max = 0.15
-                sL(2).posY.min = 0.45
-                sL(2).posY.max = 0.55
+                path &= "example_template_2_symm.txt"
             Else
-                sR.scaleContent = True
-                sM.nRaces = 2
-                ReDim sL(4)
-                sL(0).minValues = sR
-                sL(0).maxValues = sR
-                sL(0).posX.min = 0.1
-                sL(0).posX.max = 0.9
-                sL(0).posY.min = 0.1
-                sL(0).posY.max = 0.25
-
-                sL(1).minValues = sR
-                sL(1).maxValues = sR
-                sL(1).posX.min = 0.1
-                sL(1).posX.max = 0.9
-                sL(1).posY.min = 0.75
-                sL(1).posY.max = 0.9
-
-                sL(2).minValues = sC
-                sL(2).maxValues = sC
-                sL(2).posX.min = 0.45
-                sL(2).posX.max = 0.55
-                sL(2).posY.min = 0.45
-                sL(2).posY.max = 0.55
-
-                sL(3).minValues = sC
-                sL(3).maxValues = sC
-                sL(3).posX.min = 0.01
-                sL(3).posX.max = 0.15
-                sL(3).posY.min = 0.45
-                sL(3).posY.max = 0.55
-
-                sL(4).minValues = sC
-                sL(4).maxValues = sC
-                sL(4).posX.min = 0.85
-                sL(4).posX.max = 0.99
-                sL(4).posY.min = 0.45
-                sL(4).posY.max = 0.55
+                path &= "example_template_2_unsymm.txt"
             End If
-            For i As Integer = 0 To UBound(sL) Step 1
-                sL(i).minValues.AverageRadius *= 0.9
-                sL(i).maxValues.AverageRadius *= 1.1
-                sL(i).minValues.maxGoldMines *= 0.9
-                sL(i).maxValues.maxGoldMines *= 1.1
-            Next i
-            grid = New MapGenWrapper(objplace).TemplateGen(sM, sL, genTimeLimit)
         End If
+
+        Dim gsettings As ImpenetrableMeshGen.GenSettings = ImpenetrableMeshGen.GenSettings.Read(path)
+
+        If Not UseTemplateCheckBox.Checked Then
+            Dim races As Integer
+            If sel1.Checked Then
+                races = 2
+            ElseIf sel2.Checked Then
+                races = 3
+            Else
+                races = 4
+            End If
+            gsettings.common_settMap.nRaces = races
+            gsettings.common_settMap.ApplySymmetry = SymmCheckBox.Checked
+            gsettings.common_settMap.SymmetryClass = -1
+        End If
+
+        grid = New MapGenWrapper(objplace).CommonGen(gsettings, genTimeLimit)
+
 
         'Dim randstack As New RandStack(ReadTestUnits, ReadTestItems, {"%default%"}, {"%default%"}, True)
         'Dim isnew As Boolean = True
@@ -422,10 +290,12 @@ Friend Class StartForm
 
     Private Sub itemGenTest()
 
-        Dim d As New GenDefaultValues(Nothing)
-        Dim r As New RandStack(ReadTestUnits, ReadTestItems, {d.wReadDefaultFileKeyword}, {d.wReadDefaultFileKeyword}, _
-                               {d.wReadDefaultFileKeyword}, {d.wReadDefaultFileKeyword}, {d.wReadDefaultFileKeyword}, _
-                               {d.wReadDefaultFileKeyword})
+        Dim r As New RandStack(ReadTestUnits, ReadTestItems, {GenDefaultValues.wReadDefaultFileKeyword}, _
+                                                             {GenDefaultValues.wReadDefaultFileKeyword}, _
+                                                             {GenDefaultValues.wReadDefaultFileKeyword}, _
+                                                             {GenDefaultValues.wReadDefaultFileKeyword}, _
+                                                             {GenDefaultValues.wReadDefaultFileKeyword}, _
+                                                             {GenDefaultValues.wReadDefaultFileKeyword})
 
         Dim items As New List(Of String)
         items.Add("G000IG0004")

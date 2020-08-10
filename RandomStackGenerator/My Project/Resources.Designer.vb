@@ -127,6 +127,66 @@ Namespace My.Resources
         End Property
         
         '''<summary>
+        '''  Looks up a localized string similar to 
+        '''#строка, начинающаяся с решетки, игнорируется
+        '''#параметры и их значения не чувствительны к регистру
+        '''#разделитель - пробел или табуляция (может идти несколько подряд)
+        '''
+        '''#внутри блоков настройки могут идти в любом пморядке
+        '''#порядок блоков тоже может быть любом с одним исключением:
+        '''#блоки Location для расовых локаций должны стоять выше, чем блоки для обычных локаций (независимо от genMode)
+        '''
+        '''#если в блоке Location параметр имеет два значения, то при генерации будет выбрано случайное
+        '''#пример: posX 0.1 0.9
+        '''#выбере [rest of string was truncated]&quot;;.
+        '''</summary>
+        Friend ReadOnly Property example_template_1() As String
+            Get
+                Return ResourceManager.GetString("example_template_1", resourceCulture)
+            End Get
+        End Property
+        
+        '''<summary>
+        '''  Looks up a localized string similar to 
+        '''#строка, начинающаяся с решетки, игнорируется
+        '''#параметры и их значения не чувствительны к регистру
+        '''#разделитель - пробел или табуляция (может идти несколько подряд)
+        '''
+        '''#внутри блоков настройки могут идти в любом пморядке
+        '''#порядок блоков тоже может быть любом с одним исключением:
+        '''#блоки Location для расовых локаций должны стоять выше, чем блоки для обычных локаций (независимо от genMode)
+        '''
+        '''#если в блоке Location параметр имеет два значения, то при генерации будет выбрано случайное
+        '''#пример: posX 0.1 0.9
+        '''#выбере [rest of string was truncated]&quot;;.
+        '''</summary>
+        Friend ReadOnly Property example_template_2_symm() As String
+            Get
+                Return ResourceManager.GetString("example_template_2_symm", resourceCulture)
+            End Get
+        End Property
+        
+        '''<summary>
+        '''  Looks up a localized string similar to 
+        '''#строка, начинающаяся с решетки, игнорируется
+        '''#параметры и их значения не чувствительны к регистру
+        '''#разделитель - пробел или табуляция (может идти несколько подряд)
+        '''
+        '''#внутри блоков настройки могут идти в любом пморядке
+        '''#порядок блоков тоже может быть любом с одним исключением:
+        '''#блоки Location для расовых локаций должны стоять выше, чем блоки для обычных локаций (независимо от genMode)
+        '''
+        '''#если в блоке Location параметр имеет два значения, то при генерации будет выбрано случайное
+        '''#пример: posX 0.1 0.9
+        '''#выбере [rest of string was truncated]&quot;;.
+        '''</summary>
+        Friend ReadOnly Property example_template_2_unsymm() As String
+            Get
+                Return ResourceManager.GetString("example_template_2_unsymm", resourceCulture)
+            End Get
+        End Property
+        
+        '''<summary>
         '''  Looks up a localized string similar to #строка, начинающаяся с решетки, игнорируется
         '''#ID юнитов
         '''#лидеры империи
@@ -524,6 +584,12 @@ Namespace My.Resources
         '''
         '''#Лютня очарования
         '''G000IG3022
+        '''
+        '''#Тиара чистоты
+        '''G000IG2006
+        '''
+        '''#типы предметов
+        '''special
         '''.
         '''</summary>
         Friend ReadOnly Property PreservedItems() As String
@@ -617,6 +683,42 @@ Namespace My.Resources
         Friend ReadOnly Property StackStatsFields() As String
             Get
                 Return ResourceManager.GetString("StackStatsFields", resourceCulture)
+            End Get
+        End Property
+        
+        '''<summary>
+        '''  Looks up a localized string similar to Creation_settings.
+        '''</summary>
+        Friend ReadOnly Property template_creation() As String
+            Get
+                Return ResourceManager.GetString("template_creation", resourceCulture)
+            End Get
+        End Property
+        
+        '''<summary>
+        '''  Looks up a localized string similar to Location.
+        '''</summary>
+        Friend ReadOnly Property template_location() As String
+            Get
+                Return ResourceManager.GetString("template_location", resourceCulture)
+            End Get
+        End Property
+        
+        '''<summary>
+        '''  Looks up a localized string similar to Common_map_settings.
+        '''</summary>
+        Friend ReadOnly Property template_map() As String
+            Get
+                Return ResourceManager.GetString("template_map", resourceCulture)
+            End Get
+        End Property
+        
+        '''<summary>
+        '''  Looks up a localized string similar to //.
+        '''</summary>
+        Friend ReadOnly Property template_new_Block() As String
+            Get
+                Return ResourceManager.GetString("template_new_Block", resourceCulture)
             End Get
         End Property
         

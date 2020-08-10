@@ -74,8 +74,14 @@ Public Class MapGenWrapper
         Return CommonGen(sett, genTimeLimit)
     End Function
 
-    Private Function CommonGen(ByRef settGen As ImpenetrableMeshGen.GenSettings, _
-                               ByVal genTimeLimit As Integer) As Map
+    ''' <summary>Генерирует заготовку ландшафта</summary>
+    ''' <param name="settGen">Если настройки прочтены из файла, генератор сам разберется, для какого они режима</param>
+    ''' <param name="genTimeLimit">Максимальное время на операцию расстановки объектов в миллисекундах.
+    ''' Она обычно производится меньше чем за пару секунд, но бывает, что выполняется дольше минуты.
+    ''' В этом случае быстрее перегенерировать карту.
+    ''' Если не получится с пяти попыток, вернет Nothing</param>
+    Public Function CommonGen(ByRef settGen As ImpenetrableMeshGen.GenSettings, _
+                              ByVal genTimeLimit As Integer) As Map
 
         Dim t0 As Integer = Environment.TickCount
 

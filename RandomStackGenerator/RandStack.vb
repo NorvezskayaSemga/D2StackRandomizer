@@ -2939,6 +2939,16 @@ Friend Class ValueConverter
         Return CDbl(ValueConverter.StrToDblStr(s))
         'Return Convert.ToDouble(s, Globalization.NumberFormatInfo.InvariantInfo)
     End Function
+    Friend Shared Function StrToDbl(ByRef v As String, ByRef fullLine As String, ByRef fieldName As String) As Double
+        Try
+            Return ValueConverter.StrToDbl(v)
+        Catch ex As Exception
+            Dim msg As String = ex.Message & vbNewLine & fullLine
+            If Not fieldName = "" Then msg &= vbNewLine & "Field: " & fieldName
+            Throw New Exception(msg)
+            Return 1
+        End Try
+    End Function
 
     Friend Shared Function StrToDblStr(ByRef s As String) As String
         Return s.Replace(",", ".").Replace(".", System.Globalization.CultureInfo.CurrentCulture.NumberFormat.NumberDecimalSeparator)
@@ -2948,7 +2958,9 @@ Friend Class ValueConverter
         Try
             Return CInt(v)
         Catch ex As Exception
-            Throw New Exception(ex.Message & vbNewLine & fullLine & vbNewLine & "Field: " & fieldName)
+            Dim msg As String = ex.Message & vbNewLine & fullLine
+            If Not fieldName = "" Then msg &= vbNewLine & "Field: " & fieldName
+            Throw New Exception(msg)
             Return 1
         End Try
     End Function
@@ -2962,6 +2974,8 @@ Friend Class ValueConverter
         End If
     End Function
 
+    ''' <summary>Разбивает на строки текст по разделителям Chr(10) и Chr(13). Заменяет все табы на пробелы, удаляет повторяющиеся подряд пробелы, удаляет пробелы в начале и конце строки. Не добавляет в выходной массив строки, начинающиеся с #</summary>
+    ''' <param name="TXT">Какой-нибудь текст</param>
     Protected Friend Shared Function TxtSplit(ByRef TXT As String) As String()
         Dim splited() As String = TXT.Replace(Chr(10), Chr(13)).Replace(vbTab, " ").Split(Chr(13))
         Dim parseString(UBound(splited)) As Boolean
@@ -2995,6 +3009,9 @@ Friend Class ValueConverter
         If Not nStrings = UBound(result) Then ReDim Preserve result(nStrings)
         Return result
     End Function
+    ''' <summary>Разбивает на строки текст по разделителям Chr(10) и Chr(13). Заменяет все табы на пробелы, удаляет повторяющиеся подряд пробелы, удаляет пробелы в начале и конце строки. Не добавляет в выходной массив строки, начинающиеся с #</summary>
+    ''' <param name="TXT">Какой-нибудь текст</param>
+    ''' <param name="transferChar">Если строка заканчивается этой подстрокой, то подстрока удаляется, а текущая строка объединяется со следующей</param>
     Protected Friend Shared Function TxtSplit(ByRef TXT As String, ByRef transferChar As String) As String()
         Dim t() As String = ValueConverter.TxtSplit(TXT)
         Dim result(UBound(t)) As String
@@ -3274,44 +3291,56 @@ Public Class GenDefaultValues
     Public Property StackRaceChance As Double()
 
     'ключевые слова
-    Public Function wMineTypeGold() As String
+    Public Shared Function wMineTypeGold() As String
         Return My.Resources.mineTypeGold
     End Function
-    Public Function wMineTypeRandomMana() As String
+    Public Shared Function wMineTypeRandomMana() As String
         Return My.Resources.mineTypeRandomMana
     End Function
-    Public Function wMineTypeT1Mana() As String
+    Public Shared Function wMineTypeT1Mana() As String
         Return My.Resources.mineTypeT1Mana
     End Function
-    Public Function wMineTypeT3Mana() As String
+    Public Shared Function wMineTypeT3Mana() As String
         Return My.Resources.mineTypeT3Mana
     End Function
-    Public Function wObjKeyMage() As String
+    Public Shared Function wObjKeyMage() As String
         Return My.Resources.objKeyMage
     End Function
-    Public Function wObjKeyMercenaries() As String
+    Public Shared Function wObjKeyMercenaries() As String
         Return My.Resources.objKeyMercenaries
     End Function
-    Public Function wObjKeyMerchant() As String
+    Public Shared Function wObjKeyMerchant() As String
         Return My.Resources.objKeyMerchant
     End Function
-    Public Function wObjKeyMountain() As String
+    Public Shared Function wObjKeyMountain() As String
         Return My.Resources.objKeyMountain
     End Function
-    Public Function wObjKeyRuin() As String
+    Public Shared Function wObjKeyRuin() As String
         Return My.Resources.objKeyRuin
     End Function
-    Public Function wObjKeyTrainer() As String
+    Public Shared Function wObjKeyTrainer() As String
         Return My.Resources.objKeyTrainer
     End Function
-    Public Function wReadDefaultFileKeyword() As String
+    Public Shared Function wReadDefaultFileKeyword() As String
         Return My.Resources.readDefaultFileKeyword
     End Function
-    Public Function wReadModLoreFileKeyword() As String
+    Public Shared Function wReadModLoreFileKeyword() As String
         Return My.Resources.readMLoreFileKeyword
     End Function
-    Public Function wReadVanillaLoreFileKeyword() As String
+    Public Shared Function wReadVanillaLoreFileKeyword() As String
         Return My.Resources.readVLoreFileKeyword
+    End Function
+    Public Shared Function wTemplate_CreationKeyword() As String
+        Return My.Resources.template_creation
+    End Function
+    Public Shared Function wTemplate_LocationKeyword() As String
+        Return My.Resources.template_location
+    End Function
+    Public Shared Function wTemplate_MapKeyword() As String
+        Return My.Resources.template_map
+    End Function
+    Public Shared Function wTemplate_NewBlockKeyword() As String
+        Return My.Resources.template_new_Block
     End Function
 
     Public Enum ItemTypes As Integer

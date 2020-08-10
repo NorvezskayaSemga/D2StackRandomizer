@@ -211,4 +211,25 @@
   <data name="PreservedItems" type="System.Resources.ResXFileRef, System.Windows.Forms">
     <value>..\resources\preserveditems.txt;System.String, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089;windows-1251</value>
   </data>
+  <data name="template_creation" xml:space="preserve">
+    <value>Creation_settings</value>
+  </data>
+  <data name="template_location" xml:space="preserve">
+    <value>Location</value>
+  </data>
+  <data name="template_map" xml:space="preserve">
+    <value>Common_map_settings</value>
+  </data>
+  <data name="template_new_Block" xml:space="preserve">
+    <value>//</value>
+  </data>
+  <data name="example_template_1" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\resources\example_template_1.txt;System.String, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089;windows-1251</value>
+  </data>
+  <data name="example_template_2_symm" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\resources\example_template_2_symm.txt;System.String, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089;windows-1251</value>
+  </data>
+  <data name="example_template_2_unsymm" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\resources\example_template_2_unsymm.txt;System.String, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089;windows-1251</value>
+  </data>
 </root>
