@@ -1498,6 +1498,9 @@ newtry:
         Term = New TerminationCondition(Term.maxTime)
         Call ConnectDisconnectedAreas(tmpm, settMap, Term)
         If Term.ExitFromLoops Then Exit Sub
+
+        Call DisconnectRandomLocations(tmpm, settMap)
+
         Parallel.For(0, tmpm.ySize + 1, _
          Sub(y As Integer)
              For x As Integer = 0 To tmpm.xSize Step 1
@@ -1508,8 +1511,6 @@ newtry:
                  End If
              Next x
          End Sub)
-
-        Call DisconnectRandomLocations(tmpm, settMap)
 
         m = tmpm
     End Sub
@@ -1570,6 +1571,7 @@ newtry:
         n += 10
         Dim tx, ty As Double
         Dim b As Location.Borders
+        Dim setAsPath As Boolean
         For r As Integer = 0 To n Step 1
             tx = init.X + CDbl(r) * vx
             ty = init.Y + CDbl(r) * vy
@@ -1581,6 +1583,17 @@ newtry:
                         If dist < 0.5 * settMap.minPassWidth OrElse (dist <= settMap.minPassWidth AndAlso rndgen.PRand(0, 1) > 0.5) Then
                             Dim c1 As Integer = Math.Max(Math.Min(x, m.xSize - 1), 1)
                             Dim c2 As Integer = Math.Max(Math.Min(y, m.ySize - 1), 1)
+                            setAsPath = False
+                            Dim b2 As Location.Borders = NearestXY(c1, c2, m.xSize, m.ySize, 1)
+                            For i As Integer = b2.minX To b2.maxX Step 1
+                                For j As Integer = b2.minY To b2.maxY Step 1
+                                    If Not m.board(c1, c2).locID(0) = m.board(i, j).locID(0) Then
+                                        setAsPath = True
+                                        i = b2.maxX
+                                        j = b2.maxY
+                                    End If
+                                Next j
+                            Next i
                             Dim p() As Point
                             If m.symmID > -1 Then
                                 p = symm.ApplySymm(New Point(c1, c2), settMap.nRaces, m, 1)
@@ -1590,14 +1603,14 @@ newtry:
                             For Each item As Point In p
                                 If m.board(item.X, item.Y).isBorder Then
                                     m.board(item.X, item.Y).isBorder = False
-                                    m.board(item.X, item.Y).isPass = True
+                                    m.board(item.X, item.Y).isPass = setAsPath
                                 ElseIf m.board(item.X, item.Y).isAttended Then
                                     Dim tb As Location.Borders = NearestXY(item, m, 1)
                                     For xx As Integer = tb.minX To tb.maxX Step 1
                                         For yy As Integer = tb.minY To tb.maxY Step 1
                                             If m.board(xx, yy).isBorder Then
                                                 m.board(xx, yy).isBorder = False
-                                                m.board(xx, yy).isPass = True
+                                                m.board(xx, yy).isPass = setAsPath
                                             End If
                                         Next yy
                                     Next xx

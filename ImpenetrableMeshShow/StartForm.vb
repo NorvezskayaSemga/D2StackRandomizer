@@ -146,7 +146,7 @@ Friend Class StartForm
                     t(x, y) = 185
                 End If
                 If grid.board(x, y).PassGuardLoc Then
-                    t(x, y) = 23
+                    t(x, y) = 35
                 End If
                 If grid.board(x, y).isBorder Then
                     t(x, y) = grid.board(x, y).objRace.Item(0)
