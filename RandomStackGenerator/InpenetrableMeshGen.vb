@@ -1756,14 +1756,6 @@ newtry:
                 End If
             Next y
         Next x
-        For j As Integer = 0 To UBound(m.Loc) Step 1
-            For i As Integer = 0 To UBound(m.Loc) Step 1
-                If borders(i, j).Count > 0 And i < j Then
-                    borders(j, i).AddRange(borders(i, j))
-                    borders(i, j).Clear()
-                End If
-            Next i
-        Next j
 
         Dim nonEmpty(borders.Length - 1)() As Integer
         Dim IDs As New List(Of Integer)

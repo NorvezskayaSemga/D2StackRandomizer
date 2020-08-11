@@ -75,6 +75,18 @@ Public Class MapGenWrapper
     End Function
 
     ''' <summary>Генерирует заготовку ландшафта</summary>
+    ''' <param name="paths">Шаблоны, из которых случайным образом будет выбран один</param>
+    ''' <param name="genTimeLimit">Максимальное время на операцию расстановки объектов в миллисекундах.
+    ''' Она обычно производится меньше чем за пару секунд, но бывает, что выполняется дольше минуты.
+    ''' В этом случае быстрее перегенерировать карту.
+    ''' Если не получится с пяти попыток, вернет Nothing</param>
+    Public Function TemplatePoolGen(ByRef templates() As ImpenetrableMeshGen.GenSettings, _
+                                    ByVal genTimeLimit As Integer) As Map
+        Dim selected As Integer = (New RndValueGen).RndInt(0, UBound(templates), True)
+        Return CommonGen(templates(selected), genTimeLimit)
+    End Function
+
+    ''' <summary>Генерирует заготовку ландшафта</summary>
     ''' <param name="settGen">Если настройки прочтены из файла, генератор сам разберется, для какого они режима</param>
     ''' <param name="genTimeLimit">Максимальное время на операцию расстановки объектов в миллисекундах.
     ''' Она обычно производится меньше чем за пару секунд, но бывает, что выполняется дольше минуты.
