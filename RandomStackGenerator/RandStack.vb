@@ -439,6 +439,7 @@ Public Class RandStack
                              Optional ByVal LogID As Integer = -1) As List(Of String)
 
         Dim preservedItemsCost As Integer = AllDataStructues.Cost.Sum(LootCost(IGen.PreserveItems))
+        If IGen.lootCostMultiplier > 0 Then preservedItemsCost = CInt(preservedItemsCost * IGen.lootCostMultiplier)
         GoldCost -= preservedItemsCost
 
         Call AddToLog(LogID, "----Loot creation started----" & vbNewLine & _
@@ -541,6 +542,7 @@ Public Class RandStack
                              ByVal LootCostMultiplier As Double, _
                              Optional ByVal LogID As Integer = -1) As List(Of String)
         Dim lcm As Double = RecalculateMultiplier(pos, CapPos, LootCostMultiplier)
+        IGen.lootCostMultiplier = lcm
         Return ItemsGen(CInt(GoldCost * lcm), IGen, TypeCostRestriction, pos, LogID)
     End Function
     Private Function CostBarGen(ByRef minBar As Integer, ByRef maxBar As Integer, ByRef serialExecution As Boolean) As Integer
@@ -568,6 +570,7 @@ Public Class RandStack
                              Optional ByVal LogID As Integer = -1) As String
 
         Dim preservedItemsCost As Integer = AllDataStructues.Cost.Sum(LootCost(IGen.PreserveItems))
+        If IGen.lootCostMultiplier > 0 Then preservedItemsCost = CInt(preservedItemsCost * IGen.lootCostMultiplier)
         GoldCost -= preservedItemsCost
 
         Call AddToLog(LogID, "----Single item creation started----" & vbNewLine & _
@@ -632,6 +635,7 @@ Public Class RandStack
                              ByVal LootCostMultiplier As Double, _
                              Optional ByVal LogID As Integer = -1) As String
         Dim lcm As Double = RecalculateMultiplier(pos, CapPos, LootCostMultiplier)
+        IGen.lootCostMultiplier = lcm
         Return ThingGen(CInt(GoldCost * lcm), IGen, TypeCostRestriction, pos, LogID)
     End Function
     Private Function GenItemSetDynIGen(ByRef IGen As AllDataStructues.LootGenSettings, ByRef GoldCost As Integer) As AllDataStructues.LootGenSettings
@@ -973,6 +977,7 @@ Public Class RandStack
         s.ExpStackKilled = Math.Max(CInt(s.ExpStackKilled * ssm), 5)
         s.ExpBarAverage = Math.Max(CInt(s.ExpBarAverage * ssm), 25)
         s.LootCost = CInt(s.LootCost * lcm)
+        s.IGen.lootCostMultiplier = lcm
         Return Gen(s, deltaLeadership, GroundTile, NoLeader, pos)
     End Function
     ''' <summary>Создаст отряд  в соответствие с желаемыми параметрами. Не нужно пытаться создать отряд водных жителей на земле</summary>
@@ -997,6 +1002,7 @@ Public Class RandStack
 
         Dim esk As Integer = Math.Max(CInt(ExpStackKilled * ssm), 5)
         Dim lc As Double = LootCost * lcm
+        IGen.lootCostMultiplier = lcm
         Return Gen(esk, lc, Races, IGen, deltaLeadership, GroundTile, NoLeader, pos)
     End Function
     Private Function SelectPossibleLeader(ByRef leaderID As Integer, ByRef Tolerance As Double, _
@@ -2860,6 +2866,8 @@ Public Class AllDataStructues
         Dim JewelItems As ItemGenSettings
         ''' <summary>Добавит эти предметы в любом случае</summary>
         Dim PreserveItems As List(Of String)
+        ''' <summary>Множитель цены лута</summary>
+        Friend lootCostMultiplier As Double
 
         Public Shared Function Copy(ByVal v As LootGenSettings) As LootGenSettings
             Dim P As List(Of String) = Nothing
@@ -2872,7 +2880,8 @@ Public Class AllDataStructues
             Return New LootGenSettings With {.ConsumableItems = AllDataStructues.ItemGenSettings.Copy(v.ConsumableItems), _
                                              .NonconsumableItems = AllDataStructues.ItemGenSettings.Copy(v.NonconsumableItems), _
                                              .JewelItems = AllDataStructues.ItemGenSettings.Copy(v.JewelItems), _
-                                             .PreserveItems = P}
+                                             .PreserveItems = P, _
+                                             .lootCostMultiplier = v.lootCostMultiplier}
         End Function
         Public Shared Function Print(ByVal v As LootGenSettings) As String
             Dim p As String = ""
@@ -2887,7 +2896,8 @@ Public Class AllDataStructues
             Return "CItemsGen" & vbTab & AllDataStructues.ItemGenSettings.Print(v.ConsumableItems) & vbNewLine & _
                    "NItemsGen" & vbTab & AllDataStructues.ItemGenSettings.Print(v.NonconsumableItems) & vbNewLine & _
                    "JItemsGen" & vbTab & AllDataStructues.ItemGenSettings.Print(v.JewelItems) & vbNewLine & _
-                   "PreservedItems" & vbTab & p
+                   "PreservedItems" & vbTab & p & vbNewLine & _
+                   "LootCostMultiplier" & vbTab & v.lootCostMultiplier
         End Function
         ''' <summary>Return {ConsumableItems,NonconsumableItems,JewelItems}</summary>
         Public Shared Function ToArray(ByVal v As LootGenSettings) As ItemGenSettings()
