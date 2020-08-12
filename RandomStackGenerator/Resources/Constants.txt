@@ -96,7 +96,7 @@ Local_SameItem_ChanceMultiplier nonattack_artifact=0.01;/
 Global_AddedItem_ChanceMultiplier	0.8
 
 #Для каждого типа предметов задан порог количества одинаковых предметов в награде
-#Например "sphere=2" означает, что если в нагде уже есть две сферы огня, то шанс появления третьей сферы огня будет снижен
+#Например "sphere=2" означает, что если в награде уже есть две сферы огня, то шанс появления третьей сферы огня будет снижен
 #множителем из ThisBag_SameItems_ChanceMultiplier
 SameItemsAmountRestriction nonattack_artifact=1;/
                            attack_artifact=1;/

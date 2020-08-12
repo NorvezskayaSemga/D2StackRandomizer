@@ -251,7 +251,7 @@ Public Class RandStack
         Dim item As AllDataStructues.Item
         For Each id As String In items
             item = FindItemStats(id)
-            If Not (item.type = GenDefaultValues.ItemTypes.special Or comm.IsPreserved(item)) Then
+            If Not comm.IsPreserved(item) Then
                 If comm.ConsumableItemsTypes.Contains(item.type) Then
                     result.ConsumableItems.exclude = False
                     result.ConsumableItems.amount += 1
@@ -437,8 +437,13 @@ Public Class RandStack
                              ByRef TypeCostRestriction As Dictionary(Of Integer, AllDataStructues.Restriction), _
                              ByRef pos As Point, _
                              Optional ByVal LogID As Integer = -1) As List(Of String)
+
+        Dim preservedItemsCost As Integer = AllDataStructues.Cost.Sum(LootCost(IGen.PreserveItems))
+        GoldCost -= preservedItemsCost
+
         Call AddToLog(LogID, "----Loot creation started----" & vbNewLine & _
-                             "Gold sum: " & GoldCost)
+                             "Gold sum: " & GoldCost & vbNewLine & _
+                             "Preserved items cost sum: " & preservedItemsCost)
         If Not IsNothing(pos) Then
             Call AddToLog(LogID, "Position: " & pos.X & " " & pos.Y)
         Else
@@ -562,8 +567,13 @@ Public Class RandStack
                              ByRef pos As Point, _
                              Optional ByVal LogID As Integer = -1) As String
 
+        Dim preservedItemsCost As Integer = AllDataStructues.Cost.Sum(LootCost(IGen.PreserveItems))
+        GoldCost -= preservedItemsCost
+
         Call AddToLog(LogID, "----Single item creation started----" & vbNewLine & _
-                            "Max cost: " & GoldCost)
+                            "Max cost: " & GoldCost & vbNewLine & _
+                            "Preserved item cost sum: " & preservedItemsCost)
+
         If Not IsNothing(pos) Then
             Call AddToLog(LogID, "Position: " & pos.X & " " & pos.Y)
         Else
@@ -1781,6 +1791,7 @@ Public Class Common
     End Function
 
     Friend Function IsPreserved(ByRef item As AllDataStructues.Item) As Boolean
+        If item.type = GenDefaultValues.ItemTypes.special Then Return True
         If preservedItems.Contains(item.itemID.ToUpper) Then Return True
         If preservedItems.Contains(itemType.Item(item.type).ToUpper) Then Return True
         Return False
@@ -3096,10 +3107,6 @@ Public Class GenDefaultValues
             Dim spaces As String = "       "
 
             Dim AddedItemTypeChanceMultiplierStr As String = ""
-            For Each i As Integer In itemTypeName.Keys
-                AddedItemTypeChanceMultiplierStr &= vbNewLine & spaces & _
-                  itemTypeName.Item(i) & " = " & Local_AddedItemType_ChanceMultiplier(i)
-            Next i
             Dim StackRaceChanceStr As String = ""
             For Each i As Integer In RaceName.Keys
                 StackRaceChanceStr &= vbNewLine & spaces & _
@@ -3120,12 +3127,11 @@ Public Class GenDefaultValues
             log.Add("JewelItemsCostDevider = " & JewelItemsCostDevider)
             log.Add("NonJewelItemsCostDevider = " & NonJewelItemsCostDevider)
             log.Add("LootCostDispersion = " & LootCostDispersion)
-            log.Add("SameItemsAmountRestriction = " & vbNewLine & spaces & String.Join(vbNewLine & spaces, SameItemsAmountRestriction))
-            log.Add("SameItemsAmountRestrictionMultiplier = " & vbNewLine & spaces & String.Join(vbNewLine & spaces, SameItemsAmountRestriction))
-            log.Add("Local_SameItem_ChanceMultiplier = " & vbNewLine & spaces & String.Join(vbNewLine & spaces, Local_SameItem_ChanceMultiplier))
-            log.Add("ThisBag_SameItems_ChanceMultiplier = " & vbNewLine & spaces & String.Join(vbNewLine & spaces, ThisBag_SameItems_ChanceMultiplier))
+            log.Add("SameItemsAmountRestriction = " & PrintItemsSettings(SameItemsAmountRestriction, itemTypeName, spaces))
+            log.Add("Local_SameItem_ChanceMultiplier = " & PrintItemsSettings(Local_SameItem_ChanceMultiplier, itemTypeName, spaces))
+            log.Add("ThisBag_SameItems_ChanceMultiplier = " & PrintItemsSettings(ThisBag_SameItems_ChanceMultiplier, itemTypeName, spaces))
             log.Add("Global_AddedItem_ChanceMultiplier = " & Global_AddedItem_ChanceMultiplier)
-            log.Add("AddedItemTypeChanceMultiplier = " & AddedItemTypeChanceMultiplierStr)
+            log.Add("AddedItemTypeChanceMultiplier = " & PrintItemsSettings(Local_AddedItemType_ChanceMultiplier, itemTypeName, spaces))
             log.Add("AddedItemTypeSearchRadius = " & AddedItemTypeSearchRadius)
 
             'map
@@ -3136,6 +3142,22 @@ Public Class GenDefaultValues
         End If
 
     End Sub
+    Private Function PrintItemsSettings(ByRef settings() As Double, ByRef itemTypeName As Dictionary(Of Integer, String), ByRef spaces As String) As String
+        Dim result As String = ""
+        For Each i As Integer In itemTypeName.Keys
+            result &= vbNewLine & spaces & _
+              itemTypeName.Item(i) & " = " & settings(i)
+        Next i
+        Return result
+    End Function
+    Private Function PrintItemsSettings(ByRef settings() As Integer, ByRef itemTypeName As Dictionary(Of Integer, String), ByRef spaces As String) As String
+        Dim result As String = ""
+        For Each i As Integer In itemTypeName.Keys
+            result &= vbNewLine & spaces & _
+              itemTypeName.Item(i) & " = " & settings(i)
+        Next i
+        Return result
+    End Function
     Private Function ChangeToSynonymicNames(ByRef input As Dictionary(Of String, String), _
                                             ByRef synonyms As Dictionary(Of String, Integer)) As Dictionary(Of String, String)
         Dim res As New Dictionary(Of String, String)
