@@ -127,7 +127,8 @@ Namespace My.Resources
         End Property
         
         '''<summary>
-        '''  Looks up a localized string similar to 
+        '''  Looks up a localized string similar to Map generator by Norvezskaya Semga
+        '''
         '''#строка, начинающаяся с решетки, игнорируется
         '''#параметры и их значения не чувствительны к регистру
         '''#разделитель - пробел или табуляция (может идти несколько подряд)
@@ -136,9 +137,7 @@ Namespace My.Resources
         '''#порядок блоков тоже может быть любом с одним исключением:
         '''#блоки Location для расовых локаций должны стоять выше, чем блоки для обычных локаций (независимо от genMode)
         '''
-        '''#если в блоке Location параметр имеет два значения, то при генерации будет выбрано случайное
-        '''#пример: posX 0.1 0.9
-        '''#выбере [rest of string was truncated]&quot;;.
+        '''#если в блоке Location параметр имеет два значения, то при генерации будет выбрано случ [rest of string was truncated]&quot;;.
         '''</summary>
         Friend ReadOnly Property example_template_1() As String
             Get
@@ -147,7 +146,8 @@ Namespace My.Resources
         End Property
         
         '''<summary>
-        '''  Looks up a localized string similar to 
+        '''  Looks up a localized string similar to Map generator by Norvezskaya Semga
+        '''
         '''#строка, начинающаяся с решетки, игнорируется
         '''#параметры и их значения не чувствительны к регистру
         '''#разделитель - пробел или табуляция (может идти несколько подряд)
@@ -156,9 +156,7 @@ Namespace My.Resources
         '''#порядок блоков тоже может быть любом с одним исключением:
         '''#блоки Location для расовых локаций должны стоять выше, чем блоки для обычных локаций (независимо от genMode)
         '''
-        '''#если в блоке Location параметр имеет два значения, то при генерации будет выбрано случайное
-        '''#пример: posX 0.1 0.9
-        '''#выбере [rest of string was truncated]&quot;;.
+        '''#если в блоке Location параметр имеет два значения, то при генерации будет выбрано случ [rest of string was truncated]&quot;;.
         '''</summary>
         Friend ReadOnly Property example_template_2_symm() As String
             Get
@@ -167,7 +165,8 @@ Namespace My.Resources
         End Property
         
         '''<summary>
-        '''  Looks up a localized string similar to 
+        '''  Looks up a localized string similar to Map generator by Norvezskaya Semga
+        '''
         '''#строка, начинающаяся с решетки, игнорируется
         '''#параметры и их значения не чувствительны к регистру
         '''#разделитель - пробел или табуляция (может идти несколько подряд)
@@ -176,9 +175,7 @@ Namespace My.Resources
         '''#порядок блоков тоже может быть любом с одним исключением:
         '''#блоки Location для расовых локаций должны стоять выше, чем блоки для обычных локаций (независимо от genMode)
         '''
-        '''#если в блоке Location параметр имеет два значения, то при генерации будет выбрано случайное
-        '''#пример: posX 0.1 0.9
-        '''#выбере [rest of string was truncated]&quot;;.
+        '''#если в блоке Location параметр имеет два значения, то при генерации будет выбрано случ [rest of string was truncated]&quot;;.
         '''</summary>
         Friend ReadOnly Property example_template_2_unsymm() As String
             Get
@@ -719,6 +716,15 @@ Namespace My.Resources
         Friend ReadOnly Property template_new_Block() As String
             Get
                 Return ResourceManager.GetString("template_new_Block", resourceCulture)
+            End Get
+        End Property
+        
+        '''<summary>
+        '''  Looks up a localized string similar to ReadFromFile.
+        '''</summary>
+        Friend ReadOnly Property template_read_from_file() As String
+            Get
+                Return ResourceManager.GetString("template_read_from_file", resourceCulture)
             End Get
         End Property
         

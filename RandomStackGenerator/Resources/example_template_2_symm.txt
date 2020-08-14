@@ -1,3 +1,4 @@
+Map generator by Norvezskaya Semga
 
 #строка, начинающаяся с решетки, игнорируется
 #параметры и их значения не чувствительны к регистру
@@ -14,353 +15,40 @@
 #настройки режима генератора
 //Creation_settings
 
-
 #genMode=1 Будет использован блок Common_map_settings и два блока Location - для стартовых и всех остальных локаций, соответственно
 #genMode=2 Будет использован блок Common_map_settings и все блоки Location - для каждой локации индивидуальные настройки
 genMode		2
 
+#----------------------------------------------------------------------------------
 
 #общие настройки для карты
 //Common_map_settings
 
-#Количество рас
-nRaces		2
-
-#Максимальный уровень заклинаний в столице
-SpellsMaxLevel	5
+#прочитать настройки для блока с меткой $cms из файла example_template_1.txt
+№метка и имя файла не должны содержать пробелов и табов; метка не чувствительна к регистру
+#желаемые параметры можно изменить, разместив их после чтения файла)
+ReadFromFile example_template_2_unsymm.txt $cms
 
 #Применять ли операции симметрии
 ApplySymmetry	True
 
-# -1 - случайная симметрия, если .ApplySymmetry=True, игнорируется, если .ApplySymmetry=False.
-#Для двух рас: 0 - L2, 1 - xM, 2 - yM, 3 - xy1M, 4 - xy2M.
-#Для четырех рас: 0 - L4, 1 - xM+yM, 2 - xy1M+xy2M.
-#L2 - поворот на 180 градусов вокруг оси, находящейся в центре карты
-#L4 - поворот на 90 градусов вокруг оси, находящейся в центре карты
-#xM - отражение в плоскости, параллельной оси Ox, и проходящей через центр карты
-#yM - отражение в плоскости, параллельной оси Oy, и проходящей через центр карты
-#xy1M - отражение в плоскости, параллельной диагонали {x, y}, и проходящей через центр карты. Только для квадратных карт
-#xy2M - отражение в плоскости, параллельной диагонали {-x, y}, и проходящей через центр карты. Только для квадратных карт
-SymmetryClass	-1
-
-#Правая граница карты (например, если генерируем карту 24x48, то сюда пишем 24)
-xSize		96
-
-#Верхняя граница карты (например, если генерируем карту 24x48, то сюда пишем 48)
-ySize		96
-
-#Генератор будет располагать локации со столицами так, чтобы для каждой из локаций выполнялось следующиее условие:
-#R1*(1+T) >= R2, при этом R2 > R1, где R1 и R2 - расстояние до двух ближайших локаций со столицами
-RaceLocsDistTolerance		0.2
-
-#Определяет свободу перемещения по карте.
-#0 - генератор не старается соединять локации,
-#1 - генератор соединит каждую локацию с каждой соседней (но стартовые старается не соединять)
-PassageCreationChance		0.5
-
-#Минимальная ширина проходов между локациями
-minPassWidth	1.1
-
-#Минимальное расстояние между проходами
-minPassDist	7.0
-
-#Расставлять ли стражей проходов между локациями
-AddGuardsBetweenLocations	True
-
-#Множитель силы стражей проходов между локациями
-PassGuardsPowerMultiplicator	2.0
-
-#Множитель силы стражей посещаемых объектов
-ObjectGuardsPowerMultiplicator	1.2
-
-#Отношение максимального опыта, получаемого за зачистку локации среднего размера, к минимальному.
-#Чем дальше локация от ближайшей столицы и чем ближе к центру, тем больше опыта за ее зачистку
-LocExpRatio			2.0
-
-#Множитель стоимости лута нейтралов
-Wealth				0.8
-
-#Количество воды на карте. 0 - без воды, 1 - очень много
-WaterAmount			0.1
-
-#Количество дорог на карте. 0 - без дорог, 1 - максимальное количество
-RoadsAmount			0.2
-
-#Количество леса на карте. 0 - без леса, 1 - максимальное количество
-ForestAmount			0.35
-
+#----------------------------------------------------------------------------------
 
 #блок настроек для локации
 //Location
 
-#эти настройки используются только если genMode=2
-################
-#Координата локации на карте по X (число будет умножена на размер карты по X)
-posX		0.1	0.9
-#Координата локации на карте по Y (число будет умножена на размер карты по Y)
-posY		0.1	0.25
-#Шанс на то, что локация появится. От 0 до 1
-AppearanceChance	1.0
-################
+ReadFromFile example_template_2_unsymm.txt $rloc
 
-#Средний радиус локаций
-AverageRadius			20
-
-#Локации будут в форме эллипсов со случайным эксцентриситетом от (1-D)/(1+D) до (1+D)/(1-D)
-maxEccentricityDispersion	0.15
-
-#При достаточном количестве места будут создаваться локации размером от (1-D)*R до (1+D)*R.
-#Когда свободного места станет недостаточно R начнет постепенно уменьшаться до половины от начального значения
-maxRadiusDispersion		0.0
-
-#Количество золотых шахт на локацию
-maxGoldMines			1.0	2.0
-#Количество источников маны на локацию
-maxManaSources			1.0	2.0
-#Количество нейтральных городов на локацию
-maxCities			1.0
-#Количество торговцев на локацию
-maxVendors			1.0
-#Количество лагерей наемников на локацию
-maxMercenaries			0.0
-#Количество башен мага на локацию
-maxMages			1.0
-#Количество тренеров на локацию
-maxTrainers			0.0
-#Количество руин на локацию
-maxRuins			3.0	3.5
-
-#Минимальное расстояние между отрядами
-minStackToStackDist		4.0
-
-#Примерное количество опыта за убийство всех отрядов в локации
-expAmount			6000.0	7000.0
-
-#Минимальный уровень заклинаний в лавке мага
-mageSpellsMaxLevel		2	3
-#Максимальный уровень заклинаний в лавке мага
-mageSpellsMinLevel		1	2
-#Количество заклинаний в лавке мага
-mageSpellsCount			2	4
-#Могут ли встречаться в лавке мага заклинания, действующие на всю карту
-mageGlobalSpellsEnabled		False
-
-#Максимальная планка опыта у маленьких наемников (для больших в два раза выше)
-mercenariesMaxExpBar		700	900
-#Минимальная планка опыта у маленьких наемников (для больших в два раза выше)
-mercenariesMinExpBar		200	250
-#Количество наемников в лагере
-mercenariesCount		3	5
-
-#Максимальная стоимость предмета у торговца
-merchMaxItemCost		800	1000
-#Минимальная стоимость предмета у торговца
-merchMinItemCost		100
-#Полная стоимость лута у торговца
-merchItemsCost			2000	2500
-
-#Масштабировать количество посещаемых объектов и опыт за убийство всех отрядовв в локации
-scaleContent			True
-
-#Список возможных базовых рас для локации. Разделитель - ; (N;S;H;U;L;E,C)
-#В случае с локациями играбельных рас определяет расы нейтральных отрядов в локации. 
-#Список рас можно посмотреть в Resources\Constants.txt, параметр LocRacesBlocks.
-#Nothing, если нужен случайный выбор
-possibleRaces			N
-
+#----------------------------------------------------------------------------------
 
 #блок настроек для локации
 //Location
 
-#эти настройки используются только если genMode=2
-################
-#Координата локации на карте по X (число будет умножена на размер карты по X)
-posX		0.1	0.9
-#Координата локации на карте по Y (число будет умножена на размер карты по Y)
-posY		0.75	0.9
-#Шанс на то, что локация появится. От 0 до 1
-AppearanceChance	1.0
-################
+ReadFromFile example_template_2_unsymm.txt $comm_loc_1
 
-AverageRadius			20
+#----------------------------------------------------------------------------------
 
-maxEccentricityDispersion	0.15
-
-maxRadiusDispersion		0.0
-
-maxGoldMines			1.0	2.0
-maxManaSources			1.0	2.0
-maxCities			1.0
-maxVendors			1.0
-maxMercenaries			0.0
-maxMages			1.0
-maxTrainers			0.0
-maxRuins			3.0	3.5
-
-minStackToStackDist		4.0
-
-expAmount			6000.0	7000.0
-
-mageSpellsMaxLevel		2	3
-mageSpellsMinLevel		1	2
-mageSpellsCount			2	4
-mageGlobalSpellsEnabled		False
-
-mercenariesMaxExpBar		700	900
-mercenariesMinExpBar		200	250
-mercenariesCount		3	5
-
-merchMaxItemCost		800	1000
-merchMinItemCost		100
-merchItemsCost			2000	2500
-
-scaleContent			False
-
-possibleRaces			N
-
-
+#блок настроек для локации
 //Location
 
-#эти настройки используются только если genMode=2
-################
-#Координата локации на карте по X (число будет умножена на размер карты по X)
-posX		0.45	0.55
-#Координата локации на карте по Y (число будет умножена на размер карты по Y)
-posY		0.45	0.55
-#Шанс на то, что локация появится. От 0 до 1
-AppearanceChance	0.5
-################
-
-AverageRadius			17
-
-maxEccentricityDispersion	0.4
-
-maxRadiusDispersion		0.3
-
-maxGoldMines			1.0	2.0
-maxManaSources			1.0	1.5
-maxCities			1.0
-maxVendors			1.0
-maxMercenaries			0.0
-maxMages			0.0
-maxTrainers			0.0
-maxRuins			2.0	3.0
-
-minStackToStackDist		5.0
-
-expAmount			12000.0	15000.0
-
-mageSpellsMaxLevel		3	4
-mageSpellsMinLevel		2	2
-mageSpellsCount			3	4
-mageGlobalSpellsEnabled		True
-
-mercenariesMaxExpBar		1600	1900
-mercenariesMinExpBar		1000	1200
-mercenariesCount		3	5
-
-merchMaxItemCost		800	1000
-merchMinItemCost		100
-merchItemsCost			2000	2500
-
-scaleContent			True
-
-possibleRaces			Nothing
-
-
-//Location
-
-#эти настройки используются только если genMode=2
-################
-#Координата локации на карте по X (число будет умножена на размер карты по X)
-posX		0.05	0.25
-#Координата локации на карте по Y (число будет умножена на размер карты по Y)
-posY		0.45	0.55
-#Шанс на то, что локация появится. От 0 до 1
-AppearanceChance	1.0
-################
-
-AverageRadius			17
-
-maxEccentricityDispersion	0.4
-
-maxRadiusDispersion		0.3
-
-maxGoldMines			1.0	2.0
-maxManaSources			1.0	1.5
-maxCities			1.0
-maxVendors			0.0
-maxMercenaries			0.0
-maxMages			0.0
-maxTrainers			0.0
-maxRuins			1.0	2.0
-
-minStackToStackDist		5.0
-
-expAmount			12000.0	15000.0
-
-mageSpellsMaxLevel		3	4
-mageSpellsMinLevel		2	2
-mageSpellsCount			3	4
-mageGlobalSpellsEnabled		True
-
-mercenariesMaxExpBar		1600	1900
-mercenariesMinExpBar		1000	1200
-mercenariesCount		3	5
-
-merchMaxItemCost		800	1000
-merchMinItemCost		100
-merchItemsCost			2000	2500
-
-scaleContent			True
-
-possibleRaces			Nothing
-
-
-//Location
-
-#эти настройки используются только если genMode=2
-################
-#Координата локации на карте по X (число будет умножена на размер карты по X)
-posX		0.75	0.95
-#Координата локации на карте по Y (число будет умножена на размер карты по Y)
-posY		0.45	0.55
-#Шанс на то, что локация появится. От 0 до 1
-AppearanceChance	1.0
-################
-
-AverageRadius			17
-
-maxEccentricityDispersion	0.4
-
-maxRadiusDispersion		0.3
-
-maxGoldMines			1.0	2.0
-maxManaSources			1.0	1.5
-maxCities			1.0
-maxVendors			0.0
-maxMercenaries			0.0
-maxMages			0.0
-maxTrainers			0.0
-maxRuins			1.0	2.0
-
-minStackToStackDist		5.0
-
-expAmount			12000.0	15000.0
-
-mageSpellsMaxLevel		3	4
-mageSpellsMinLevel		2	2
-mageSpellsCount			3	4
-mageGlobalSpellsEnabled		True
-
-mercenariesMaxExpBar		1600	1900
-mercenariesMinExpBar		1000	1200
-mercenariesCount		3	5
-
-merchMaxItemCost		800	1000
-merchMinItemCost		100
-merchItemsCost			2000	2500
-
-scaleContent			True
-
-possibleRaces			Nothing
+ReadFromFile example_template_2_unsymm.txt $comm_loc_2

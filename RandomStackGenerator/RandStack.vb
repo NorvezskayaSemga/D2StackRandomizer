@@ -3374,6 +3374,9 @@ Public Class GenDefaultValues
     Public Shared Function wTemplate_NewBlockKeyword() As String
         Return My.Resources.template_new_Block
     End Function
+    Public Shared Function wTemplate_ReadFromFileKeyword() As String
+        Return My.Resources.template_read_from_file
+    End Function
 
     Public Enum ItemTypes As Integer
         nonattack_artifact = 0

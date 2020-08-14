@@ -184,14 +184,14 @@ Public Class ImpenetrableMeshGen
             Public Shared Sub ReadPos(ByRef path As String, ByRef locSettings() As LocationGenSetting)
                 Dim txt() As String = ValueConverter.TxtSplit(IO.File.ReadAllText(path))
                 For i As Integer = 0 To UBound(locSettings) Step 1
-                    Call locSettings(i).Read(txt, i + 1)
+                    Call locSettings(i).Read(txt, i + 1, path)
                 Next i
             End Sub
-            Private Sub Read(ByRef txt() As String, ByRef blockNumber As Integer)
+            Private Sub Read(ByRef txt() As String, ByRef blockNumber As Integer, ByRef baseFilePath As String)
                 Dim minData As Dictionary(Of String, String) = Map.ReadBlock(txt, GenDefaultValues.wTemplate_LocationKeyword, _
-                                                                             blockNumber, 1, True)
+                                                                             blockNumber, 1, True, baseFilePath)
                 Dim maxData As Dictionary(Of String, String) = Map.ReadBlock(txt, GenDefaultValues.wTemplate_LocationKeyword, _
-                                                                             blockNumber, 2, True)
+                                                                             blockNumber, 2, True, baseFilePath)
 
                 posX = New ValueRange
                 posY = New ValueRange
@@ -235,7 +235,7 @@ Public Class ImpenetrableMeshGen
         End Function
         Private Sub ReadMode(ByRef path As String)
             Dim txt() As String = ValueConverter.TxtSplit(IO.File.ReadAllText(path))
-            Dim data As Dictionary(Of String, String) = Map.ReadBlock(txt, GenDefaultValues.wTemplate_CreationKeyword, 1, 1, True)
+            Dim data As Dictionary(Of String, String) = Map.ReadBlock(txt, GenDefaultValues.wTemplate_CreationKeyword, 1, 1, True, path)
             Call Map.ReadValue("genMode", genMode, data, GenDefaultValues.wTemplate_LocationKeyword)
         End Sub
 
@@ -3833,14 +3833,15 @@ Public Class Map
                 blockNumber += 1
                 ReDim Preserve res(blockNumber - 1)
                 res(blockNumber - 1) = New SettingsLoc
-                Call res(blockNumber - 1).Read(txt, blockNumber, dataColumn, nextLoop)
+                Call res(blockNumber - 1).Read(txt, blockNumber, dataColumn, nextLoop, path)
             Loop
             ReDim Preserve res(UBound(res) - 1)
             Return res
         End Function
-        Private Sub Read(ByRef txt() As String, ByRef blockNumber As Integer, ByRef dataColumn As Integer, ByRef nextLoop As Boolean)
+        Private Sub Read(ByRef txt() As String, ByRef blockNumber As Integer, ByRef dataColumn As Integer, _
+                         ByRef nextLoop As Boolean, ByRef baseFilePath As String)
             Dim data As Dictionary(Of String, String) = ReadBlock(txt, GenDefaultValues.wTemplate_LocationKeyword, _
-                                                                  blockNumber, dataColumn, False)
+                                                                  blockNumber, dataColumn, False, baseFilePath)
             If IsNothing(data) Then
                 nextLoop = False
                 Exit Sub
@@ -3971,11 +3972,11 @@ Public Class Map
         Public Shared Function Read(ByRef path As String) As SettingsMap
             Dim txt() As String = ValueConverter.TxtSplit(IO.File.ReadAllText(path))
             Dim res As New SettingsMap
-            Call res.Read(txt)
+            Call res.Read(txt, path)
             Return res
         End Function
-        Private Sub Read(ByRef txt() As String)
-            Dim data As Dictionary(Of String, String) = ReadBlock(txt, GenDefaultValues.wTemplate_MapKeyword, 1, 1, True)
+        Private Sub Read(ByRef txt() As String, ByRef baseFilePath As String)
+            Dim data As Dictionary(Of String, String) = ReadBlock(txt, GenDefaultValues.wTemplate_MapKeyword, 1, 1, True, baseFilePath)
 
             Call Map.ReadValue("xSize", xSize, data, GenDefaultValues.wTemplate_MapKeyword)
             Call Map.ReadValue("ySize", ySize, data, GenDefaultValues.wTemplate_MapKeyword)
@@ -4001,15 +4002,16 @@ Public Class Map
     ''' <param name="fileContent">Содержимое файла после ValueConverter.TxtSplit</param>
     ''' <param name="blockName">Имя блока</param>
     ''' <param name="blockNumber">Номер блока > 0</param>
-    Protected Friend Shared Function ReadBlock(ByRef fileContent() As String, ByRef blockName As String, _
+    Protected Friend Shared Function ReadBlock(ByRef fileContent() As String, _
+                                               ByRef blockName As String, _
                                                ByRef blockNumber As Integer, _
                                                ByRef readColumn As Integer, _
-                                               ByRef throwExceptionIfNoBlock As Boolean) As Dictionary(Of String, String)
+                                               ByRef throwExceptionIfNoBlock As Boolean, _
+                                               ByRef baseFilePath As String) As Dictionary(Of String, String)
         Dim startLine As Integer = -1
-        Dim endLine As Integer = -1
         Dim n As Integer = 0
         For i As Integer = 0 To UBound(fileContent) Step 1
-            If fileContent(i) = GenDefaultValues.wTemplate_NewBlockKeyword & blockName Then
+            If fileContent(i).ToUpper.StartsWith((GenDefaultValues.wTemplate_NewBlockKeyword & blockName).ToUpper) Then
                 n += 1
                 If n = blockNumber Then
                     startLine = i
@@ -4021,14 +4023,56 @@ Public Class Map
             If throwExceptionIfNoBlock Then Throw New Exception("Could not find line " & GenDefaultValues.wTemplate_NewBlockKeyword & blockName)
             Return Nothing
         End If
+
         Dim fields As New Dictionary(Of String, String)
         For i As Integer = startLine + 1 To UBound(fileContent) Step 1
-            If fileContent(i).StartsWith(GenDefaultValues.wTemplate_NewBlockKeyword) Then Exit For
+            If fileContent(i).ToUpper.StartsWith(GenDefaultValues.wTemplate_NewBlockKeyword.ToUpper) Then Exit For
             Dim s() As String = fileContent(i).Split(CChar(" "))
-            fields.Add(s(0).ToUpper, s(Math.Min(UBound(s), readColumn)))
+            If fileContent(i).ToUpper.StartsWith(GenDefaultValues.wTemplate_ReadFromFileKeyword.ToUpper) Then
+                Dim fileName As String = s(1)
+                Dim searchBlockName As String = s(2)
+                Call ReadFromOtherFile(baseFilePath, fileName, searchBlockName, readColumn, fields)
+            Else
+                If fields.ContainsKey(s(0).ToUpper) Then fields.Remove(s(0).ToUpper)
+                fields.Add(s(0).ToUpper, s(Math.Min(UBound(s), readColumn)))
+            End If
         Next i
         Return fields
     End Function
+    Protected Friend Shared Sub ReadFromOtherFile(ByRef baseFile As String, ByRef readFromFile As String, _
+                                                  ByRef searchField As String, ByRef readColumn As Integer, _
+                                                  ByRef readTo As Dictionary(Of String, String))
+        Dim f As String = IO.Path.GetDirectoryName(baseFile) & "\" & readFromFile
+        Dim fileContent() As String = ValueConverter.TxtSplit(IO.File.ReadAllText(f))
+        Dim blockN As Integer = 0
+        Dim blockName As String = ""
+        For i As Integer = 0 To UBound(fileContent) Step 1
+            If fileContent(i).ToUpper.StartsWith(GenDefaultValues.wTemplate_NewBlockKeyword.ToUpper) Then
+                Dim s() As String = fileContent(i).Split(CChar(" "))
+                If s.Length > 1 AndAlso s(1).ToUpper = searchField.ToUpper Then
+                    blockName = s(0)
+                    Exit For
+                End If
+            End If
+        Next i
+        If blockName = "" Then Throw New Exception("Could not find line block with name " & searchField)
+
+        For i As Integer = 0 To UBound(fileContent) Step 1
+            If fileContent(i).ToUpper.StartsWith(blockName.ToUpper) Then
+                blockN += 1
+                Dim s() As String = fileContent(i).Split(CChar(" "))
+                If s.Length > 1 AndAlso s(1).ToUpper = searchField.ToUpper Then Exit For
+            End If
+        Next i
+
+        Dim data As Dictionary(Of String, String) = ReadBlock(fileContent, _
+            blockName.Replace(GenDefaultValues.wTemplate_NewBlockKeyword, ""), blockN, readColumn, True, f)
+        For Each k As String In data.Keys
+            If readTo.ContainsKey(k.ToUpper) Then readTo.Remove(k.ToUpper)
+            readTo.Add(k.ToUpper, data.Item(k))
+        Next k
+
+    End Sub
     Protected Friend Shared Sub ReadValue(ByRef name As String, ByRef value As String, _
                                    ByRef data As Dictionary(Of String, String), ByRef blockName As String)
         If data.ContainsKey(name.ToUpper) Then
