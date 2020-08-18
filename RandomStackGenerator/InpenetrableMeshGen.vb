@@ -4886,7 +4886,7 @@ Public Class StackLocationsGen
             Next i
             pointsList = pList
             currentN = -1
-            bestN = -1
+            bestN = Integer.MinValue
             selected = -1
         End If
 
@@ -4900,7 +4900,7 @@ Public Class StackLocationsGen
 
         If selected > -1 Then
         'Если здесь гвардов >= гвардов в лучшем результате, то выходим
-            If currentN >= bestN And bestN > -1 Then Exit Sub
+            If currentN >= bestN And bestN > Integer.MinValue Then Exit Sub
 
             currentOutput(currentN) = selected
 
@@ -4939,19 +4939,23 @@ Public Class StackLocationsGen
                     Next p
                 End If
             Next i
-
-            If TestPassage(changedPassage, pointsList) Then
-                For i As Integer = 0 To currentN Step 1
-                    bestOutput(i) = currentOutput(i)
-                Next i
-                For i As Integer = currentN + 1 To bestN Step 1
-                    bestOutput(i) = -1
-                Next i
-                bestN = currentN
-                Exit Sub
-            End If
         Else
             changedPassage.edgePoints = prevPassage.edgePoints
+        End If
+
+        If TestPassage(changedPassage, pointsList) Then
+            If currentN = -1 Then
+                bestN = -1
+                Exit Sub
+            End If
+            For i As Integer = 0 To currentN Step 1
+                bestOutput(i) = currentOutput(i)
+            Next i
+            For i As Integer = currentN + 1 To bestN Step 1
+                bestOutput(i) = -1
+            Next i
+            bestN = currentN
+            Exit Sub
         End If
 
         For Each i As Integer In IDs_bak
