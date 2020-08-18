@@ -137,7 +137,7 @@ Friend Class StartForm
                 If grid.board(x, y).isAttended Then
                     t(x, y) = 51 + 2 * grid.board(x, y).objectID
                 ElseIf grid.board(x, y).isPass Then
-                    't(x, y) = 90
+                    t(x, y) = 155
                 End If
                 If grid.board(x, y).Penetrable Then
                     't(x, y) = 100
@@ -146,7 +146,7 @@ Friend Class StartForm
                     t(x, y) = 185
                 End If
                 If grid.board(x, y).PassGuardLoc Then
-                    t(x, y) = 35
+                    t(x, y) = 94
                 End If
                 If grid.board(x, y).isBorder Then
                     t(x, y) = grid.board(x, y).objRace.Item(0)
@@ -154,10 +154,10 @@ Friend Class StartForm
                     't(x, y) += 200
                 End If
                 If grid.board(x, y).isForest Then
-                    t(x, y) = 135
+                    't(x, y) = 135
                 End If
                 If grid.board(x, y).isRoad Then
-                    t(x, y) = 145
+                    't(x, y) = 145
                 End If
             Next y
         Next x
