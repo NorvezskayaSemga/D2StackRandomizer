@@ -2085,6 +2085,7 @@ Public Class Common
                 For Each i As Integer In IDs
                     Weight(i) = 1
                 Next i
+                Exit Do
             End If
         Loop
         Return RandomSelection(IDs, Weight, serial)
