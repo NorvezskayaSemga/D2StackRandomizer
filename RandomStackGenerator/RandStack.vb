@@ -2082,9 +2082,50 @@ Public Class Common
                 WeightsSum += Weight(i)
             Next i
             If smearing > maxSmearing AndAlso WeightsSum = 0 Then
-                For Each i As Integer In IDs
-                    Weight(i) = 1
-                Next i
+                If Not noValue Then
+                    Dim minAbs(UBound(Stats)) As Double
+                    For j As Integer = 0 To UBound(Stats) Step 1
+                        minAbs(j) = Double.MaxValue
+                    Next j
+                    For Each i As Integer In IDs
+                        If Not IsNothing(mult) Then
+                            m = mult(i)
+                        Else
+                            m = 1
+                        End If
+                        Dim invM As Double = 1 / m
+                        For j As Integer = 0 To UBound(Stats) Step 1
+                            minAbs(j) = Math.Min(minAbs(j), Math.Abs(DesiredStats(j) - Stats(j)(i) * invM))
+                        Next j
+                    Next i
+
+                    WeightsSum = 0
+                    Dim s, d As Double
+                    For Each i As Integer In IDs
+                        Weight(i) = 1
+                        If Not IsNothing(mult) Then
+                            m = mult(i)
+                        Else
+                            m = 1
+                        End If
+                        For j As Integer = 0 To UBound(Stats) Step 1
+                            d = m * DesiredStats(j)
+                            s = Stats(j)(i)
+                            If s < d Then
+                                s += minAbs(j) * m
+                            Else
+                                s -= minAbs(j) * m
+                            End If
+                            Weight(i) *= Gauss(s, d, BaseSmearing)
+                        Next j
+                        WeightsSum += Weight(i)
+                    Next i
+                End If
+                If WeightsSum = 0 Then
+                    For Each i As Integer In IDs
+                        Weight(i) = 1
+                    Next i
+                End If
                 Exit Do
             End If
         Loop
