@@ -200,7 +200,11 @@ Public Class RandStack
 
     ''' <summary>Вычисляет параметры отряда по составу. Цена предмета в мане прибавится к стоимости лута в золоте</summary>
     ''' <param name="stack">ID юнитов и предметов отряда</param>
-    Public Function StackStats(ByRef stack As AllDataStructues.Stack) As AllDataStructues.DesiredStats
+    ''' <param name="isSettingsForRuins"> Опция для перегенератора карт.
+    ''' Для руин в любом случае генератор лута не будет обязан добавлять предмет в качестве награды (True).
+    ''' Для остальных объектов (False) генератор будет обязан добавить хоть какой-то предмет, если
+    ''' до перегенерации в награде были предметы, не входящие в список PreservedItems.txt</param>
+    Public Function StackStats(ByRef stack As AllDataStructues.Stack, ByVal isSettingsForRuins As Boolean) As AllDataStructues.DesiredStats
         Dim result As New AllDataStructues.DesiredStats With {.Race = New List(Of Integer)}
         Dim unit As AllDataStructues.Unit
         For i As Integer = 0 To UBound(stack.pos) Step 1
@@ -236,13 +240,17 @@ Public Class RandStack
 
         Dim LCost As AllDataStructues.Cost = LootCost(stack.items)
         result.LootCost = AllDataStructues.Cost.Sum(LCost)
-        result.IGen = GetItemsGenSettings(stack.items)
+        result.IGen = GetItemsGenSettings(stack.items, isSettingsForRuins)
 
         Return result
     End Function
     ''' <summary>Определит настройки генерации новых предметов</summary>
     ''' <param name="items">Список предметов объекта</param>
-    Public Function GetItemsGenSettings(ByRef items As List(Of String)) As AllDataStructues.LootGenSettings
+    ''' <param name="isSettingsForRuins"> Опция для перегенератора карт.
+    ''' Для руин в любом случае генератор лута не будет обязан добавлять предмет в качестве награды (True).
+    ''' Для остальных объектов (False) генератор будет обязан добавить хоть какой-то предмет, если
+    ''' до перегенерации в награде были предметы, не входящие в список PreservedItems.txt</param>
+    Public Function GetItemsGenSettings(ByRef items As List(Of String), ByVal isSettingsForRuins As Boolean) As AllDataStructues.LootGenSettings
         If IsNothing(items) Then Return New AllDataStructues.LootGenSettings
         Dim result As New AllDataStructues.LootGenSettings With { _
             .ConsumableItems = New AllDataStructues.ItemGenSettings With {.exclude = True}, _
@@ -252,6 +260,7 @@ Public Class RandStack
         For Each id As String In items
             item = FindItemStats(id)
             If Not comm.IsPreserved(item) Then
+                result.addLootAnyway = Not isSettingsForRuins
                 If comm.ConsumableItemsTypes.Contains(item.type) Then
                     result.ConsumableItems.exclude = False
                     result.ConsumableItems.amount += 1
@@ -438,19 +447,7 @@ Public Class RandStack
                              ByRef pos As Point, _
                              Optional ByVal LogID As Integer = -1) As List(Of String)
 
-        Dim preservedItemsCost As Integer = AllDataStructues.Cost.Sum(LootCost(IGen.PreserveItems))
-        If IGen.lootCostMultiplier > 0 Then preservedItemsCost = CInt(preservedItemsCost * IGen.lootCostMultiplier)
-        GoldCost -= preservedItemsCost
-
-        Call AddToLog(LogID, "----Loot creation started----" & vbNewLine & _
-                             "Gold sum: " & GoldCost & vbNewLine & _
-                             "Preserved items cost sum: " & preservedItemsCost)
-        If Not IsNothing(pos) Then
-            Call AddToLog(LogID, "Position: " & pos.X & " " & pos.Y)
-        Else
-            Call AddToLog(LogID, "Position: unknown")
-        End If
-        Call AddToLog(LogID, IGen)
+        Call LootGenPrepare(GoldCost, IGen, pos, LogID, True)
 
         Dim DynTypeWeightMultiplier() As Double = ItemTypeDynWeight(pos)
 
@@ -557,6 +554,38 @@ Public Class RandStack
         Dim bar As Double = 1 - (1 - R) / m
         Return minBar + CInt(bar * CDbl(maxBar - minBar))
     End Function
+    Private Sub LootGenPrepare(ByRef GoldCost As Integer, _
+                               ByRef IGen As AllDataStructues.LootGenSettings, _
+                               ByRef pos As Point, _
+                               ByRef LogID As Integer, _
+                               ByRef lootGenCall As Boolean)
+
+        Dim preservedItemsCost As Integer = AllDataStructues.Cost.Sum(LootCost(IGen.PreserveItems))
+        If IGen.lootCostMultiplier > 0 Then preservedItemsCost = CInt(preservedItemsCost * IGen.lootCostMultiplier)
+        GoldCost -= preservedItemsCost
+
+        If (IsNothing(IGen.PreserveItems) OrElse IGen.PreserveItems.Count = 0) _
+         And IGen.addLootAnyway And GoldCost < minItemGoldCost Then
+            GoldCost = CInt(1.2 * minItemGoldCost)
+        End If
+
+        If lootGenCall Then
+            Call AddToLog(LogID, "----Loot creation started----" & vbNewLine & _
+                                 "Gold sum: " & GoldCost)
+        Else
+            Call AddToLog(LogID, "----Single item creation started----" & vbNewLine & _
+                                 "Max cost: " & GoldCost)
+        End If
+        Call AddToLog(LogID, "Preserved items cost sum: " & preservedItemsCost)
+
+        If Not IsNothing(pos) Then
+            Call AddToLog(LogID, "Position: " & pos.X & " " & pos.Y)
+        Else
+            Call AddToLog(LogID, "Position: unknown")
+        End If
+        Call AddToLog(LogID, IGen)
+    End Sub
+
     ''' <summary>Генерирует один предмет. Если не получится выбрать подходящий предмет, вернет пустую строку</summary>
     ''' <param name="GoldCost">Максимальная стоимость предмета в золоте. Драгоценности считаются дешевле в два раза</param>
     ''' <param name="IGen">Настройки генерации предметов</param>
@@ -569,20 +598,7 @@ Public Class RandStack
                              ByRef pos As Point, _
                              Optional ByVal LogID As Integer = -1) As String
 
-        Dim preservedItemsCost As Integer = AllDataStructues.Cost.Sum(LootCost(IGen.PreserveItems))
-        If IGen.lootCostMultiplier > 0 Then preservedItemsCost = CInt(preservedItemsCost * IGen.lootCostMultiplier)
-        GoldCost -= preservedItemsCost
-
-        Call AddToLog(LogID, "----Single item creation started----" & vbNewLine & _
-                            "Max cost: " & GoldCost & vbNewLine & _
-                            "Preserved item cost sum: " & preservedItemsCost)
-
-        If Not IsNothing(pos) Then
-            Call AddToLog(LogID, "Position: " & pos.X & " " & pos.Y)
-        Else
-            Call AddToLog(LogID, "Position: unknown")
-        End If
-        Call AddToLog(LogID, IGen)
+        Call LootGenPrepare(GoldCost, IGen, pos, LogID, False)
 
         If Not IsNothing(IGen.PreserveItems) AndAlso IGen.PreserveItems.Count > 0 Then
             Dim thing As AllDataStructues.Item = FindItemStats(IGen.PreserveItems.Item(0))
@@ -2908,6 +2924,8 @@ Public Class AllDataStructues
         Dim JewelItems As ItemGenSettings
         ''' <summary>Добавит эти предметы в любом случае</summary>
         Dim PreserveItems As List(Of String)
+        ''' <summary>Установит стоимость добавляемого лута на 1.2*RandStack.minItemGoldCost, если LootCost меньше RandStack.minItemGoldCost</summary>
+        Dim addLootAnyway As Boolean
         ''' <summary>Множитель цены лута</summary>
         Friend lootCostMultiplier As Double
 

@@ -78,7 +78,7 @@ Friend Class StartForm
 
 
     Private Sub GenButton_Click() Handles GenButton.Click
-
+        Call itemGenTest()
         Call comm.ReadExcludedObjectsList({"%default%"})
         Dim objSizeArray() As ImpenetrableObjects.GlobalMapDecoration = ReadObjSize()
 
@@ -292,7 +292,7 @@ Friend Class StartForm
         items.Add("G000IG0004")
 
         Dim lcost As AllDataStructues.Cost = r.LootCost(items)
-        Dim igen As AllDataStructues.LootGenSettings = r.GetItemsGenSettings(items)
+        Dim igen As AllDataStructues.LootGenSettings = r.GetItemsGenSettings(items, False)
         Dim result As List(Of String) = r.ItemsGen(AllDataStructues.Cost.Sum(lcost), igen, Nothing, New Point(0, 0))
     End Sub
 
