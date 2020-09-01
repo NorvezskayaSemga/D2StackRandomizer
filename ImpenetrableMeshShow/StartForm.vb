@@ -78,7 +78,7 @@ Friend Class StartForm
 
 
     Private Sub GenButton_Click() Handles GenButton.Click
-        Call itemGenTest()
+
         Call comm.ReadExcludedObjectsList({"%default%"})
         Dim objSizeArray() As ImpenetrableObjects.GlobalMapDecoration = ReadObjSize()
 
