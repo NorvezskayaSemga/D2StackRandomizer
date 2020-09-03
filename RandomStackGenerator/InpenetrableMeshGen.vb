@@ -923,16 +923,16 @@ newtry:
     ''' <param name="settMap">Общие настройки для карты</param>
     Public Sub SetLocIdToCells(ByRef m As Map, ByVal settMap As Map.SettingsMap)
 
-        Dim allPoints()() As Point = Nothing
-        Dim pID()() As Integer = Nothing
-        Dim selectedIDs() As Integer = Nothing
-        Dim Weight()() As Double = Nothing
-        Dim minweight As Double
-        Dim selectedWeight() As Double = Nothing
-        Dim calculatedWeights(,,) As Double = Nothing
-        Dim idlist As List(Of Integer) = Nothing
-
         ReDim m.board(m.xSize, m.ySize)
+
+        Dim allPoints(m.board.Length - 1) As Point
+        Dim selectedIDs() As Integer = Nothing
+        Dim weight(UBound(allPoints))() As Double
+        Dim weightSum(UBound(allPoints)) As Double
+        Dim idlist As List(Of Integer) = New List(Of Integer)
+        Dim pointID(m.xSize, m.ySize) As Integer
+
+        Dim n As Integer = -1
         For x As Integer = 0 To m.xSize Step 1
             For y As Integer = 0 To m.ySize Step 1
                 m.board(x, y).ClearLocIDArray() 'New List(Of Integer)
@@ -941,44 +941,41 @@ newtry:
                 m.board(x, y).isBorder = False
                 m.board(x, y).isPass = False
                 m.board(x, y).objectID = DefMapObjects.Types.None
+
+                n += 1
+                allPoints(n) = New Point(x, y)
+                pointID(x, y) = n
             Next y
         Next x
         For Each Loc As Location In m.Loc
             m.board(Loc.pos.X, Loc.pos.Y).AddToLocIDArray(Loc.ID)
         Next Loc
-        ReDim allPoints(m.ySize)
-        ReDim pID(UBound(allPoints)), Weight(UBound(allPoints)), _
-              selectedIDs(UBound(allPoints)), selectedWeight(UBound(allPoints)), _
-              calculatedWeights(m.xSize, m.ySize, UBound(m.Loc))
-        minweight = 10 ^ -9
-        For i As Integer = 0 To UBound(allPoints) Step 1
-            ReDim Preserve allPoints(i)(m.xSize), pID(i)(m.xSize), Weight(i)(m.xSize)
+        For i As Integer = 0 To UBound(weight) Step 1
+            ReDim weight(i)(m.Loc.Length)
         Next i
-        For y As Integer = 0 To m.ySize Step 1
-            For x As Integer = 0 To m.xSize Step 1
-                For i As Integer = 0 To UBound(m.Loc) Step 1
-                    calculatedWeights(x, y, i) = -1
-                Next i
-            Next x
-        Next y
-        idlist = New List(Of Integer)
-        idlist.Add(-1)
 
+        Dim selectedPoints() As Point = Nothing
+
+        Dim enter_Loop As Boolean = True
         If m.symmID > -1 Then
-            Do While idlist.Count > 0
-                Call makePointsList(m, idlist, allPoints, pID, Weight, minweight, selectedIDs, selectedWeight, calculatedWeights)
+            Do While idlist.Count > 0 Or enter_Loop
+                enter_Loop = False
+                Call makePointsList(m, idlist, allPoints, pointID, weight, weightSum, selectedPoints)
                 If idlist.Count > 0 Then
-                    Dim s As Integer = comm.RandomSelection(idlist, selectedWeight, True)
-                    Dim pp() As Point = symm.ApplySymm(allPoints(s)(selectedIDs(s)), settMap.nRaces, m, 1)
+                    Dim s() As Integer = selectPoint(idlist, weight, weightSum)
+                    Dim selPointID As Integer = s(0)
+                    Dim selLocID As Integer = s(1)
+                    Dim pp() As Point = symm.ApplySymm(allPoints(selPointID), settMap.nRaces, m, 1)
+                    selectedPoints = pp
                     If pp.Length > 1 Then
-                        Dim pl() As Point = symm.ApplySymm(m.Loc(pID(s)(selectedIDs(s)) - 1).pos, settMap.nRaces, m, 1)
+                        Dim pl() As Point = symm.ApplySymm(m.Loc(selLocID - 1).pos, settMap.nRaces, m, 1)
                         If pl.Length = pp.Length Then
-                            For i As Integer = 0 To UBound(pl) Step 1
+                            For i As Integer = 0 To UBound(pp) Step 1
                                 m.board(pp(i).X, pp(i).Y).AddToLocIDArray(m.Loc(Location.FindLocIDByPosition(m, pl(i))).ID)
                             Next i
                         ElseIf pl.Length = 1 Then
                             For i As Integer = 0 To UBound(pp) Step 1
-                                m.board(pp(i).X, pp(i).Y).AddToLocIDArray(pID(s)(selectedIDs(s)))
+                                m.board(pp(i).X, pp(i).Y).AddToLocIDArray(selLocID)
                             Next i
                         Else
                             Dim possibleLocs As New List(Of Integer)
@@ -1020,195 +1017,85 @@ newtry:
                             Next p
                         End If
                     Else
-                        m.board(pp(0).X, pp(0).Y).AddToLocIDArray(pID(s)(selectedIDs(s)))
+                        m.board(pp(0).X, pp(0).Y).AddToLocIDArray(selLocID)
                     End If
                 End If
             Loop
-
-            Dim symmPoints(m.xSize, m.ySize)() As Point
-            Dim tmpm As Map = m
-            'Parallel.For(0, m.Loc.Length, Sub(i As Integer)
-            For i As Integer = 0 To UBound(m.Loc) Step 1
-                If Not tmpm.Loc(i).IsObtainedBySymmery Then
-                    Dim n1(), n2, maxDiff, sel, myj As Integer
-                    Dim t As Location.Borders
-                    Dim b As New Location.Borders With {.minX = Integer.MaxValue, .maxX = Integer.MinValue, _
-                                                        .miny = Integer.MaxValue, .maxy = Integer.MinValue}
-                    For y As Integer = 0 To tmpm.ySize Step 1
-                        For x As Integer = 0 To tmpm.xSize Step 1
-                            If tmpm.board(x, y).locID(0) = tmpm.Loc(i).ID Then
-                                b.minX = Math.Min(b.minX, x)
-                                b.minY = Math.Min(b.minY, y)
-                                b.maxX = Math.Max(b.maxX, x)
-                                b.maxY = Math.Max(b.maxY, y)
-                                symmPoints(x, y) = symm.ApplySymm(New Point(x, y), settMap.nRaces, tmpm, 1)
-                            End If
-                        Next x
-                    Next y
-
-                    Dim tryagain As Boolean = True
-                    Dim nIter As Integer = 0
-                    Do While tryagain And nIter < 1000
-                        tryagain = False
-                        nIter += 1
-                        For y As Integer = b.minY To b.maxY Step 1
-                            For x As Integer = b.minX To b.maxX Step 1
-                                'для каждой точки и ее отражений считаем соседей для нас myid<>neubourid для каждого id отдельно, для отражений myid=neubourid если выгоднее поменять местами - меняем. повторяем цикл, пока выгодно менять
-                                If Not IsNothing(symmPoints(x, y)) AndAlso symmPoints(x, y).Length > 1 Then
-                                    t = NearestXY(x, y, tmpm.xSize, tmpm.ySize, 1)
-                                    ReDim n1(UBound(tmpm.Loc))
-                                    For q As Integer = t.minY To t.maxY Step 1
-                                        For p As Integer = t.minX To t.maxX Step 1
-                                            If Not tmpm.board(p, q).locID(0) = tmpm.Loc(i).ID Then
-                                                n1(tmpm.board(p, q).locID(0) - 1) += 1
-                                            End If
-                                        Next p
-                                    Next q
-                                    maxDiff = 3
-                                    sel = -1
-                                    myj = -1
-                                    For j As Integer = 0 To UBound(symmPoints(x, y)) Step 1
-                                        If Not x = symmPoints(x, y)(j).X Or Not y = symmPoints(x, y)(j).Y Then
-                                            n2 = 0
-                                            t = NearestXY(symmPoints(x, y)(j).X, symmPoints(x, y)(j).Y, tmpm.xSize, tmpm.ySize, 1)
-                                            For q As Integer = t.minY To t.maxY Step 1
-                                                For p As Integer = t.minX To t.maxX Step 1
-                                                    If tmpm.board(p, q).locID(0) = tmpm.Loc(i).ID Then
-                                                        n2 += 1
-                                                    End If
-                                                Next p
-                                            Next q
-                                            If n2 > 0 And n2 = n1(tmpm.board(symmPoints(x, y)(j).X, symmPoints(x, y)(j).Y).locID(0) - 1) Then
-                                                Dim d As Integer = n2
-                                                If maxDiff < d Then
-                                                    maxDiff = d
-                                                    sel = j
-                                                End If
-                                            End If
-                                        Else
-                                            myj = j
-                                        End If
-                                    Next j
-                                    If sel > -1 Then
-                                        Dim tID1, tID2 As Integer
-                                        tID1 = tmpm.board(symmPoints(x, y)(myj).X, symmPoints(x, y)(myj).Y).locID(0)
-                                        tID2 = tmpm.board(symmPoints(x, y)(sel).X, symmPoints(x, y)(sel).Y).locID(0)
-                                        tmpm.board(symmPoints(x, y)(myj).X, symmPoints(x, y)(myj).Y).ClearLocIDArray()
-                                        tmpm.board(symmPoints(x, y)(sel).X, symmPoints(x, y)(sel).Y).ClearLocIDArray()
-                                        tmpm.board(symmPoints(x, y)(myj).X, symmPoints(x, y)(myj).Y).AddToLocIDArray(tID2)
-                                        tmpm.board(symmPoints(x, y)(sel).X, symmPoints(x, y)(sel).Y).AddToLocIDArray(tID1)
-                                        b.minX = Math.Min(b.minX, symmPoints(x, y)(sel).X)
-                                        b.minY = Math.Min(b.minY, symmPoints(x, y)(sel).Y)
-                                        b.maxX = Math.Max(b.maxX, symmPoints(x, y)(sel).X)
-                                        b.maxY = Math.Max(b.maxY, symmPoints(x, y)(sel).Y)
-                                        If symmPoints(x, y).Length > 2 Then
-                                            Dim tj1, tj2 As Integer
-                                            tj1 = -1 : tj2 = -1
-                                            For j As Integer = 0 To UBound(symmPoints(x, y)) Step 1
-                                                If Not j = myj And Not j = sel Then
-                                                    tj1 = j
-                                                    Exit For
-                                                End If
-                                            Next j
-                                            For j As Integer = tj1 + 1 To UBound(symmPoints(x, y)) Step 1
-                                                If Not j = myj And Not j = sel Then
-                                                    tj2 = j
-                                                    Exit For
-                                                End If
-                                            Next j
-                                            tID1 = tmpm.board(symmPoints(x, y)(tj1).X, symmPoints(x, y)(tj1).Y).locID(0)
-                                            tID2 = tmpm.board(symmPoints(x, y)(tj2).X, symmPoints(x, y)(tj2).Y).locID(0)
-                                            tmpm.board(symmPoints(x, y)(tj1).X, symmPoints(x, y)(tj1).Y).ClearLocIDArray()
-                                            tmpm.board(symmPoints(x, y)(tj2).X, symmPoints(x, y)(tj2).Y).ClearLocIDArray()
-                                            tmpm.board(symmPoints(x, y)(tj1).X, symmPoints(x, y)(tj1).Y).AddToLocIDArray(tID2)
-                                            tmpm.board(symmPoints(x, y)(tj2).X, symmPoints(x, y)(tj2).Y).AddToLocIDArray(tID1)
-                                        End If
-                                        x = b.maxX
-                                        y = b.maxY
-                                        tryagain = True
-                                    End If
-                                End If
-                            Next x
-                        Next y
-                    Loop
-                End If
-            Next i
-            ' End Sub)
-            m = tmpm
         Else
-            Do While idlist.Count > 0
-                Call makePointsList(m, idlist, allPoints, pID, Weight, minweight, selectedIDs, selectedWeight, calculatedWeights)
+            Do While idlist.Count > 0 Or enter_Loop
+                enter_Loop = False
+                Call makePointsList(m, idlist, allPoints, pointID, weight, weightSum, selectedPoints)
                 If idlist.Count > 0 Then
-                    Dim s As Integer = comm.RandomSelection(idlist, selectedWeight, True)
-                    m.board(allPoints(s)(selectedIDs(s)).X, _
-                            allPoints(s)(selectedIDs(s)).Y).AddToLocIDArray(pID(s)(selectedIDs(s)))
+                    Dim s() As Integer = selectPoint(idlist, weight, weightSum)
+                    Dim selPointID As Integer = s(0)
+                    Dim selLocID As Integer = s(1)
+                    selectedPoints = {New Point(allPoints(selPointID).X, allPoints(selPointID).Y)}
+                    m.board(allPoints(selPointID).X, allPoints(selPointID).Y).AddToLocIDArray(selLocID)
                 End If
             Loop
         End If
     End Sub
-    Private Sub makePointsList(ByRef m As Map, ByRef idlist As List(Of Integer), ByRef allPoints()() As Point, _
-                               ByRef pID()() As Integer, ByRef Weight()() As Double, ByVal minweight As Double, _
-                               ByRef selectedIDs() As Integer, ByRef selectedWeight() As Double, _
-                               ByRef calculatedWeights(,,) As Double)
-        Dim tmp_m As Map = m
-        Dim tmp_allPoints()() As Point = allPoints
-        Dim tmp_pID()() As Integer = pID
-        Dim tmp_selectedIDs() As Integer = selectedIDs
-        Dim tmp_Weight()() As Double = Weight
-        Dim tmp_selectedWeight() As Double = selectedWeight
-        Dim tmp_calculatedWeights(,,) As Double = calculatedWeights
-
-        Parallel.For(0, tmp_m.ySize + 1, _
-         Sub(y As Integer)
-             Dim n As Integer = -1
-             Dim u As Integer = UBound(tmp_allPoints(y))
-             Dim b As Location.Borders
-             For x As Integer = 0 To tmp_m.xSize Step 1
-                 If tmp_m.board(x, y).locID.Count = 0 Then
-                     b = NearestXY(x, y, tmp_m.xSize, tmp_m.ySize, 1)
-                     For i As Integer = b.minX To b.maxX Step 1
-                         For j As Integer = b.minY To b.maxY Step 1
-                             If tmp_m.board(i, j).locID.Count > 0 Then
-                                 n += 1
-                                 If n > u Then
-                                     u = 2 * u + 1
-                                     ReDim Preserve tmp_allPoints(y)(u), tmp_pID(y)(u), tmp_Weight(y)(u)
-                                 End If
-                                 tmp_allPoints(y)(n) = New Point(x, y)
-                                 tmp_pID(y)(n) = tmp_m.board(i, j).locID(0)
-                                 If tmp_calculatedWeights(x, y, tmp_pID(y)(n) - 1) > -1 Then
-                                     tmp_Weight(y)(n) = tmp_calculatedWeights(x, y, tmp_pID(y)(n) - 1)
-                                 Else
-                                     tmp_Weight(y)(n) = Math.Max(tmp_m.Loc(tmp_pID(y)(n) - 1).pWeight(tmp_allPoints(y)(n)), minweight)
-                                     tmp_calculatedWeights(x, y, tmp_pID(y)(n) - 1) = tmp_Weight(y)(n)
-                                 End If
-                             End If
-                         Next j
-                     Next i
-                 End If
-             Next x
-             If n > -1 Then
-                 tmp_selectedIDs(y) = rndgen.RndInt(0, n, False)
-                 tmp_selectedWeight(y) = tmp_Weight(y)(tmp_selectedIDs(y))
-             Else
-                 tmp_selectedIDs(y) = -1
-                 tmp_selectedWeight(y) = 0
-             End If
-         End Sub)
-        idlist.Clear()
-        For y As Integer = 0 To tmp_m.ySize Step 1
-            If tmp_selectedIDs(y) > -1 Then
-                idlist.Add(y)
-            End If
-        Next y
-        m = tmp_m
-        allPoints = tmp_allPoints
-        pID = tmp_pID
-        selectedIDs = tmp_selectedIDs
-        Weight = tmp_Weight
-        selectedWeight = tmp_selectedWeight
-        calculatedWeights = tmp_calculatedWeights
+    Private Sub makePointsList(ByRef m As Map, ByRef idlist As List(Of Integer), _
+                               ByRef allPoints() As Point, _
+                               ByRef pointID(,) As Integer, _
+                               ByRef weight()() As Double, ByRef weightSum() As Double, _
+                               ByRef selectedPoints() As Point)
+        If Not IsNothing(selectedPoints) Then
+            For Each p As Point In selectedPoints
+                Dim pID As Integer = pointID(p.X, p.Y)
+                If idlist.Contains(pID) Then idlist.Remove(pID)
+            Next p
+            For Each p As Point In selectedPoints
+                Dim b As Location.Borders = NearestXY(p.X, p.Y, m.xSize, m.ySize, 1)
+                For j As Integer = b.minY To b.maxY Step 1
+                    For i As Integer = b.minX To b.maxX Step 1
+                        Call makePointsList_handlePoint(m, idlist, i, j, allPoints, pointID, weight, weightSum)
+                    Next i
+                Next j
+            Next p
+            selectedPoints = Nothing
+        Else
+            For y As Integer = 0 To m.ySize Step 1
+                For x As Integer = 0 To m.xSize Step 1
+                    Call makePointsList_handlePoint(m, idlist, x, y, allPoints, pointID, weight, weightSum)
+                Next x
+            Next y
+        End If
     End Sub
+    Private Sub makePointsList_handlePoint(ByRef m As Map, ByRef idlist As List(Of Integer), _
+                                           ByRef x As Integer, ByRef y As Integer, _
+                                           ByRef allPoints() As Point, _
+                                           ByRef pointID(,) As Integer, _
+                                           ByRef weight()() As Double, ByRef weightSum() As Double)
+        If m.board(x, y).locID.Count = 0 Then
+            Dim pID As Integer = pointID(x, y)
+            Dim locID As Integer
+            Dim b As Location.Borders = NearestXY(x, y, m.xSize, m.ySize, 1)
+            For j As Integer = b.minY To b.maxY Step 1
+                For i As Integer = b.minX To b.maxX Step 1
+                    If m.board(i, j).locID.Count > 0 Then
+                        locID = m.board(i, j).locID(0)
+                        If Not m.Loc(locID - 1).IsObtainedBySymmery And weight(pID)(locID) = 0 Then
+                            weight(pID)(locID) = Math.Max(m.Loc(locID - 1).pWeight(allPoints(pID)), 10 ^ -9)
+                            weightSum(pID) += weight(pID)(locID)
+                        End If
+                    End If
+                Next i
+            Next j
+            If Not idlist.Contains(pID) Then idlist.Add(pID)
+        End If
+    End Sub
+    Private Function selectPoint(ByRef idlist As List(Of Integer), _
+                                 ByRef weight()() As Double, ByRef weightSum() As Double) As Integer()
+        Dim selectedPointID As Integer = comm.RandomSelection(idlist, weightSum, True)
+
+        Dim locs As New List(Of Integer)
+        For i As Integer = 0 To UBound(weight(selectedPointID)) Step 1
+            If weight(selectedPointID)(i) > 0 Then locs.Add(i)
+        Next i
+        Dim selectedLoc As Integer = comm.RandomSelection(locs, weight(selectedPointID), True)
+        Return New Integer() {selectedPointID, selectedLoc}
+    End Function
 
     ''' <summary>Выполняется после SetLocIdToCells. В зависимости от того, какие ID локаци присвоены тайлам, расставит проходы стенки между локациями</summary>
     ''' <param name="m">Хранилище данных о карте. К этому моменту должны быть 
