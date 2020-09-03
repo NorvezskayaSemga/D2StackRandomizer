@@ -119,6 +119,7 @@ Public Class ImpenetrableMeshGen
                 res.merchItemsCost = RandomValue(min.merchItemsCost, max.merchItemsCost, randomizer)
                 res.scaleContent = RandomValue(min.scaleContent, max.scaleContent, randomizer)
                 res.possibleRaces = RandomValue(min.possibleRaces, max.possibleRaces, randomizer)
+                res.RaceCities = RandomValue(min.RaceCities, max.RaceCities, randomizer)
 
                 res.mageSpellsMinLevel = Math.Min(res.mageSpellsMinLevel, res.mageSpellsMaxLevel)
                 res.mercenariesMinExpBar = Math.Min(res.mercenariesMinExpBar, res.mercenariesMaxExpBar)
@@ -180,6 +181,21 @@ Public Class ImpenetrableMeshGen
                     End If
                 End If
             End Function
+            Public Shared Function RandomValue(ByRef min() As Map.SettingsLoc.SettingsRaceCity, ByRef max() As Map.SettingsLoc.SettingsRaceCity, ByRef randomizer As RndValueGen) As Map.SettingsLoc.SettingsRaceCity()
+                If randomizer.RndInt(0, 1, True) = 0 Then
+                    If Not IsNothing(min) Then
+                        Return Map.SettingsLoc.SettingsRaceCity.Copy(min)
+                    Else
+                        Return Nothing
+                    End If
+                Else
+                    If Not IsNothing(max) Then
+                        Return Map.SettingsLoc.SettingsRaceCity.Copy(max)
+                    Else
+                        Return Nothing
+                    End If
+                End If
+            End Function
 
             Public Shared Sub ReadPos(ByRef path As String, ByRef locSettings() As LocationGenSetting)
                 Dim txt() As String = ValueConverter.TxtSplit(IO.File.ReadAllText(path))
@@ -200,10 +216,13 @@ Public Class ImpenetrableMeshGen
                 Call Map.ReadValue("AppearanceChance", AppearanceChance.min, minData, GenDefaultValues.wTemplate_LocationKeyword)
                 Call Map.ReadValue("posX", posX.min, minData, GenDefaultValues.wTemplate_LocationKeyword)
                 Call Map.ReadValue("posY", posY.min, minData, GenDefaultValues.wTemplate_LocationKeyword)
+                Call Map.ReadValue("RaceCities", minValues.RaceCities, minData, GenDefaultValues.wTemplate_LocationKeyword, CChar(";"))
 
                 Call Map.ReadValue("AppearanceChance", AppearanceChance.max, maxData, GenDefaultValues.wTemplate_LocationKeyword)
                 Call Map.ReadValue("posX", posX.max, maxData, GenDefaultValues.wTemplate_LocationKeyword)
                 Call Map.ReadValue("posY", posY.max, maxData, GenDefaultValues.wTemplate_LocationKeyword)
+                Call Map.ReadValue("RaceCities", maxValues.RaceCities, maxData, GenDefaultValues.wTemplate_LocationKeyword, CChar(";"))
+
             End Sub
 
         End Structure
@@ -456,6 +475,7 @@ newtry:
                                                               settGen.template_settGenLoc(i).minValues, _
                                                               settGen.template_settGenLoc(i).maxValues, _
                                                               rndgen)
+                        Call lsett(i - deltaI).IncrementOwner(0, settGen.common_settMap.nRaces)
                         checkResult = lsett(i - deltaI).Check
                         If checkResult.Length > 0 Then
                             invalidSettings = True
@@ -507,15 +527,18 @@ newtry:
                 For i As Integer = 0 To UBound(loc) Step 1
                     Dim d As Integer = MinimalSqDistanceForLocationsObtainedBySymmetry(loc(i))
                     symmLocs = symm.ApplySymm(loc(i), settGen.common_settMap.nRaces, res, d)
-                    If i = 0 And Not symmLocs.Length = settGen.common_settMap.nRaces Then
-                        exitLoop2 = False
-                        Exit For
+                    If Not symmLocs.Length = settGen.common_settMap.nRaces Then
+                        If i = 0 Or Not IsNothing(lsett(i).RaceCities) Then
+                            exitLoop2 = False
+                            Exit For
+                        End If
                     End If
                     For j As Integer = 0 To UBound(symmLocs) Step 1
                         n += 1
                         outLocs(n) = Location.Copy(symmLocs(j))
                         outLocs(n).ID = n + 1
                         outSett(n) = Map.SettingsLoc.Copy(lsett(i))
+                        Call outSett(n).IncrementOwner(j, settGen.common_settMap.nRaces)
                     Next j
                 Next i
                 If exitLoop2 Then
@@ -2020,6 +2043,7 @@ newtry:
                 If tmpm.board(x, y).objectID > DefMapObjects.Types.None Then
                     Dim id As Integer = tmpm.board(x, y).objectID
                     Dim gid As Integer = tmpm.board(x, y).groupID
+                    Dim t_city As Map.SettingsLoc.SettingsRaceCity = Map.SettingsLoc.SettingsRaceCity.Copy(tmpm.board(x, y).City)
                     Dim d As Integer = ActiveObjects(id).dxy
                     For j As Integer = 0 To UBound(ObjectBlank(id), 2) Step 1
                         Dim dy As Integer = y + j
@@ -2033,8 +2057,13 @@ newtry:
                                 tmpm.board(dx, dy).isBorder = ObjectBlank(id)(i, j).isBorder
                                 tmpm.board(dx, dy).Penetrable = ObjectBlank(id)(i, j).Penetrable
                                 tmpm.board(dx, dy).objectID = ObjectBlank(id)(i, j).objectID
+                                tmpm.board(dx, dy).City = Map.SettingsLoc.SettingsRaceCity.Copy(ObjectBlank(id)(i, j).City)
                                 If ObjectBlank(id)(i, j).isAttended Or ObjectBlank(id)(i, j).isBorder Then
                                     tmpm.board(dx, dy).isPass = False
+                                End If
+                                If tmpm.board(dx, dy).GuardLoc And tmpm.board(dx, dy).objectID = DefMapObjects.Types.City _
+                                 And tmpm.board(dx, dy).City.owner > 0 Then
+                                    tmpm.board(dx, dy).GuardLoc = False
                                 End If
                             ElseIf ObjectBlank(id)(i, j).GuardLoc Or ObjectBlank(id)(i, j).isAttended Or ObjectBlank(id)(i, j).isBorder _
                             Or ObjectBlank(id)(i, j).objectID > DefMapObjects.Types.None Then
@@ -2043,6 +2072,7 @@ newtry:
                         Next i
                     Next j
                     tmpm.board(x + d, y + d).groupID = gid
+                    tmpm.board(x + d, y + d).City = Map.SettingsLoc.SettingsRaceCity.Copy(t_city)
                     If ActiveObjects(id).hasExternalGuard Then
                         maxGroupID += 1
                         tmpm.board(x + d + ActiveObjects(id).Size, _
@@ -2207,7 +2237,8 @@ newtry:
         End If
 
         Dim areaUsed As Integer
-        Dim DblnObj() As Double = New Double() {0, nCapital, _
+        Dim DblnObj() As Double = New Double() {0, _
+                                                nCapital, _
                                                 sett.maxCities, _
                                                 sett.maxVendors, _
                                                 sett.maxMercenaries, _
@@ -2216,6 +2247,7 @@ newtry:
                                                 sett.maxRuins, _
                                                 sett.maxGoldMines, _
                                                 sett.maxManaSources}
+        'определяем количество объектов
         Dim nObj(UBound(DblnObj) - 1) As Integer
         For i As Integer = 0 To UBound(DblnObj) Step 1
             Dim m As Double = DblnObj(i)
@@ -2246,39 +2278,71 @@ newtry:
         For i As Integer = 0 To UBound(nObj) Step 1
             sum += nObj(i)
         Next i
+        If Not IsNothing(sett.RaceCities) Then sum += sett.RaceCities.Length
+
+
         ReDim places(sum), nearWith(sum)
         Dim p As Integer = 0
+
+        'добавляем столицу
         Do While nObj(1) > 0
             nearWith(p) = -1
-            Call AddObjId(places, nObj, 1, p, areaUsed)
+            Call AddObjId(places, nObj, DefMapObjects.Types.Capital, p, areaUsed)
             If areaUsed >= LocArea(1) Then
                 ReDim Preserve places(p - 1), nearWith(p - 1)
                 Exit Sub
             End If
         Loop
-        Dim k As Integer = 0
-        Dim placedMines As Integer = 0
-        Do While nObj(8) > 0 And placedMines < nMinMines
-            If isRaceLoc Then
-                nearWith(p) = k
-                k += 1
-                If k = nCapital Then k = 0
-            Else
-                nearWith(p) = -1
+
+        Dim course() As Integer
+        If isRaceLoc Then
+            course = {0, 1}
+        Else
+            course = {1, 0}
+        End If
+
+        For addCourseID As Integer = 0 To UBound(course) Step 1
+            If course(addCourseID) = 0 Then
+                'добавляем минимально нужное количество шахт
+                Dim k As Integer = 0
+                Dim placedMines As Integer = 0
+                Do While nObj(8) > 0 And placedMines < nMinMines
+                    If isRaceLoc Then
+                        nearWith(p) = k
+                        k += 1
+                        If k = nCapital Then k = 0
+                    Else
+                        nearWith(p) = -1
+                    End If
+                    Call AddObjId(places, nObj, DefMapObjects.Types.Mine, p, areaUsed)
+                    If areaUsed >= LocArea(1) Then
+                        ReDim Preserve places(p - 1), nearWith(p - 1)
+                        Exit Sub
+                    End If
+                    placedMines += 1
+                Loop
+            ElseIf course(addCourseID) = 1 Then
+                'добавляем обязательные города
+                If Not IsNothing(sett.RaceCities) Then
+                    For i As Integer = 0 To UBound(sett.RaceCities) Step 1
+                        nearWith(p) = -1
+                        Call AddObjId(places, Nothing, DefMapObjects.Types.City, p, areaUsed)
+                        If areaUsed >= LocArea(1) Then
+                            ReDim Preserve places(p - 1), nearWith(p - 1)
+                            Exit Sub
+                        End If
+                    Next i
+                End If
             End If
-            Call AddObjId(places, nObj, 8, p, areaUsed)
-            If areaUsed >= LocArea(1) Then
-                ReDim Preserve places(p - 1), nearWith(p - 1)
-                Exit Sub
-            End If
-            placedMines += 1
-        Loop
-        Dim OWeight(UBound(ActiveObjects)) As Double
+        Next addCourseID
+
+        'добавляем все остальные объекты в случайном порядке
+        Dim ObjectWeight(UBound(ActiveObjects)) As Double
         For i As Integer = 1 To UBound(ActiveObjects) Step 1
             If ActiveObjects(i).hasExternalGuard Then
-                OWeight(i) = 1 / (ActiveObjects(i).Size + 4) ^ 2
+                ObjectWeight(i) = 1 / (ActiveObjects(i).Size + 4) ^ 2
             Else
-                OWeight(i) = 1 / (ActiveObjects(i).Size + 2) ^ 2
+                ObjectWeight(i) = 1 / (ActiveObjects(i).Size + 2) ^ 2
             End If
         Next i
         Dim AllObjList(sum - p), s As Integer
@@ -2288,7 +2352,7 @@ newtry:
         For i As Integer = 0 To UBound(nObj) Step 1
             For j As Integer = 1 To nObj(i) Step 1
                 AllObjList(t) = i
-                Weight(t) = OWeight(i)
+                Weight(t) = ObjectWeight(i)
                 ids.Add(t)
                 t += 1
             Next j
@@ -2308,11 +2372,11 @@ newtry:
                          ByRef p As Integer, ByRef AreaUsed As Integer)
         places(p) = ActiveObjects(id).TypeID
         AreaUsed = CInt(AreaUsed + (ActiveObjects(id).Area * 1.2))
-        nObj(id) -= 1
+        If Not IsNothing(nObj) Then nObj(id) -= 1
         p += 1
     End Sub
-    Private Sub FillLocation(ByRef GroupID As Integer, ByRef LocId As Integer, ByRef m As Map, ByRef LocsPlacing() As Location.Borders, _
-                             ByRef LocArea()() As Integer, ByVal settMap As Map.SettingsMap, ByRef settLoc() As Map.SettingsLoc, _
+    Private Sub FillLocation(ByRef GroupID As Integer, ByVal LocId As Integer, ByRef m As Map, ByRef LocsPlacing() As Location.Borders, _
+                             ByRef LocArea()() As Integer, ByVal settMap As Map.SettingsMap, ByVal settLoc() As Map.SettingsLoc, _
                              ByVal symmId As Integer, ByVal IsRaceLoc As Boolean, LocSymmMult() As Double, _
                              ByRef LocFreeCells()(,) As Boolean, ByRef Term As TerminationCondition)
         Dim tmpm As Map = m
@@ -2384,6 +2448,7 @@ newtry:
             Next i
             If minRmetric < maxRmetric Then ok = False
             If ok Then
+                Dim ex As Boolean = False
                 Dim tmp_G As Integer = GroupID
                 Parallel.For(0, v.Length, _
                  Sub(i As Integer)
@@ -2392,14 +2457,21 @@ newtry:
                      For j As Integer = 0 To i - 1 Step 1
                          g += v(i).Length
                      Next j
+                     Dim nPlacedCities As Integer = 0
                      'Dim g As Integer = tmp_G + i * (minN + 1)
                      For n As Integer = 0 To UBound(v(i)) Step 1
-                         Call PlaceObject(tmpm, places(i)(n), v(i)(n).X, v(i)(n).Y, g + n, settMap)
+                         Call PlaceObject(tmpm, places(i)(n), v(i)(n).X, v(i)(n).Y, g + n, nPlacedCities, _
+                                          settLoc(i + LocId - 1), settMap)
                      Next n
+                     If Not IsNothing(settLoc(i + LocId - 1).RaceCities) AndAlso
+                      nPlacedCities < settLoc(i + LocId - 1).RaceCities.Length Then
+                         ex = True
+                     End If
                  End Sub)
                 For i As Integer = 0 To UBound(v) Step 1
                     GroupID += v(i).Length
                 Next i
+                If ex Then Throw New Exception("Одна из локаций слишком маленькая, чтобы вместить города, обязательные для добавления")
                 'GroupID += v.Length * (minN + 1)
             End If
         Loop
@@ -2451,20 +2523,17 @@ newtry:
         Next j
         Return True
     End Function
-    Private Sub PlaceObject(ByRef m As Map, ByRef id As Integer, ByRef x As Integer, ByRef y As Integer, ByRef GroupID As Integer)
-        Dim b As Location.Borders = ObjectBorders(id, x, y)
-        For j As Integer = b.minY To b.maxY Step 1
-            For i As Integer = b.minX To b.maxX Step 1
-                m.board(i, j).isAttended = True
-            Next i
-        Next j
-        m.board(b.minX, b.minY).objectID = id
-        m.board(b.minX, b.minY).groupID = GroupID
-    End Sub
     Private Sub PlaceObject(ByRef m As Map, ByRef id As Integer, ByRef x As Integer, ByRef y As Integer, _
-                            ByRef GroupID As Integer, ByRef settMap As Map.SettingsMap)
+                            ByRef GroupID As Integer, ByRef placedCities As Integer, _
+                            ByRef settLoc As Map.SettingsLoc, ByRef settMap As Map.SettingsMap)
         If m.symmID < 0 Then
-            Call PlaceObject(m, id, x, y, GroupID)
+            Dim b As Location.Borders = ObjectBorders(id, x, y)
+            For j As Integer = b.minY To b.maxY Step 1
+                For i As Integer = b.minX To b.maxX Step 1
+                    m.board(i, j).isAttended = True
+                Next i
+            Next j
+            Call PlaceObject_SetProperties(m, id, GroupID, placedCities, settLoc, settMap, 0, b.minX, b.minY)
         Else
             Dim b As Location.Borders = ObjectBorders(id, x, y)
             Dim p(3), plist() As Point
@@ -2480,12 +2549,28 @@ newtry:
                     Next k
                 Next i
             Next j
+            Dim incrementOwner As Integer = 0
             For k As Integer = 0 To UBound(p) Step 1
                 If p(k).X < Integer.MaxValue And p(k).Y < Integer.MaxValue Then
-                    m.board(p(k).X, p(k).Y).objectID = id
-                    m.board(p(k).X, p(k).Y).groupID = GroupID
+                    Call PlaceObject_SetProperties(m, id, GroupID, placedCities, settLoc, settMap, incrementOwner, p(k).X, p(k).Y)
+                    incrementOwner += 1
                 End If
             Next k
+        End If
+    End Sub
+    Private Sub PlaceObject_SetProperties(ByRef m As Map, ByRef typeID As Integer, ByRef GroupID As Integer, _
+                                          ByRef placedCities As Integer, _
+                                          ByRef settLoc As Map.SettingsLoc, ByRef settMap As Map.SettingsMap, _
+                                          ByRef increment As Integer, _
+                                          ByRef x As Integer, ByRef y As Integer)
+        m.board(x, y).objectID = typeID
+        m.board(x, y).groupID = GroupID
+        If typeID = DefMapObjects.Types.City Then
+            If Not IsNothing(settLoc.RaceCities) AndAlso placedCities < settLoc.RaceCities.Length Then
+                m.board(x, y).City = Map.SettingsLoc.SettingsRaceCity.Copy(settLoc.RaceCities(placedCities))
+                Call m.board(x, y).City.IncrementOwner(increment, settMap.nRaces)
+            End If
+            placedCities += 1
         End If
     End Sub
     Private Sub PlaceObject(ByRef freeCell(,) As Boolean, ByRef id As Integer, ByRef x As Integer, ByRef y As Integer)
@@ -3619,6 +3704,8 @@ Public Class Map
         Dim isRoad As Boolean
         ''' <summary>True, если на клетке лес</summary>
         Dim isForest As Boolean
+        ''' <summary>Если 0, то город будет нейтральным, иначе - такая же раса, как и раса-владелец указанной локации</summary>
+        Dim City As SettingsLoc.SettingsRaceCity
 
         Public Sub AddToLocIDArray(ByRef value As Integer)
             If locID.Count = 0 Then
@@ -3700,6 +3787,9 @@ Public Class Map
         '''<summary>Полная стоимость лута у торговца</summary>
         Dim merchItemsCost As Integer
 
+        '''<summary>Города, принадлежащие играбельным расам</summary>
+        Dim RaceCities() As SettingsRaceCity
+
         ''' <summary>Масштабировать количество посещаемых объектов и опыт за убийство всех отрядовв в локации</summary>
         Dim scaleContent As Boolean
 
@@ -3776,6 +3866,17 @@ Public Class Map
             Return Checked
         End Function
 
+        ''' <summary>Сменить владельцев в RaceCities, если номер локации расы-владельца больше 0.
+        ''' Если полученный номер станет больше nRaces, то уменьшится на nRaces</summary>
+        ''' <param name="i">Добавить к номеру владельца это число</param>
+        ''' <param name="nRaces">Количество рас</param>
+        Public Sub IncrementOwner(ByRef i As Integer, ByRef nRaces As Integer)
+            If IsNothing(RaceCities) Then Exit Sub
+            For n As Integer = 0 To UBound(RaceCities) Step 1
+                Call RaceCities(n).IncrementOwner(i, nRaces)
+            Next n
+        End Sub
+
         ''' <param name="settRaceLoc">Настройки для стартовых локаций играбельных рас</param>
         ''' <param name="settCommLoc">Настройки для остальных локацийт</param>
         ''' <param name="nRaces">Количество играбельных рас</param>
@@ -3820,6 +3921,7 @@ Public Class Map
             .merchItemsCost = v.merchItemsCost, _
             .scaleContent = v.scaleContent, _
             .possibleRaces = r, _
+            .RaceCities = SettingsRaceCity.Copy(v.RaceCities), _
             .Checked = v.Checked}
         End Function
         Public Shared Function Copy(ByRef v() As SettingsLoc) As SettingsLoc()
@@ -3879,6 +3981,50 @@ Public Class Map
             Call Map.ReadValue("scaleContent", scaleContent, data, GenDefaultValues.wTemplate_LocationKeyword)
             Call Map.ReadValue("possibleRaces", possibleRaces, data, GenDefaultValues.wTemplate_LocationKeyword, CChar(";"))
         End Sub
+
+        Public Structure SettingsRaceCity
+            ''' <summary>Уровень города</summary>
+            Dim level As Integer
+            ''' <summary>Номер локации расых-владельца. Если 0 - нейтрал</summary>
+            Dim owner As Integer
+            ''' <summary>Идентификатор расы-владельца</summary>
+            Dim race As String
+
+            Public Shared Function Copy(ByRef v As SettingsRaceCity) As SettingsRaceCity
+                Return New SettingsRaceCity With {.level = v.level, .owner = v.owner, .race = v.race}
+            End Function
+            Public Shared Function Copy(ByRef v() As SettingsRaceCity) As SettingsRaceCity()
+                If Not IsNothing(v) Then
+                    Dim rc(UBound(v)) As SettingsRaceCity
+                    For i As Integer = 0 To UBound(v) Step 1
+                        rc(i) = SettingsRaceCity.Copy(v(i))
+                    Next i
+                    Return rc
+                Else
+                    Return Nothing
+                End If
+            End Function
+
+            ''' <summary>Сменить владельца, если номер локации расых-владельца больше 0.
+            ''' Если полученный номер станет больше nRaces, то уменьшится на nRaces</summary>
+            ''' <param name="i">Добавить к номеру владельца это число</param>
+            ''' <param name="nRaces">Количество рас</param>
+            Public Sub IncrementOwner(ByRef i As Integer, ByRef nRaces As Integer)
+                If owner = 0 Then Exit Sub
+                If owner < 0 Then Throw New Exception("Unexpected city owner ID: " & owner)
+                owner += i
+                Do While owner > nRaces
+                    owner -= nRaces
+                Loop
+            End Sub
+
+            Public Shared Function Read(ByRef v As String) As SettingsRaceCity
+                Dim s() As String = v.Split(CChar("#"))
+                Return New SettingsRaceCity With {.level = ValueConverter.StrToInt(s(0), v, "RaceCities"), _
+                                                  .owner = ValueConverter.StrToInt(s(1), v, "RaceCities")}
+            End Function
+
+        End Structure
 
     End Structure
     Public Structure SettingsMap
@@ -4080,7 +4226,7 @@ Public Class Map
 
     End Sub
     Protected Friend Shared Sub ReadValue(ByRef name As String, ByRef value As String, _
-                                   ByRef data As Dictionary(Of String, String), ByRef blockName As String)
+                                          ByRef data As Dictionary(Of String, String), ByRef blockName As String)
         If data.ContainsKey(name.ToUpper) Then
             value = data.Item(name.ToUpper)
         Else
@@ -4088,19 +4234,19 @@ Public Class Map
         End If
     End Sub
     Protected Friend Shared Sub ReadValue(ByRef name As String, ByRef value As Double, _
-                                   ByRef data As Dictionary(Of String, String), ByRef blockName As String)
+                                          ByRef data As Dictionary(Of String, String), ByRef blockName As String)
         Dim txt As String = ""
         Call ReadValue(name, txt, data, blockName)
         value = ValueConverter.StrToDbl(txt, PrintValue(name, txt), "")
     End Sub
     Protected Friend Shared Sub ReadValue(ByRef name As String, ByRef value As Integer, _
-                                   ByRef data As Dictionary(Of String, String), ByRef blockName As String)
+                                          ByRef data As Dictionary(Of String, String), ByRef blockName As String)
         Dim txt As String = ""
         Call ReadValue(name, txt, data, blockName)
         value = ValueConverter.StrToInt(txt, PrintValue(name, txt), "")
     End Sub
     Protected Friend Shared Sub ReadValue(ByRef name As String, ByRef value As Boolean, _
-                                   ByRef data As Dictionary(Of String, String), ByRef blockName As String)
+                                          ByRef data As Dictionary(Of String, String), ByRef blockName As String)
         Dim txt As String = ""
         Call ReadValue(name, txt, data, blockName)
         value = ValueConverter.StrToBool(txt)
@@ -4114,6 +4260,21 @@ Public Class Map
             value = Nothing
         Else
             value = txt.Split(delimiter)
+        End If
+    End Sub
+    Protected Friend Shared Sub ReadValue(ByRef name As String, ByRef value() As SettingsLoc.SettingsRaceCity, _
+                                          ByRef data As Dictionary(Of String, String), ByRef blockName As String, _
+                                          ByRef delimiter As Char)
+        Dim txt As String = ""
+        Call ReadValue(name, txt, data, blockName)
+        If txt.ToUpper = "Nothing".ToUpper Then
+            value = Nothing
+        Else
+            Dim s() As String = txt.Split(delimiter)
+            ReDim value(UBound(s))
+            For i As Integer = 0 To UBound(s) Step 1
+                value(i) = SettingsLoc.SettingsRaceCity.Read(s(i))
+            Next i
         End If
     End Sub
     Protected Friend Shared Function PrintValue(ByRef name As String, ByRef value As String) As String
@@ -4184,9 +4345,12 @@ Public Class Map
                     End If
                 End If
                 If complited.StacksPlacing_Done Then
-                    If Not board(x, y).GuardLoc And (board(x, y).objectID = DefMapObjects.Types.City Or _
+                    If Not board(x, y).GuardLoc And ((board(x, y).objectID = DefMapObjects.Types.City And board(x, y).City.owner = 0) Or _
                                                      board(x, y).objectID = DefMapObjects.Types.Ruins) Then
                         Return "Warning: internal guard for object is not set"
+                    End If
+                    If board(x, y).GuardLoc And board(x, y).objectID = DefMapObjects.Types.City And board(x, y).City.owner > 0 Then
+                        Return "Warning: internal guard for race city is set"
                     End If
                 End If
                 If complited.StacksPlacing_Done And board(x, y).PassGuardLoc Then
@@ -4502,8 +4666,13 @@ Public Class StackLocationsGen
 
         For y As Integer = 0 To m.ySize Step 1
             For x As Integer = 0 To m.xSize Step 1
-                If m.board(x, y).objectID = DefMapObjects.Types.City _
-                Or m.board(x, y).objectID = DefMapObjects.Types.Ruins Then
+                If m.board(x, y).objectID = DefMapObjects.Types.City Then
+                    If tmpm.board(x, y).City.owner > 0 Then
+                        tmpm.board(x, y).GuardLoc = False
+                    Else
+                        tmpm.board(x, y).GuardLoc = True
+                    End If
+                ElseIf m.board(x, y).objectID = DefMapObjects.Types.Ruins Then
                     m.board(x, y).GuardLoc = True
                 End If
             Next x
@@ -5951,6 +6120,8 @@ Public Class ImpenetrableObjects
     End Sub
     Private Sub PlaceCities(ByRef m As Map, ByRef settMap As Map.SettingsMap)
         Dim cityGroup As Dictionary(Of Integer, List(Of Point)) = MakeCityGroupsList(m)
+        Dim locRace As New Dictionary(Of Integer, String)
+        locRace.Add(0, "N")
         For y As Integer = 0 To m.ySize Step 1
             For x As Integer = 0 To m.xSize Step 1
                 If m.board(x, y).objectID = DefMapObjects.Types.Capital Then
@@ -5965,26 +6136,45 @@ Public Class ImpenetrableObjects
                     ElseIf m.board(x, y).objRace.Item(0) = comm.RaceIdentifierToSubrace("E") Then
                         m.board(x, y).objectName = DefMapObjects.capitalElves
                     End If
+                    locRace.Add(m.board(x, y).locID(0), comm.RaceNumberToRaceChar(m.board(x, y).objRace.Item(0)))
                 End If
             Next x
         Next y
         If cityGroup.Count > 0 Then
             For Each L As List(Of Point) In cityGroup.Values
                 Dim town As String
-                If m.board(L.Item(0).X, L.Item(0).Y).locID(0) <= settMap.nRaces Then
-                    town = DefMapObjects.townT1
-                Else
-                    Dim r As Double = comm.rndgen.PRand(0, 1)
-                    If r > 0.3 Then
-                        town = DefMapObjects.townT1
-                    ElseIf r > 0.1 Then
-                        town = DefMapObjects.townT2
+                Dim level As Integer = m.board(L.Item(0).X, L.Item(0).Y).City.level
+                If level = 0 Then
+                    If m.board(L.Item(0).X, L.Item(0).Y).locID(0) <= settMap.nRaces Then
+                        level = 1
                     Else
-                        town = DefMapObjects.townT3
+                        Dim r As Double = comm.rndgen.PRand(0, 1)
+                        If r > 0.3 Then
+                            level = 1
+                        ElseIf r > 0.1 Then
+                            level = 2
+                        Else
+                            level = 3
+                        End If
                     End If
+                End If
+                If level = 1 Then
+                    town = DefMapObjects.townT1
+                ElseIf level = 2 Then
+                    town = DefMapObjects.townT2
+                ElseIf level = 3 Then
+                    town = DefMapObjects.townT3
+                ElseIf level = 4 Then
+                    town = DefMapObjects.townT4
+                ElseIf level = 5 Then
+                    town = DefMapObjects.townT5
+                Else
+                    Throw New Exception("Unexpected preset town level: " & m.board(L.Item(0).X, L.Item(0).Y).City.level)
                 End If
                 For Each p As Point In L
                     m.board(p.X, p.Y).objectName = town
+                    m.board(p.X, p.Y).City.level = level
+                    m.board(p.X, p.Y).City.race = locRace.Item(m.board(p.X, p.Y).City.owner)
                 Next p
             Next L
         End If

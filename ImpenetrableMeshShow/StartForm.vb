@@ -144,6 +144,8 @@ Friend Class StartForm
                 End If
                 If grid.board(x, y).GuardLoc Then
                     t(x, y) = 185
+                ElseIf grid.board(x, y).objectID = DefMapObjects.Types.City Then
+                    t(x, y) += 55
                 End If
                 If grid.board(x, y).PassGuardLoc Then
                     t(x, y) = 94
