@@ -2480,7 +2480,7 @@ newtry:
          Sub(i As Integer)
              If Not tmpm.Loc(i).IsObtainedBySymmery Then
                  TT(i) = New TerminationCondition(maxTime)
-                 ex(i) = MakeLabyrinth(tmpm, settMap, tmpm.Loc(i).ID, tmpm.symmID, TT(i))
+                 ex(i) = MakeLabyrinth(tmpm, settMap, tmpm.Loc(i).ID, TT(i))
              End If
          End Sub)
         For i As Integer = 0 To UBound(tmpm.Loc) Step 1
@@ -2489,14 +2489,21 @@ newtry:
         Next
         If Term.ExitFromLoops Then Exit Sub
         Term = New TerminationCondition(Term.maxTime)
-        Call ConnectDisconnectedAreas(tmpm, settMap, Term)
+        Dim sm As New Map.SettingsMap With {.ApplySymmetry = settMap.ApplySymmetry, _
+                                            .minPassWidth = 1.1, _
+                                            .nRaces = settMap.nRaces, _
+                                            .SymmetryClass = settMap.SymmetryClass, _
+                                            .xSize = settMap.xSize, _
+                                            .ySize = settMap.ySize}
+        Call ConnectDisconnectedAreas(tmpm, sm, Term)
         m = tmpm
     End Sub
-    Private Function MakeLabyrinth(ByRef m As Map, ByRef settMap As Map.SettingsMap, ByRef LocId As Integer, ByRef symmID As Integer, _
+    Private Function MakeLabyrinth(ByRef m As Map, ByRef settMap As Map.SettingsMap, ByRef LocId As Integer, _
                                    ByRef Term As TerminationCondition) As String
         Try
             Dim b As New Location.Borders With {.minX = Integer.MaxValue, .minY = Integer.MaxValue, _
                                                 .maxX = Integer.MinValue, .maxY = Integer.MinValue}
+            Dim n As Location.Borders
             For y As Integer = 0 To m.ySize Step 1
                 For x As Integer = 0 To m.xSize Step 1
                     If m.board(x, y).locID(0) = LocId Then
@@ -2506,7 +2513,7 @@ newtry:
                         b.maxY = Math.Max(b.maxY, y)
                         m.board(x, y).isPass = False
                         If Not m.board(x, y).isBorder And Not m.board(x, y).isAttended Then
-                            Dim n As Location.Borders = NearestXY(x, y, m.xSize, m.ySize, 1)
+                            n = NearestXY(x, y, m.xSize, m.ySize, 1)
                             For j As Integer = n.minY To n.maxY Step 1
                                 For i As Integer = n.minX To n.maxX Step 1
                                     If Not m.board(i, j).locID(0) = LocId Then
@@ -2525,7 +2532,7 @@ newtry:
                 For x As Integer = b.minX To b.maxX Step 1
                     If m.board(x, y).locID(0) = LocId Then
                         m.board(x, y).isPass = m.board(x, y).isPass And m.board(x, y).Penetrable
-                        If symmID > -1 Then
+                        If m.symmID > -1 Then
                             Dim p() As Point = symm.ApplySymm(New Point(x, y), settMap.nRaces, m, 1)
                             For k As Integer = 0 To UBound(p) Step 1
                                 m.board(p(k).X, p(k).Y).isPass = m.board(x, y).isPass
@@ -2582,6 +2589,47 @@ newtry:
                     Call LifeAlgo(m, settMap, conn(i), init(i), New Point(b.minX, b.minY), Term)
                 Next i
             End If
+
+            Dim setAsBorder(b.maxX - b.minX, b.maxY - b.minY) As Boolean
+            Dim makeBorder As Boolean
+            For y As Integer = b.minY To b.maxY Step 1
+                For x As Integer = b.minX To b.maxX Step 1
+                    If m.board(x, y).locID(0) = LocId And Not m.board(x, y).isAttended _
+                    And Not m.board(x, y).isBorder And m.board(x, y).isPass _
+                    And Not m.board(x, y).isObjectGuard And Not m.board(x, y).PassGuardLoc And Not m.board(x, y).GuardLoc Then
+                        n = NearestXY(x, y, m.xSize, m.ySize, 1)
+                        makeBorder = True
+                        For j As Integer = n.minY To n.maxY Step 1
+                            For i As Integer = n.minX To n.maxX Step 1
+                                If m.board(i, j).isBorder Then
+                                    makeBorder = False
+                                    i = n.maxX
+                                    j = n.maxY
+                                End If
+                            Next i
+                        Next j
+                        If makeBorder Then If rndgen.Rand(0, 1) > 0.65 Then setAsBorder(x - b.minX, y - b.minY) = True
+                    End If
+                Next x
+            Next y
+            For y As Integer = b.minY To b.maxY Step 1
+                For x As Integer = b.minX To b.maxX Step 1
+                    If setAsBorder(x - b.minX, y - b.minY) Then
+                        If m.symmID > -1 Then
+                            Dim p() As Point = symm.ApplySymm(New Point(x, y), settMap.nRaces, m, 1)
+                            For k As Integer = 0 To UBound(p) Step 1
+                                m.board(p(k).X, p(k).Y).isPass = False
+                                m.board(p(k).X, p(k).Y).Penetrable = False
+                                m.board(p(k).X, p(k).Y).isBorder = True
+                            Next k
+                        Else
+                            m.board(x, y).isPass = False
+                            m.board(x, y).Penetrable = False
+                            m.board(x, y).isBorder = True
+                        End If
+                    End If
+                Next x
+            Next y
         Catch ex As Exception
             Return ex.Message
         End Try
