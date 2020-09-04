@@ -1968,7 +1968,6 @@ newtry:
                 End If
             Next x
         Next y
-
     End Sub
     Private Sub ObjectsPlacingVariants(ByRef objIDs() As Integer, ByRef locID As Integer, _
                                        ByRef m As Map, ByRef settMap As Map.SettingsMap, _
@@ -2421,6 +2420,7 @@ newtry:
                 Next i
             Next j
             Call PlaceObject_SetProperties(m, id, GroupID, placedCities, settLoc, settMap, 0, b.minX, b.minY)
+            placedCities += 1
         Else
             Dim b As Location.Borders = ObjectBorders(id, x, y)
             Dim p(3), plist() As Point
@@ -2436,28 +2436,28 @@ newtry:
                     Next k
                 Next i
             Next j
-            Dim incrementOwner As Integer = 0
+            Dim ownerIncrement As Integer = 0
             For k As Integer = 0 To UBound(p) Step 1
                 If p(k).X < Integer.MaxValue And p(k).Y < Integer.MaxValue Then
-                    Call PlaceObject_SetProperties(m, id, GroupID, placedCities, settLoc, settMap, incrementOwner, p(k).X, p(k).Y)
-                    incrementOwner += 1
+                    Call PlaceObject_SetProperties(m, id, GroupID, placedCities, settLoc, settMap, ownerIncrement, p(k).X, p(k).Y)
+                    ownerIncrement += 1
                 End If
             Next k
+            placedCities += 1
         End If
     End Sub
     Private Sub PlaceObject_SetProperties(ByRef m As Map, ByRef typeID As Integer, ByRef GroupID As Integer, _
                                           ByRef placedCities As Integer, _
                                           ByRef settLoc As Map.SettingsLoc, ByRef settMap As Map.SettingsMap, _
-                                          ByRef increment As Integer, _
+                                          ByRef ownerIncrement As Integer, _
                                           ByRef x As Integer, ByRef y As Integer)
         m.board(x, y).objectID = typeID
         m.board(x, y).groupID = GroupID
         If typeID = DefMapObjects.Types.City Then
             If Not IsNothing(settLoc.RaceCities) AndAlso placedCities < settLoc.RaceCities.Length Then
                 m.board(x, y).City = Map.SettingsLoc.SettingsRaceCity.Copy(settLoc.RaceCities(placedCities))
-                Call m.board(x, y).City.IncrementOwner(increment, settMap.nRaces)
+                Call m.board(x, y).City.IncrementOwner(ownerIncrement, settMap.nRaces)
             End If
-            placedCities += 1
         End If
     End Sub
     Private Sub PlaceObject(ByRef freeCell(,) As Boolean, ByRef id As Integer, ByRef x As Integer, ByRef y As Integer)
@@ -3908,7 +3908,8 @@ Public Class Map
             Public Shared Function Read(ByRef v As String) As SettingsRaceCity
                 Dim s() As String = v.Split(CChar("#"))
                 Return New SettingsRaceCity With {.level = ValueConverter.StrToInt(s(0), v, "RaceCities"), _
-                                                  .owner = ValueConverter.StrToInt(s(1), v, "RaceCities")}
+                                                  .owner = ValueConverter.StrToInt(s(1), v, "RaceCities"), _
+                                                  .race = ""}
             End Function
 
         End Structure
