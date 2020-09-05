@@ -85,7 +85,7 @@ Friend Class StartForm
         Dim objplace As New ImpenetrableObjects(objSizeArray, {"%default%"}, {"%default%"}, {"%default%"}, ReadSpells)
 
         Dim grid As Map
-        Dim genTimeLimit As Integer = 10000
+        Dim genTimeLimit As Integer = 3000
 
         Dim path As String = ".\Resources\"
 
@@ -151,16 +151,20 @@ Friend Class StartForm
                     t(x, y) = 94
                 End If
                 If grid.board(x, y).isBorder Then
-                    t(x, y) = grid.board(x, y).objRace.Item(0)
+                    If Not IsNothing(grid.board(x, y).objRace) Then
+                        t(x, y) = grid.board(x, y).objRace.Item(0)
+                    Else
+                        t(x, y) = 5 + grid.board(x, y).locID(0)
+                    End If
                 ElseIf grid.board(x, y).isWater Then
                     't(x, y) += 200
                 End If
-                If grid.board(x, y).isForest Then
-                    't(x, y) = 135
-                End If
-                If grid.board(x, y).isRoad Then
-                    't(x, y) = 145
-                End If
+                    If grid.board(x, y).isForest Then
+                        't(x, y) = 135
+                    End If
+                    If grid.board(x, y).isRoad Then
+                        't(x, y) = 145
+                    End If
             Next y
         Next x
         For x As Integer = 0 To grid.xSize Step 1

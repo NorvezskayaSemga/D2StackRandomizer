@@ -92,6 +92,8 @@ ReadFromFile example_template_1.txt $cloc
 
 RaceCities 1#1
 
+maxCities			0.0
+
 posX		0.15	0.25
 posY		0.45	0.55
 AppearanceChance	1.0
@@ -103,6 +105,8 @@ AppearanceChance	1.0
 ReadFromFile example_template_1.txt $cloc
 
 RaceCities 1#2
+
+maxCities			0.0
 
 posX		0.75	0.85
 posY		0.45	0.55

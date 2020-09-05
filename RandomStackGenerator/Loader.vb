@@ -157,7 +157,7 @@ again:
         End If
 
         If Not IsNothing(grid.board) Then
-            Dim staclocgen As New StackLocationsGen
+            Dim staclocgen As New StackLocationsGen(genmesh)
             If Not staclocgen.Gen(grid, settGen.common_settMap, copiedSettings, genTimeLimit) Then GoTo again
         Else
             grid.Clear()

@@ -53,8 +53,9 @@ Public Class ImpenetrableMeshGen
     End Structure
 
     Private rndgen As New RndValueGen
-    Private comm As New Common
-    Private symm As New SymmetryOperations
+    Protected Friend comm As New Common
+    Protected Friend symm As New SymmetryOperations
+    Private stackLocGen As New StackLocationsGen(Me)
 
     Public ActiveObjects() As AttendedObject
 
@@ -397,6 +398,7 @@ newtry:
                 Call m.log.Add("Setting location ID to tiles: " & Environment.TickCount - t0 & " ms")
                 t0 = Environment.TickCount
                 Call SetBorders(m, settGen.common_settMap, term)
+                Call stackLocGen.PlasePassesGuards(m, settGen.common_settMap, True, term)
                 Call m.log.Add("Passages creating: " & Environment.TickCount - t0 & " ms")
                 t0 = Environment.TickCount
                 Call PlaceActiveObjects(m, settGen.common_settMap, copiedSettings, term)
@@ -4397,9 +4399,19 @@ End Class
 
 Public Class StackLocationsGen
 
-    Private genmap As New ImpenetrableMeshGen
-    Private symm As New SymmetryOperations
-    Private comm As New Common
+    Private genmap As ImpenetrableMeshGen
+    Private symm As SymmetryOperations
+    Private comm As Common
+
+    Public Sub New(Optional ByRef gm As ImpenetrableMeshGen = Nothing)
+        If IsNothing(gm) Then
+            genmap = New ImpenetrableMeshGen
+        Else
+            genmap = gm
+        End If
+        symm = genmap.symm
+        comm = genmap.comm
+    End Sub
 
     ''' <summary>Расставляет локации для отрядов на карту с подготовленную в InpenetrableMeshGen
     ''' Для руин и городов выставляет локации с параметрами отрядов там же, где и хранится objectID.
@@ -4461,7 +4473,7 @@ Public Class StackLocationsGen
         If settMap.AddGuardsBetweenLocations Then
             Dim term As New TerminationCondition(maxGenTime)
             Dim guards(UBound(m.Loc))() As Point
-            guards = PlasePassesGuards(tmpm, settMap, term)
+            guards = PlasePassesGuards(tmpm, settMap, False, term)
             If term.ExitFromLoops Then Return False
 
             Dim gList() As Point = ConvertPointsArray({guards})
@@ -4781,8 +4793,9 @@ Public Class StackLocationsGen
         Dim passTiles(,) As Boolean
         Dim edgePoints() As List(Of Point)
     End Structure
-    Private Function PlasePassesGuards(ByVal m As Map, ByRef settMap As Map.SettingsMap, _
-                                       ByRef term As TerminationCondition) As Point()()
+    Protected Friend Function PlasePassesGuards(ByVal m As Map, ByRef settMap As Map.SettingsMap, _
+                                                ByVal unmarkPassagesWithoutGuard As Boolean, _
+                                                ByRef term As TerminationCondition) As Point()()
 
         Dim passTile(m.xSize, m.ySize) As Boolean
         For y As Integer = 0 To m.ySize Step 1
@@ -4904,28 +4917,68 @@ Public Class StackLocationsGen
         Dim termL As TerminationCondition = term
         Parallel.For(0, k + 1, _
          Sub(i As Integer)
-             result(handle(i)) = HandlePath(m, passages(handle(i)), termL)
+             result(handle(i)) = HandlePath(m, passages(handle(i)), unmarkPassagesWithoutGuard, termL)
          End Sub)
         term = termL
 
-        Return result
+        If unmarkPassagesWithoutGuard Then
+            For y As Integer = 0 To m.ySize Step 1
+                For x As Integer = 0 To m.xSize Step 1
+                    If m.board(x, y).isPass Then
+                        m.board(x, y).isPass = False
+                        m.board(x, y).Penetrable = False
+                    End If
+                Next x
+            Next y
+            For i As Integer = 0 To UBound(passages) Step 1
+                If Not IsNothing(passages(i).passTiles) Then
+                    Dim setAsPass As Boolean = Not IsNothing(result(i))
+                    For y As Integer = 0 To passages(i).Size.Y Step 1
+                        For x As Integer = 0 To passages(i).Size.X Step 1
+                            If passages(i).passTiles(x, y) Then
+                                Dim xb As Integer = passages(i).bias.X + x
+                                Dim yb As Integer = passages(i).bias.Y + y
+                                If m.symmID > -1 Then
+                                    Dim p() As Point = symm.ApplySymm(New Point(xb, yb), settMap.nRaces, m, 1)
+                                    For r As Integer = 0 To UBound(p) Step 1
+                                        m.board(p(r).X, p(r).Y).isPass = setAsPass
+                                        m.board(p(r).X, p(r).Y).Penetrable = setAsPass
+                                    Next r
+                                Else
+                                    m.board(xb, yb).isPass = setAsPass
+                                    m.board(xb, yb).Penetrable = setAsPass
+                                End If
+                            End If
+                        Next x
+                    Next y
+                End If
+            Next i
+            Return Nothing
+        Else
+            Return result
+        End If
     End Function
     Private Function HandlePath(ByRef m As Map, ByRef path As Passage, _
+                                ByRef justCheckGuardNecessity As Boolean, _
                                 ByRef term As TerminationCondition) As Point()
         Dim output() As Integer = Nothing
         Dim pointsList() As Point = Nothing
         Dim bestN As Integer
         term.CheckTime()
         If term.ExitFromLoops Then Return Nothing
-        Call PlaceGuardLoc(m, pointsList, -1, bestN, Nothing, output, Nothing, -1, path, term)
+        Call PlaceGuardLoc(m, pointsList, -1, bestN, Nothing, output, Nothing, -1, path, justCheckGuardNecessity, term)
 
         If bestN < 0 Then Return Nothing
 
-        Dim out(bestN) As Point
-        For i As Integer = 0 To bestN Step 1
-            out(i) = New Point(pointsList(output(i)).X + path.bias.X, pointsList(output(i)).Y + path.bias.Y)
-        Next i
-
+        Dim out() As Point
+        If Not justCheckGuardNecessity Then
+            ReDim out(bestN)
+            For i As Integer = 0 To bestN Step 1
+                out(i) = New Point(pointsList(output(i)).X + path.bias.X, pointsList(output(i)).Y + path.bias.Y)
+            Next i
+        Else
+            out = {New Point(-1, -1)}
+        End If
         Return out
     End Function
     Private Function GetConnected(ByRef free(,) As Boolean) As Boolean()(,)
@@ -4953,6 +5006,7 @@ Public Class StackLocationsGen
                               ByRef IDs As List(Of Integer), _
                               ByRef selected As Integer, _
                               ByRef prevPassage As Passage, _
+                              ByRef justCheckGuardNecessity As Boolean, _
                               ByRef term As TerminationCondition)
         term.CheckTime()
         If term.ExitFromLoops Then
@@ -5004,7 +5058,7 @@ Public Class StackLocationsGen
         Next i
 
         If selected > -1 Then
-        'Если здесь гвардов >= гвардов в лучшем результате, то выходим
+            'Если здесь гвардов >= гвардов в лучшем результате, то выходим
             If currentN >= bestN And bestN > Integer.MinValue Then Exit Sub
 
             currentOutput(currentN) = selected
@@ -5061,11 +5115,16 @@ Public Class StackLocationsGen
             Next i
             bestN = currentN
             Exit Sub
+        ElseIf justCheckGuardNecessity Then
+            bestOutput = Nothing
+            currentOutput = Nothing
+            bestN = 1
+            Exit Sub
         End If
 
         For Each i As Integer In IDs_bak
             Call PlaceGuardLoc(m, pointsList, currentN + 1, bestN, CType(currentOutput.Clone, Integer()), _
-                               bestOutput, IDs_bak, i, changedPassage, term)
+                               bestOutput, IDs_bak, i, changedPassage, justCheckGuardNecessity, term)
         Next i
     End Sub
     Private Function TestPassage(ByRef p As Passage, ByRef pointsList() As Point) As Boolean
