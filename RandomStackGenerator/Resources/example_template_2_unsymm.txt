@@ -85,7 +85,7 @@ RaceCities	nothing
 
 posX		0.45	0.55
 posY		0.45	0.55
-AppearanceChance	1.0
+AppearanceChance	0.5
 
 #----------------------------------------------------------------------------------
 

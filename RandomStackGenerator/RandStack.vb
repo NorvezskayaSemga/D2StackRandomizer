@@ -472,7 +472,7 @@ Public Class RandStack
             IDs.Clear()
             For i As Integer = 0 To UBound(AllItems) Step 1
                 'new filter
-                If ItemFilter(IGen, AllItems(i)) AndAlso ItemFilter(TypeCostRestriction, AllItems(i)) Then
+                If ItemFilter(IGen, AllItems(i)) AndAlso ItemFilter(TypeCostRestriction, AllItems(i)) AndAlso ItemFilter(DynIGen, AllItems(i), DynCost) Then
                     IDs.Add(i)
                     weight(i) = GenItemWeight(AllItems(i), costBar) * multiplierItemsWeight(i) * DynTypeWeightMultiplier(AllItems(i).type) * DynSameItemWeightMultiplier(i)
                     If Not ItemFilter(DynIGen, AllItems(i), costBar) Then weight(i) *= 0.001
@@ -877,7 +877,25 @@ Public Class RandStack
                 If settings(i).exclude Then
                     Return False
                 Else
-                    If AllDataStructues.Cost.Sum(LootCost(item)) > 2 * CostBar(i) Then Return False
+                    Dim sum As Integer = AllDataStructues.Cost.Sum(LootCost(item))
+                    If sum > comm.defValues.CostBarExcessLimit * CostBar(i) Then Return False
+                    Exit For
+                End If
+            End If
+        Next i
+        Return True
+    End Function
+    Friend Function ItemFilter(ByRef IGen As AllDataStructues.LootGenSettings, ByRef item As AllDataStructues.Item, _
+                               ByRef currentMaxLootCost As Integer) As Boolean
+        If Not comm.IsAppropriateItem(item) Then Return False
+        Dim settings() As AllDataStructues.ItemGenSettings = AllDataStructues.LootGenSettings.ToArray(IGen)
+        For i As Integer = 0 To UBound(settings) Step 1
+            If comm.ItemTypesLists(i).Contains(item.type) Then
+                If settings(i).exclude Then
+                    Return False
+                Else
+                    Dim sum As Integer = AllDataStructues.Cost.Sum(LootCost(item))
+                    If sum > comm.defValues.LootCostExcessLimit * currentMaxLootCost Then Return False
                     Exit For
                 End If
             End If
@@ -3158,6 +3176,8 @@ Public Class GenDefaultValues
         Call SetProperty(ThisBag_SameItems_ChanceMultiplier, "ThisBag_SameItems_ChanceMultiplier", RConstants, DConstants, itemTypeID, False)
         Call SetProperty(Local_SameItem_ChanceMultiplier, "Local_SameItem_ChanceMultiplier", RConstants, DConstants, itemTypeID, False)
         Call SetProperty(AddedItemTypeSearchRadius, "AddedItemTypeSearchRadius", RConstants, DConstants)
+        Call SetProperty(CostBarExcessLimit, "CostBarExcessLimit", RConstants, DConstants)
+        Call SetProperty(LootCostExcessLimit, "LootCostExcessLimit", RConstants, DConstants)
 
         'map
         Call SetProperty(minLocationRadiusAtAll, "minLocationRadiusAtAll", RConstants, DConstants)
@@ -3203,6 +3223,8 @@ Public Class GenDefaultValues
             log.Add("Global_AddedItem_ChanceMultiplier = " & Global_AddedItem_ChanceMultiplier)
             log.Add("AddedItemTypeChanceMultiplier = " & PrintItemsSettings(Local_AddedItemType_ChanceMultiplier, itemTypeName, spaces))
             log.Add("AddedItemTypeSearchRadius = " & AddedItemTypeSearchRadius)
+            log.Add("CostBarExcessLimit = " & CostBarExcessLimit)
+            log.Add("LootCostExcessLimit = " & LootCostExcessLimit)
 
             'map
             log.Add("minLocationRadiusAtAll = " & minLocationRadiusAtAll)
@@ -3376,6 +3398,8 @@ Public Class GenDefaultValues
     Public Property SameItemsAmountRestriction As Integer()
     Public Property ThisBag_SameItems_ChanceMultiplier As Double()
     Public Property Local_SameItem_ChanceMultiplier As Double()
+    Public Property CostBarExcessLimit As Double
+    Public Property LootCostExcessLimit As Double
 
     'map
     Public Property minLocationRadiusAtAll As Double
