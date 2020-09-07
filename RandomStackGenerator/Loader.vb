@@ -28,7 +28,7 @@ Public Class MapGenWrapper
         objPlace = ImpObjectPlacer
     End Sub
 
-    ''' <summary>Генерирует заготовку ландшафта</summary>
+    ''' <summary>Генерирует заготовку ландшафта. В случае неудачи вернет пустую карту с сохраненным логом</summary>
     ''' <param name="sM">Общие настройки для карты</param>
     ''' <param name="sR">Настройки для стартовых локаций играбельных рас.
     ''' Дробная часть определяет шанс округления большую сторону</param>
@@ -38,7 +38,7 @@ Public Class MapGenWrapper
     ''' <param name="genTimeLimit">Максимальное время на операцию расстановки объектов в миллисекундах.
     ''' Она обычно производится меньше чем за пару секунд, но бывает, что выполняется дольше минуты.
     ''' В этом случае быстрее перегенерировать карту.
-    ''' Если не получится с пяти попыток, вернет Nothing</param>
+    ''' Если не получится с пяти попыток, вернет пустую карту с сохраненным логом</param>
     Public Function SimpleGen(ByRef sM As Map.SettingsMap, _
                               ByRef sR As Map.SettingsLoc, _
                               ByRef sC As Map.SettingsLoc, _
@@ -52,7 +52,7 @@ Public Class MapGenWrapper
         Return CommonGen(sett, genTimeLimit)
     End Function
 
-    ''' <summary>Генерирует заготовку ландшафта</summary>
+    ''' <summary>Генерирует заготовку ландшафта. В случае неудачи вернет пустую карту с сохраненным логом</summary>
     ''' <param name="sM">Общие настройки для карты</param>
     ''' <param name="sL">Настройки для каждой локации. Первыми должны идти стартовые локации рас.
     ''' Коментарий к настройкам стартовых локаций играбельных рас:
@@ -63,7 +63,7 @@ Public Class MapGenWrapper
     ''' <param name="genTimeLimit">Максимальное время на операцию расстановки объектов в миллисекундах.
     ''' Она обычно производится меньше чем за пару секунд, но бывает, что выполняется дольше минуты.
     ''' В этом случае быстрее перегенерировать карту.
-    ''' Если не получится с пяти попыток, вернет Nothing</param>
+    ''' Если не получится с пяти попыток, вернет пустую карту с сохраненным логом</param>
     Public Function TemplateGen(ByRef sM As Map.SettingsMap, _
                                 ByRef sL() As ImpenetrableMeshGen.GenSettings.LocationGenSetting, _
                                 ByVal genTimeLimit As Integer) As Map
@@ -74,24 +74,24 @@ Public Class MapGenWrapper
         Return CommonGen(sett, genTimeLimit)
     End Function
 
-    ''' <summary>Генерирует заготовку ландшафта</summary>
+    ''' <summary>Генерирует заготовку ландшафта. В случае неудачи вернет пустую карту с сохраненным логом</summary>
     ''' <param name="templates">Шаблоны, из которых случайным образом будет выбран один</param>
     ''' <param name="genTimeLimit">Максимальное время на операцию расстановки объектов в миллисекундах.
     ''' Она обычно производится меньше чем за пару секунд, но бывает, что выполняется дольше минуты.
     ''' В этом случае быстрее перегенерировать карту.
-    ''' Если не получится с пяти попыток, вернет Nothing</param>
+    ''' Если не получится с пяти попыток, вернет пустую карту с сохраненным логом</param>
     Public Function TemplatePoolGen(ByRef templates() As ImpenetrableMeshGen.GenSettings, _
                                     ByVal genTimeLimit As Integer) As Map
         Dim selected As Integer = (New RndValueGen).RndInt(0, UBound(templates), True)
         Return CommonGen(templates(selected), genTimeLimit)
     End Function
 
-    ''' <summary>Генерирует заготовку ландшафта</summary>
+    ''' <summary>Генерирует заготовку ландшафта. В случае неудачи вернет пустую карту с сохраненным логом</summary>
     ''' <param name="settGen">Если настройки прочтены из файла, генератор сам разберется, для какого они режима</param>
     ''' <param name="genTimeLimit">Максимальное время на операцию расстановки объектов в миллисекундах.
     ''' Она обычно производится меньше чем за пару секунд, но бывает, что выполняется дольше минуты.
     ''' В этом случае быстрее перегенерировать карту.
-    ''' Если не получится с пяти попыток, вернет Nothing</param>
+    ''' Если не получится с пяти попыток, вернет пустую карту с сохраненным логом</param>
     Public Function CommonGen(ByRef settGen As ImpenetrableMeshGen.GenSettings, _
                               ByVal genTimeLimit As Integer) As Map
 
@@ -137,7 +137,7 @@ Public Class MapGenWrapper
         End If
 
 again:
-        grid = genmesh.GenMap(settGen, genTimeLimit)
+        grid = genmesh.GenMap(settGen, genTimeLimit, grid.log)
 
         If Not grid.TestMap = "" Then
             Call grid.log.Add(grid.TestMap)
@@ -170,11 +170,16 @@ again:
             Return grid
         End If
 
-        Call stackstats.Gen(grid, settGen.common_settMap, copiedSettings)
-        Call watergenerator.Gen(grid, settGen.common_settMap)
-        Call racegen.Gen(grid, Nothing, copiedSettings)
-        Call objPlace.Gen(grid, settGen.common_settMap, copiedSettings)
-        Call penOnjGen.Gen(grid, settGen.common_settMap)
+        Try
+            Call stackstats.Gen(grid, settGen.common_settMap, copiedSettings)
+            Call watergenerator.Gen(grid, settGen.common_settMap)
+            Call racegen.Gen(grid, Nothing, copiedSettings)
+            Call objPlace.Gen(grid, settGen.common_settMap, copiedSettings)
+            Call penOnjGen.Gen(grid, settGen.common_settMap)
+        Catch ex As Exception
+            grid.log.Add(ex.Message & vbNewLine & ex.StackTrace)
+            GoTo again
+        End Try
 
         Call grid.log.Add(vbNewLine & "Total generation time: " & Environment.TickCount - t0 & " ms")
 

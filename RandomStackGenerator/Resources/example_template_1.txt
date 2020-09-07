@@ -107,7 +107,7 @@ AppearanceChance	1.0
 ################
 
 #Средний радиус локаций
-AverageRadius			20
+AverageRadius			22
 
 #Локации будут в форме эллипсов со случайным эксцентриситетом от (1-D)/(1+D) до (1+D)/(1-D)
 maxEccentricityDispersion	0.15
@@ -165,11 +165,14 @@ merchItemsCost			2000	2500
 #Масштабировать количество посещаемых объектов и опыт за убийство всех отрядовв в локации
 scaleContent			False
 
-#Список возможных базовых рас для локации. Разделитель - ; (N;S;H;U;L;E,C)
+#Список возможных базовых рас для локации. Разделитель - ; (N;S;H;U;L;E;C)
 #В случае с локациями играбельных рас определяет расы нейтральных отрядов в локации. 
 #Список рас можно посмотреть в Resources\Constants.txt, параметр LocRacesBlocks.
 #Nothing, если нужен случайный выбор
 possibleRaces			N
+
+#True, если локация должна быть соединена с соседними независимо от глобальных настроек
+ConnectWithAllNeighboringLocations	False
 
 #----------------------------------------------------------------------------------
 
@@ -210,4 +213,6 @@ merchItemsCost			2000	2500
 scaleContent			True
 
 possibleRaces			Nothing
+
+ConnectWithAllNeighboringLocations	False
 

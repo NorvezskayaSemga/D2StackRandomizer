@@ -121,6 +121,7 @@ Public Class ImpenetrableMeshGen
                 res.scaleContent = RandomValue(min.scaleContent, max.scaleContent, randomizer)
                 res.possibleRaces = RandomValue(min.possibleRaces, max.possibleRaces, randomizer)
                 res.RaceCities = RandomValue(min.RaceCities, max.RaceCities, randomizer)
+                res.ConnectWithAllNeighboringLocations = RandomValue(min.ConnectWithAllNeighboringLocations, max.ConnectWithAllNeighboringLocations, randomizer)
 
                 res.mageSpellsMinLevel = Math.Min(res.mageSpellsMinLevel, res.mageSpellsMaxLevel)
                 res.mercenariesMinExpBar = Math.Min(res.mercenariesMinExpBar, res.mercenariesMaxExpBar)
@@ -334,7 +335,8 @@ Public Class ImpenetrableMeshGen
     ''' Она обычно производится меньше чем за пару секунд, но бывает, что выполняется дольше минуты.
     ''' В этом случае быстрее перегенерировать карту.
     ''' Если не получится с пяти попыток, вернет Nothing</param>
-    Public Function GenMap(ByRef settGen As GenSettings, ByRef maxGenTime As Integer) As Map
+    Public Function GenMap(ByRef settGen As GenSettings, ByRef maxGenTime As Integer, ByRef log As Log) As Map
+        log.Add(vbNewLine & "-----New map creation attempt-----")
         settGen.common_settMap.xSize -= 1
         settGen.common_settMap.ySize -= 1
 
@@ -357,6 +359,11 @@ Public Class ImpenetrableMeshGen
         Dim logString As String = ""
         Dim selectedSymmetryClass As Integer
         Dim copiedSettings() As Map.SettingsLoc
+
+        If Not IsNothing(log) Then
+            m = New Map(-1, -1, -1)
+            m.log = log
+        End If
 
         Do While AttemptsN < 5
             Try
@@ -397,7 +404,7 @@ newtry:
                 Call SetLocIdToCells(m, settGen.common_settMap)
                 Call m.log.Add("Setting location ID to tiles: " & Environment.TickCount - t0 & " ms")
                 t0 = Environment.TickCount
-                Call SetBorders(m, settGen.common_settMap, term)
+                Call SetBorders(m, settGen.common_settMap, copiedSettings, term)
                 Call stackLocGen.PlasePassesGuards(m, settGen.common_settMap, True, term)
                 Call m.log.Add("Passages creating: " & Environment.TickCount - t0 & " ms")
                 t0 = Environment.TickCount
@@ -410,10 +417,12 @@ newtry:
                 If Not term.ExitFromLoops Then
                     m.complited.LoationsCreation_Done = True
                     Return m
+                Else
+                    Call m.log.Add("Impenetrable mesh gen: time limit termination")
                 End If
                 nTry = 0
             Catch ex As Exception
-                Call m.log.Add("Some error occured in ImpenetrableMeshGen: " & vbNewLine & ex.Message)
+                Call m.log.Add("Some error occured in ImpenetrableMeshGen: " & vbNewLine & ex.Message & vbNewLine & ex.StackTrace)
                 m.Clear()
                 If nTry > 1 Then
                     Throw ex
@@ -1109,7 +1118,7 @@ newtry:
     ''' .board(,).LocID - как минимум одно значение (можно больше, если по соседству с тайлом есть тайлы других локаций (но тот, что первый в списке - основной)</param>
     ''' <param name="settMap">Общие настройки для карты</param>
     ''' <param name="Term">Нужно инициализировать экземпляр этого класса до начала генерации</param>
-    Public Sub SetBorders(ByRef m As Map, ByVal settMap As Map.SettingsMap, ByRef Term As TerminationCondition)
+    Public Sub SetBorders(ByRef m As Map, ByVal settMap As Map.SettingsMap, ByRef settLoc() As Map.SettingsLoc, ByRef Term As TerminationCondition)
 
         Dim tmpm As Map = m
         Dim del(tmpm.xSize, tmpm.ySize), freeze(tmpm.xSize, tmpm.ySize) As Boolean
@@ -1411,8 +1420,27 @@ newtry:
         Call ConnectDisconnectedAreas(tmpm, settMap, Term)
         If Term.ExitFromLoops Then Exit Sub
 
-        Call DisconnectRandomLocations(tmpm, settMap)
+        Call DisconnectRandomLocations(tmpm, settMap, settLoc)
 
+        Parallel.For(0, tmpm.ySize + 1, _
+         Sub(y As Integer)
+             For x As Integer = 0 To tmpm.xSize Step 1
+                 If tmpm.board(x, y).isPass Then
+                     Dim removePathStatus As Boolean = True
+                     Dim b As Location.Borders = NearestXY(x, y, tmpm.xSize, tmpm.ySize, 1)
+                     For j As Integer = b.minY To b.maxY Step 1
+                         For i As Integer = b.minX To b.maxX Step 1
+                             If Not tmpm.board(x, y).locID(0) = tmpm.board(i, j).locID(0) And Not tmpm.board(i, j).isBorder Then
+                                 removePathStatus = False
+                                 i = b.maxX
+                                 j = b.maxY
+                             End If
+                         Next i
+                     Next j
+                     tmpm.board(x, y).isPass = Not removePathStatus
+                 End If
+             Next x
+         End Sub)
         Parallel.For(0, tmpm.ySize + 1, _
          Sub(y As Integer)
              For x As Integer = 0 To tmpm.xSize Step 1
@@ -1639,7 +1667,7 @@ newtry:
         Next i
         Return FindDisconnected(free, c)
     End Function
-    Private Sub DisconnectRandomLocations(ByRef m As Map, ByVal settMap As Map.SettingsMap)
+    Private Sub DisconnectRandomLocations(ByRef m As Map, ByRef settMap As Map.SettingsMap, ByRef settLoc() As Map.SettingsLoc)
 
         Dim init As Point = Nothing
         For x As Integer = 0 To m.xSize Step 1
@@ -1676,26 +1704,30 @@ newtry:
         For x As Integer = 0 To m.xSize Step 1
             For y As Integer = 0 To m.ySize Step 1
                 If Not m.board(x, y).isBorder Then
-                    If Not m.Loc(m.board(x, y).locID(0) - 1).IsObtainedBySymmery Then
-                        addedTo.Clear()
-                        Dim b As Location.Borders = NearestXY(x, y, m.xSize, m.ySize, 1)
-                        For i As Integer = b.minX To b.maxX Step 1
-                            For j As Integer = b.minY To b.maxY Step 1
-                                If Not m.board(x, y).locID(0) = m.board(i, j).locID(0) Then
-                                    If Not addedTo.Contains(m.board(i, j).locID(0)) Then
-                                        If m.board(x, y).locID(0) < m.board(i, j).locID(0) Then
-                                            d1 = m.board(x, y).locID(0)
-                                            d2 = m.board(i, j).locID(0)
-                                        Else
-                                            d1 = m.board(i, j).locID(0)
-                                            d2 = m.board(x, y).locID(0)
+                    If Not settLoc(m.board(x, y).locID(0) - 1).ConnectWithAllNeighboringLocations Then
+                        If Not m.Loc(m.board(x, y).locID(0) - 1).IsObtainedBySymmery Then
+                            addedTo.Clear()
+                            Dim b As Location.Borders = NearestXY(x, y, m.xSize, m.ySize, 1)
+                            For i As Integer = b.minX To b.maxX Step 1
+                                For j As Integer = b.minY To b.maxY Step 1
+                                    If Not settLoc(m.board(i, j).locID(0) - 1).ConnectWithAllNeighboringLocations Then
+                                        If Not m.board(x, y).locID(0) = m.board(i, j).locID(0) Then
+                                            If Not addedTo.Contains(m.board(i, j).locID(0)) Then
+                                                If m.board(x, y).locID(0) < m.board(i, j).locID(0) Then
+                                                    d1 = m.board(x, y).locID(0)
+                                                    d2 = m.board(i, j).locID(0)
+                                                Else
+                                                    d1 = m.board(i, j).locID(0)
+                                                    d2 = m.board(x, y).locID(0)
+                                                End If
+                                                addedTo.Add(m.board(i, j).locID(0))
+                                                borders(d1 - 1, d2 - 1).Add(New Point(x, y))
+                                            End If
                                         End If
-                                        addedTo.Add(m.board(i, j).locID(0))
-                                        borders(d1 - 1, d2 - 1).Add(New Point(x, y))
                                     End If
-                                End If
-                            Next j
-                        Next i
+                                Next j
+                            Next i
+                        End If
                     End If
                 End If
             Next y
@@ -1713,6 +1745,7 @@ newtry:
                 End If
             Next i
         Next j
+        If n = -1 Then Exit Sub
         Dim tmpM As New Map(m.xSize, m.ySize, m.symmID)
         Dim s() As Point
         For i As Integer = 0 To n Step 1
@@ -1797,7 +1830,7 @@ newtry:
     ''' Дробная часть определяет шанс округления в большую сторону. В случае округления вниз дробная часть добавляется к максимальному количеству шахт </param>
     ''' <param name="Term">Нужно инициализировать экземпляр этого класса до начала генерации</param>
     Public Sub PlaceActiveObjects(ByRef m As Map, ByVal settMap As Map.SettingsMap, _
-                                  ByRef settLoc() As Map.SettingsLoc, _
+                                  ByVal settLoc() As Map.SettingsLoc, _
                                   ByRef Term As TerminationCondition)
         Dim ObjectBlank()(,) As Map.Cell = ActiveObjectsSet(settMap, m.symmID)
         Dim tmpm As Map = m
@@ -1932,30 +1965,34 @@ newtry:
 
         Dim GroupID As Integer = 1
         Term = New TerminationCondition(Term.maxTime)
-        Call FillLocation(GroupID, 1, tmpm, LocsPlacing, LocArea, settMap, settLoc, _
-                          tmpm.symmID, True, LocSymmMult, LocFreeCells, Term)
+        Dim warning As String = FillLocation(GroupID, 1, tmpm, LocsPlacing, LocArea, settMap, settLoc, _
+                                             tmpm.symmID, True, LocSymmMult, LocFreeCells, Term)
         If Term.ExitFromLoops Then Exit Sub
+        If Not warning = "" Then Throw New Exception(warning)
+
         Dim TT(UBound(tmpm.Loc)) As TerminationCondition
         Dim maxTime As Long = Term.maxTime
-
-        'Parallel.For(settMap.nRaces, tmpm.Loc.Length, _
-        ' Sub(i As Integer)
-        For i As Integer = settMap.nRaces To UBound(tmpm.Loc) Step 1
-            If Not tmpm.Loc(i).IsObtainedBySymmery Then
-                TT(i) = New TerminationCondition(maxTime)
-                For j As Integer = 0 To UBound(tmpm.Loc) Step 1
-                    If Not IsNothing(TT(j)) Then TT(i).ExitFromLoops = TT(i).ExitFromLoops Or TT(j).ExitFromLoops
-                Next j
-                If TT(i).ExitFromLoops Then Exit Sub
-                Call FillLocation(GroupID, tmpm.Loc(i).ID, tmpm, LocsPlacing, LocArea, settMap, settLoc, _
-                                  tmpm.symmID, False, LocSymmMult, LocFreeCells, TT(i))
-            End If
-        Next i
-        ' End Sub)
+        Dim warnings(UBound(tmpm.Loc)) As String
+        Parallel.For(settMap.nRaces, tmpm.Loc.Length, _
+         Sub(i As Integer)
+             'For i As Integer = settMap.nRaces To UBound(tmpm.Loc) Step 1
+             If Not tmpm.Loc(i).IsObtainedBySymmery Then
+                 TT(i) = New TerminationCondition(maxTime)
+                 For j As Integer = 0 To UBound(tmpm.Loc) Step 1
+                     If Not IsNothing(TT(j)) Then TT(i).ExitFromLoops = TT(i).ExitFromLoops Or TT(j).ExitFromLoops
+                 Next j
+                 If TT(i).ExitFromLoops Then Exit Sub
+                 warnings(i) = FillLocation(GroupID, tmpm.Loc(i).ID, tmpm, LocsPlacing, LocArea, settMap, settLoc, _
+                                            tmpm.symmID, False, LocSymmMult, LocFreeCells, TT(i))
+             End If
+             'Next i
+         End Sub)
         For i As Integer = 0 To UBound(tmpm.Loc) Step 1
+            If Not warnings(i) = "" Then warning = warnings(i)
             If Not IsNothing(TT(i)) Then Term.ExitFromLoops = Term.ExitFromLoops Or TT(i).ExitFromLoops
         Next i
         If Term.ExitFromLoops Then Exit Sub
+        If Not warning = "" Then Throw New Exception(warning)
 
         Dim maxGroupID As Integer = ImpenetrableMeshGen.GetMaxGroupID(tmpm)
 
@@ -2028,7 +2065,7 @@ newtry:
         ReDim output(UBound(tmpIDs))
         Call PlaceObjRow(tmpIDs, 0, NearWith, _
                          New Point(m.Loc(locID - 1).pos.X - dx, m.Loc(locID - 1).pos.Y - dy), _
-                         FreeCells, output, Term, maxN, bestOutput)
+                        FreeCells, output, Term, maxN, bestOutput)
         If maxN = 0 And IsNothing(output(0)) Then
             output = Nothing
             Exit Sub
@@ -2295,10 +2332,10 @@ newtry:
         If Not IsNothing(nObj) Then nObj(id) -= 1
         p += 1
     End Sub
-    Private Sub FillLocation(ByRef GroupID As Integer, ByVal LocId As Integer, ByRef m As Map, ByRef LocsPlacing() As Location.Borders, _
-                             ByRef LocArea()() As Integer, ByVal settMap As Map.SettingsMap, ByVal settLoc() As Map.SettingsLoc, _
-                             ByVal symmId As Integer, ByVal IsRaceLoc As Boolean, LocSymmMult() As Double, _
-                             ByRef LocFreeCells()(,) As Boolean, ByRef Term As TerminationCondition)
+    Private Function FillLocation(ByRef GroupID As Integer, ByVal LocId As Integer, ByRef m As Map, ByRef LocsPlacing() As Location.Borders, _
+                                  ByRef LocArea()() As Integer, ByVal settMap As Map.SettingsMap, ByVal settLoc() As Map.SettingsLoc, _
+                                  ByVal symmId As Integer, ByVal IsRaceLoc As Boolean, LocSymmMult() As Double, _
+                                  ByRef LocFreeCells()(,) As Boolean, ByRef Term As TerminationCondition) As String
         Dim tmpm As Map = m
         Dim tmpLocsPlacing() As Location.Borders = LocsPlacing
         Dim tmpLocFreeCells()(,) As Boolean = LocFreeCells
@@ -2339,9 +2376,15 @@ newtry:
             For i As Integer = 0 To UBound(v) Step 1
                 If IsNothing(v(i)) Then
                     If IsRaceLoc Then
-                        Throw New Exception("Как минимум одна из стартовых локаций настолько маленькая, что я не могу разместить даже столицу")
+                        Return "Как минимум одна из стартовых локаций настолько маленькая, что я не могу разместить даже столицу"
                     Else
-                        Exit Do
+                        Dim sL As Map.SettingsLoc = settLoc(LocId - 1)
+                        If sL.maxCities + sL.maxGoldMines + sL.maxManaSources _
+                         + sL.maxMages + sL.maxMercenaries + sL.maxRuins + sL.maxTrainers + sL.maxVendors > 1 Then
+                            Return "Не получилось ничего вместить в локацию"
+                        Else
+                            Exit Do
+                        End If
                     End If
                 End If
                 If minN > UBound(v(i)) Then minN = UBound(v(i))
@@ -2396,7 +2439,8 @@ newtry:
             End If
         Loop
         m = tmpm
-    End Sub
+        Return ""
+    End Function
     Friend Shared Function GetMaxGroupID(ByRef m As Map) As Integer
         Dim maxGroupID As Integer = -1
         For y As Integer = 0 To m.ySize Step 1
@@ -3768,6 +3812,9 @@ Public Class Map
         ''' Nothing, если нужен случайный выбор</summary>
         Dim possibleRaces() As String
 
+        ''' <summary>True, если локация должна быть соединена с соседними независимо от глобальных настроек</summary>
+        Dim ConnectWithAllNeighboringLocations As Boolean
+
         Private Checked As Boolean
         ''' <summary>Проверит корректность параметров. Вернет пустое сообщение, если все нормально</summary>
         Public Function Check() As String
@@ -3891,6 +3938,7 @@ Public Class Map
             .scaleContent = v.scaleContent, _
             .possibleRaces = r, _
             .RaceCities = SettingsRaceCity.Copy(v.RaceCities), _
+            .ConnectWithAllNeighboringLocations = v.ConnectWithAllNeighboringLocations, _
             .Checked = v.Checked}
         End Function
         Public Shared Function Copy(ByRef v() As SettingsLoc) As SettingsLoc()
@@ -3949,6 +3997,7 @@ Public Class Map
             Call Map.ReadValue("merchItemsCost", merchItemsCost, data, GenDefaultValues.wTemplate_LocationKeyword)
             Call Map.ReadValue("scaleContent", scaleContent, data, GenDefaultValues.wTemplate_LocationKeyword)
             Call Map.ReadValue("possibleRaces", possibleRaces, data, GenDefaultValues.wTemplate_LocationKeyword, CChar(";"))
+            Call Map.ReadValue("ConnectWithAllNeighboringLocations", ConnectWithAllNeighboringLocations, data, GenDefaultValues.wTemplate_LocationKeyword)
         End Sub
 
         Public Structure SettingsRaceCity
@@ -4506,8 +4555,10 @@ Public Class StackLocationsGen
             Dim term As New TerminationCondition(maxGenTime)
             Dim guards(UBound(m.Loc))() As Point
             guards = PlasePassesGuards(tmpm, settMap, False, term)
-            If term.ExitFromLoops Then Return False
-
+            If term.ExitFromLoops Then
+                Call m.log.Add("Stack locations gen: time limit termination")
+                Return False
+            End If
             Dim gList() As Point = ConvertPointsArray({guards})
 
             'Call RemoveExcessPassGuards(tmpm, settMap, gList)
@@ -4822,7 +4873,7 @@ Public Class StackLocationsGen
 
     Private Structure Passage
         Dim bias, Size As Point
-        Dim passTiles(,) As Boolean
+        Dim passTiles(,) As Integer
         Dim edgePoints() As List(Of Point)
     End Structure
     Protected Friend Function PlasePassesGuards(ByVal m As Map, ByRef settMap As Map.SettingsMap, _
@@ -4864,9 +4915,15 @@ Public Class StackLocationsGen
              miny = Math.Max(miny - 1, 0)
              maxy = Math.Min(maxy + 1, m.ySize)
              ReDim passages(i).passTiles(maxx - minx, maxy - miny)
+             Dim pointID As Integer = -1
              For y As Integer = miny To maxy Step 1
                  For x As Integer = minx To maxx Step 1
-                     passages(i).passTiles(x - minx, y - miny) = connected(i)(x, y)
+                     If connected(i)(x, y) Then
+                         pointID += 1
+                         passages(i).passTiles(x - minx, y - miny) = pointID
+                     Else
+                         passages(i).passTiles(x - minx, y - miny) = -1
+                     End If
                      If Not connected(i)(x, y) And Not m.board(x, y).isBorder And Not m.board(x, y).isAttended Then
                          Dim b As Location.Borders = ImpenetrableMeshGen.NearestXY(x, y, m.xSize, m.ySize, 1)
                          For q As Integer = b.minY To b.maxY Step 1
@@ -4887,17 +4944,14 @@ Public Class StackLocationsGen
 
         If m.symmID > -1 Then
             Dim s()() As Point
-            Dim n As Integer
             Dim del, pointFound As Boolean
             For i As Integer = 0 To UBound(passages) - 1 Step 1
                 If Not IsNothing(passages(i).passTiles) Then
                     ReDim s(passages(i).passTiles.Length - 1)
-                    n = -1
                     For y As Integer = 0 To passages(i).Size.Y Step 1
                         For x As Integer = 0 To passages(i).Size.X Step 1
-                            If passages(i).passTiles(x, y) Then
-                                n += 1
-                                s(n) = symm.ApplySymm(New Point(passages(i).bias.X + x, passages(i).bias.Y + y), settMap.nRaces, m, 1)
+                            If passages(i).passTiles(x, y) > -1 Then
+                                s(passages(i).passTiles(x, y)) = symm.ApplySymm(New Point(passages(i).bias.X + x, passages(i).bias.Y + y), settMap.nRaces, m, 1)
                             End If
                         Next x
                     Next y
@@ -4907,16 +4961,18 @@ Public Class StackLocationsGen
                             del = True
                             For y As Integer = 0 To passages(j).Size.Y Step 1
                                 For x As Integer = 0 To passages(j).Size.X Step 1
-                                    If passages(j).passTiles(x, y) Then
+                                    If passages(j).passTiles(x, y) > -1 Then
                                         pointFound = False
-                                        For t As Integer = 0 To n Step 1
-                                            For q As Integer = 0 To UBound(s(t)) Step 1
-                                                If x + passages(j).bias.X = s(t)(q).X And y + passages(j).bias.Y = s(t)(q).Y Then
-                                                    pointFound = True
-                                                    Exit For
-                                                End If
-                                            Next q
-                                            If pointFound Then Exit For
+                                        For t As Integer = 0 To UBound(s) Step 1
+                                            If Not IsNothing(s(t)) Then
+                                                For q As Integer = 0 To UBound(s(t)) Step 1
+                                                    If x + passages(j).bias.X = s(t)(q).X And y + passages(j).bias.Y = s(t)(q).Y Then
+                                                        pointFound = True
+                                                        Exit For
+                                                    End If
+                                                Next q
+                                                If pointFound Then Exit For
+                                            End If
                                         Next t
                                         If Not pointFound Then
                                             del = False
@@ -4967,7 +5023,7 @@ Public Class StackLocationsGen
                     Dim setAsPass As Boolean = Not IsNothing(result(i))
                     For y As Integer = 0 To passages(i).Size.Y Step 1
                         For x As Integer = 0 To passages(i).Size.X Step 1
-                            If passages(i).passTiles(x, y) Then
+                            If passages(i).passTiles(x, y) > -1 Then
                                 Dim xb As Integer = passages(i).bias.X + x
                                 Dim yb As Integer = passages(i).bias.Y + y
                                 If m.symmID > -1 Then
@@ -4993,12 +5049,47 @@ Public Class StackLocationsGen
     Private Function HandlePath(ByRef m As Map, ByRef path As Passage, _
                                 ByRef justCheckGuardNecessity As Boolean, _
                                 ByRef term As TerminationCondition) As Point()
-        Dim output() As Integer = Nothing
+
         Dim pointsList() As Point = Nothing
         Dim bestN As Integer
         term.CheckTime()
         If term.ExitFromLoops Then Return Nothing
-        Call PlaceGuardLoc(m, pointsList, -1, bestN, Nothing, output, Nothing, -1, path, justCheckGuardNecessity, term)
+        Dim currentOutput(), bestOutput() As Integer
+        Dim IDs As New List(Of Integer)
+
+        Dim n As Integer = -1
+        For j As Integer = 0 To path.Size.Y Step 1
+            For i As Integer = 0 To path.Size.X Step 1
+                If path.passTiles(i, j) > -1 Then n = Math.Max(n, path.passTiles(i, j))
+            Next i
+        Next j
+        ReDim pointsList(n)
+        Dim rndID As New List(Of Integer)
+        ReDim currentOutput(UBound(pointsList)), bestOutput(UBound(pointsList))
+        For j As Integer = 0 To path.Size.Y Step 1
+            For i As Integer = 0 To path.Size.X Step 1
+                If path.passTiles(i, j) > -1 Then
+                    pointsList(path.passTiles(i, j)) = New Point(i, j)
+                    rndID.Add(path.passTiles(i, j))
+                End If
+            Next i
+        Next j
+        n = rndID.Count - 1
+        For i As Integer = 0 To n Step 1
+            Dim s As Integer = comm.rndgen.RndInt(0, rndID.Count - 1, False)
+            IDs.Add(rndID.Item(s))
+            rndID.RemoveAt(s)
+        Next i
+
+        For currentNLimit As Integer = 0 To UBound(pointsList) Step 1
+            bestN = Integer.MinValue
+            For i As Integer = 0 To UBound(pointsList) Step 1
+                currentOutput(i) = -1
+                bestOutput(i) = -1
+            Next i
+            Call PlaceGuardLoc(m, pointsList, -1, currentNLimit, bestN, currentOutput, bestOutput, IDs, -1, path, justCheckGuardNecessity, term)
+            If bestN > Integer.MinValue Then Exit For
+        Next currentNLimit
 
         If bestN < 0 Then Return Nothing
 
@@ -5006,7 +5097,7 @@ Public Class StackLocationsGen
         If Not justCheckGuardNecessity Then
             ReDim out(bestN)
             For i As Integer = 0 To bestN Step 1
-                out(i) = New Point(pointsList(output(i)).X + path.bias.X, pointsList(output(i)).Y + path.bias.Y)
+                out(i) = New Point(pointsList(bestOutput(i)).X + path.bias.X, pointsList(bestOutput(i)).Y + path.bias.Y)
             Next i
         Else
             out = {New Point(-1, -1)}
@@ -5032,6 +5123,7 @@ Public Class StackLocationsGen
     Private Sub PlaceGuardLoc(ByRef m As Map, _
                               ByRef pointsList() As Point, _
                               ByRef currentN As Integer, _
+                              ByRef currentNLimit As Integer, _
                               ByRef bestN As Integer, _
                               ByRef currentOutput() As Integer, _
                               ByRef bestOutput() As Integer, _
@@ -5045,44 +5137,41 @@ Public Class StackLocationsGen
             Exit Sub
         End If
 
-        If IsNothing(pointsList) Then
-            Dim n As Integer = -1
-            For j As Integer = 0 To prevPassage.Size.Y Step 1
-                For i As Integer = 0 To prevPassage.Size.X Step 1
-                    If prevPassage.passTiles(i, j) Then
-                        n += 1
-                    End If
-                Next i
-            Next j
-            Dim pList(n) As Point
-            IDs = New List(Of Integer)
-            Dim rndID As New List(Of Integer)
-            ReDim currentOutput(n), bestOutput(n)
-            n = -1
-            For j As Integer = 0 To prevPassage.Size.Y Step 1
-                For i As Integer = 0 To prevPassage.Size.X Step 1
-                    If prevPassage.passTiles(i, j) Then
-                        n += 1
-                        pList(n) = New Point(i, j)
-                        rndID.Add(n)
-                        currentOutput(n) = -1
-                        bestOutput(n) = -1
-                    End If
-                Next i
-            Next j
-            For i As Integer = 0 To n Step 1
-                Dim s As Integer = comm.rndgen.RndInt(0, rndID.Count - 1, False)
-                IDs.Add(rndID.Item(s))
-                rndID.RemoveAt(s)
-            Next i
-            pointsList = pList
-            currentN = -1
-            bestN = Integer.MinValue
-            selected = -1
-        End If
+        'If IsNothing(pointsList) Then
+        '    Dim n As Integer = -1
+        '    For j As Integer = 0 To prevPassage.Size.Y Step 1
+        '        For i As Integer = 0 To prevPassage.Size.X Step 1
+        '            If prevPassage.passTiles(i, j) > -1 Then n = Math.Max(n, prevPassage.passTiles(i, j))
+        '        Next i
+        '    Next j
+        '    Dim pList(n) As Point
+        '    IDs = New List(Of Integer)
+        '    Dim rndID As New List(Of Integer)
+        '    ReDim currentOutput(UBound(pList)), bestOutput(UBound(pList))
+        '    For j As Integer = 0 To prevPassage.Size.Y Step 1
+        '        For i As Integer = 0 To prevPassage.Size.X Step 1
+        '            If prevPassage.passTiles(i, j) > -1 Then
+        '                pList(prevPassage.passTiles(i, j)) = New Point(i, j)
+        '                rndID.Add(prevPassage.passTiles(i, j))
+        '                currentOutput(prevPassage.passTiles(i, j)) = -1
+        '                bestOutput(prevPassage.passTiles(i, j)) = -1
+        '            End If
+        '        Next i
+        '    Next j
+        '    n = rndID.Count - 1
+        '    For i As Integer = 0 To n Step 1
+        '        Dim s As Integer = comm.rndgen.RndInt(0, rndID.Count - 1, False)
+        '        IDs.Add(rndID.Item(s))
+        '        rndID.RemoveAt(s)
+        '    Next i
+        '    pointsList = pList
+        '    currentN = -1
+        '    bestN = Integer.MinValue
+        '    selected = -1
+        'End If
 
         Dim changedPassage As New Passage With {.bias = prevPassage.bias, _
-                                                .passTiles = CType(prevPassage.passTiles.Clone, Boolean(,)), _
+                                                .passTiles = CType(prevPassage.passTiles.Clone, Integer(,)), _
                                                 .Size = prevPassage.Size}
         Dim IDs_bak As New List(Of Integer)
         For Each i As Integer In IDs
@@ -5101,20 +5190,11 @@ Public Class StackLocationsGen
                                                                       changedPassage.Size.X, _
                                                                       changedPassage.Size.Y, _
                                                                       1)
-            Dim throwException As Boolean
             For j As Integer = b.minY To b.maxY Step 1
                 For i As Integer = b.minX To b.maxX Step 1
-                    If changedPassage.passTiles(i, j) Then
-                        changedPassage.passTiles(i, j) = False
-                        throwException = True
-                        For k As Integer = 0 To UBound(pointsList) Step 1
-                            If pointsList(k).X = i And pointsList(k).Y = j Then
-                                IDs_bak.Remove(k)
-                                throwException = False
-                                Exit For
-                            End If
-                        Next k
-                        If throwException Then Throw New Exception("")
+                    If changedPassage.passTiles(i, j) > -1 Then
+                        IDs_bak.Remove(changedPassage.passTiles(i, j))
+                        changedPassage.passTiles(i, j) = -1
                     End If
                 Next i
             Next j
@@ -5134,28 +5214,32 @@ Public Class StackLocationsGen
             changedPassage.edgePoints = prevPassage.edgePoints
         End If
 
-        If TestPassage(changedPassage, pointsList) Then
-            If currentN = -1 Then
-                bestN = -1
+        If currentN = currentNLimit Or justCheckGuardNecessity Then
+            If TestPassage(changedPassage, pointsList) Then
+                If currentN = -1 Then
+                    bestN = -1
+                    Exit Sub
+                End If
+                For i As Integer = 0 To currentN Step 1
+                    bestOutput(i) = currentOutput(i)
+                Next i
+                For i As Integer = currentN + 1 To bestN Step 1
+                    bestOutput(i) = -1
+                Next i
+                bestN = currentN
+                Exit Sub
+            ElseIf justCheckGuardNecessity Then
+                bestOutput = Nothing
+                currentOutput = Nothing
+                bestN = 1
+                Exit Sub
+            Else
                 Exit Sub
             End If
-            For i As Integer = 0 To currentN Step 1
-                bestOutput(i) = currentOutput(i)
-            Next i
-            For i As Integer = currentN + 1 To bestN Step 1
-                bestOutput(i) = -1
-            Next i
-            bestN = currentN
-            Exit Sub
-        ElseIf justCheckGuardNecessity Then
-            bestOutput = Nothing
-            currentOutput = Nothing
-            bestN = 1
-            Exit Sub
         End If
 
         For Each i As Integer In IDs_bak
-            Call PlaceGuardLoc(m, pointsList, currentN + 1, bestN, CType(currentOutput.Clone, Integer()), _
+            Call PlaceGuardLoc(m, pointsList, currentN + 1, currentNLimit, bestN, CType(currentOutput.Clone, Integer()), _
                                bestOutput, IDs_bak, i, changedPassage, justCheckGuardNecessity, term)
         Next i
     End Sub
@@ -5175,7 +5259,7 @@ Public Class StackLocationsGen
                         b = ImpenetrableMeshGen.NearestXY(item.X, item.Y, p.Size.X, p.Size.Y, 1)
                         For y As Integer = b.minY To b.maxY Step 1
                             For x As Integer = b.minX To b.maxX Step 1
-                                If p.passTiles(x, y) Then
+                                If p.passTiles(x, y) > -1 Then
                                     If LocID(x, y) = 0 Then
                                         LocID(x, y) = i1
                                     Else
@@ -5207,7 +5291,7 @@ Public Class StackLocationsGen
                                         b.maxY = j + 1
                                         For x As Integer = b.minX To b.maxX Step 1
                                             For y As Integer = b.minY To b.maxY Step 1
-                                                If p.passTiles(x, y) Then
+                                                If p.passTiles(x, y) > -1 Then
                                                     If connectedWithLoc(x, y) = 0 Then
                                                         If LocID(x, y) > 0 And Not LocID(x1, y1) = LocID(x, y) Then Return False
 

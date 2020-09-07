@@ -32,6 +32,7 @@ Partial Class StartForm
         Me.GenManyButton = New System.Windows.Forms.Button()
         Me.RndTestButton = New System.Windows.Forms.Button()
         Me.UseTemplateCheckBox = New System.Windows.Forms.CheckBox()
+        Me.LogTextBox = New System.Windows.Forms.TextBox()
         CType(Me.PictureBox1, System.ComponentModel.ISupportInitialize).BeginInit()
         Me.Panel1.SuspendLayout()
         Me.SuspendLayout()
@@ -137,11 +138,21 @@ Partial Class StartForm
         Me.UseTemplateCheckBox.Text = "Use template"
         Me.UseTemplateCheckBox.UseVisualStyleBackColor = True
         '
+        'LogTextBox
+        '
+        Me.LogTextBox.Location = New System.Drawing.Point(756, 12)
+        Me.LogTextBox.Multiline = True
+        Me.LogTextBox.Name = "LogTextBox"
+        Me.LogTextBox.ScrollBars = System.Windows.Forms.ScrollBars.Vertical
+        Me.LogTextBox.Size = New System.Drawing.Size(380, 575)
+        Me.LogTextBox.TabIndex = 7
+        '
         'StartForm
         '
         Me.AutoScaleDimensions = New System.Drawing.SizeF(6.0!, 13.0!)
         Me.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font
-        Me.ClientSize = New System.Drawing.Size(773, 606)
+        Me.ClientSize = New System.Drawing.Size(1142, 606)
+        Me.Controls.Add(Me.LogTextBox)
         Me.Controls.Add(Me.UseTemplateCheckBox)
         Me.Controls.Add(Me.RndTestButton)
         Me.Controls.Add(Me.GenManyButton)
@@ -168,5 +179,6 @@ Partial Class StartForm
     Friend WithEvents GenManyButton As System.Windows.Forms.Button
     Friend WithEvents RndTestButton As System.Windows.Forms.Button
     Friend WithEvents UseTemplateCheckBox As System.Windows.Forms.CheckBox
+    Friend WithEvents LogTextBox As System.Windows.Forms.TextBox
 
 End Class

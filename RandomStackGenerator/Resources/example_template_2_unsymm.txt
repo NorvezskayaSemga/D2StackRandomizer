@@ -35,6 +35,7 @@ nRaces		2
 #Применять ли операции симметрии
 ApplySymmetry	False
 
+PassageCreationChance		0.0
 #----------------------------------------------------------------------------------
 
 #блок настроек для локации
@@ -78,11 +79,13 @@ posY		0.75	0.9
 
 ReadFromFile example_template_1.txt $cloc
 
+ConnectWithAllNeighboringLocations	True
+
 RaceCities	nothing
 
 posX		0.45	0.55
 posY		0.45	0.55
-AppearanceChance	0.5
+AppearanceChance	1.0
 
 #----------------------------------------------------------------------------------
 

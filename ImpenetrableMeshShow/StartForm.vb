@@ -85,7 +85,7 @@ Friend Class StartForm
         Dim objplace As New ImpenetrableObjects(objSizeArray, {"%default%"}, {"%default%"}, {"%default%"}, ReadSpells)
 
         Dim grid As Map
-        Dim genTimeLimit As Integer = 3000
+        Dim genTimeLimit As Integer = 5000
 
         Dim path As String = ".\Resources\"
 
@@ -123,8 +123,9 @@ Friend Class StartForm
         grid = New MapGenWrapper(objplace).CommonGen(gsettings, genTimeLimit)
 
         Console.WriteLine(grid.log.PrintAll)
+        LogTextBox.Text = grid.log.PrintAll
 
-        Call ShowResult(grid)
+        If Not IsNothing(grid) Then Call ShowResult(grid)
 
     End Sub
     Public Sub ShowResult(ByRef grid As Map)
