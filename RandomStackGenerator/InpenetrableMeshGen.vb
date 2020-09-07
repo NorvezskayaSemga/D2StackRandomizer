@@ -1400,7 +1400,7 @@ newtry:
                      Dim Centers() As Point = New Point() {tmpm.Loc(i).pos, tmpm.Loc(j).pos}
                      For Each c As Point In Centers
                          For Each p As Integer In selected
-                             Call MakePass(tmpm, pointsslist(p), c, settMap)
+                             Call MakePass(tmpm, pointsslist(p), c, settMap, True, False)
                          Next p
                      Next c
                  End If
@@ -1469,14 +1469,46 @@ newtry:
                         End If
                     Next x1
                 Next y1
-                Call MakePass(m, p1, p2, settMap)
+                Call MakePass(m, p1, p2, settMap, False, True)
             End If
         Loop
     End Sub
     Private Sub MakePass(ByRef m As Map, ByRef init As Point, ByRef dest As Point, _
-                         ByRef settMap As Map.SettingsMap)
-        Dim vx As Double = dest.X - init.X
-        Dim vy As Double = dest.Y - init.Y
+                         ByRef settMap As Map.SettingsMap, ByRef makeIntermediatePoint As Boolean, ByRef serial As Boolean)
+
+        Dim intermediate As Point
+        If makeIntermediatePoint Then
+            Dim dist As Double = init.Dist(dest)
+            Dim r As Location.Borders
+            r = NearestXY(init, m, CInt(Math.Ceiling(dist)))
+            Dim minDist As Double = Double.MaxValue
+            Dim p As New Point(-1, -1)
+            For y As Integer = r.minY To r.maxY Step 1
+                For x As Integer = r.minX To r.maxX Step 1
+                    If m.board(x, y).locID(0) = m.board(dest.X, dest.Y).locID(0) And Not m.board(x, y).isBorder Then
+                        Dim d As Double = init.SqDist(x, y)
+                        If minDist > d Then
+                            minDist = d
+                            p.X = x
+                            p.Y = y
+                        End If
+                    End If
+                Next x
+            Next y
+            Dim newX As Integer = -1
+            Dim newY As Integer = -1
+            Do While newX < 0 Or newY < 0 Or newX > m.xSize Or newY > m.ySize OrElse Not m.board(newX, newY).locID(0) = m.board(dest.X, dest.Y).locID(0)
+                newX = rndgen.RndInt(p.X - 1, p.X + 1, serial)
+                newY = rndgen.RndInt(p.Y - 1, p.Y + 1, serial)
+            Loop
+            intermediate = New Point(newX, newY)
+            Call MakePass(m, init, intermediate, settMap, False, serial)
+        Else
+            intermediate = init
+        End If
+
+        Dim vx As Double = dest.X - intermediate.X
+        Dim vy As Double = dest.Y - intermediate.Y
         Dim n As Integer = CInt(10 * Math.Max((vx * vx + vy * vy), 1))
         vx /= n
         vy /= n
@@ -1485,27 +1517,27 @@ newtry:
         Dim b As Location.Borders
         Dim setAsPath As Boolean
         For r As Integer = 0 To n Step 1
-            tx = init.X + CDbl(r) * vx
-            ty = init.Y + CDbl(r) * vy
+            tx = intermediate.X + CDbl(r) * vx
+            ty = intermediate.Y + CDbl(r) * vy
             b = NearestXY(CInt(tx), CInt(ty), m.xSize, m.ySize, CInt(2 * (0.5 * settMap.minPassWidth + 1)))
-            For x As Integer = b.minX To b.maxX Step 1
-                For y As Integer = b.minY To b.maxY Step 1
+            For y As Integer = b.minY To b.maxY Step 1
+                For x As Integer = b.minX To b.maxX Step 1
                     If m.board(x, y).isBorder Then
                         Dim dist As Double = Math.Sqrt(CDbl(x - tx) ^ 2 + CDbl(y - ty) ^ 2)
-                        If dist < 0.5 * settMap.minPassWidth OrElse (dist <= settMap.minPassWidth AndAlso rndgen.PRand(0, 1) > 0.5) Then
+                        If dist < 0.5 * settMap.minPassWidth OrElse (dist <= settMap.minPassWidth AndAlso rndgen.Rand(0, 1, serial) > 0.5) Then
                             Dim c1 As Integer = Math.Max(Math.Min(x, m.xSize - 1), 1)
                             Dim c2 As Integer = Math.Max(Math.Min(y, m.ySize - 1), 1)
                             setAsPath = False
                             Dim b2 As Location.Borders = NearestXY(c1, c2, m.xSize, m.ySize, 1)
-                            For i As Integer = b2.minX To b2.maxX Step 1
-                                For j As Integer = b2.minY To b2.maxY Step 1
+                            For j As Integer = b2.minY To b2.maxY Step 1
+                                For i As Integer = b2.minX To b2.maxX Step 1
                                     If Not m.board(c1, c2).locID(0) = m.board(i, j).locID(0) Then
                                         setAsPath = True
                                         i = b2.maxX
                                         j = b2.maxY
                                     End If
-                                Next j
-                            Next i
+                                Next i
+                            Next j
                             Dim p() As Point
                             If m.symmID > -1 Then
                                 p = symm.ApplySymm(New Point(c1, c2), settMap.nRaces, m, 1)
@@ -1518,20 +1550,20 @@ newtry:
                                     m.board(item.X, item.Y).isPass = setAsPath
                                 ElseIf m.board(item.X, item.Y).isAttended Then
                                     Dim tb As Location.Borders = NearestXY(item, m, 1)
-                                    For xx As Integer = tb.minX To tb.maxX Step 1
-                                        For yy As Integer = tb.minY To tb.maxY Step 1
+                                    For yy As Integer = tb.minY To tb.maxY Step 1
+                                        For xx As Integer = tb.minX To tb.maxX Step 1
                                             If m.board(xx, yy).isBorder Then
                                                 m.board(xx, yy).isBorder = False
                                                 m.board(xx, yy).isPass = setAsPath
                                             End If
-                                        Next yy
-                                    Next xx
+                                        Next xx
+                                    Next yy
                                 End If
                             Next item
                         End If
                     End If
-                Next y
-            Next x
+                Next x
+            Next y
         Next r
     End Sub
     Friend Function FindConnected(ByRef m As Map, ByRef init As Point) As Boolean(,)
