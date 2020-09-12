@@ -790,7 +790,7 @@ Public Class RandStackTest
         If IsNothing(UnitsList) Then Call ReadTestUnits()
         If IsNothing(ItemsList) Then Call ReadTestItems()
         Dim target As RandStack = New RandStack(UnitsList, ItemsList, excludeList, customLootChanceList, customRaceList, _
-                                                soleUnitsList, bigStackUnitsList, preservedItemsList)
+                                                soleUnitsList, bigStackUnitsList, preservedItemsList, 5)
         target.comm.ReadExcludedObjectsList({RandomStackGenerator.My.Resources.readDefaultFileKeyword, _
                                              RandomStackGenerator.My.Resources.readVLoreFileKeyword, _
                                              RandomStackGenerator.My.Resources.readMLoreFileKeyword})

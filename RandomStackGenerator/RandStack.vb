@@ -55,7 +55,8 @@ Public Class RandStack
     ''' Для чтения из дефолтного листа в массив нужно добавить строчку %default% (наличие этого ключевого в файле запустит чтение дефолтного файла)</param>
     Public Sub New(ByRef AllUnitsList() As AllDataStructues.Unit, ByRef AllItemsList() As AllDataStructues.Item, _
                    ByRef ExcludeLists() As String, ByRef LootChanceMultiplierLists() As String, ByRef CustomUnitRace() As String, _
-                   ByRef SoleUnitsList() As String, ByRef BigStackUnits() As String, ByRef PreservedItemsList() As String)
+                   ByRef SoleUnitsList() As String, ByRef BigStackUnits() As String, ByRef PreservedItemsList() As String, _
+                   ByRef TalismanChargesDefaultAmount As Integer)
         rndgen = comm.rndgen
         log = New Log(comm)
         If IsNothing(AllUnitsList) Or IsNothing(AllItemsList) Then Exit Sub
@@ -96,6 +97,9 @@ Public Class RandStack
         minItemGoldCost = Integer.MaxValue
         For i As Integer = 0 To UBound(AllItems) Step 1
             AllItems(i) = AllDataStructues.Item.Copy(AllItemsList(i))
+            If AllItems(i).type = GenDefaultValues.ItemTypes.talisman Then
+                AllItemsList(i).itemCost *= TalismanChargesDefaultAmount
+            End If
             ItemsArrayPos.Add(AllItems(i).itemID.ToUpper, i)
 
             ItemCostSum(i) = AllDataStructues.Cost.Sum(LootCost(AllItems(i)))
@@ -2858,6 +2862,17 @@ Public Class AllDataStructues
                                   .White = CInt(v.White * n)}
         End Operator
         Public Shared Operator *(ByVal n As Double, ByVal v As Cost) As Cost
+            Return v * n
+        End Operator
+        Public Shared Operator *(ByVal v As Cost, ByVal n As Integer) As Cost
+            Return New Cost With {.Black = v.Black * n, _
+                                  .Blue = v.Blue * n, _
+                                  .Gold = v.Gold * n, _
+                                  .Green = v.Green * n, _
+                                  .Red = v.Red * n, _
+                                  .White = v.White * n}
+        End Operator
+        Public Shared Operator *(ByVal n As Integer, ByVal v As Cost) As Cost
             Return v * n
         End Operator
         Public Shared Operator /(ByVal v As Cost, ByVal n As Double) As Cost
