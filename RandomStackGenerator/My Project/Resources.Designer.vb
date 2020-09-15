@@ -137,7 +137,7 @@ Namespace My.Resources
         '''#порядок блоков тоже может быть любом с одним исключением:
         '''#блоки Location для расовых локаций должны стоять выше, чем блоки для обычных локаций (независимо от genMode)
         '''
-        '''#если в блоке Location параметр имеет два значения, то при генерации будет выбрано случ [rest of string was truncated]&quot;;.
+        '''#если в блоке Location параметр имеет два значения, то при генерации будет вы [rest of string was truncated]&quot;;.
         '''</summary>
         Friend ReadOnly Property example_template_1() As String
             Get
@@ -156,7 +156,7 @@ Namespace My.Resources
         '''#порядок блоков тоже может быть любом с одним исключением:
         '''#блоки Location для расовых локаций должны стоять выше, чем блоки для обычных локаций (независимо от genMode)
         '''
-        '''#если в блоке Location параметр имеет два значения, то при генерации будет выбрано случ [rest of string was truncated]&quot;;.
+        '''#если в блоке Location параметр имеет два значения, то при генерации будет вы [rest of string was truncated]&quot;;.
         '''</summary>
         Friend ReadOnly Property example_template_2_symm() As String
             Get
@@ -175,7 +175,7 @@ Namespace My.Resources
         '''#порядок блоков тоже может быть любом с одним исключением:
         '''#блоки Location для расовых локаций должны стоять выше, чем блоки для обычных локаций (независимо от genMode)
         '''
-        '''#если в блоке Location параметр имеет два значения, то при генерации будет выбрано случ [rest of string was truncated]&quot;;.
+        '''#если в блоке Location параметр имеет два значения, то при генерации будет вы [rest of string was truncated]&quot;;.
         '''</summary>
         Friend ReadOnly Property example_template_2_unsymm() As String
             Get
@@ -569,6 +569,27 @@ Namespace My.Resources
         Friend ReadOnly Property PlateauConstructor() As String
             Get
                 Return ResourceManager.GetString("PlateauConstructor", resourceCulture)
+            End Get
+        End Property
+        
+        '''<summary>
+        '''  Looks up a localized string similar to #строка, начинающаяся с решетки, игнорируется
+        '''#Список играбельных субрас
+        '''
+        '''#империя
+        '''1
+        '''#нежить
+        '''2
+        '''#легионы
+        '''3
+        '''#кланы
+        '''4
+        '''#эльфы
+        '''14.
+        '''</summary>
+        Friend ReadOnly Property PlayableSubraces() As String
+            Get
+                Return ResourceManager.GetString("PlayableSubraces", resourceCulture)
             End Get
         End Property
         

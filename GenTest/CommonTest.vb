@@ -156,13 +156,13 @@ Public Class CommonTest
         Dim ok As Boolean = True
         Dim path As String = RandomStackGenerator.My.Resources.testFileKeyword
         Dim expected As String = _
-        "ID location1 AverageExpBar 1000 ExpStackKilled 200 Race U StackSize 1 MaxGiants 0 MeleeCount 2 LootCost 0 IsInternalCityGuard False CItemsGen False#0#0 NItemsGen False#0#0 JItemsGen False#0#0 PreservedItems no" & vbNewLine & _
-        "ID testloc2 AverageExpBar 100 ExpStackKilled 200 Race U+D StackSize 3 MaxGiants 1 MeleeCount 0 LootCost 3400 IsInternalCityGuard False CItemsGen False#0#0 NItemsGen False#0#0 JItemsGen False#0#0 PreservedItems no" & vbNewLine & _
-        "ID loc3 AverageExpBar 1000 ExpStackKilled 200 Race H StackSize 1 MaxGiants 0 MeleeCount 2 LootCost 0 IsInternalCityGuard False CItemsGen False#0#0 NItemsGen False#0#0 JItemsGen False#0#0 PreservedItems no" & vbNewLine & _
-        "ID loc54 AverageExpBar 1000 ExpStackKilled 200 Race H StackSize 1 MaxGiants 0 MeleeCount 2 LootCost 0 IsInternalCityGuard False CItemsGen True#1#2 NItemsGen False#0#0 JItemsGen False#0#0 PreservedItems no" & vbNewLine & _
-        "ID l AverageExpBar 1000 ExpStackKilled 200 Race H StackSize 1 MaxGiants 0 MeleeCount 2 LootCost 0 IsInternalCityGuard True CItemsGen True#1#2 NItemsGen True#1#2 JItemsGen False#0#0 PreservedItems no" & vbNewLine & _
+        "ID location1 AverageExpBar 1000 ExpStackKilled 200 Race U StackSize 1 MaxGiants 0 MeleeCount 2 LootCost 0 IsInternalCityGuard False CItemsGen False#0#0 NItemsGen False#0#0 JItemsGen False#0#0 PreservedItems no LootCostMultiplier 0" & vbNewLine & _
+        "ID testloc2 AverageExpBar 100 ExpStackKilled 200 Race U+D StackSize 3 MaxGiants 1 MeleeCount 0 LootCost 3400 IsInternalCityGuard False CItemsGen False#0#0 NItemsGen False#0#0 JItemsGen False#0#0 PreservedItems no LootCostMultiplier 0" & vbNewLine & _
+        "ID loc3 AverageExpBar 1000 ExpStackKilled 200 Race H StackSize 1 MaxGiants 0 MeleeCount 2 LootCost 0 IsInternalCityGuard False CItemsGen False#0#0 NItemsGen False#0#0 JItemsGen False#0#0 PreservedItems no LootCostMultiplier 0" & vbNewLine & _
+        "ID loc54 AverageExpBar 1000 ExpStackKilled 200 Race H StackSize 1 MaxGiants 0 MeleeCount 2 LootCost 0 IsInternalCityGuard False CItemsGen True#1#2 NItemsGen False#0#0 JItemsGen False#0#0 PreservedItems no LootCostMultiplier 0" & vbNewLine & _
+        "ID l AverageExpBar 1000 ExpStackKilled 200 Race H StackSize 1 MaxGiants 0 MeleeCount 2 LootCost 0 IsInternalCityGuard True CItemsGen True#1#2 NItemsGen True#1#2 JItemsGen False#0#0 PreservedItems no LootCostMultiplier 0" & vbNewLine & _
         "ID 22 ShopContent G000UU9999+1000+1000+500" & vbNewLine & _
-        "ID loc53 AverageExpBar 1000 ExpStackKilled 200 Race H StackSize 1 MaxGiants 0 MeleeCount 2 LootCost 0 IsInternalCityGuard False CItemsGen True#1#2 NItemsGen False#0#0 JItemsGen True#1#2 PreservedItems G000IG0001" & vbNewLine
+        "ID loc53 AverageExpBar 1000 ExpStackKilled 200 Race H StackSize 1 MaxGiants 0 MeleeCount 2 LootCost 0 IsInternalCityGuard False CItemsGen True#1#2 NItemsGen False#0#0 JItemsGen True#1#2 PreservedItems G000IG0001 LootCostMultiplier 0" & vbNewLine
         Dim content() As AllDataStructues.DesiredStats = target.ParseDesiredStackStatsFile(path)
         Call target.WriteDesiredStackStats(path, content)
 

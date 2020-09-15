@@ -294,8 +294,7 @@ Friend Class StartForm
                                                              {GenDefaultValues.wReadDefaultFileKeyword}, _
                                                              {GenDefaultValues.wReadDefaultFileKeyword}, _
                                                              {GenDefaultValues.wReadDefaultFileKeyword}, _
-                                                             5, _
-                                                             {"g000000000"})
+                                                             5)
 
         Dim items As New List(Of String)
         items.Add("G000IG0004")

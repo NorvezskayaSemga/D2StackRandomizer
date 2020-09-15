@@ -67,7 +67,7 @@ Public Class ObjectsContentSetTest
 
         Dim rStack As New RandStack(rndtest.UnitsList, rndtest.ItemsList, rndtest.excludeList, rndtest.customLootChanceList, _
                                     rndtest.customRaceList, rndtest.soleUnitsList, rndtest.bigStackUnitsList, _
-                                    rndtest.preservedItemsList, 5, rndtest.T1Units)
+                                    rndtest.preservedItemsList, 5)
 
         Dim target As New ObjectsContentSet(rStack, rndtest.AllSpells)
         Dim ok As Boolean = True
@@ -105,7 +105,7 @@ Public Class ObjectsContentSetTest
 
         Dim rStack As New RandStack(rndtest.UnitsList, rndtest.ItemsList, rndtest.excludeList, rndtest.customLootChanceList, _
                                     rndtest.customRaceList, rndtest.soleUnitsList, rndtest.bigStackUnitsList, _
-                                    rndtest.preservedItemsList, 5, rndtest.T1Units)
+                                    rndtest.preservedItemsList, 5)
 
         Dim target As New ObjectsContentSet(rStack, rndtest.AllSpells)
         Dim ok As Boolean = True
@@ -170,7 +170,7 @@ Public Class ObjectsContentSetTest
 
         Dim rStack As New RandStack(rndtest.UnitsList, rndtest.ItemsList, rndtest.excludeList, rndtest.customLootChanceList, _
                                     rndtest.customRaceList, rndtest.soleUnitsList, rndtest.bigStackUnitsList, _
-                                    rndtest.preservedItemsList, 5, rndtest.T1Units)
+                                    rndtest.preservedItemsList, 5)
 
         Dim target As New ObjectsContentSet(rStack, rndtest.AllSpells)
         Dim ok As Boolean = True
@@ -205,7 +205,7 @@ Public Class ObjectsContentSetTest
 
         Dim rStack As New RandStack(rndtest.UnitsList, rndtest.ItemsList, rndtest.excludeList, rndtest.customLootChanceList, _
                                     rndtest.customRaceList, rndtest.soleUnitsList, rndtest.bigStackUnitsList, _
-                                    rndtest.preservedItemsList, 5, rndtest.T1Units)
+                                    rndtest.preservedItemsList, 5)
 
         Dim target As New ObjectsContentSet(rStack, rndtest.AllSpells)
         Dim ok As Boolean = True
@@ -241,7 +241,7 @@ Public Class ObjectsContentSetTest
 
         Dim rStack As New RandStack(rndtest.UnitsList, rndtest.ItemsList, rndtest.excludeList, rndtest.customLootChanceList, _
                                     rndtest.customRaceList, rndtest.soleUnitsList, rndtest.bigStackUnitsList, _
-                                    rndtest.preservedItemsList, 5, rndtest.T1Units)
+                                    rndtest.preservedItemsList, 5)
 
 
         Dim target As New ObjectsContentSet(rStack, rndtest.AllSpells)

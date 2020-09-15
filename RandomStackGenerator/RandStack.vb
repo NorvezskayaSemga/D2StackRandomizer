@@ -54,17 +54,15 @@ Public Class RandStack
     ''' Допускается передача неинициализитрованного массива.
     ''' Для чтения из дефолтного листа в массив нужно добавить строчку %default% (наличие этого ключевого в файле запустит чтение дефолтного файла)</param>
     ''' <param name="TalismanChargesDefaultAmount">Количество зарядов у талисманов (таблица GVars, поле TALIS_CHRG)</param>
-    ''' <param name="PlayableRaceT1Units">Список вообще всех юнитов из таблицы GRace</param>
     Public Sub New(ByRef AllUnitsList() As AllDataStructues.Unit, ByRef AllItemsList() As AllDataStructues.Item, _
                    ByRef ExcludeLists() As String, ByRef LootChanceMultiplierLists() As String, ByRef CustomUnitRace() As String, _
                    ByRef SoleUnitsList() As String, ByRef BigStackUnits() As String, ByRef PreservedItemsList() As String, _
-                   ByRef TalismanChargesDefaultAmount As Integer, ByRef PlayableRaceT1Units() As String)
+                   ByRef TalismanChargesDefaultAmount As Integer)
         rndgen = comm.rndgen
         log = New Log(comm)
         If IsNothing(AllUnitsList) Or IsNothing(AllItemsList) Then Exit Sub
 
         If TalismanChargesDefaultAmount < 1 Then Throw New Exception("Unexpected TalismanChargesDefaultAmount")
-        If IsNothing(PlayableRaceT1Units) Then Throw New Exception("PlayableRaceT1Units is nothing")
 
         Call comm.ReadExcludedObjectsList(ExcludeLists)
         Call comm.ReadCustomUnitRace(CustomUnitRace)
@@ -73,15 +71,18 @@ Public Class RandStack
         Call comm.ReadBigStackUnits(BigStackUnits)
         Call comm.ReadPreservedItemsList(PreservedItemsList)
 
-        Dim PlayableRaceT1UnitsList As New List(Of String)
-        For Each item In PlayableRaceT1Units
-            PlayableRaceT1UnitsList.Add(item.ToUpper)
+        Dim PlayableSubraces As New List(Of Integer)
+        For Each item As String In comm.TxtSplit(comm.defValues.PlayableSubraces)
+            PlayableSubraces.Add(ValueConverter.StrToInt(item, "", ""))
         Next item
+        Dim unitSubrace As Integer
 
         ReDim AllUnits(UBound(AllUnitsList)), ExpBar(UBound(AllUnitsList)), ExpKilled(UBound(AllUnitsList)), multiplierUnitDesiredStats(UBound(AllUnitsList))
         For i As Integer = 0 To UBound(AllUnitsList) Step 1
             AllUnits(i) = AllDataStructues.Unit.Copy(AllUnitsList(i))
             UnitsArrayPos.Add(AllUnits(i).unitID.ToUpper, i)
+
+            unitSubrace = AllUnits(i).race
 
             If comm.customRace.ContainsKey(AllUnits(i).unitID) Then
                 AllUnits(i).race = comm.RaceIdentifierToSubrace(comm.customRace.Item(AllUnits(i).unitID))
@@ -96,7 +97,7 @@ Public Class RandStack
                 multiplierUnitDesiredStats(i) = comm.defValues.giantUnitsExpMultiplier
             End If
 
-            If AllUnits(i).level > 1 Or PlayableRaceT1UnitsList.Contains(AllUnits(i).unitID.ToUpper) Then
+            If PlayableSubraces.Contains(unitSubrace) Then
                 AllUnits(i).fromRaceBrach = True
             Else
                 AllUnits(i).fromRaceBrach = False
@@ -3134,7 +3135,7 @@ Friend Class ValueConverter
         Dim parseString(UBound(splited)) As Boolean
         Dim nStrings As Integer = -1
         For i As Integer = 0 To UBound(splited) Step 1
-            If splited(i).Length > 1 AndAlso Not splited(i).Substring(0, 1) = "#" Then
+            If splited(i).Length > 0 AndAlso Not splited(i).Substring(0, 1) = "#" Then
                 parseString(i) = True
                 nStrings += 1
             End If
@@ -3628,6 +3629,9 @@ Public Class GenDefaultValues
     End Function
     Public Function PreservedItems() As String
         Return ReadResources("PreservedItems", My.Resources.PreservedItems)
+    End Function
+    Public Function PlayableSubraces() As String
+        Return ReadResources("PlayableSubraces", My.Resources.PlayableSubraces)
     End Function
 
 End Class

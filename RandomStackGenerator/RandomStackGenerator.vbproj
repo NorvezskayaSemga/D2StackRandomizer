@@ -118,6 +118,7 @@
     <Content Include="Resources\example_template_2_unsymm.txt">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>
+    <None Include="Resources\PlayableSubraces.txt" />
     <Content Include="Resources\PreservedItems.txt">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>
