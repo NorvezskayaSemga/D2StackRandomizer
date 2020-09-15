@@ -55,6 +55,14 @@ Public Class RandStackTest
     '
 #End Region
 
+    Friend T1Units() As String = {
+"g000uu3001", "g000uu0023", "g000uu0019", "g000uu0020", "g000uu8248", "g000uu0022", "g000uu0001", "g000uu0006", "g000uu0008", "g000uu0011", "g000uu0018", "g003uu5001",
+"g000uu3002", "g000uu0048", "g000uu0044", "g000uu0045", "g000uu8249", "g000uu0047", "g000uu0036", "g000uu0026", "g000uu0033", "g000uu0029", "g000uu0043", "g004uu5039",
+"g000uu3003", "g000uu0074", "g000uu0070", "g000uu0071", "g000uu8250", "g000uu0073", "g000uu0052", "g000uu0055", "g000uu0062", "g000uu0057", "g000uu0069", "g004uu6120",
+"g000uu3004", "g000uu0100", "g000uu0096", "g000uu8252", "g000uu8253", "g000uu0099", "g000uu0086", "g000uu0078", "g000uu0080", "g000uu0093", "g000uu0092", "g001uu7539",
+"g000000000", "g000000000", "g000000000", "g000000000", "g000000000", "g000000000", "g000000000", "g000000000", "g000000000", "g000000000", "g000000000", "g000000000",
+"g000uu8040", "g000uu8013", "g000uu8009", "g000uu8011", "g000uu8251", "g000uu8012", "g000uu8014", "g000uu8018", "g000uu8025", "g000uu8031", "g000uu8029", "g003uu8037"}
+
     Friend excludeList() As String = New String() {RandomStackGenerator.My.Resources.readDefaultFileKeyword, _
                                                    RandomStackGenerator.My.Resources.readDefaultFileKeyword}
     Friend customRaceList() As String = New String() {RandomStackGenerator.My.Resources.readDefaultFileKeyword, _
@@ -790,7 +798,7 @@ Public Class RandStackTest
         If IsNothing(UnitsList) Then Call ReadTestUnits()
         If IsNothing(ItemsList) Then Call ReadTestItems()
         Dim target As RandStack = New RandStack(UnitsList, ItemsList, excludeList, customLootChanceList, customRaceList, _
-                                                soleUnitsList, bigStackUnitsList, preservedItemsList, 5)
+                                                soleUnitsList, bigStackUnitsList, preservedItemsList, 5, T1Units)
         target.comm.ReadExcludedObjectsList({RandomStackGenerator.My.Resources.readDefaultFileKeyword, _
                                              RandomStackGenerator.My.Resources.readVLoreFileKeyword, _
                                              RandomStackGenerator.My.Resources.readMLoreFileKeyword})
@@ -811,7 +819,7 @@ Public Class RandStackTest
                                                                 .JewelItems = New AllDataStructues.ItemGenSettings With {.exclude = True, .costPart = 0.9}}
 
         For i As Integer = 1 To 20 Step 1
-            Call target.Gen(stats, 0, True, False, New Point(1, 1))
+            Call target.Gen(stats, 0, True, False, New Point(1, 1), Nothing)
         Next i
         Dim log As String = target.log.PrintAll
         If log = "" Then ok = False

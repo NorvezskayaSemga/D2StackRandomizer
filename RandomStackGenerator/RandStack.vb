@@ -53,13 +53,18 @@ Public Class RandStack
     ''' <param name="PreservedItemsList">Файлы со списками предметов, которые нельзя перегенерировать. Записи в них могут повторяться. 
     ''' Допускается передача неинициализитрованного массива.
     ''' Для чтения из дефолтного листа в массив нужно добавить строчку %default% (наличие этого ключевого в файле запустит чтение дефолтного файла)</param>
+    ''' <param name="TalismanChargesDefaultAmount">Количество зарядов у талисманов (таблица GVars, поле TALIS_CHRG)</param>
+    ''' <param name="PlayableRaceT1Units">Список вообще всех юнитов из таблицы GRace</param>
     Public Sub New(ByRef AllUnitsList() As AllDataStructues.Unit, ByRef AllItemsList() As AllDataStructues.Item, _
                    ByRef ExcludeLists() As String, ByRef LootChanceMultiplierLists() As String, ByRef CustomUnitRace() As String, _
                    ByRef SoleUnitsList() As String, ByRef BigStackUnits() As String, ByRef PreservedItemsList() As String, _
-                   ByRef TalismanChargesDefaultAmount As Integer)
+                   ByRef TalismanChargesDefaultAmount As Integer, ByRef PlayableRaceT1Units() As String)
         rndgen = comm.rndgen
         log = New Log(comm)
         If IsNothing(AllUnitsList) Or IsNothing(AllItemsList) Then Exit Sub
+
+        If TalismanChargesDefaultAmount < 1 Then Throw New Exception("Unexpected TalismanChargesDefaultAmount")
+        If IsNothing(PlayableRaceT1Units) Then Throw New Exception("PlayableRaceT1Units is nothing")
 
         Call comm.ReadExcludedObjectsList(ExcludeLists)
         Call comm.ReadCustomUnitRace(CustomUnitRace)
@@ -67,6 +72,11 @@ Public Class RandStack
         Call comm.ReadSoleUnits(SoleUnitsList)
         Call comm.ReadBigStackUnits(BigStackUnits)
         Call comm.ReadPreservedItemsList(PreservedItemsList)
+
+        Dim PlayableRaceT1UnitsList As New List(Of String)
+        For Each item In PlayableRaceT1Units
+            PlayableRaceT1UnitsList.Add(item.ToUpper)
+        Next item
 
         ReDim AllUnits(UBound(AllUnitsList)), ExpBar(UBound(AllUnitsList)), ExpKilled(UBound(AllUnitsList)), multiplierUnitDesiredStats(UBound(AllUnitsList))
         For i As Integer = 0 To UBound(AllUnitsList) Step 1
@@ -84,6 +94,12 @@ Public Class RandStack
                 multiplierUnitDesiredStats(i) = comm.defValues.smallUnitsExpMultiplier
             Else
                 multiplierUnitDesiredStats(i) = comm.defValues.giantUnitsExpMultiplier
+            End If
+
+            If AllUnits(i).level > 1 Or PlayableRaceT1UnitsList.Contains(AllUnits(i).unitID.ToUpper) Then
+                AllUnits(i).fromRaceBrach = True
+            Else
+                AllUnits(i).fromRaceBrach = False
             End If
         Next i
 
@@ -947,9 +963,10 @@ Public Class RandStack
     ''' <param name="GroundTile">True, если на клетку нельзя ставить водных лидеров. Водной считается клетка с водой, окруженная со всех сторон клетками с водой</param>
     ''' <param name="NoLeader">True, если стэк находится внутри руин или города</param>
     ''' <param name="pos">Точка на карте, в которую добавляются предметы</param>
+    ''' <param name="MapLords">Список лордов на карте. Юниты из веток развития соответствующих рас добавляться в отряды не будут. Передавай Nothing для игнорирования этого фильтра</param>
     Public Function Gen(ByRef StackStats As AllDataStructues.DesiredStats, _
                         ByVal deltaLeadership As Integer, ByVal GroundTile As Boolean, _
-                        ByVal NoLeader As Boolean, ByRef pos As Point) As AllDataStructues.Stack
+                        ByVal NoLeader As Boolean, ByRef pos As Point, ByRef MapLords() As String) As AllDataStructues.Stack
 
         If Not IsNothing(StackStats.shopContent) Then Return Nothing
 
@@ -969,7 +986,7 @@ Public Class RandStack
         End If
         Call log.Add(DynStackStats, False)
 
-        Dim result As AllDataStructues.Stack = GenStackMultithread(StackStats, DynStackStats, deltaLeadership, GroundTile, NoLeader)
+        Dim result As AllDataStructues.Stack = GenStackMultithread(StackStats, DynStackStats, deltaLeadership, GroundTile, NoLeader, MapLords)
 
         result.items = ItemsGen(DynStackStats.LootCost, DynStackStats.IGen, Nothing, pos)
 
@@ -986,14 +1003,15 @@ Public Class RandStack
     ''' <param name="GroundTile">True, если на клетку нельзя ставить водных лидеров. Водной считается клетка с водой, окруженная со всех сторон клетками с водой</param>
     ''' <param name="NoLeader">True, если стэк находится внутри руин или города</param>
     ''' <param name="pos">Точка на карте, в которую добавляются предметы</param>
+    ''' <param name="MapLords">Список лордов на карте. Юниты из веток развития соответствующих рас добавляться в отряды не будут. Передавай Nothing для игнорирования этого фильтра</param>
     Public Function Gen(ByVal ExpStackKilled As Integer, ByVal LootCost As Double, ByRef Races As List(Of Integer), _
                         ByRef IGen As AllDataStructues.LootGenSettings, ByVal deltaLeadership As Integer, _
-                        ByVal GroundTile As Boolean, ByVal NoLeader As Boolean, ByRef pos As Point) As AllDataStructues.Stack
+                        ByVal GroundTile As Boolean, ByVal NoLeader As Boolean, ByRef pos As Point, ByRef MapLords() As String) As AllDataStructues.Stack
         Dim StackStat As AllDataStructues.DesiredStats = StackStatsGen.GenDesiredStats _
                             (CDbl(ExpStackKilled), LootCost, rndgen, comm.valConv, comm.defValues)
         StackStat.Race = Races
         StackStat.IGen = IGen
-        Return Gen(StackStat, deltaLeadership, GroundTile, NoLeader, pos)
+        Return Gen(StackStat, deltaLeadership, GroundTile, NoLeader, pos, MapLords)
     End Function
     ''' <summary>Создаст отряд  в соответствие с желаемыми параметрами. Не нужно пытаться создать отряд водных жителей на земле</summary>
     ''' <param name="StackStats">Желаемые параметры стэка</param>
@@ -1004,9 +1022,10 @@ Public Class RandStack
     ''' <param name="CapPos">Положение столиц (угол с наименьшей координатой по X и Y)</param>
     ''' <param name="StackStrengthMultiplier">Множитель силы отряда: изменяем опыт за убийство и среднюю планку опыта</param>
     ''' <param name="LootCostMultiplier">Множитель стоимости предметов</param>
+    ''' <param name="MapLords">Список лордов на карте. Юниты из веток развития соответствующих рас добавляться в отряды не будут. Передавай Nothing для игнорирования этого фильтра</param>
     Public Function Gen(ByRef StackStats As AllDataStructues.DesiredStats, ByVal deltaLeadership As Integer, _
                         ByVal GroundTile As Boolean, ByVal NoLeader As Boolean, ByRef pos As Point, _
-                        ByRef CapPos() As Point, _
+                        ByRef CapPos() As Point, ByRef MapLords() As String, _
                         ByVal StackStrengthMultiplier As Double, ByVal LootCostMultiplier As Double) As AllDataStructues.Stack
         Dim ssm As Double = RecalculateMultiplier(pos, CapPos, StackStrengthMultiplier)
         Dim lcm As Double = RecalculateMultiplier(pos, CapPos, LootCostMultiplier)
@@ -1016,7 +1035,7 @@ Public Class RandStack
         s.ExpBarAverage = Math.Max(CInt(s.ExpBarAverage * ssm), 25)
         s.LootCost = CInt(s.LootCost * lcm)
         s.IGen.lootCostMultiplier = lcm
-        Return Gen(s, deltaLeadership, GroundTile, NoLeader, pos)
+        Return Gen(s, deltaLeadership, GroundTile, NoLeader, pos, MapLords)
     End Function
     ''' <summary>Создаст отряд  в соответствие с желаемыми параметрами. Не нужно пытаться создать отряд водных жителей на земле</summary>
     ''' <param name="ExpStackKilled">Примерный опыт за убийство стэка</param>
@@ -1030,10 +1049,11 @@ Public Class RandStack
     ''' <param name="CapPos">Положение столиц (угол с наименьшей координатой по X и Y)</param>
     ''' <param name="StackStrengthMultiplier">Множитель силы отряда: изменяем опыт за убийство и среднюю планку опыта</param>
     ''' <param name="LootCostMultiplier">Множитель стоимости предметов</param>
+    ''' <param name="MapLords">Список лордов на карте. Юниты из веток развития соответствующих рас добавляться в отряды не будут. Передавай Nothing для игнорирования этого фильтра</param>
     Public Function Gen(ByVal ExpStackKilled As Integer, ByVal LootCost As Double, ByRef Races As List(Of Integer), _
                         ByRef IGen As AllDataStructues.LootGenSettings, ByVal deltaLeadership As Integer, _
                         ByVal GroundTile As Boolean, ByVal NoLeader As Boolean, ByRef pos As Point, _
-                        ByRef CapPos() As Point, _
+                        ByRef CapPos() As Point, ByRef MapLords() As String, _
                         ByVal StackStrengthMultiplier As Double, ByVal LootCostMultiplier As Double) As AllDataStructues.Stack
         Dim ssm As Double = RecalculateMultiplier(pos, CapPos, StackStrengthMultiplier)
         Dim lcm As Double = RecalculateMultiplier(pos, CapPos, LootCostMultiplier)
@@ -1041,11 +1061,15 @@ Public Class RandStack
         Dim esk As Integer = Math.Max(CInt(ExpStackKilled * ssm), 5)
         Dim lc As Double = LootCost * lcm
         IGen.lootCostMultiplier = lcm
-        Return Gen(esk, lc, Races, IGen, deltaLeadership, GroundTile, NoLeader, pos)
+        Return Gen(esk, lc, Races, IGen, deltaLeadership, GroundTile, NoLeader, pos, MapLords)
     End Function
     Private Function SelectPossibleLeader(ByRef leaderID As Integer, ByRef Tolerance As Double, _
-                                          ByRef StackStats As AllDataStructues.DesiredStats, ByRef GroundTile As Boolean) As Boolean
+                                          ByRef StackStats As AllDataStructues.DesiredStats, ByRef GroundTile As Boolean, _
+                                          ByRef MapLordsRaces As List(Of Integer)) As Boolean
         If Not comm.IsAppropriateLeader(AllUnits(leaderID)) Then Return False
+
+        If AllUnits(leaderID).fromRaceBrach AndAlso MapLordsRaces.Contains(AllUnits(leaderID).race) Then Return False
+
         If Not setting_IgnoreUnitRace Then
             If Not StackStats.Race.Contains(AllUnits(leaderID).race) Then Return False
         End If
@@ -1089,12 +1113,19 @@ Public Class RandStack
     Private Function GenStackMultithread(ByVal StackStats As AllDataStructues.DesiredStats, _
                                          ByVal BakDynStackStats As AllDataStructues.DesiredStats, _
                                          ByVal deltaLeadership As Integer, ByVal GroundTile As Boolean, _
-                                         ByVal NoLeader As Boolean) As AllDataStructues.Stack
+                                         ByVal NoLeader As Boolean, ByRef MapLords() As String) As AllDataStructues.Stack
 
         Dim units(11)() As AllDataStructues.Unit
         Dim DynStackStats(UBound(units)) As AllDataStructues.DesiredStats
         Call log.MRedim(units.Length)
         Dim leaderExpKilled() As Integer = Nothing
+        Dim MapLordsRaces As New List(Of Integer)
+        If Not IsNothing(MapLords) Then
+            For i As Integer = 0 To UBound(MapLords) Step 1
+                MapLordsRaces.Add(comm.LordsRace(MapLords(i).ToUpper))
+            Next i
+        End If
+
         If Not NoLeader Then ReDim leaderExpKilled(UBound(units))
 
         Parallel.For(0, units.Length, _
@@ -1104,7 +1135,7 @@ Public Class RandStack
              Dim BaseStackSize As Integer
              DynStackStats(jobID) = AllDataStructues.DesiredStats.Copy(BakDynStackStats)
              Dim SelectedLeader As Integer = GenLeader(StackStats, DynStackStats(jobID), FreeMeleeSlots, deltaLeadership, _
-                                                       GroundTile, NoLeader, CDbl(jobID / units.Length), jobID)
+                                                       GroundTile, NoLeader, MapLordsRaces, CDbl(jobID / units.Length), jobID)
              BaseStackSize = DynStackStats(jobID).StackSize
              If Not NoLeader Then
                  If AllUnits(SelectedLeader).small Then
@@ -1115,7 +1146,7 @@ Public Class RandStack
              End If
 
              Dim SelectedFighters As List(Of Integer) = GenFingters(StackStats, DynStackStats(jobID), FreeMeleeSlots, _
-                                                                    SelectedLeader, GroundTile, BaseStackSize, _
+                                                                    SelectedLeader, GroundTile, BaseStackSize, MapLordsRaces, _
                                                                     CDbl(jobID / units.Length), jobID)
              units(jobID) = GenUnitsList(SelectedFighters, SelectedLeader, NoLeader)
 
@@ -1142,6 +1173,7 @@ Public Class RandStack
     Private Function GenLeader(ByRef StackStats As AllDataStructues.DesiredStats, ByRef DynStackStats As AllDataStructues.DesiredStats, _
                                ByRef FreeMeleeSlots As Integer, _
                                ByRef deltaLeadership As Integer, ByRef GroundTile As Boolean, ByRef NoLeader As Boolean, _
+                               ByRef MapLordsRaces As List(Of Integer), _
                                ByRef Bias As Double, ByRef LogID As Integer) As Integer
         If NoLeader Then Return -1
 
@@ -1168,7 +1200,7 @@ Public Class RandStack
         Do While PossibleLeaders.Count < 3
             PossibleLeaders.Clear()
             For i As Integer = 0 To UBound(AllUnits) Step 1
-                If SelectPossibleLeader(i, Tolerance, DynStackStats, GroundTile) Then PossibleLeaders.Add(i)
+                If SelectPossibleLeader(i, Tolerance, DynStackStats, GroundTile, MapLordsRaces) Then PossibleLeaders.Add(i)
             Next i
             If Tolerance > 2 And PossibleLeaders.Count > 0 Then Exit Do
 
@@ -1238,18 +1270,19 @@ Public Class RandStack
                                  ByRef DynStackStats As AllDataStructues.DesiredStats, _
                                  ByRef FreeMeleeSlots As Integer, ByRef SelectedLeader As Integer, _
                                  ByRef GroundTile As Boolean, ByRef BaseStackSize As Integer, _
+                                 ByRef MapLordsRaces As List(Of Integer), _
                                  ByRef Bias As Double, ByRef LogID As Integer) As List(Of Integer)
         Dim SelectedFighters As New List(Of Integer)
         Dim fighter As Integer
         Do While DynStackStats.StackSize > 0
             'создаем список воинов, которых можно использовать
             fighter = SelectFighters(False, False, DynStackStats, FreeMeleeSlots, SelectedLeader, _
-                                     SelectedFighters, BaseStackSize, Bias, LogID)
+                                     SelectedFighters, BaseStackSize, MapLordsRaces, Bias, LogID)
             If fighter = -1 Then
                 fighter = SelectFighters(True, False, DynStackStats, FreeMeleeSlots, SelectedLeader, _
-                                         SelectedFighters, BaseStackSize, Bias, LogID)
+                                         SelectedFighters, BaseStackSize, MapLordsRaces, Bias, LogID)
                 If fighter = -1 Then fighter = SelectFighters(True, True, DynStackStats, FreeMeleeSlots, SelectedLeader, _
-                                                              SelectedFighters, BaseStackSize, Bias, LogID)
+                                                              SelectedFighters, BaseStackSize, MapLordsRaces, Bias, LogID)
             End If
             If fighter = -1 Then
                 If DynStackStats.MeleeCount > 0 Then
@@ -1409,7 +1442,7 @@ Public Class RandStack
     Private Function SelectFighters(ByRef skipfilter1 As Boolean, ByRef skipfilter2 As Boolean, _
                                     ByRef DynStackStats As AllDataStructues.DesiredStats, ByRef FreeMeleeSlots As Integer, _
                                     ByRef SelectedLeader As Integer, ByRef SelectedFighters As List(Of Integer), _
-                                    ByRef BaseStackSize As Integer, _
+                                    ByRef BaseStackSize As Integer, ByRef MapLordsRaces As List(Of Integer), _
                                     ByRef Bias As Double, ByRef LogID As Integer) As Integer
 
         Dim serialExecution As Boolean = (LogID < 0)
@@ -1420,7 +1453,7 @@ Public Class RandStack
         'Do While PossibleFighters.Count = 0 'And TExpStack < 1.1 * DynStackStats.ExpStackKilled
         For j As Integer = 0 To UBound(AllUnits) Step 1
             If SelectPossibleFighter(skipfilter1, skipfilter2, j, DynStackStats, FreeMeleeSlots, _
-                                     SelectedLeader, SelectedFighters, BaseStackSize) Then PossibleFighters.Add(j)
+                                     SelectedLeader, SelectedFighters, BaseStackSize, MapLordsRaces) Then PossibleFighters.Add(j)
         Next j
         '    TExpStack += 0.1 * DynStackStats.ExpStackKilled / DynStackStats.StackSize
         '    nloops += 1
@@ -1447,8 +1480,12 @@ Public Class RandStack
                                            ByRef FreeMeleeSlots As Integer, _
                                            ByRef SelectedLeader As Integer, _
                                            ByRef SelectedFighters As List(Of Integer), _
-                                           ByRef BaseStackSize As Integer) As Boolean
+                                           ByRef BaseStackSize As Integer, _
+                                           ByRef MapLordsRaces As List(Of Integer)) As Boolean
         If Not comm.IsAppropriateFighter(AllUnits(fighterID)) Then Return False
+
+        If AllUnits(fighterID).fromRaceBrach AndAlso MapLordsRaces.Contains(AllUnits(fighterID).race) Then Return False
+
         If comm.SoleUnits.ContainsKey(AllUnits(fighterID).unitID) Then
             Dim sole As List(Of String) = comm.SoleUnits.Item(AllUnits(fighterID).unitID)
             If SelectedLeader > -1 AndAlso sole.Contains(AllUnits(SelectedLeader).unitID) Then Return False
@@ -2727,6 +2764,8 @@ Public Class AllDataStructues
         Dim dynUpgrade2 As DynUpgrade
         ''' <summary>Можно ли использовать юнита. 0 - неизвестно, -1 - нет, 1 - да</summary>
         Friend useState As Integer
+        ''' <summary>True - юнит находится в ветке развития играбельной расы</summary>
+        Friend fromRaceBrach As Boolean
 
         Public Shared Function Copy(ByVal v As Unit) As Unit
             Return New Unit With {.name = v.name, _
