@@ -1828,9 +1828,20 @@ Public Class Common
             LordsRace.Add(s(0).ToUpper, RaceIdentifierToSubrace(s(1)))
         Next i
 
-        ConsumableItemsTypes.AddRange(New Integer() {4, 5, 6, 7, 8, 11, 12})
-        NonconsumableItemsTypes.AddRange(New Integer() {0, 1, 2, 3, 9, 13})
-        JewelItemsTypes.AddRange(New Integer() {10})
+        ConsumableItemsTypes.AddRange(New Integer() {GenDefaultValues.ItemTypes.elixir, _
+                                                     GenDefaultValues.ItemTypes.healing_elixir, _
+                                                     GenDefaultValues.ItemTypes.ressurection_elixir, _
+                                                     GenDefaultValues.ItemTypes.permanent_elixir, _
+                                                     GenDefaultValues.ItemTypes.scroll, _
+                                                     GenDefaultValues.ItemTypes.sphere, _
+                                                     GenDefaultValues.ItemTypes.talisman})
+        NonconsumableItemsTypes.AddRange(New Integer() {GenDefaultValues.ItemTypes.nonattack_artifact, _
+                                                        GenDefaultValues.ItemTypes.relic, _
+                                                        GenDefaultValues.ItemTypes.attack_artifact, _
+                                                        GenDefaultValues.ItemTypes.banner, _
+                                                        GenDefaultValues.ItemTypes.stuff, _
+                                                        GenDefaultValues.ItemTypes.boots})
+        JewelItemsTypes.AddRange(New Integer() {GenDefaultValues.ItemTypes.jewel})
         ItemTypesLists = {ConsumableItemsTypes, NonconsumableItemsTypes, JewelItemsTypes}
 
         Call defValues.ParseItemTypes(itemTypeID, itemType)
