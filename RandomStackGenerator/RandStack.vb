@@ -241,18 +241,18 @@ Public Class RandStack
                     result.StackSize += 2
                     result.MaxGiants += 1
                 End If
-                If Not unit.small Or unit.reach = GenDefaultValues.UnitAttackReach.melee Then result.MeleeCount += 1
                 If unit.level < stack.level(i) Then
-                    Dim d As Integer = stack.level(i) - unit.level
-                    If d < unit.dynUpgradeLevel Then
-                        result.ExpStackKilled += unit.dynUpgrade1.EXPkilled * d
-                        result.ExpBarAverage += unit.dynUpgrade1.EXPnext * d
+                    Dim d1 As Integer = stack.level(i) - unit.level
+                    If stack.level(i) < unit.dynUpgradeLevel Then
+                        result.ExpStackKilled += unit.dynUpgrade1.EXPkilled * d1
+                        result.ExpBarAverage += unit.dynUpgrade1.EXPnext * d1
                     Else
-                        result.ExpStackKilled += unit.dynUpgrade1.EXPkilled * (unit.dynUpgradeLevel - 1)
-                        result.ExpBarAverage += unit.dynUpgrade1.EXPnext * (unit.dynUpgradeLevel - 1)
-                        d -= unit.dynUpgradeLevel - 1
-                        result.ExpStackKilled += unit.dynUpgrade2.EXPkilled * d
-                        result.ExpBarAverage += unit.dynUpgrade2.EXPnext * d
+                        Dim d2 As Integer = unit.dynUpgradeLevel - unit.level
+                        result.ExpStackKilled += unit.dynUpgrade1.EXPkilled * d2
+                        result.ExpBarAverage += unit.dynUpgrade1.EXPnext * d2
+                        d1 -= d2
+                        result.ExpStackKilled += unit.dynUpgrade2.EXPkilled * d1
+                        result.ExpBarAverage += unit.dynUpgrade2.EXPnext * d1
                     End If
                 End If
             End If

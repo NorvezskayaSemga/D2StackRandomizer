@@ -713,13 +713,19 @@ Public Class RandStackTest
             s.pos(i) = "G000000000"
         Next i
         s.pos(0) = AllUnitsList(0).unitID.ToUpper
-
-        For i As Integer = 1 To expectedEkill.Length Step 1
-            s.level(0) = i
-            Dim stats As AllDataStructues.DesiredStats = target.StackStats(s, False)
-            If Not stats.ExpStackKilled = expectedEkill(i - 1) Then ok = False
-            If Not stats.ExpBarAverage = expectedEbar(i - 1) Then ok = False
-        Next i
+        For unitBaseLevel As Integer = 1 To 5 Step 1
+            target.AllUnits(0).level = unitBaseLevel
+            For i As Integer = unitBaseLevel To expectedEkill.Length Step 1
+                s.level(0) = i
+                Dim stats As AllDataStructues.DesiredStats = target.StackStats(s, False)
+                If Not stats.ExpStackKilled = expectedEkill(i - 1) Then ok = False
+                If Not stats.ExpBarAverage = expectedEbar(i - 1) Then ok = False
+            Next i
+            For i As Integer = 0 To UBound(expectedEkill) Step 1
+                expectedEkill(i) -= target.AllUnits(0).dynUpgrade1.EXPkilled
+                expectedEbar(i) -= target.AllUnits(0).dynUpgrade1.EXPnext
+            Next i
+        Next unitBaseLevel
 
         If Not ok Then Assert.Inconclusive("Verify the correctness of this test method.")
     End Sub
