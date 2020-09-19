@@ -222,26 +222,21 @@ Public Class RandStackTest
         Dim statsList As New List(Of AllDataStructues.DesiredStats)
 
         For r As Integer = 0 To UBound(races) Step 1
-            For eb As Integer = 0 To 10 Step 2
-                Dim ExpBarAverage As Integer = 100 + 200 * eb
-                For ek As Integer = 1 To 4 Step 1
-                    Dim ExpStackKilled As Integer = 200 + 50 * ek
-                    For mg As Integer = 0 To 3 Step 1
-                        Dim MaxGiants As Integer = mg
-                        For mc As Integer = 0 To 3 Step 1
-                            Dim MeleeCount As Integer = mc
-                            For s As Integer = 1 To 6 Step 2
-                                Dim StackSize As Integer = s
+            For Each ExpBarAverage As Integer In {50, 125, 500, 1000}
+                For Each ExpStackKilled As Integer In {200, 275, 350}
+                    For MaxGiants As Integer = 0 To 3 Step 1
+                        For MeleeCount As Integer = 0 To 3 Step 1
+                            For StackSize As Integer = 1 To 6 Step 1
                                 statsList.Add(New AllDataStructues.DesiredStats With { _
-                                                  .ExpBarAverage = ExpBarAverage, .ExpStackKilled = ExpStackKilled, _
-                                                  .MaxGiants = MaxGiants, .MeleeCount = MeleeCount, _
-                                                  .Race = New List(Of Integer), .StackSize = StackSize})
+                                                   .ExpBarAverage = ExpBarAverage, .ExpStackKilled = ExpStackKilled, _
+                                                   .MaxGiants = MaxGiants, .MeleeCount = MeleeCount, _
+                                                   .Race = New List(Of Integer), .StackSize = StackSize})
                                 statsList.Item(statsList.Count - 1).Race.Add(target.comm.RaceIdentifierToSubrace(races(r)))
-                            Next s
-                        Next mc
-                    Next mg
-                Next ek
-            Next eb
+                            Next StackSize
+                        Next MeleeCount
+                    Next MaxGiants
+                Next ExpStackKilled
+            Next ExpBarAverage
         Next r
 
         Parallel.ForEach(statsList, _
