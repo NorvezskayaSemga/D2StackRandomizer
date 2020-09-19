@@ -241,6 +241,7 @@ Public Class RandStack
                     result.StackSize += 2
                     result.MaxGiants += 1
                 End If
+                If Not unit.small Or unit.reach = GenDefaultValues.UnitAttackReach.melee Then result.MeleeCount += 1
                 If unit.level < stack.level(i) Then
                     Dim d1 As Integer = stack.level(i) - unit.level
                     If stack.level(i) < unit.dynUpgradeLevel Then
