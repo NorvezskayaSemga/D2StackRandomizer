@@ -76,7 +76,6 @@ Friend Class StartForm
         Return average / Math.Sqrt(res + 1)
     End Function
 
-
     Private Sub GenButton_Click() Handles GenButton.Click
 
         Call comm.ReadExcludedObjectsList({"%default%"})
@@ -204,7 +203,7 @@ Friend Class StartForm
         PictureBox1.Image = img
     End Sub
 
-    Private Function ReadSpells() As AllDataStructues.Spell()
+    Public Function ReadSpells() As AllDataStructues.Spell()
         Dim spells() As String = comm.TxtSplit(My.Resources.TestSpells)
         Dim rspells() As String = comm.TxtSplit(My.Resources.TestSpellsRace)
         Dim res(UBound(spells) - 1) As AllDataStructues.Spell
@@ -230,7 +229,7 @@ Friend Class StartForm
         Return res
     End Function
 
-    Private Function ReadObjSize() As ImpenetrableObjects.GlobalMapDecoration()
+    Public Function ReadObjSize() As ImpenetrableObjects.GlobalMapDecoration()
         Dim t() As String = comm.TxtSplit(My.Resources.TestObjectSize)
         Dim result(UBound(t) - 1) As ImpenetrableObjects.GlobalMapDecoration
         ObjectsSize.Clear()
@@ -242,7 +241,7 @@ Friend Class StartForm
         Return result
     End Function
 
-    Private Function ReadTestUnits() As AllDataStructues.Unit()
+    Public Function ReadTestUnits() As AllDataStructues.Unit()
         Dim comm As New Common
         Dim s() As String = comm.TxtSplit(My.Resources.TestUnitsTable)
         Dim r() As String
@@ -269,7 +268,7 @@ Friend Class StartForm
         Return UnitsList
     End Function
 
-    Private Function ReadTestItems() As AllDataStructues.Item()
+    Public Function ReadTestItems() As AllDataStructues.Item()
         Dim comm As New Common
         Dim s() As String = comm.TxtSplit(My.Resources.TestItemsTable)
         Dim r() As String
