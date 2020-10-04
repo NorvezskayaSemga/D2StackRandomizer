@@ -262,6 +262,37 @@ Public Class ImpenetrableMeshGen
 
     End Structure
 
+    Private Structure ObjectPlacingSettings
+        ''' <summary>Тип объекта</summary>
+        Dim objectType As Integer
+        ''' <summary>Рядом с каким объектом разместить этот объект</summary>
+        Dim placeNearWith As Integer
+        ''' <summary>Растояние от объекта placeNearWith, на котором скорее всего окажется размещаемый объект</summary>
+        Dim prefferedDistance As Double
+        ''' <summary>Чем меньше сигма, тем строже требование по расстоянию</summary>
+        Dim sigma As Double
+        ''' <summary>Даже при заданном расстоянии от объекта стараться расположить объект с учетом других</summary>
+        Dim applyUniformity As Boolean
+
+        Public Shared Function Copy(ByRef v As ObjectPlacingSettings) As ObjectPlacingSettings
+            Return New ObjectPlacingSettings With {.applyUniformity = v.applyUniformity, _
+                                                    .objectType = v.objectType, _
+                                                    .placeNearWith = v.placeNearWith, _
+                                                    .prefferedDistance = v.prefferedDistance, _
+                                                    .sigma = v.sigma}
+        End Function
+
+        Public Sub SetDistanceSettings(ByRef nearObjectType As Integer, ByRef ActiveObjects() As AttendedObject, ByRef rndgen As RndValueGen)
+            If objectType = DefMapObjects.Types.Capital Then
+                prefferedDistance = 2
+                sigma = 2
+            Else
+                prefferedDistance = 0.5 * rndgen.Rand(1.05, Math.Sqrt(2.1), True) * (ActiveObjects(objectType).Size + ActiveObjects(nearObjectType).Size) + rndgen.Rand(0, 3, True)
+                sigma = 0.2
+            End If
+        End Sub
+    End Structure
+
     Public Sub New()
         minLocationRadiusAtAll = (New GenDefaultValues(Nothing)).minLocationRadiusAtAll
 
@@ -2040,32 +2071,23 @@ newtry:
             Next x
         Next y
     End Sub
-    Private Sub ObjectsPlacingVariants(ByRef objIDs() As Integer, ByRef locID As Integer, _
+    Private Sub ObjectsPlacingVariants(ByRef placingObjects() As ObjectPlacingSettings, _
+                                       ByRef locID As Integer, _
                                        ByRef m As Map, ByRef settMap As Map.SettingsMap, _
                                        ByRef LocsPlacing() As Location.Borders, _
                                        ByRef FreeCells(,) As Boolean, _
-                                       ByRef NearWith() As Integer, ByRef symmID As Integer, _
                                        ByRef output() As Point, ByRef Term As TerminationCondition)
-        If IsNothing(NearWith) Then
-            ReDim NearWith(UBound(objIDs))
-            For i As Integer = 0 To UBound(NearWith) Step 1
-                NearWith(i) = -1
-            Next i
-        End If
-        Dim dx As Integer = LocsPlacing(locID - 1).minX
-        Dim dy As Integer = LocsPlacing(locID - 1).minY
 
-        Dim tmpIDs() As Integer = CType(objIDs.Clone, Integer())
+        Dim locCenter As New Point(m.Loc(locID - 1).pos.X - LocsPlacing(locID - 1).minX, _
+                                   m.Loc(locID - 1).pos.Y - LocsPlacing(locID - 1).minY)
 
         Call Term.CheckTime()
         If Term.ExitFromLoops Then Exit Sub
 
-        Dim bestOutput(UBound(tmpIDs)) As Point
+        Dim bestOutput(UBound(placingObjects)) As Point
         Dim maxN As Integer = 0
-        ReDim output(UBound(tmpIDs))
-        Call PlaceObjRow(tmpIDs, 0, NearWith, _
-                         New Point(m.Loc(locID - 1).pos.X - dx, m.Loc(locID - 1).pos.Y - dy), _
-                        FreeCells, output, Term, maxN, bestOutput)
+        ReDim output(UBound(placingObjects))
+        Call PlaceObjRow(placingObjects, 0, locCenter, FreeCells, output, Term, maxN, bestOutput)
         If maxN = 0 And IsNothing(output(0)) Then
             output = Nothing
             Exit Sub
@@ -2075,15 +2097,17 @@ newtry:
         End If
         For i As Integer = 0 To UBound(output) Step 1
             If Not IsNothing(output(i)) Then
-                output(i) = New Point(output(i).X + dx, output(i).Y + dy)
+                output(i) = New Point(output(i).X + LocsPlacing(locID - 1).minX, _
+                                      output(i).Y + LocsPlacing(locID - 1).minY)
             Else
                 ReDim Preserve output(i - 1)
                 Exit For
             End If
         Next i
     End Sub
-    Private Sub PlaceObjRow(ByRef objIDs() As Integer, ByRef n As Integer, _
-                            ByRef NearWith() As Integer, ByRef LocCenter As Point, _
+    Private Sub PlaceObjRow(ByRef placingObjects() As ObjectPlacingSettings, _
+                            ByRef n As Integer, _
+                            ByRef LocCenter As Point, _
                             ByRef freeCells(,) As Boolean, ByRef output() As Point, _
                             ByRef Term As TerminationCondition,
                             ByRef maxN As Integer, ByRef bestOutput() As Point)
@@ -2106,31 +2130,31 @@ newtry:
         Dim Weight(UBound(pointsList)) As Double
         Dim pID As New List(Of Integer)
         Dim np As Integer = -1
-        Dim desR, R, sigma As Double
-        If NearWith(n) > -1 Then
-            desR = (ActiveObjects(n).Size + ActiveObjects(objIDs(NearWith(n))).Size + 5) * 0.25 * (1 + Math.Sqrt(2))
-            sigma = 0.1
-        ElseIf objIDs(n) = 1 Then
-            desR = 2
-            sigma = 2
-        End If
+        Dim R As Double
         For y As Integer = 0 To UBound(freeCells, 2) Step 1
             For x As Integer = 0 To UBound(freeCells, 1) Step 1
-                If MayPlaceObject(fc_bak, objIDs(n), x, y) Then
+                If MayPlaceObject(fc_bak, placingObjects(n).objectType, x, y) Then
                     np += 1
                     pointsList(np) = New Point(x, y)
                     pID.Add(np)
-                    If NearWith(n) > -1 Then
-                        R = output(NearWith(n)).Dist(pointsList(np))
-                        Weight(np) = comm.Gauss(R, desR, sigma)
-                    ElseIf objIDs(n) = 1 Then
-                        R = LocCenter.Dist(pointsList(np))
-                        Weight(np) = comm.Gauss(R, desR, sigma)
+                    If placingObjects(n).placeNearWith > -1 Or placingObjects(n).objectType = DefMapObjects.Types.Capital Then
+                        If placingObjects(n).placeNearWith > -1 Then
+                            R = output(placingObjects(n).placeNearWith).Dist(pointsList(np))
+                        Else
+                            R = LocCenter.Dist(pointsList(np))
+                        End If
+                        Weight(np) = comm.Gauss(R, placingObjects(n).prefferedDistance, placingObjects(n).sigma)
+                        If placingObjects(n).applyUniformity Then
+                            For i As Integer = 0 To n - 1 Step 1
+                                R = output(i).Dist(pointsList(np))
+                                Weight(np) *= (1 + 0.1 * R)
+                            Next i
+                        End If
                     Else
                         Weight(np) = 1
                         For i As Integer = 0 To n - 1 Step 1
                             R = output(i).Dist(pointsList(np))
-                            Weight(np) *= (10 + R)
+                            Weight(np) *= (1 + 0.15 * R)
                         Next i
                     End If
                     Weight(np) = Math.Max(Weight(np), 0.000001)
@@ -2143,14 +2167,14 @@ newtry:
         End If
         ReDim Preserve pointsList(np), Weight(np)
         Dim checkN As Integer = Math.Min(10, pID.Count)
-        If n < UBound(objIDs) Then
+        If n < UBound(placingObjects) Then
             Do While pID.Count > 0
                 fc = CType(fc_bak.Clone, Boolean(,))
                 selected = comm.RandomSelection(pID, False)
                 pID.Remove(selected)
                 output(n) = New Point(pointsList(selected).X, pointsList(selected).Y)
-                Call PlaceObject(fc, objIDs(n), output(n).X, output(n).Y)
-                Call PlaceObjRow(objIDs, n + 1, NearWith, LocCenter, fc, output, Term, maxN, bestOutput)
+                Call PlaceObject(fc, placingObjects(n).objectType, output(n).X, output(n).Y)
+                Call PlaceObjRow(placingObjects, n + 1, LocCenter, fc, output, Term, maxN, bestOutput)
                 If Term.ExitFromLoops Then Exit Sub
                 If Not IsNothing(output(n + 1)) Then
                     pID.Clear()
@@ -2170,10 +2194,9 @@ newtry:
             output(n) = New Point(pointsList(selected).X, pointsList(selected).Y)
         End If
     End Sub
-    Private Sub MakeLocObjectsList(ByRef places() As Integer, ByRef nearWith() As Integer, _
+    Private Sub MakeLocObjectsList(ByRef places() As ObjectPlacingSettings, ByRef loc As Location, _
                                    ByRef sett As Map.SettingsLoc, ByRef isRaceLoc As Boolean, _
-                                   ByRef LocArea() As Integer, ByRef symmID As Integer, _
-                                   ByRef LocSymmMult As Double)
+                                   ByRef LocArea() As Integer, ByRef LocSymmMult As Double, ByRef map As Map)
         Dim nCapital, nMinMines As Integer
         Dim mult As Double
         If sett.scaleContent Then
@@ -2238,15 +2261,15 @@ newtry:
         If Not IsNothing(sett.RaceCities) Then sum += sett.RaceCities.Length
 
 
-        ReDim places(sum), nearWith(sum)
+        ReDim places(sum)
         Dim p As Integer = 0
 
         'добавляем столицу
         Do While nObj(1) > 0
-            nearWith(p) = -1
             Call AddObjId(places, nObj, DefMapObjects.Types.Capital, p, areaUsed)
             If areaUsed >= LocArea(1) Then
-                ReDim Preserve places(p - 1), nearWith(p - 1)
+                ReDim Preserve places(p - 1)
+                Call SetNearWithSettings(places, loc, map)
                 Exit Sub
             End If
         Loop
@@ -2264,16 +2287,10 @@ newtry:
                 Dim k As Integer = 0
                 Dim placedMines As Integer = 0
                 Do While nObj(8) > 0 And placedMines < nMinMines
-                    If isRaceLoc Then
-                        nearWith(p) = k
-                        k += 1
-                        If k = nCapital Then k = 0
-                    Else
-                        nearWith(p) = -1
-                    End If
                     Call AddObjId(places, nObj, DefMapObjects.Types.Mine, p, areaUsed)
                     If areaUsed >= LocArea(1) Then
-                        ReDim Preserve places(p - 1), nearWith(p - 1)
+                        ReDim Preserve places(p - 1)
+                        Call SetNearWithSettings(places, loc, map)
                         Exit Sub
                     End If
                     placedMines += 1
@@ -2282,10 +2299,10 @@ newtry:
                 'добавляем обязательные города
                 If Not IsNothing(sett.RaceCities) Then
                     For i As Integer = 0 To UBound(sett.RaceCities) Step 1
-                        nearWith(p) = -1
                         Call AddObjId(places, Nothing, DefMapObjects.Types.City, p, areaUsed)
                         If areaUsed >= LocArea(1) Then
-                            ReDim Preserve places(p - 1), nearWith(p - 1)
+                            ReDim Preserve places(p - 1)
+                            Call SetNearWithSettings(places, loc, map)
                             Exit Sub
                         End If
                     Next i
@@ -2317,17 +2334,141 @@ newtry:
         Do While ids.Count > 0
             s = comm.RandomSelection(ids, Weight, True)
             ids.Remove(s)
-            nearWith(p) = -1
             Call AddObjId(places, nObj, AllObjList(s), p, areaUsed)
             If areaUsed >= LocArea(1) Then
-                ReDim Preserve places(p - 1), nearWith(p - 1)
+                ReDim Preserve places(p - 1)
+                Call SetNearWithSettings(places, loc, map)
                 Exit Sub
             End If
         Loop
+        Call SetNearWithSettings(places, loc, map)
     End Sub
-    Private Sub AddObjId(ByRef places() As Integer, ByRef nObj() As Integer, ByRef id As Integer, _
+    Private Sub SetNearWithSettings(ByRef places() As ObjectPlacingSettings, ByRef loc As Location, ByRef m As Map)
+        Dim capitalN As Integer = -1
+        For i As Integer = 0 To UBound(places) Step 1
+            places(i).placeNearWith = -1
+            places(i).sigma = 0
+        Next i
+        For i As Integer = 0 To UBound(places) Step 1
+            If places(i).objectType = DefMapObjects.Types.Capital Then
+                capitalN = i
+                places(i).SetDistanceSettings(-1, ActiveObjects, rndgen)
+                Exit For
+            End If
+        Next i
+        If capitalN > -1 Then
+            Dim n As Integer = 0
+            For i As Integer = 0 To UBound(places) Step 1
+                If places(i).objectType = DefMapObjects.Types.Mine Then
+                    places(i).placeNearWith = capitalN
+                    places(i).SetDistanceSettings(places(places(i).placeNearWith).objectType, ActiveObjects, rndgen)
+                    n += 1
+                    If n = 2 Then Exit For
+                End If
+            Next i
+        End If
+        For i As Integer = 0 To UBound(places) Step 1
+            If places(i).objectType = DefMapObjects.Types.City Then
+                For j As Integer = 0 To UBound(places) Step 1
+                    If places(j).objectType = DefMapObjects.Types.Mine And places(j).placeNearWith = -1 Then
+                        places(j).placeNearWith = i
+                        places(j).SetDistanceSettings(places(places(j).placeNearWith).objectType, ActiveObjects, rndgen)
+                    End If
+                Next j
+            End If
+        Next i
+        'сортируем так, чтобы те, что должны быть рядом с чем-то расположены, сразу шли после этого чего-то
+        Dim dependentObjects(UBound(places)) As List(Of ObjectPlacingSettings)
+        Dim newPlaces(UBound(places)) As ObjectPlacingSettings
+        For i As Integer = 0 To UBound(places) Step 1
+            dependentObjects(i) = New List(Of ObjectPlacingSettings)
+        Next i
+        For i As Integer = 0 To UBound(places) Step 1
+            If places(i).placeNearWith > -1 Then
+                dependentObjects(places(i).placeNearWith).Add(ObjectPlacingSettings.Copy(places(i)))
+            End If
+        Next i
+        Dim k As Integer = -1
+        Dim newNearWith As Integer
+        For i As Integer = 0 To UBound(places) Step 1
+            If places(i).placeNearWith = -1 Then
+                k += 1
+                newPlaces(k) = ObjectPlacingSettings.Copy(places(i))
+                If dependentObjects(i).Count > 0 Then
+                    newNearWith = k
+                    For Each p As ObjectPlacingSettings In dependentObjects(i)
+                        k += 1
+                        newPlaces(k) = ObjectPlacingSettings.Copy(p)
+                        newPlaces(k).placeNearWith = newNearWith
+                    Next p
+                End If
+            End If
+        Next i
+        places = newPlaces
+        If capitalN > -1 And m.symmID = -1 Then
+            Dim n As Integer
+            Dim area(UBound(places)), areaSum As Integer
+            For i As Integer = 0 To UBound(places) Step 1
+                If Not places(i).objectType = DefMapObjects.Types.Capital And places(i).placeNearWith = -1 Then
+                    n += 1
+                    area(i) = CInt(ActiveObjects(places(i).objectType).Size ^ 2)
+                    For j As Integer = 0 To UBound(places) Step 1
+                        If places(j).placeNearWith = i Then
+                            area(i) = CInt(ActiveObjects(places(j).objectType).Size ^ 2)
+                        End If
+                    Next j
+                    areaSum += area(i)
+                End If
+            Next i
+            If n > 0 Then
+                Dim Rnext, Rprev As Double
+                Dim R0 As Double = Math.Sqrt(0.5) * ActiveObjects(DefMapObjects.Types.Capital).Size + 1
+                Dim R1 As Double = 0.5 * Math.Min(loc.gASize, loc.gBSize)
+                Dim R2 As Double = 0.5 * Math.Max(loc.gASize, loc.gBSize)
+                Dim Area1 As Double = R1 ^ 2 - R0 ^ 2
+                Dim Area2 As Double = R1 * (R2 - R1)
+                Rprev = R0
+                Dim W1 As Double = areaSum * Area1 / (Area1 + Area2)
+                For i As Integer = 0 To UBound(places) Step 1
+                    If Not places(i).objectType = DefMapObjects.Types.Capital And places(i).placeNearWith = -1 Then
+                        places(i).placeNearWith = capitalN
+                        places(i).applyUniformity = True
+                        places(i).sigma = 1.5
+
+                        places(i).SetDistanceSettings(places(places(i).placeNearWith).objectType, ActiveObjects, rndgen)
+
+                        'R_prev < R1
+                        ' (R_next^2 - R_prev^2)/(Area1+Area2) =area(i)/areasum 
+                        ' if R_next>R1
+                        '   ((R1^2 - R_prev^2)+(R_next - R_1)*R1)/(Area1+Area2) =area(i)/areasum    
+                        ' end if
+                        'else
+                        ' (R_next - R_prev)*R1/(Area1+Area2) =area(i)/areasum 
+                        'end if
+
+                        If Rprev < R1 Then
+                            Rnext = Math.Sqrt(area(i) * (Area1 + Area2) / areaSum + Rprev ^ 2)
+                            If Rnext > R1 Then
+                                Rnext = (area(i) * (Area1 + Area2) / areaSum - R1 ^ 2 + Rprev ^ 2) / R1 + R1
+                            End If
+                        Else
+                            Rnext = area(i) * (Area1 + Area2) / (areaSum * R1) + Rprev
+                        End If
+
+                        places(i).prefferedDistance += 0.5 * (Rnext + Rprev)
+                        Rprev = Rnext
+                    End If
+                Next i
+            End If
+        End If
+    End Sub
+    Private Function DesiredDist(ByRef objType1 As Integer, ByRef objType2 As Integer) As Double
+        Return 0.5 * rndgen.Rand(1.05, Math.Sqrt(2.1), True) * (ActiveObjects(objType1).Size + ActiveObjects(objType2).Size) + rndgen.Rand(0, 3, True)
+    End Function
+
+    Private Sub AddObjId(ByRef places() As ObjectPlacingSettings, ByRef nObj() As Integer, ByRef id As Integer, _
                          ByRef p As Integer, ByRef AreaUsed As Integer)
-        places(p) = ActiveObjects(id).TypeID
+        places(p).objectType = ActiveObjects(id).TypeID
         AreaUsed = CInt(AreaUsed + (ActiveObjects(id).Area * 1.2))
         If Not IsNothing(nObj) Then nObj(id) -= 1
         p += 1
@@ -2340,8 +2481,7 @@ newtry:
         Dim tmpLocsPlacing() As Location.Borders = LocsPlacing
         Dim tmpLocFreeCells()(,) As Boolean = LocFreeCells
         Dim TT As TerminationCondition = Term
-        Dim places()(), nearWith()() As Integer
-        places = Nothing : nearWith = Nothing
+        Dim places()() As ObjectPlacingSettings = Nothing
         Dim ok As Boolean = False
         Do While Not ok
             Call TT.CheckTime()
@@ -2351,21 +2491,19 @@ newtry:
             End If
             Dim v()() As Point = Nothing
             If symmId > -1 Or Not IsRaceLoc Then
-                ReDim v(0), places(0), nearWith(0)
-                Call MakeLocObjectsList(places(0), nearWith(0), settLoc(LocId - 1), IsRaceLoc, LocArea(LocId - 1), _
-                                        symmId, LocSymmMult(LocId - 1))
+                ReDim v(0), places(0)
+                Call MakeLocObjectsList(places(0), m.Loc(LocId - 1), settLoc(LocId - 1), IsRaceLoc, LocArea(LocId - 1), LocSymmMult(LocId - 1), tmpm)
                 Call ObjectsPlacingVariants(places(0), LocId, tmpm, settMap, tmpLocsPlacing, _
-                                            tmpLocFreeCells(LocId - 1), nearWith(0), symmId, v(0), TT)
+                                            tmpLocFreeCells(LocId - 1), v(0), TT)
             Else
-                ReDim v(settMap.nRaces - 1), places(settMap.nRaces - 1), nearWith(settMap.nRaces - 1)
+                ReDim v(settMap.nRaces - 1), places(settMap.nRaces - 1)
                 For i As Integer = 0 To settMap.nRaces - 1 Step 1
-                    Call MakeLocObjectsList(places(i), nearWith(i), settLoc(i), IsRaceLoc, LocArea(i), _
-                                            symmId, LocSymmMult(i))
+                    Call MakeLocObjectsList(places(i), m.Loc(LocId - 1), settLoc(i), IsRaceLoc, LocArea(i), LocSymmMult(i), tmpm)
                 Next i
                 Parallel.For(0, settMap.nRaces, _
                  Sub(i As Integer)
                      Call ObjectsPlacingVariants(places(i), i + 1, tmpm, settMap, tmpLocsPlacing, _
-                                                 tmpLocFreeCells(i), nearWith(i), symmId, v(i), TT)
+                                                 tmpLocFreeCells(i), v(i), TT)
                  End Sub)
             End If
             If TT.ExitFromLoops Then
@@ -2423,7 +2561,7 @@ newtry:
                      Dim nPlacedCities As Integer = 0
                      'Dim g As Integer = tmp_G + i * (minN + 1)
                      For n As Integer = 0 To UBound(v(i)) Step 1
-                         Call PlaceObject(tmpm, places(i)(n), v(i)(n).X, v(i)(n).Y, g + n, nPlacedCities, _
+                         Call PlaceObject(tmpm, places(i)(n).objectType, v(i)(n).X, v(i)(n).Y, g + n, nPlacedCities, _
                                           settLoc(i + LocId - 1), settMap)
                      Next n
                      If Not IsNothing(settLoc(i + LocId - 1).RaceCities) AndAlso
