@@ -37,7 +37,7 @@
         If IsNothing(name) Then
             download = True
         Else
-            Dim d As Integer = 365 * (DateAndTime.Today.Year - t.Year) + t.DayOfYear - DateAndTime.Today.DayOfYear
+            Dim d As Integer = 365 * (DateAndTime.Today.Year - t.Year) + DateAndTime.Today.DayOfYear - t.DayOfYear
             If d > 7 Then download = True
         End If
         If download Then
