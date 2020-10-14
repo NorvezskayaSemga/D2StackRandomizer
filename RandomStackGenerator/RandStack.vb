@@ -189,7 +189,7 @@ Public Class RandStack
         End If
         If Not IsNothing(AllItems) Then
             For i As Integer = 0 To UBound(AllItems) Step 1
-                If comm.IsExcluded(AllItems(i).itemID) Then
+                If comm.IsExcluded(AllItems(i).itemID) OrElse comm.IsExcluded(comm.itemType.Item(AllItems(i).type).ToUpper) Then
                     AllItems(i).useState = GenDefaultValues.ExclusionState.excluded
                 Else
                     AllItems(i).useState = GenDefaultValues.ExclusionState.canUse
@@ -634,6 +634,7 @@ Public Class RandStack
         Dim selected As Integer
         Dim IDs As New List(Of Integer)
         Dim result As String = ""
+        Dim minGoldCost As Integer = CInt(Math.Max(Math.Min(comm.defValues.MinRuinsLootCostMultiplier, 1), 0) * GoldCost)
 
         Dim DynTypeWeightMultiplier(), DynItemWeightMultiplier(UBound(AllItems)), DynSameItemWeightMultiplier() As Double
 
@@ -643,7 +644,7 @@ Public Class RandStack
         IDs.Clear()
         For i As Integer = 0 To UBound(AllItems) Step 1
             DynItemWeightMultiplier(i) = multiplierItemsWeight(i) * DynTypeWeightMultiplier(AllItems(i).type) * DynSameItemWeightMultiplier(i)
-            If ItemCostSum(i) <= GoldCost AndAlso ItemFilter(IGen, AllItems(i)) _
+            If ItemCostSum(i) <= GoldCost AndAlso ItemCostSum(i) >= minGoldCost AndAlso ItemFilter(IGen, AllItems(i)) _
             AndAlso ItemFilter(TypeCostRestriction, AllItems(i)) Then IDs.Add(i)
         Next i
         If IDs.Count > 0 Then
@@ -3245,6 +3246,7 @@ Public Class GenDefaultValues
         Call SetProperty(AddedItemTypeSearchRadius, "AddedItemTypeSearchRadius", RConstants, DConstants)
         Call SetProperty(CostBarExcessLimit, "CostBarExcessLimit", RConstants, DConstants)
         Call SetProperty(LootCostExcessLimit, "LootCostExcessLimit", RConstants, DConstants)
+        Call SetProperty(MinRuinsLootCostMultiplier, "MinRuinsLootCostMultiplier", RConstants, DConstants)
 
         'map
         Call SetProperty(minLocationRadiusAtAll, "minLocationRadiusAtAll", RConstants, DConstants)
@@ -3292,6 +3294,7 @@ Public Class GenDefaultValues
             log.Add("AddedItemTypeSearchRadius = " & AddedItemTypeSearchRadius)
             log.Add("CostBarExcessLimit = " & CostBarExcessLimit)
             log.Add("LootCostExcessLimit = " & LootCostExcessLimit)
+            log.Add("MinRuinsLootCostMultiplier = " & MinRuinsLootCostMultiplier)
 
             'map
             log.Add("minLocationRadiusAtAll = " & minLocationRadiusAtAll)
@@ -3467,6 +3470,7 @@ Public Class GenDefaultValues
     Public Property Local_SameItem_ChanceMultiplier As Double()
     Public Property CostBarExcessLimit As Double
     Public Property LootCostExcessLimit As Double
+    Public Property MinRuinsLootCostMultiplier As Double
 
     'map
     Public Property minLocationRadiusAtAll As Double
