@@ -40,7 +40,7 @@ LootCostDispersion			2.0
 #Множитель шанса появления каждого типа предметов, не зависящий от того, какие предметы уже есть на карте
 #есть условие по цене.
 #Например elixir=0.75#cost>400else1.25 значит, что для обычных эликсиров стоимостью больше 400 множитель равен 0.75, для тех, что дешевле 401 - 1.25
-Global_ItemType_ChanceMultiplier   talisman=0.1;/
+Global_ItemType_ChanceMultiplier   talisman=0.1#cost>1500else1;/
                                    scroll=0.15;/
                                    sphere=0.5;/
                                    stuff=0.25;/
@@ -69,7 +69,7 @@ Local_AddedItemType_ChanceMultiplier nonattack_artifact=0.65;/
                                      stuff=0.35;/
                                      jewel=0.95;/
                                      sphere=0.85;/
-                                     talisman=0.35;/
+                                     talisman=0.25;/
                                      special=1
 
 #Для каждого предмета при привышении порога количества таких же предметов (SameItemsAmountRestriction)
