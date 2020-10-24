@@ -115,7 +115,7 @@ Public Class RandStack
         For i As Integer = 0 To UBound(AllItems) Step 1
             AllItems(i) = AllDataStructues.Item.Copy(AllItemsList(i))
             If AllItems(i).type = GenDefaultValues.ItemTypes.talisman Then
-                AllItemsList(i).itemCost *= TalismanChargesDefaultAmount
+                AllItems(i).itemCost *= TalismanChargesDefaultAmount
             End If
             ItemsArrayPos.Add(AllItems(i).itemID.ToUpper, i)
 
