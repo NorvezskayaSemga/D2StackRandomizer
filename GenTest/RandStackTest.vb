@@ -56,7 +56,7 @@ Public Class RandStackTest
 #End Region
 
     Friend Function CreateRandStack_Accessor() As RandStack_Accessor
-        Return New RandStack_Accessor(UnitsList, ItemsList, excludeList, customLootChanceList, _
+        Return New RandStack_Accessor(UnitsList, ItemsList, AllSpells, excludeList, customLootChanceList, _
                                       customRaceList, soleUnitsList, bigStackUnitsList, preservedItemsList, 5)
     End Function
 
@@ -695,7 +695,7 @@ Public Class RandStackTest
         Dim CustomUnitRace() As String = New String() {"%defailt%"}
         Dim CustomLootChance() As String = New String() {"%defailt%"}
 
-        Dim target As RandStack_Accessor = New RandStack_Accessor(AllUnitsList, ItemsList, ExcludeLists, CustomLootChance, _
+        Dim target As RandStack_Accessor = New RandStack_Accessor(AllUnitsList, ItemsList, AllSpells, ExcludeLists, CustomLootChance, _
                                                                   CustomUnitRace, soleUnitsList, bigStackUnitsList, preservedItemsList, 5)
         Call target.ResetExclusions()
         Dim ok As Boolean = True
@@ -791,7 +791,7 @@ Public Class RandStackTest
 
         If IsNothing(UnitsList) Then Call ReadTestUnits()
         If IsNothing(ItemsList) Then Call ReadTestItems()
-        Dim target As RandStack = New RandStack(UnitsList, ItemsList, excludeList, customLootChanceList, customRaceList, _
+        Dim target As RandStack = New RandStack(UnitsList, ItemsList, AllSpells, excludeList, customLootChanceList, customRaceList, _
                                                 soleUnitsList, bigStackUnitsList, preservedItemsList, 5)
         target.comm.ReadExcludedObjectsList({RandomStackGenerator.My.Resources.readDefaultFileKeyword, _
                                              RandomStackGenerator.My.Resources.readVLoreFileKeyword, _

@@ -7494,13 +7494,6 @@ Public Class ObjectsContentSet
         End If
     End Function
 
-    Private Function FindSpell(ByRef id As String) As AllDataStructues.Spell
-        Dim u As String = id.ToUpper
-        If spells.ContainsKey(u) Then Return spells.Item(u)
-        If excludedSpells.ContainsKey(u) Then Return excludedSpells.Item(u)
-        Return Nothing
-    End Function
-
     ''' <summary>Создаст список заклинаний</summary>
     ''' <param name="d">Желаемые параметры доступных заклинаний. Имеет значение только .shopContent</param>
     ''' <param name="AllManaSources">Список источников маны на карте (см. DefMapObjects)</param>
@@ -7518,7 +7511,12 @@ Public Class ObjectsContentSet
         If AllManaSources.Contains(DefMapObjects.mineWhite) Then availMana.White = 1
         If AllManaSources.Contains(DefMapObjects.mineRed) Then availMana.Red = 1
         If AllManaSources.Contains(DefMapObjects.mineBlue) Then availMana.Blue = 1
-        Dim races() As String = New String() {"H", "C", "L", "U", "E", "R"}
+
+        Dim races() As String = New String() {My.Resources.spellRandomRace.ToUpper}
+        For Each r As String In randStack.comm.defValues.playableRaces
+            ReDim Preserve races(races.Length)
+            races(UBound(races)) = randStack.comm.defValues.RaceNumberToRaceChar(randStack.comm.RaceIdentifierToSubrace(r))
+        Next r
 
         Dim res, slist As New List(Of String)
         Dim txt As String = ""
@@ -7936,7 +7934,7 @@ Public Class ObjectsContentSet
     Private Function RndPart(ByRef minRange As Integer, ByRef maxRange As Integer, ByRef N As Integer, ByRef partsCount As Integer) As Integer
         Dim d As Double = (maxRange - minRange) / partsCount
         Dim max As Double = minRange + N * d
-        Dim min As Double = min - d
+        Dim min As Double = max - d
         Dim v As Double = randStack.rndgen.Rand(min, max, True)
         Dim p0 As Double = Math.Floor(v)
         Dim p1 As Double = v - p0
@@ -7948,7 +7946,7 @@ Public Class ObjectsContentSet
                 p1 = 0
             End If
         End If
-        Return CInt(Math.Max(min, Math.Min(max, p0 + p1)))
+        Return CInt(Math.Max(minRange, Math.Min(maxRange, p0 + p1)))
     End Function
 
     ''' <summary>Вернет настройки генерации заклинаний</summary>
@@ -7971,7 +7969,7 @@ Public Class ObjectsContentSet
             output = GetSettingsCommon(input)
         ElseIf mode = 2 Then
             For Each item In input
-                spell = FindSpell(item)
+                spell = randStack.FindSpellStats(item)
                 If Not spell.spellID = "" Then
                     Dim prop As String = SpellProperties(spell)
                     output.Add(prop)
@@ -7979,14 +7977,14 @@ Public Class ObjectsContentSet
             Next item
         ElseIf mode = 3 Then
             For Each item In input
-                spell = FindSpell(item)
+                spell = randStack.FindSpellStats(item)
                 If Not spell.spellID = "" Then
                     output.Add(spell.category.ToString)
                 End If
             Next item
         ElseIf mode = 4 Then
             For Each item In input
-                spell = FindSpell(item)
+                spell = randStack.FindSpellStats(item)
                 If Not spell.spellID = "" Then
                     Dim prop As String = SpellProperties(spell)
                     output.Add(spell.category.ToString & "#" & prop)
@@ -8106,26 +8104,30 @@ Public Class ObjectsContentSet
         Dim s As Map.SettingsLoc = sett(m.board(x, y).locID(0) - 1)
         Dim res As New List(Of String)
         Dim cost As Integer = s.merchItemsCost
-        Dim selected, itemcost As Integer
+        Dim selected, itemcost, minCost, maxCost As Integer
         Dim addOnce, addedTypes, selection, exclude As New List(Of Integer)
         addOnce.AddRange(New Integer() {GenDefaultValues.ItemTypes.attack_artifact, GenDefaultValues.ItemTypes.nonattack_artifact, _
                                         GenDefaultValues.ItemTypes.banner, GenDefaultValues.ItemTypes.boots, GenDefaultValues.ItemTypes.permanent_elixir, _
                                         GenDefaultValues.ItemTypes.relic, GenDefaultValues.ItemTypes.stuff, GenDefaultValues.ItemTypes.talisman})
-        exclude.AddRange(New Integer() {GenDefaultValues.ItemTypes.special, GenDefaultValues.ItemTypes.jewel})
+        For Each item As Integer In excludedItemType
+            exclude.Add(item)
+        Next item
 
         For Each v As Integer In System.Enum.GetValues(GetType(GenDefaultValues.ItemTypes))
             If randStack.comm.IsExcluded(randStack.comm.itemType.Item(v).ToUpper) AndAlso Not exclude.Contains(v) Then exclude.Add(v)
         Next v
         For Each deltaCost As Integer In {400, 200, 200, 100}
             selected = GenDefaultValues.ItemTypes.healing_elixir
-            cost -= deltaCost
-            res.Add(randStack.comm.itemType.Item(selected) & "#" & deltaCost)
+            Dim c As Integer = Math.Min(typeMaxCost(selected), Math.Max(typeMinCost(selected), deltaCost))
+            cost -= c
+            res.Add(randStack.comm.itemType.Item(selected) & "#" & c)
             If Not addedTypes.Contains(selected) Then addedTypes.Add(selected)
         Next deltaCost
         For Each deltaCost As Integer In {400, 400}
             selected = GenDefaultValues.ItemTypes.ressurection_elixir
-            cost -= deltaCost
-            res.Add(randStack.comm.itemType.Item(selected) & "#" & deltaCost)
+            Dim c As Integer = Math.Min(typeMaxCost(selected), Math.Max(typeMinCost(selected), deltaCost))
+            cost -= c
+            res.Add(randStack.comm.itemType.Item(selected) & "#" & c)
             If Not addedTypes.Contains(selected) Then addedTypes.Add(selected)
         Next deltaCost
         Do While cost > 0
@@ -8136,11 +8138,19 @@ Public Class ObjectsContentSet
                 End If
             Next v
             selected = randStack.comm.RandomSelection(selection, True)
-            If cost > s.merchMinItemCost Then
-                itemcost = randStack.rndgen.RndInt(s.merchMinItemCost, s.merchMaxItemCost, True)
+            If randStack.comm.ConsumableItemsTypes.Contains(selected) Then
+                minCost = s.merchMinConsumableItemCost
+                maxCost = s.merchMaxConsumableItemCost
+            Else
+                minCost = s.merchMinNonconsumableItemCost
+                maxCost = s.merchMaxNonconsumableItemCost
+            End If
+            If cost > minCost Then
+                itemcost = randStack.rndgen.RndInt(minCost, maxCost, True)
             Else
                 itemcost = cost
             End If
+            itemcost = Math.Min(typeMaxCost(selected), Math.Max(typeMinCost(selected), itemcost))
             cost -= itemcost
             res.Add(randStack.comm.itemType.Item(selected) & "#" & itemcost)
             If Not addedTypes.Contains(selected) Then addedTypes.Add(selected)
@@ -8203,21 +8213,16 @@ Public Class ObjectsContentSet
         Dim res As New List(Of String)
         Dim mercRace As String
         Dim selected As String
+        Dim raceID As Integer
         Dim bar As Integer
-
-        Dim playableRacesIDs As New List(Of Integer)
-
-
-        '#'по лордам узнаем, какиерасы играбельны
-        'создаем список неиграбельных рас
-
         For i As Integer = 1 To s.mercenariesCount Step 1
             If m.board(x, y).locID(0) > nRaces Then
-                'выбираем неиграбельную расу
-                mercRace = randStack.comm.defValues.RaceNumberToRaceChar(randStack.comm.RaceIdentifierToSubrace(selected))
+                selected = randStack.comm.defValues.neutralRaces(randStack.rndgen.RndInt(0, UBound(randStack.comm.defValues.neutralRaces), True))
+                raceID = randStack.comm.RaceIdentifierToSubrace(selected)
             Else
-                mercRace = randStack.comm.defValues.RaceNumberToRaceChar(m.board(x, y).objRace(0))
+                raceID = m.board(x, y).objRace(0)
             End If
+            mercRace = randStack.comm.defValues.RaceNumberToRaceChar(raceID)
             bar = RndPart(s.mercenariesMinExpBar, s.mercenariesMaxExpBar, i, s.mercenariesCount)
             res.Add(mercRace & "#" & bar)
         Next i

@@ -65,11 +65,11 @@ Public Class ObjectsContentSetTest
         If IsNothing(rndtest.ItemsList) Then rndtest.ReadTestItems()
         If IsNothing(rndtest.AllSpells) Then rndtest.ReadTestSpells()
 
-        Dim rStack As New RandStack(rndtest.UnitsList, rndtest.ItemsList, rndtest.excludeList, rndtest.customLootChanceList, _
+        Dim rStack As New RandStack(rndtest.UnitsList, rndtest.ItemsList, rndtest.AllSpells, rndtest.excludeList, rndtest.customLootChanceList, _
                                     rndtest.customRaceList, rndtest.soleUnitsList, rndtest.bigStackUnitsList, _
                                     rndtest.preservedItemsList, 5)
 
-        Dim target As New ObjectsContentSet(rStack, rndtest.AllSpells)
+        Dim target As New ObjectsContentSet(rStack)
         Dim ok As Boolean = True
         Dim actual As String
 
@@ -103,11 +103,11 @@ Public Class ObjectsContentSetTest
         If IsNothing(rndtest.ItemsList) Then rndtest.ReadTestItems()
         If IsNothing(rndtest.AllSpells) Then rndtest.ReadTestSpells()
 
-        Dim rStack As New RandStack(rndtest.UnitsList, rndtest.ItemsList, rndtest.excludeList, rndtest.customLootChanceList, _
+        Dim rStack As New RandStack(rndtest.UnitsList, rndtest.ItemsList, rndtest.AllSpells, rndtest.excludeList, rndtest.customLootChanceList, _
                                     rndtest.customRaceList, rndtest.soleUnitsList, rndtest.bigStackUnitsList, _
                                     rndtest.preservedItemsList, 5)
 
-        Dim target As New ObjectsContentSet(rStack, rndtest.AllSpells)
+        Dim target As New ObjectsContentSet(rStack)
         Dim ok As Boolean = True
         Dim actual As List(Of String)
         Dim input, mines As New List(Of String)
@@ -168,11 +168,11 @@ Public Class ObjectsContentSetTest
         If IsNothing(rndtest.ItemsList) Then rndtest.ReadTestItems()
         If IsNothing(rndtest.AllSpells) Then rndtest.ReadTestSpells()
 
-        Dim rStack As New RandStack(rndtest.UnitsList, rndtest.ItemsList, rndtest.excludeList, rndtest.customLootChanceList, _
+        Dim rStack As New RandStack(rndtest.UnitsList, rndtest.ItemsList, rndtest.AllSpells, rndtest.excludeList, rndtest.customLootChanceList, _
                                     rndtest.customRaceList, rndtest.soleUnitsList, rndtest.bigStackUnitsList, _
                                     rndtest.preservedItemsList, 5)
 
-        Dim target As New ObjectsContentSet(rStack, rndtest.AllSpells)
+        Dim target As New ObjectsContentSet(rStack)
         Dim ok As Boolean = True
         Dim actual As List(Of String)
         Dim input As New List(Of String)
@@ -203,11 +203,11 @@ Public Class ObjectsContentSetTest
         If IsNothing(rndtest.ItemsList) Then rndtest.ReadTestItems()
         If IsNothing(rndtest.AllSpells) Then rndtest.ReadTestSpells()
 
-        Dim rStack As New RandStack(rndtest.UnitsList, rndtest.ItemsList, rndtest.excludeList, rndtest.customLootChanceList, _
+        Dim rStack As New RandStack(rndtest.UnitsList, rndtest.ItemsList, rndtest.AllSpells, rndtest.excludeList, rndtest.customLootChanceList, _
                                     rndtest.customRaceList, rndtest.soleUnitsList, rndtest.bigStackUnitsList, _
                                     rndtest.preservedItemsList, 5)
 
-        Dim target As New ObjectsContentSet(rStack, rndtest.AllSpells)
+        Dim target As New ObjectsContentSet(rStack)
         Dim ok As Boolean = True
         Dim actual As List(Of String)
         Dim input As New List(Of String)
@@ -239,12 +239,12 @@ Public Class ObjectsContentSetTest
         If IsNothing(rndtest.ItemsList) Then rndtest.ReadTestItems()
         If IsNothing(rndtest.AllSpells) Then rndtest.ReadTestSpells()
 
-        Dim rStack As New RandStack(rndtest.UnitsList, rndtest.ItemsList, rndtest.excludeList, rndtest.customLootChanceList, _
+        Dim rStack As New RandStack(rndtest.UnitsList, rndtest.ItemsList, rndtest.AllSpells, rndtest.excludeList, rndtest.customLootChanceList, _
                                     rndtest.customRaceList, rndtest.soleUnitsList, rndtest.bigStackUnitsList, _
                                     rndtest.preservedItemsList, 5)
 
 
-        Dim target As New ObjectsContentSet(rStack, rndtest.AllSpells)
+        Dim target As New ObjectsContentSet(rStack)
         Dim ok As Boolean = True
 
         'Dim spells, units, items As New List(Of String)

@@ -372,7 +372,6 @@ Public Class RaceGen
     'Dim StackRaceWeight() As Double = New Double() {0, 1, 1, 1, 1, 0.75, 1, 1, 2, 0.05, 1, 1, 1, 1, 1, 1, 0.75, 0, 1, 1}
     ''                                               -, H, U, L, C,    N, H, E, G,    D, S, W, B, A, E,AS,  AST, -. AW,AG 
 
-    Dim AllPlayableRacesList() As Integer '#'по расам лордов определяем список играбельных рас и их номер в массиве LRaces
     Dim LRaces() As Integer
     Dim LRacesWeight(), SRacesWeight()() As Double
     Dim SRaces()()() As Integer
@@ -475,6 +474,19 @@ Public Class RaceGen
         'выбор играбельных рас
         Dim selectedRaces As New List(Of Integer)
         If IsNothing(PlayableRaces) Then
+            Dim AllPlayableRacesList(UBound(LRaces)) As Integer
+            Dim n As Integer = -1
+            For i As Integer = 0 To UBound(comm.defValues.playableRaces) Step 1
+                Dim id As Integer = comm.RaceIdentifierToSubrace(comm.defValues.playableRaces(i))
+                For j As Integer = 0 To UBound(LRaces) Step 1
+                    If id = LRaces(j) Then
+                        n += 1
+                        AllPlayableRacesList(n) = j
+                        Exit For
+                    End If
+                Next j
+            Next i
+            ReDim Preserve AllPlayableRacesList(n)
             selectedRaces.AddRange(AllPlayableRacesList)
             For i As Integer = 0 To UBound(AllPlayableRacesList) - nRaces Step 1
                 Dim s As Integer = comm.RandomSelection(selectedRaces, True)

@@ -15,6 +15,10 @@ Public Class RandStack
 
     Private ItemsArrayPos As New Dictionary(Of String, Integer)
     Friend AllItems() As AllDataStructues.Item
+
+    Private SpellsArrayPos As New Dictionary(Of String, Integer)
+    Friend AllSpells() As AllDataStructues.Spell
+
     Public rndgen As RndValueGen
     Public comm As New Common With {.onExcludedListChanged = AddressOf ResetExclusions}
 
@@ -55,6 +59,7 @@ Public Class RandStack
     ''' Для чтения из дефолтного листа в массив нужно добавить строчку %default% (наличие этого ключевого в файле запустит чтение дефолтного файла)</param>
     ''' <param name="TalismanChargesDefaultAmount">Количество зарядов у талисманов (таблица GVars, поле TALIS_CHRG)</param>
     Public Sub New(ByRef AllUnitsList() As AllDataStructues.Unit, ByRef AllItemsList() As AllDataStructues.Item, _
+                   ByRef AllSpellsList() As AllDataStructues.Spell, _
                    ByRef ExcludeLists() As String, ByRef LootChanceMultiplierLists() As String, ByRef CustomUnitRace() As String, _
                    ByRef SoleUnitsList() As String, ByRef BigStackUnits() As String, ByRef PreservedItemsList() As String, _
                    ByRef TalismanChargesDefaultAmount As Integer)
@@ -129,6 +134,12 @@ Public Class RandStack
         Next i
         bak_multiplierItemsWeight = CType(multiplierItemsWeight.Clone, Double())
 
+        ReDim AllSpells(UBound(AllSpellsList))
+        For i As Integer = 0 To UBound(AllSpellsList) Step 1
+            AllSpells(i) = AllDataStructues.Spell.Copy(AllSpellsList(i))
+            SpellsArrayPos.Add(AllSpells(i).spellID.ToUpper, i)
+        Next i
+
         Call ResetExclusions()
     End Sub
     Private Function ItemTypeWeight(ByRef wList As Dictionary(Of String, String), ByRef itemType As String, ByRef cost As Double) As Double
@@ -180,7 +191,7 @@ Public Class RandStack
     Private Sub ResetExclusions()
         If Not IsNothing(AllUnits) Then
             For i As Integer = 0 To UBound(AllUnits) Step 1
-                If comm.IsExcluded(AllUnits(i).unitID) Then
+                If comm.IsExcluded(AllUnits(i)) Then
                     AllUnits(i).useState = GenDefaultValues.ExclusionState.excluded
                 Else
                     AllUnits(i).useState = GenDefaultValues.ExclusionState.canUse
@@ -189,13 +200,22 @@ Public Class RandStack
         End If
         If Not IsNothing(AllItems) Then
             For i As Integer = 0 To UBound(AllItems) Step 1
-                If comm.IsExcluded(AllItems(i).itemID) OrElse comm.IsExcluded(comm.itemType.Item(AllItems(i).type).ToUpper) Then
+                If comm.IsExcluded(AllItems(i)) Then
                     AllItems(i).useState = GenDefaultValues.ExclusionState.excluded
                 Else
                     AllItems(i).useState = GenDefaultValues.ExclusionState.canUse
                 End If
             Next i
         End If
+        'If Not IsNothing(AllSpells) Then
+        '    For i As Integer = 0 To UBound(AllSpells) Step 1
+        '        If comm.IsExcluded(AllSpells(i)) Then
+        '            AllSpells(i).useState = GenDefaultValues.ExclusionState.excluded
+        '        Else
+        '            AllSpells(i).useState = GenDefaultValues.ExclusionState.canUse
+        '        End If
+        '    Next i
+        'End If
     End Sub
 
     ''' <summary>Найдет статы юнита по ID (нечувствительно к регистру)</summary>
@@ -214,6 +234,16 @@ Public Class RandStack
         Dim f As String = ID.ToUpper
         If ItemsArrayPos.ContainsKey(f) Then
             Return AllDataStructues.Item.Copy(AllItems(ItemsArrayPos.Item(f)))
+        Else
+            Return Nothing
+        End If
+    End Function
+    ''' <summary>Найдет статы заклинания по ID (нечувствительно к регистру)</summary>
+    ''' <param name="ID">GxxxSSxxxx</param>
+    Public Function FindSpellStats(ByVal ID As String) As AllDataStructues.Spell
+        Dim f As String = ID.ToUpper
+        If SpellsArrayPos.ContainsKey(f) Then
+            Return AllDataStructues.Spell.Copy(AllSpells(SpellsArrayPos.Item(f)))
         Else
             Return Nothing
         End If
@@ -1847,7 +1877,7 @@ Public Class Common
 
     Friend Function IsAppropriateFighter(ByRef unit As AllDataStructues.Unit) As Boolean
         If unit.useState = GenDefaultValues.ExclusionState.unknown Then
-            If IsExcluded(unit.unitID) Then Return False
+            If IsExcluded(unit) Then Return False
         Else
             If unit.useState = GenDefaultValues.ExclusionState.excluded Then Return False
         End If
@@ -1856,7 +1886,7 @@ Public Class Common
     End Function
     Friend Function IsAppropriateLeader(ByRef unit As AllDataStructues.Unit) As Boolean
         If unit.useState = GenDefaultValues.ExclusionState.unknown Then
-            If IsExcluded(unit.unitID) Then Return False
+            If IsExcluded(unit) Then Return False
         Else
             If unit.useState = GenDefaultValues.ExclusionState.excluded Then Return False
         End If
@@ -1865,8 +1895,7 @@ Public Class Common
     End Function
     Friend Function IsAppropriateItem(ByRef item As AllDataStructues.Item) As Boolean
         If item.useState = GenDefaultValues.ExclusionState.unknown Then
-            If IsExcluded(item.itemID) Then Return False
-            If IsExcluded(itemType.Item(item.type).ToUpper) Then Return False
+            If IsExcluded(item) Then Return False
         Else
             If item.useState = GenDefaultValues.ExclusionState.excluded Then Return False
         End If
@@ -1876,6 +1905,17 @@ Public Class Common
             If item.itemCostSum = 0 Then Return False
         End If
         Return True
+    End Function
+    Protected Friend Function IsExcluded(ByRef item As AllDataStructues.Item) As Boolean
+        If excludedObjects.Contains(item.itemID.ToUpper) Then Return True
+        If excludedObjects.Contains(itemType.Item(item.type).ToUpper) Then Return True
+        Return False
+    End Function
+    Protected Friend Function IsExcluded(ByRef unit As AllDataStructues.Unit) As Boolean
+        Return excludedObjects.Contains(unit.unitID.ToUpper)
+    End Function
+    Protected Friend Function IsExcluded(ByRef spell As AllDataStructues.Spell) As Boolean
+        Return excludedObjects.Contains(spell.spellID.ToUpper)
     End Function
     Protected Friend Function IsExcluded(ByRef ID As String) As Boolean
         Return excludedObjects.Contains(ID.ToUpper)
@@ -2995,6 +3035,20 @@ Public Class AllDataStructues
         Dim category As Integer
         ''' <summary>Площадь действия заклинания</summary>
         Dim area As Integer
+
+        Public Shared Function Copy(ByRef v As Spell) As Spell
+            Dim r As New Dictionary(Of String, AllDataStructues.Cost)
+            For Each k As String In v.researchCost.Keys
+                r.Add(k, AllDataStructues.Cost.Copy(v.researchCost.Item(k)))
+            Next k
+            Return New Spell With {.area = v.area, _
+                                    .castCost = AllDataStructues.Cost.Copy(v.castCost), _
+                                    .category = v.category, _
+                                    .level = v.level, _
+                                    .name = v.name, _
+                                    .spellID = v.spellID, _
+                                    .researchCost = r}
+        End Function
     End Structure
 
     Public Structure LootGenSettings

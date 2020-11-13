@@ -67,7 +67,7 @@ minPassWidth	1.1
 minPassDist	7.0
 
 #Расставлять ли стражей проходов между локациями
-AddGuardsBetweenLocations	True
+AddGuardsBetweenLocations	False
 
 #Множитель силы стражей проходов между локациями
 PassGuardsPowerMultiplicator	2.0
@@ -125,7 +125,7 @@ maxCities			1.0
 #Количество торговцев на локацию
 maxVendors			1.0
 #Количество лагерей наемников на локацию
-maxMercenaries			0.0
+maxMercenaries			1.0
 #Количество башен мага на локацию
 maxMages			1.0
 #Количество тренеров на локацию
@@ -155,12 +155,17 @@ mercenariesMinExpBar		200	250
 #Количество наемников в лагере
 mercenariesCount		3	5
 
-#Максимальная стоимость предмета у торговца
-merchMaxItemCost		800		1000
-#Минимальная стоимость предмета у торговца
-merchMinItemCost		100
+
+#Максимальная стоимость расходуемого предмета у торговца
+merchMaxConsumableItemCost		500		600
+#Минимальная стоимость расходуемого предмета у торговца
+merchMinConsumableItemCost		75
+#Максимальная стоимость нерасходуемого предмета у торговца
+merchMaxNonconsumableItemCost		1200		1500
+#Минимальная стоимость нерасходуемого предмета у торговца
+merchMinNonconsumableItemCost		900
 #Полная стоимость лута у торговца
-merchItemsCost			2000	2500
+merchItemsCost			7000	9500
 
 #Масштабировать количество посещаемых объектов и опыт за убийство всех отрядовв в локации
 scaleContent			False
@@ -186,10 +191,10 @@ maxRadiusDispersion		0.3
 
 maxGoldMines			1.0	1.0
 maxManaSources			1.0	1.0
-maxCities			1.0
+maxCities			0.0
 maxVendors			0.0
 maxMercenaries			1.0
-maxMages			0.0
+maxMages			1.0
 maxTrainers			1.0
 maxRuins			1.0	1.5
 
@@ -206,9 +211,11 @@ mercenariesMaxExpBar		1600	1900
 mercenariesMinExpBar		1000	1200
 mercenariesCount		3	5
 
-merchMaxItemCost		800	1000
-merchMinItemCost		100
-merchItemsCost			2000	2500
+merchMaxConsumableItemCost		500	600
+merchMinConsumableItemCost		75
+merchMaxNonconsumableItemCost		1500	2000
+merchMinNonconsumableItemCost		900
+merchItemsCost			12000	15000
 
 scaleContent			True
 

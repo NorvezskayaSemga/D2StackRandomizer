@@ -123,36 +123,46 @@
             Console.WriteLine(ex.Message)
             AddToLog(-1, "Names downloader: " & ex.Message)
         End Try
-        'завернуть в Try
-        If Not IsNothing(Tn) And Not IsNothing(Tw) Then
-            Dim added As New Dictionary(Of String, Integer)
-            ReDim name(UBound(Tn)), weight(UBound(Tw))
-            For i As Integer = 0 To UBound(Tn) Step 1
-                Dim s As String = Tn(i).ToUpper
-                If Not added.ContainsKey(s) Then
-                    name(added.Count) = Tn(i)
-                    added.Add(s, added.Count)
-                End If
-                weight(added.Item(s)) += Tw(i)
-            Next i
-            ReDim Preserve name(added.Count - 1), weight(added.Count - 1)
-        End If
-        If Not IsNothing(w) Then w.Dispose()
+        Try
+            If Not IsNothing(Tn) And Not IsNothing(Tw) Then
+                Dim added As New Dictionary(Of String, Integer)
+                ReDim name(UBound(Tn)), weight(UBound(Tw))
+                For i As Integer = 0 To UBound(Tn) Step 1
+                    If Not IsNothing(Tn(i)) AndAlso Not Tn(i) = "" AndAlso Tw(i) > 0 Then
+                        Dim s As String = Tn(i).ToUpper
+                        If Not added.ContainsKey(s) Then
+                            name(added.Count) = Tn(i)
+                            added.Add(s, added.Count)
+                        End If
+                        weight(added.Item(s)) += Tw(i)
+                    End If
+                Next i
+                ReDim Preserve name(added.Count - 1), weight(added.Count - 1)
+            End If
+        Catch ex As Exception
+            Console.WriteLine(ex.Message)
+            AddToLog(-1, "Names weight sum: " & ex.Message)
+        End Try
+        Try
+            If Not IsNothing(w) Then w.Dispose()
+        Catch ex As Exception
+            AddToLog(-1, "Web client dispose: " & ex.Message)
+        End Try
     End Sub
 
     Private Sub PrintNames()
-        If IsNothing(name) Then Exit Sub
-        Dim str As String = LordMinWeight.ToString
-        For i As Integer = 0 To UBound(name) Step 1
-            str &= vbNewLine & name(i) & vbTab & weight(i)
-        Next i
-        AddToLog(-1, "Writing " & path)
         Try
+            If IsNothing(name) Then Exit Sub
+            Dim str As String = LordMinWeight.ToString
+            For i As Integer = 0 To UBound(name) Step 1
+                str &= vbNewLine & name(i) & vbTab & weight(i)
+            Next i
+            AddToLog(-1, "Writing " & path)
             IO.File.WriteAllText(path, str)
+            AddToLog(-1, "End writing")
         Catch ex As Exception
             AddToLog(-1, ex.Message)
         End Try
-        AddToLog(-1, "End writing")
     End Sub
     Private Function ReadNames() As Date
         If Not IO.File.Exists(path) Then Return Nothing
@@ -196,12 +206,17 @@
         Return t
     End Function
     Private Sub ReadExclusions()
-        excludeRace.Add(comm.RaceIdentifierToSubrace("Greenskins"))
-        Dim str() As String = comm.TxtSplit(comm.defValues.ExcludeIDsForNames)
-        log.Add(comm.ReadingLog.PrintAll)
-        For i As Integer = 0 To UBound(str) Step 1
-            exclude.Add(str(i).ToUpper)
-        Next i
+        Try
+            excludeRace.Add(comm.RaceIdentifierToSubrace("Greenskins"))
+            Dim str() As String = comm.TxtSplit(comm.defValues.ExcludeIDsForNames)
+            log.Add(comm.ReadingLog.PrintAll)
+            For i As Integer = 0 To UBound(str) Step 1
+                exclude.Add(str(i).ToUpper)
+            Next i
+        Catch ex As Exception
+            Console.WriteLine(ex.Message)
+            AddToLog(-1, "Exclusions reader: " & ex.Message)
+        End Try
     End Sub
 
     '''<summary>Присвоит имя отряду</summary>
