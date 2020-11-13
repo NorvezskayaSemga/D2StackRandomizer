@@ -1216,8 +1216,8 @@ Public Class RandStack
                     If PossibleLeaders.Count > 0 Then Exit Do
                     Throw New Exception("Что-то не так в выборе возможных лидеров отряда" & vbNewLine & _
                                         "Имя локации: " & StackStats.LocationName & vbNewLine & _
-                                        "StackStats:" & vbNewLine & AllDataStructues.DesiredStats.Print(StackStats, comm.RaceNumberToRaceChar) & vbNewLine & _
-                                        "DynStackStats:" & vbNewLine & AllDataStructues.DesiredStats.Print(DynStackStats, comm.RaceNumberToRaceChar))
+                                        "StackStats:" & vbNewLine & AllDataStructues.DesiredStats.Print(StackStats, comm.defValues.RaceNumberToRaceChar) & vbNewLine & _
+                                        "DynStackStats:" & vbNewLine & AllDataStructues.DesiredStats.Print(DynStackStats, comm.defValues.RaceNumberToRaceChar))
                 End If
             End If
             Tolerance += 0.2
@@ -1231,8 +1231,8 @@ Public Class RandStack
         If SelectedLeader = -1 Then
             Throw New Exception("Возможно, бесконечный цикл в случайном выборе из массива возможных лидеров" & vbNewLine & _
                                 "Имя локации: " & StackStats.LocationName & vbNewLine & _
-                                "StackStats:" & vbNewLine & AllDataStructues.DesiredStats.Print(StackStats, comm.RaceNumberToRaceChar) & vbNewLine & _
-                                "DynStackStats:" & vbNewLine & AllDataStructues.DesiredStats.Print(DynStackStats, comm.RaceNumberToRaceChar))
+                                "StackStats:" & vbNewLine & AllDataStructues.DesiredStats.Print(StackStats, comm.defValues.RaceNumberToRaceChar) & vbNewLine & _
+                                "DynStackStats:" & vbNewLine & AllDataStructues.DesiredStats.Print(DynStackStats, comm.defValues.RaceNumberToRaceChar))
         End If
 
         'теперь нужно добрать воинов в отряд
@@ -1296,8 +1296,8 @@ Public Class RandStack
             ElseIf fighter = -2 Then
                 Throw New Exception("Возможно, бесконечный цикл в случайном выборе из массива возможных воинов" & vbNewLine & _
                                     "Имя локации: " & StackStats.LocationName & vbNewLine & _
-                                    "StackStats:" & vbNewLine & AllDataStructues.DesiredStats.Print(StackStats, comm.RaceNumberToRaceChar) & vbNewLine & _
-                                    "DynStackStats:" & vbNewLine & AllDataStructues.DesiredStats.Print(DynStackStats, comm.RaceNumberToRaceChar))
+                                    "StackStats:" & vbNewLine & AllDataStructues.DesiredStats.Print(StackStats, comm.defValues.RaceNumberToRaceChar) & vbNewLine & _
+                                    "DynStackStats:" & vbNewLine & AllDataStructues.DesiredStats.Print(DynStackStats, comm.defValues.RaceNumberToRaceChar))
             Else
                 SelectedFighters.Add(fighter)
             End If
@@ -1356,8 +1356,8 @@ Public Class RandStack
         For i As Integer = 0 To UBound(unitIsUsed) Step 1
             If Not unitIsUsed(i) Then Throw New Exception("Что-то не так в размещателе юнитов" & vbNewLine & _
                                                           "Имя локации: " & StackStats.LocationName & vbNewLine & _
-                                                          "StackStats:" & vbNewLine & AllDataStructues.DesiredStats.Print(StackStats, comm.RaceNumberToRaceChar) & vbNewLine & _
-                                                          "DynStackStats:" & vbNewLine & AllDataStructues.DesiredStats.Print(DynStackStats, comm.RaceNumberToRaceChar))
+                                                          "StackStats:" & vbNewLine & AllDataStructues.DesiredStats.Print(StackStats, comm.defValues.RaceNumberToRaceChar) & vbNewLine & _
+                                                          "DynStackStats:" & vbNewLine & AllDataStructues.DesiredStats.Print(DynStackStats, comm.defValues.RaceNumberToRaceChar))
         Next i
         For i As Integer = 0 To UBound(result.pos) Step 1
             If result.pos(i) = "" Then result.pos(i) = emptyItem
@@ -1756,8 +1756,6 @@ End Class
 Public Class Common
 
     Public rndgen As New RndValueGen
-    Private Races As New Dictionary(Of String, Integer)
-    Friend RaceNumberToRaceChar As New Dictionary(Of Integer, String)
     ''' <summary>Список исключаемых объектов</summary>
     Public excludedObjects As New List(Of String)
     ''' <summary>Список предметов, которые нельзя перегенерировать</summary>
@@ -1798,8 +1796,6 @@ Public Class Common
         Call ReadingLog.Enable()
 
         defValues = New GenDefaultValues(ReadingLog)
-
-        Call defValues.ParseRaces(Races, RaceNumberToRaceChar)
 
         Dim splitedFields() As String = TxtSplit(defValues.StackStatsFields)
         ReDim StatFields(CInt(splitedFields.Length / 2 - 1))
@@ -2061,7 +2057,7 @@ Public Class Common
     Public Sub WriteDesiredStackStats(ByRef path As String, ByRef content() As AllDataStructues.DesiredStats)
         Dim s(UBound(content)) As String
         For i As Integer = 0 To UBound(s) Step 1
-            s(i) = TxtSplit(AllDataStructues.DesiredStats.Print(content(i), RaceNumberToRaceChar).Replace(vbNewLine, vbTab))(0)
+            s(i) = TxtSplit(AllDataStructues.DesiredStats.Print(content(i), defValues.RaceNumberToRaceChar).Replace(vbNewLine, vbTab))(0)
         Next i
         If Not path = My.Resources.testFileKeyword Then
             IO.File.WriteAllLines(path, s)
@@ -2077,8 +2073,8 @@ Public Class Common
     ''' <param name="ID">Идентификатор расы (файл races.txt)</param>
     Public Function RaceIdentifierToSubrace(ByVal ID As String, Optional ByVal ThrowExceptionIfUnknownID As Boolean = True) As Integer
         Dim uID As String = ID.ToUpper
-        If Races.ContainsKey(uID) Then
-            Return Races.Item(uID)
+        If defValues.linked_Races.ContainsKey(uID) Then
+            Return defValues.linked_Races.Item(uID)
         Else
             If ThrowExceptionIfUnknownID Then Throw New Exception("Неизвестный идентификатор расы:" & ID)
             Return -1
@@ -3210,16 +3206,20 @@ Public Class GenDefaultValues
 
     Private myLog As Log
 
+    Protected Friend linked_Races As New Dictionary(Of String, Integer)
+    Friend RaceNumberToRaceChar As New Dictionary(Of Integer, String)
+
     ''' <param name="log">Лог для записи отчета, можно nothing</param>
     ''' <remarks></remarks>
     Public Sub New(ByRef log As Log)
 
         myLog = log
 
-        Dim itemTypeID, RaceID As New Dictionary(Of String, Integer)
-        Dim itemTypeName, RaceName As New Dictionary(Of Integer, String)
+        Dim itemTypeID As New Dictionary(Of String, Integer)
+        Dim itemTypeName As New Dictionary(Of Integer, String)
         Call ParseItemTypes(itemTypeID, itemTypeName)
-        Call ParseRaces(RaceID, RaceName)
+        Call ParseRaces(linked_Races, RaceNumberToRaceChar)
+        Call DefineRaces()
 
         Dim RConstants As Dictionary(Of String, String) = PropertiesArrayToDictionary(ValueConverter.TxtSplit(Constants(), "/"))
         Dim DConstants As Dictionary(Of String, String) = PropertiesArrayToDictionary(ValueConverter.TxtSplit(My.Resources.Constants, "/"))
@@ -3254,7 +3254,7 @@ Public Class GenDefaultValues
         Dim commonRacesBlock As String = ""
         Call SetProperty(commonRacesBlock, "commonRacesBlock", RConstants, DConstants)
         Call SetProperty(LocRacesBlocks, "LocRacesBlocks", RConstants, DConstants)
-        Call SetProperty(StackRaceChance, "StackRaceChance", RConstants, DConstants, RaceID, True)
+        Call SetProperty(StackRaceChance, "StackRaceChance", RConstants, DConstants, linked_Races, True)
 
         For i As Integer = 0 To UBound(LocRacesBlocks) Step 1
             If Not LocRacesBlocks(i).EndsWith(":") Then LocRacesBlocks(i) &= ","
@@ -3267,9 +3267,9 @@ Public Class GenDefaultValues
 
             Dim AddedItemTypeChanceMultiplierStr As String = ""
             Dim StackRaceChanceStr As String = ""
-            For Each i As Integer In RaceName.Keys
+            For Each i As Integer In RaceNumberToRaceChar.Keys
                 StackRaceChanceStr &= vbNewLine & spaces & _
-                  RaceName.Item(i) & " (" & i & ") = " & StackRaceChance(i)
+                  RaceNumberToRaceChar.Item(i) & " (" & i & ") = " & StackRaceChance(i)
             Next i
 
             'common
@@ -3300,7 +3300,6 @@ Public Class GenDefaultValues
             log.Add("minLocationRadiusAtAll = " & minLocationRadiusAtAll)
             log.Add("LocRacesBlocks = " & vbNewLine & spaces & String.Join(vbNewLine & spaces, LocRacesBlocks))
             log.Add("StackRaceChance = " & StackRaceChanceStr)
-
         End If
 
     End Sub
@@ -3448,8 +3447,32 @@ Public Class GenDefaultValues
         Next i
     End Sub
 
+    Protected Friend Sub DefineRaces()
+        Dim allRaces() As String = ValueConverter.TxtSplit(Races)
+        Dim allLords() As String = ValueConverter.TxtSplit(Lords)
+
+        Dim lordsRaceID As New List(Of Integer)
+        For Each line As String In allLords
+            Dim s As Integer = linked_Races.Item(line.Split(CChar(" "))(1))
+            If Not lordsRaceID.Contains(s) Then lordsRaceID.Add(s)
+        Next line
+        ReDim playableRaces(-1), neutralRaces(-1)
+        For Each line As String In allRaces
+            Dim s As String = line.Split(CChar(" "))(0)
+            If lordsRaceID.Contains(linked_Races.Item(s.ToUpper)) Then
+                ReDim Preserve PlayableRaces(PlayableRaces.Length)
+                PlayableRaces(UBound(PlayableRaces)) = s.ToUpper
+            Else
+                ReDim Preserve NeutralRaces(NeutralRaces.Length)
+                NeutralRaces(UBound(NeutralRaces)) = s.ToUpper
+            End If
+        Next line
+    End Sub
+
     'common
     Public Property defaultSigma As Double
+    Public Property playableRaces As String()
+    Public Property neutralRaces As String()
 
     'units
     Public Property expBarDispersion As Double
@@ -3836,7 +3859,7 @@ Public Class Log
     ''' <param name="contString">Будут добавлены поля этой переменной</param>
     Public Sub MAdd(ByVal LogID As Integer, ByVal contString As AllDataStructues.DesiredStats, ByVal shortOut As Boolean)
         If Not Enabled Then Exit Sub
-        multiThreadLog(LogID).Add(AllDataStructues.DesiredStats.Print(contString, comm.RaceNumberToRaceChar, shortOut))
+        multiThreadLog(LogID).Add(AllDataStructues.DesiredStats.Print(contString, comm.defValues.RaceNumberToRaceChar, shortOut))
     End Sub
     ''' <summary>Добавить запись в лог, если логирование включено</summary>
     ''' <param name="LogID">Номер задачи. От 0 до Size-1</param>

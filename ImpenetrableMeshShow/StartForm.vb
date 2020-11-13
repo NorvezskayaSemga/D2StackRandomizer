@@ -78,13 +78,18 @@ Friend Class StartForm
 
     Private Sub GenButton_Click() Handles GenButton.Click
 
+        Dim def() As String = {"%default%"}
+
+        Dim rstack As New RandStack(ReadTestUnits, ReadTestItems, def, def, def, def, def, def, 5)
+        Dim objCont As New ObjectsContentSet(rstack, ReadSpells)
+
         Call comm.ReadExcludedObjectsList({"%default%"})
         Dim objSizeArray() As ImpenetrableObjects.GlobalMapDecoration = ReadObjSize()
 
-        Dim objplace As New ImpenetrableObjects(objSizeArray, {"%default%"}, {"%default%"}, {"%default%"}, ReadSpells)
+        Dim objplace As New ImpenetrableObjects(objSizeArray, def, def, def, ReadSpells)
 
         Dim grid As Map
-        Dim genTimeLimit As Integer = 5000
+        Dim genTimeLimit As Integer = 10000
 
         Dim path As String = ".\Resources\"
 
@@ -124,7 +129,10 @@ Friend Class StartForm
         Console.WriteLine(grid.log.PrintAll)
         LogTextBox.Text = grid.log.PrintAll
 
-        If Not IsNothing(grid) Then Call ShowResult(grid)
+        If Not IsNothing(grid) Then
+            Call ShowResult(grid)
+            Call shortMapFormat.MapConversion(grid, gsettings, objCont, True)
+        End If
 
     End Sub
     Public Sub ShowResult(ByRef grid As Map)

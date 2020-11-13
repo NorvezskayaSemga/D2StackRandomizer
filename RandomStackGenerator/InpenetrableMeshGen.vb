@@ -3379,6 +3379,9 @@ End Class
 
 Public Class Location
 
+    ''' <summary>ID расы, используемой на локации</summary>
+    Public Race As Integer
+
     ''' <summary>Номер локации, больше ноля</summary>
     Public ID As Integer
     ''' <summary>Положение локации</summary>
@@ -3428,7 +3431,7 @@ Public Class Location
     End Sub
 
     Public Shared Function Copy(ByRef L As Location) As Location
-        Return New Location(L.pos, L.gASize, L.gBSize, L.gAlpha, L.ID, L.IsObtainedBySymmery)
+        Return New Location(L.pos, L.gASize, L.gBSize, L.gAlpha, L.ID, L.IsObtainedBySymmery) With {.Race = L.Race}
     End Function
 
     Friend Shared Function FindLocIDByPosition(ByRef m As Map, ByRef p As Point) As Integer
@@ -3780,9 +3783,189 @@ Public Class AttendedObject
     End Sub
 End Class
 
+
+Public Class shortMapFormat
+
+    ''' <summary>Состояние тайлов</summary>
+    Public landscape(-1, -1) As TileState
+    ''' <summary>Объекты местности</summary>
+    Public landmarks(-1) As simpleObject
+    ''' <summary>Горы</summary>
+    Public mountains(-1) As simpleObject
+    ''' <summary>Столицы</summary>
+    Public capitals(-1) As simpleObject
+    ''' <summary>Шахты</summary>
+    Public mines(-1) As simpleObject
+    ''' <summary>Торговцы предметами</summary>
+    Public merchantsItems(-1) As MerchantItemObject
+    ''' <summary>Торговцы заклинаниями</summary>
+    Public merchantsSpells(-1) As MerchantSpellObject
+    ''' <summary>Наемники</summary>
+    Public merchantsUnits(-1) As MerchantUnitObject
+    ''' <summary>Тренеры</summary>
+    Public trainers(-1) As simpleObject
+    ''' <summary>Отряды</summary>
+    Public stacks(-1) As StackObject
+
+    ''' <summary>Раса владельца</summary>
+    Public Enum OwnerRace
+        Humans = 1
+        Undead = 2
+        Legions = 3
+        Clans = 4
+        Neutral = 5
+        Elves = 7
+    End Enum
+    Public Class simpleObject
+        ''' <summary>Положение верхнего левого угла объекта</summary>
+        Public pos As Point
+        ''' <summary>ID объекта GXXXWWXXXX</summary>
+        Public id As String
+    End Class
+    Public Structure TileState
+        ''' <summary>See here GroundType</summary>
+        Public ground As Integer
+        ''' <summary>See shortMapFormat.OwnerRace</summary>
+        Public owner As Integer
+
+        ''' <summary>Тип местности</summary>
+        Public Enum GroundType
+            Plain = 0
+            Forest = 1
+            'Mountain = 4
+            Water = 3
+            Road = 5
+        End Enum
+    End Structure
+    Public MustInherit Class ObjectWithInternalStack
+        Inherits simpleObject
+        ''' <summary>Настройки генерации внутреннего отряда</summary>
+        Public internalStackSettings As AllDataStructues.DesiredStats
+        ''' <summary>Внутренний стек</summary>
+        Public internalStack As AllDataStructues.Stack
+    End Class
+    Public Class RuinObject
+        Inherits ObjectWithInternalStack
+        ''' <summary>Настройки создания награды</summary>
+        Public rewardSettings As AllDataStructues.ItemGenSettings
+        ''' <summary>Ресурсы</summary>
+        Public resourcesReward As AllDataStructues.Cost
+        ''' <summary>Предмет</summary>
+        Public itemReward As AllDataStructues.Item
+    End Class
+    Public Class CityObject
+        Inherits ObjectWithInternalStack
+        ''' <summary>Настройки генерации внешнего отряда</summary>
+        Public externalStackSettings As AllDataStructues.DesiredStats
+        ''' <summary>Внешний стек</summary>
+        Public exteternalStack As AllDataStructues.Stack
+        ''' <summary>Уровень города</summary>
+        Public level As Integer
+        ''' <summary>See shortMapFormat.OwnerRace</summary>
+        Public owner As Integer
+    End Class
+    Public Class MerchantItemObject
+        Inherits simpleObject
+        ''' <summary>Список предметов</summary>
+        Dim content() As AllDataStructues.Item
+    End Class
+    Public Class MerchantSpellObject
+        Inherits simpleObject
+        ''' <summary>Список заклинаний</summary>
+        Dim content() As AllDataStructues.Spell
+    End Class
+    Public Class MerchantUnitObject
+        Inherits simpleObject
+        ''' <summary>Список юнитов</summary>
+        Dim content() As AllDataStructues.Unit
+    End Class
+    Public Class StackObject
+        ''' <summary>Положение отряда</summary>
+        Public pos As Point
+        ''' <summary>Настройки генерации отряда</summary>
+        Public stackSettings As AllDataStructues.DesiredStats
+        ''' <summary>Отряд</summary>
+        Dim stack As AllDataStructues.Stack
+    End Class
+
+
+
+    ''' <summary>Конвертирует карту для более удобной записи в файл</summary>
+    ''' <param name="m">Карта</param>
+    ''' <param name="objContent">Полностью инициализированный класс</param>
+    ''' <param name="fullSymmetry">Если карта симметрична, сделать отряды и награды абсолютно симметричными</param>
+    Public Shared Function MapConversion(ByRef m As Map, ByRef settGen As ImpenetrableMeshGen.GenSettings, ByRef objContent As ObjectsContentSet, ByRef fullSymmetry As Boolean) As shortMapFormat
+
+        Dim gLocSettings() As Map.SettingsLoc
+        If settGen.genMode = ImpenetrableMeshGen.GenSettings.genModes.simple Then
+            gLocSettings = Map.SettingsLoc.ToArray(settGen.simple_settRaceLoc, _
+                                                   settGen.simple_settCommLoc, _
+                                                   settGen.common_settMap.nRaces, _
+                                                   m.Loc.Length)
+        Else
+            gLocSettings = Map.SettingsLoc.Copy(settGen.template_settLoc)
+        End If
+
+        Dim res As New shortMapFormat
+        ReDim res.landscape(UBound(m.board, 1), UBound(m.board, 2))
+
+        Dim name As String
+        Dim vendorContent As List(Of String)
+
+        For y As Integer = 0 To UBound(m.board, 2) Step 1
+            For x As Integer = 0 To UBound(m.board, 1) Step 1
+                'ландшафт
+                res.landscape(x, y).owner = OwnerRace.Neutral
+                If m.board(x, y).isWater Then
+                    res.landscape(x, y).ground = TileState.GroundType.Water
+                Else
+                    If m.board(x, y).isForest Then
+                        res.landscape(x, y).ground = TileState.GroundType.Forest
+                    ElseIf m.board(x, y).isRoad Then
+                        res.landscape(x, y).ground = TileState.GroundType.Road
+                    Else
+                        res.landscape(x, y).ground = TileState.GroundType.Plain
+                    End If
+                End If
+
+                name = m.board(x, y).objectName
+
+                'объекты местности
+                If Not name = "" Then
+                    If m.board(x, y).objectID = DefMapObjects.Types.Capital Then
+                        Call AddObject(res.capitals, x, y, name)
+                    ElseIf m.board(x, y).objectID = DefMapObjects.Types.City Then
+
+                    ElseIf m.board(x, y).objectID = DefMapObjects.Types.Vendor Then
+
+                    ElseIf m.board(x, y).objectID = DefMapObjects.Types.Mercenary Then
+
+                    ElseIf m.board(x, y).objectID = DefMapObjects.Types.Mage Then
+
+                    ElseIf m.board(x, y).objectID = DefMapObjects.Types.Trainer Then
+                        Call AddObject(res.trainers, x, y, name)
+                    ElseIf m.board(x, y).objectID = DefMapObjects.Types.Ruins Then
+
+                    ElseIf m.board(x, y).objectID = DefMapObjects.Types.Mine Then
+                        Call AddObject(res.mines, x, y, objContent.SetMineType(name))
+                    End If
+                End If
+            Next x
+        Next y
+
+
+    End Function
+    Private Shared Sub AddObject(ByRef AddTo() As simpleObject, ByRef x As Integer, ByRef y As Integer, ByRef name As String)
+        ReDim Preserve AddTo(AddTo.Length)
+        AddTo(UBound(AddTo)) = New simpleObject With {.pos = New Point(x, y), .id = name}
+    End Sub
+
+
+End Class
+
 Public Class Map
     ''' <summary>Список локаций. Первые в списке - стартовые по числу играбельных рас на карте</summary>
-    Public Loc As Location()
+    Public Loc() As Location
     ''' <summary>Поле карты, содержащее свойства каждой клетки</summary>
     Public board(,) As Cell
     ''' <summary>Правая граница карты (например, если генерируем карту 24x48, то сюда пишем 23)</summary>
@@ -3840,8 +4023,6 @@ Public Class Map
         Dim objectID As Integer
         ''' <summary>Если клетка является углом объекта c наименьшей координатой по X и Y, то здесь хранится ID объекта, как он записан в ресурсах игры</summary>
         Dim objectName As String
-        ''' <summary>Если клетка является углом посещаемого объекта c наименьшей координатой по X и Y, то здесь хранится подтип объекта</summary>
-        Dim Subtype As Integer
         ''' <summary>Для объектов с одинаковым ID выставляются одинаковые параметры генерации отрядов и лута или одинаковый класс.
         ''' При необходимости выставляются одинаковые отряды и лут.</summary>
         Dim groupID As Integer
@@ -4614,6 +4795,10 @@ Public Class Map
         complited = Nothing
     End Sub
 
+    Public Function MapConversion(ByRef r As ObjectsContentSet, ByRef fullSymmetry As Boolean) As shortMapFormat
+        'Return shortMapFormat.MapConversion(Me, r, fullSymmetry)
+    End Function
+
 End Class
 
 Public Class StackLocationsGen
@@ -4849,7 +5034,7 @@ Public Class StackLocationsGen
         m = tmpm
     End Sub
     Private Function FillLocation(ByRef m As Map, ByRef settMap As Map.SettingsMap, _
-                                  ByRef settLoc As Map.SettingsLoc, ByRef LocID As Integer) As List(Of Point)
+                                  ByVal settLoc As Map.SettingsLoc, ByRef LocID As Integer) As List(Of Point)
 
         Dim b As New Location.Borders With {.minX = Integer.MaxValue, .maxX = Integer.MinValue, _
                                             .miny = Integer.MaxValue, .maxy = Integer.MinValue}
@@ -4922,6 +5107,7 @@ Public Class StackLocationsGen
         Dim tryagain As Boolean
         Dim selected As Integer = 0
         r = Nothing
+
         For i As Integer = 0 To UBound(StackPos) Step 1
             StackPos(i) = PlaceStacks(isPossiblePoint, settLoc)
             If StackPos(i).Count > 1 Then
@@ -5017,7 +5203,6 @@ Public Class StackLocationsGen
     Protected Friend Function PlasePassesGuards(ByVal m As Map, ByRef settMap As Map.SettingsMap, _
                                                 ByVal unmarkPassagesWithoutGuard As Boolean, _
                                                 ByRef term As TerminationCondition) As Point()()
-
         Dim passTile(m.xSize, m.ySize) As Boolean
         For y As Integer = 0 To m.ySize Step 1
             For x As Integer = 0 To m.xSize Step 1
@@ -5140,6 +5325,7 @@ Public Class StackLocationsGen
                 handle(k) = i
             End If
         Next i
+
         Dim termL As TerminationCondition = term
         Parallel.For(0, k + 1, _
          Sub(i As Integer)
@@ -5219,6 +5405,7 @@ Public Class StackLocationsGen
             rndID.RemoveAt(s)
         Next i
 
+        Dim t0 As Integer = Environment.TickCount
         For currentNLimit As Integer = 0 To UBound(pointsList) Step 1
             bestN = Integer.MinValue
             For i As Integer = 0 To UBound(pointsList) Step 1
@@ -5226,8 +5413,14 @@ Public Class StackLocationsGen
                 bestOutput(i) = -1
             Next i
             Call PlaceGuardLoc(m, pointsList, -1, currentNLimit, bestN, currentOutput, bestOutput, IDs, -1, path, justCheckGuardNecessity, term)
+            If Environment.TickCount - t0 > 5000 Then
+                t0 = t0
+            End If
             If bestN > Integer.MinValue Then Exit For
         Next currentNLimit
+        Dim t1 As Integer = Environment.TickCount
+        Console.WriteLine(t1 - t0)
+
 
         If bestN < 0 Then Return Nothing
 
@@ -5274,39 +5467,6 @@ Public Class StackLocationsGen
         If term.ExitFromLoops Then
             Exit Sub
         End If
-
-        'If IsNothing(pointsList) Then
-        '    Dim n As Integer = -1
-        '    For j As Integer = 0 To prevPassage.Size.Y Step 1
-        '        For i As Integer = 0 To prevPassage.Size.X Step 1
-        '            If prevPassage.passTiles(i, j) > -1 Then n = Math.Max(n, prevPassage.passTiles(i, j))
-        '        Next i
-        '    Next j
-        '    Dim pList(n) As Point
-        '    IDs = New List(Of Integer)
-        '    Dim rndID As New List(Of Integer)
-        '    ReDim currentOutput(UBound(pList)), bestOutput(UBound(pList))
-        '    For j As Integer = 0 To prevPassage.Size.Y Step 1
-        '        For i As Integer = 0 To prevPassage.Size.X Step 1
-        '            If prevPassage.passTiles(i, j) > -1 Then
-        '                pList(prevPassage.passTiles(i, j)) = New Point(i, j)
-        '                rndID.Add(prevPassage.passTiles(i, j))
-        '                currentOutput(prevPassage.passTiles(i, j)) = -1
-        '                bestOutput(prevPassage.passTiles(i, j)) = -1
-        '            End If
-        '        Next i
-        '    Next j
-        '    n = rndID.Count - 1
-        '    For i As Integer = 0 To n Step 1
-        '        Dim s As Integer = comm.rndgen.RndInt(0, rndID.Count - 1, False)
-        '        IDs.Add(rndID.Item(s))
-        '        rndID.RemoveAt(s)
-        '    Next i
-        '    pointsList = pList
-        '    currentN = -1
-        '    bestN = Integer.MinValue
-        '    selected = -1
-        'End If
 
         Dim changedPassage As New Passage With {.bias = prevPassage.bias, _
                                                 .passTiles = CType(prevPassage.passTiles.Clone, Integer(,)), _
@@ -6212,7 +6372,7 @@ Public Class ImpenetrableObjects
         Call AddMerchantItems(m, settMap, settLoc)
 
         Call m.log.Add("Objects types definition: " & Environment.TickCount - t0 & " ms")
-        
+
         m.complited.ImpenetrableObjectsPlacing_Done = True
     End Sub
 
@@ -6385,7 +6545,7 @@ Public Class ImpenetrableObjects
                     ElseIf m.board(x, y).objRace.Item(0) = comm.RaceIdentifierToSubrace("E") Then
                         m.board(x, y).objectName = DefMapObjects.capitalElves
                     End If
-                    locRace.Add(m.board(x, y).locID(0), comm.RaceNumberToRaceChar(m.board(x, y).objRace.Item(0)))
+                    locRace.Add(m.board(x, y).locID(0), comm.defValues.RaceNumberToRaceChar(m.board(x, y).objRace.Item(0)))
                 End If
             Next x
         Next y
@@ -7274,7 +7434,7 @@ End Class
 
 Public Class ObjectsContentSet
 
-    Private randStack As RandStack
+    Protected Friend randStack As RandStack
     Private manaSourcesTypes() As String = New String() {DefMapObjects.mineGreen, DefMapObjects.mineBlack, DefMapObjects.mineWhite, _
                                                          DefMapObjects.mineRed, DefMapObjects.mineBlue}
 
@@ -7301,20 +7461,20 @@ Public Class ObjectsContentSet
             End If
         Next i
 
-        mines.Add("gold", DefMapObjects.mineGold)
-        mines.Add("green", DefMapObjects.mineGreen)
-        mines.Add("black", DefMapObjects.mineBlack)
-        mines.Add("white", DefMapObjects.mineWhite)
-        mines.Add("red", DefMapObjects.mineRed)
-        mines.Add("blue", DefMapObjects.mineBlue)
+        mines.Add("GOLD", DefMapObjects.mineGold)
+        mines.Add("GREEN", DefMapObjects.mineGreen)
+        mines.Add("BLACK", DefMapObjects.mineBlack)
+        mines.Add("WHITE", DefMapObjects.mineWhite)
+        mines.Add("RED", DefMapObjects.mineRed)
+        mines.Add("BLUE", DefMapObjects.mineBlue)
 
     End Sub
 
     Private Sub AddToLog(ByRef log As Log, ByRef LogID As Integer, ByRef Msg As String)
         If LogID > -1 Then
-            Call Log.MAdd(LogID, Msg)
+            Call log.MAdd(LogID, Msg)
         Else
-            Call Log.Add(Msg)
+            Call log.Add(Msg)
         End If
     End Sub
 
@@ -7441,7 +7601,7 @@ Public Class ObjectsContentSet
         race = -2
         For Each r As String In races
             If L.Contains(r) Then
-                If r = "R" Then
+                If r.ToUpper = My.Resources.spellRandomRace.ToUpper Then
                     race = -1
                 Else
                     race = randStack.comm.RaceIdentifierToSubrace(r)
@@ -7573,7 +7733,7 @@ Public Class ObjectsContentSet
     Private Function msgToLog(ByRef unitID As Integer) As String
         If unitID > 0 Then
             Dim unit As AllDataStructues.Unit = randStack.AllUnits(unitID)
-            Dim txt As String = unit.unitID & " - " & unit.name & " - " & randStack.comm.RaceNumberToRaceChar(unit.race) & " - " & unit.EXPnext
+            Dim txt As String = unit.unitID & " - " & unit.name & " - " & randStack.comm.defValues.RaceNumberToRaceChar(unit.race) & " - " & unit.EXPnext
             If unit.small Then
                 txt &= " (small)"
             Else
@@ -7633,19 +7793,19 @@ Public Class ObjectsContentSet
                                           ByRef log As Log, _
                                           Optional ByVal LogID As Integer = -1) As List(Of String)
 
-        Call AddToLog(Log, LogID, "----Alternative loot creation started----")
+        Call AddToLog(log, LogID, "----Alternative loot creation started----")
         Dim txt As String = ""
         Dim res As New List(Of String)
         Dim selection As New List(Of Integer)
         Dim dCost As Integer = 0
         Dim itemID As Integer = -1
         For Each v As String In d.shopContent
-            If Log.IsEnabled Then txt = "In: " & v
+            If log.IsEnabled Then txt = "In: " & v
             If IsNumeric(v) Then
                 Dim bar As Integer = CInt(v)
                 itemID = SelectItem(bar, -1, dCost, d, res.Count, TypeCostRestriction)
                 If itemID > -1 Then res.Add(randStack.AllItems(itemID).itemID)
-                If Log.IsEnabled Then txt &= msgToLog(itemID, dCost, True)
+                If log.IsEnabled Then txt &= msgToLog(itemID, dCost, True)
             ElseIf randStack.comm.itemTypeID.ContainsKey(v.ToUpper) Then
                 selection.Clear()
                 Dim type As Integer = randStack.comm.itemTypeID.Item(v.ToUpper)
@@ -7691,7 +7851,7 @@ Public Class ObjectsContentSet
             Call AddToLog(log, LogID, txt)
         Next v
 
-        Call AddToLog(Log, LogID, "----Alternative loot creation ended----")
+        Call AddToLog(log, LogID, "----Alternative loot creation ended----")
 
         Return res
     End Function
@@ -7773,6 +7933,24 @@ Public Class ObjectsContentSet
         Return output
     End Function
 
+    Private Function RndPart(ByRef minRange As Integer, ByRef maxRange As Integer, ByRef N As Integer, ByRef partsCount As Integer) As Integer
+        Dim d As Double = (maxRange - minRange) / partsCount
+        Dim max As Double = minRange + N * d
+        Dim min As Double = min - d
+        Dim v As Double = randStack.rndgen.Rand(min, max, True)
+        Dim p0 As Double = Math.Floor(v)
+        Dim p1 As Double = v - p0
+        If p1 > 0 Then
+            Dim r As Double = randStack.rndgen.Rand(0, 1, True)
+            If r <= p1 Then
+                p1 = 1
+            Else
+                p1 = 0
+            End If
+        End If
+        Return CInt(Math.Max(min, Math.Min(max, p0 + p1)))
+    End Function
+
     ''' <summary>Вернет настройки генерации заклинаний</summary>
     ''' <param name="mode">-1 - случайный мод в каждой строчке, 1 - вернет ID, 2 - УровеньРасаМассовость, 3 - Тип, 4 - Тип#УровеньРасаМассовость</param>
     ''' <param name="input">ID заклинаний</param>
@@ -7826,7 +8004,7 @@ Public Class ObjectsContentSet
             race = "R"
         Else
             Dim lord As String = spell.researchCost.Keys(0)
-            race = randStack.comm.RaceNumberToRaceChar.Item(randStack.comm.LordsRace.Item(lord))
+            race = randStack.comm.defValues.RaceNumberToRaceChar.Item(randStack.comm.LordsRace.Item(lord))
         End If
         Dim mass As String
         If spell.area > 998 Then
@@ -7836,7 +8014,37 @@ Public Class ObjectsContentSet
         End If
         Return spell.level & race & mass
     End Function
-
+    ''' <summary>Вернет настройки генерации заклинаний</summary>
+    ''' <param name="m">Готовая карта</param>
+    ''' <param name="sett">Настройки локаций</param>
+    ''' <param name="x">Положение по X</param>
+    ''' <param name="y">Положение по Y</param>
+    ''' <param name="nRaces">Количество играбельных рас</param>
+    Public Function GetSpellsListSettings(ByRef m As Map, ByRef sett() As Map.SettingsLoc, ByVal x As Integer, ByVal y As Integer, ByVal nRaces As Integer) As List(Of String)
+        Dim s As Map.SettingsLoc = sett(m.board(x, y).locID(0) - 1)
+        Dim res As New List(Of String)
+        Dim level As Integer
+        Dim spellRace, canBeMass As String
+        If m.board(x, y).locID(0) > nRaces Then
+            spellRace = My.Resources.spellRandomRace
+        Else
+            spellRace = randStack.comm.defValues.RaceNumberToRaceChar(m.board(x, y).objRace(0))
+        End If
+        For i As Integer = 1 To s.mageSpellsCount Step 1
+            level = RndPart(s.mageSpellsMinLevel, s.mageSpellsMaxLevel, i, s.mageSpellsCount)
+            If s.mageGlobalSpellsEnabled Then
+                If randStack.rndgen.RndInt(0, 1, True) = 1 Then
+                    canBeMass = "T"
+                Else
+                    canBeMass = "F"
+                End If
+            Else
+                canBeMass = "F"
+            End If
+            res.Add(level & spellRace & canBeMass)
+        Next i
+        Return res
+    End Function
     ''' <summary>Вернет настройки генерации предметов</summary>
     ''' <param name="mode">-1 - случайный мод в каждой строчке, 1 - вернет ID, 2 - Цена, 3 - Тип, 4 - Тип#Цена</param>
     ''' <param name="input">ID заклинаний</param>
@@ -7889,18 +8097,68 @@ Public Class ObjectsContentSet
         End If
         Return output
     End Function
-
     ''' <summary>Вернет настройки генерации предметов</summary>
+    ''' <param name="m">Готовая карта</param>
+    ''' <param name="sett">Настройки локаций</param>
+    ''' <param name="x">Положение по X</param>
+    ''' <param name="y">Положение по Y</param>
+    Public Function GetMerchantListSettings(ByRef m As Map, ByRef sett() As Map.SettingsLoc, ByVal x As Integer, ByVal y As Integer) As List(Of String)
+        Dim s As Map.SettingsLoc = sett(m.board(x, y).locID(0) - 1)
+        Dim res As New List(Of String)
+        Dim cost As Integer = s.merchItemsCost
+        Dim selected, itemcost As Integer
+        Dim addOnce, addedTypes, selection, exclude As New List(Of Integer)
+        addOnce.AddRange(New Integer() {GenDefaultValues.ItemTypes.attack_artifact, GenDefaultValues.ItemTypes.nonattack_artifact, _
+                                        GenDefaultValues.ItemTypes.banner, GenDefaultValues.ItemTypes.boots, GenDefaultValues.ItemTypes.permanent_elixir, _
+                                        GenDefaultValues.ItemTypes.relic, GenDefaultValues.ItemTypes.stuff, GenDefaultValues.ItemTypes.talisman})
+        exclude.AddRange(New Integer() {GenDefaultValues.ItemTypes.special, GenDefaultValues.ItemTypes.jewel})
+
+        For Each v As Integer In System.Enum.GetValues(GetType(GenDefaultValues.ItemTypes))
+            If randStack.comm.IsExcluded(randStack.comm.itemType.Item(v).ToUpper) AndAlso Not exclude.Contains(v) Then exclude.Add(v)
+        Next v
+        For Each deltaCost As Integer In {400, 200, 200, 100}
+            selected = GenDefaultValues.ItemTypes.healing_elixir
+            cost -= deltaCost
+            res.Add(randStack.comm.itemType.Item(selected) & "#" & deltaCost)
+            If Not addedTypes.Contains(selected) Then addedTypes.Add(selected)
+        Next deltaCost
+        For Each deltaCost As Integer In {400, 400}
+            selected = GenDefaultValues.ItemTypes.ressurection_elixir
+            cost -= deltaCost
+            res.Add(randStack.comm.itemType.Item(selected) & "#" & deltaCost)
+            If Not addedTypes.Contains(selected) Then addedTypes.Add(selected)
+        Next deltaCost
+        Do While cost > 0
+            selection.Clear()
+            For Each v As Integer In System.Enum.GetValues(GetType(GenDefaultValues.ItemTypes))
+                If Not exclude.Contains(v) Then
+                    If Not addOnce.Contains(v) OrElse Not addedTypes.Contains(v) Then selection.Add(v)
+                End If
+            Next v
+            selected = randStack.comm.RandomSelection(selection, True)
+            If cost > s.merchMinItemCost Then
+                itemcost = randStack.rndgen.RndInt(s.merchMinItemCost, s.merchMaxItemCost, True)
+            Else
+                itemcost = cost
+            End If
+            cost -= itemcost
+            res.Add(randStack.comm.itemType.Item(selected) & "#" & itemcost)
+            If Not addedTypes.Contains(selected) Then addedTypes.Add(selected)
+        Loop
+        Return res
+    End Function
+
+    ''' <summary>Вернет настройки генерации наемников</summary>
     ''' <param name="mode">-1 - случайный мод в каждой строчке, 1 - вернет ID, 2 - Планка опыта, 3 - Раса, 4 - Раса#Планка опыта</param>
-    ''' <param name="input">ID заклинаний</param>
+    ''' <param name="input">ID юнитов</param>
     Public Function GetMercenariesListSettings(ByVal mode As Integer, ByRef input() As String) As List(Of String)
         Dim L As New List(Of String)
         L.AddRange(input)
         Return GetMercenariesListSettings(mode, L)
     End Function
-    ''' <summary>Вернет настройки генерации предметов</summary>
+    ''' <summary>Вернет настройки генерации наемников</summary>
     ''' <param name="mode">-1 - случайный мод в каждой строчке, 1 - вернет ID, 2 - Планка опыта, 3 - Раса, 4 - Раса#Планка опыта</param>
-    ''' <param name="input">ID заклинаний</param>
+    ''' <param name="input">ID юнитов</param>
     Public Function GetMercenariesListSettings(ByVal mode As Integer, ByRef input As List(Of String)) As List(Of String)
         Dim output As New List(Of String)
         Dim unit As AllDataStructues.Unit
@@ -7918,14 +8176,14 @@ Public Class ObjectsContentSet
         ElseIf mode = 3 Then
             For Each item In input
                 unit = randStack.FindUnitStats(item)
-                output.Add(randStack.comm.RaceNumberToRaceChar(unit.race))
+                output.Add(randStack.comm.defValues.RaceNumberToRaceChar(unit.race))
             Next item
         ElseIf mode = 4 Then
             For Each item In input
                 unit = randStack.FindUnitStats(item)
                 Dim expNext As Integer = unit.EXPnext
                 If Not unit.small Then expNext = CInt(expNext * 0.5)
-                output.Add(randStack.comm.RaceNumberToRaceChar(unit.race) & _
+                output.Add(randStack.comm.defValues.RaceNumberToRaceChar(unit.race) & _
                            "#" & expNext.ToString)
             Next item
         Else
@@ -7933,6 +8191,37 @@ Public Class ObjectsContentSet
             output = Nothing
         End If
         Return output
+    End Function
+    ''' <summary>Вернет настройки генерации наемников</summary>
+    ''' <param name="m">Готовая карта</param>
+    ''' <param name="sett">Настройки локаций</param>
+    ''' <param name="x">Положение по X</param>
+    ''' <param name="y">Положение по Y</param>
+    ''' <param name="nRaces">Количество играбельных рас</param>
+    Public Function GetMercenariesListSettings(ByRef m As Map, ByRef sett() As Map.SettingsLoc, ByVal x As Integer, ByVal y As Integer, ByVal nRaces As Integer) As List(Of String)
+        Dim s As Map.SettingsLoc = sett(m.board(x, y).locID(0) - 1)
+        Dim res As New List(Of String)
+        Dim mercRace As String
+        Dim selected As String
+        Dim bar As Integer
+
+        Dim playableRacesIDs As New List(Of Integer)
+
+
+        '#'по лордам узнаем, какиерасы играбельны
+        'создаем список неиграбельных рас
+
+        For i As Integer = 1 To s.mercenariesCount Step 1
+            If m.board(x, y).locID(0) > nRaces Then
+                'выбираем неиграбельную расу
+                mercRace = randStack.comm.defValues.RaceNumberToRaceChar(randStack.comm.RaceIdentifierToSubrace(selected))
+            Else
+                mercRace = randStack.comm.defValues.RaceNumberToRaceChar(m.board(x, y).objRace(0))
+            End If
+            bar = RndPart(s.mercenariesMinExpBar, s.mercenariesMaxExpBar, i, s.mercenariesCount)
+            res.Add(mercRace & "#" & bar)
+        Next i
+        Return res
     End Function
 
 End Class

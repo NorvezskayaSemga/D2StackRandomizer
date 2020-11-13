@@ -131,7 +131,7 @@ maxMages			1.0
 #Количество тренеров на локацию
 maxTrainers			0.0
 #Количество руин на локацию
-maxRuins			3.0	3.5
+maxRuins			1.0	1.5
 
 #Минимальное расстояние между отрядами
 minStackToStackDist		4.0
@@ -184,14 +184,14 @@ maxEccentricityDispersion	0.4
 
 maxRadiusDispersion		0.3
 
-maxGoldMines			1.0	2.0
-maxManaSources			1.0	1.5
+maxGoldMines			1.0	1.0
+maxManaSources			1.0	1.0
 maxCities			1.0
-maxVendors			1.0
-maxMercenaries			0.0
+maxVendors			0.0
+maxMercenaries			1.0
 maxMages			0.0
-maxTrainers			0.0
-maxRuins			2.0	3.0
+maxTrainers			1.0
+maxRuins			1.0	1.5
 
 minStackToStackDist		5.0
 

@@ -133,11 +133,11 @@ Namespace My.Resources
         '''#параметры и их значения не чувствительны к регистру
         '''#разделитель - пробел или табуляция (может идти несколько подряд)
         '''
-        '''#внутри блоков настройки могут идти в любом пморядке
-        '''#порядок блоков тоже может быть любом с одним исключением:
+        '''#внутри блоков настройки могут идти в любом порядке
+        '''#порядок блоков тоже может быть любым с одним исключением:
         '''#блоки Location для расовых локаций должны стоять выше, чем блоки для обычных локаций (независимо от genMode)
         '''
-        '''#если в блоке Location параметр имеет два значения, то при генерации будет вы [rest of string was truncated]&quot;;.
+        '''#если в блоке Location параметр имеет два значения, то при генерации будет выб [rest of string was truncated]&quot;;.
         '''</summary>
         Friend ReadOnly Property example_template_1() As String
             Get
@@ -152,11 +152,11 @@ Namespace My.Resources
         '''#параметры и их значения не чувствительны к регистру
         '''#разделитель - пробел или табуляция (может идти несколько подряд)
         '''
-        '''#внутри блоков настройки могут идти в любом пморядке
-        '''#порядок блоков тоже может быть любом с одним исключением:
+        '''#внутри блоков настройки могут идти в любом порядке
+        '''#порядок блоков тоже может быть любым с одним исключением:
         '''#блоки Location для расовых локаций должны стоять выше, чем блоки для обычных локаций (независимо от genMode)
         '''
-        '''#если в блоке Location параметр имеет два значения, то при генерации будет вы [rest of string was truncated]&quot;;.
+        '''#если в блоке Location параметр имеет два значения, то при генерации будет выб [rest of string was truncated]&quot;;.
         '''</summary>
         Friend ReadOnly Property example_template_2_symm() As String
             Get
@@ -171,11 +171,11 @@ Namespace My.Resources
         '''#параметры и их значения не чувствительны к регистру
         '''#разделитель - пробел или табуляция (может идти несколько подряд)
         '''
-        '''#внутри блоков настройки могут идти в любом пморядке
-        '''#порядок блоков тоже может быть любом с одним исключением:
+        '''#внутри блоков настройки могут идти в любом порядке
+        '''#порядок блоков тоже может быть любым с одним исключением:
         '''#блоки Location для расовых локаций должны стоять выше, чем блоки для обычных локаций (независимо от genMode)
         '''
-        '''#если в блоке Location параметр имеет два значения, то при генерации будет вы [rest of string was truncated]&quot;;.
+        '''#если в блоке Location параметр имеет два значения, то при генерации будет выб [rest of string was truncated]&quot;;.
         '''</summary>
         Friend ReadOnly Property example_template_2_unsymm() As String
             Get
@@ -387,7 +387,18 @@ Namespace My.Resources
         '''G000IG9101	0.2
         '''#клыкастая связка
         '''G001IG0082	0.1
-        '''.
+        '''
+        '''#Эликсир защиты от магии Воздуха
+        '''G000IG0021	1.2
+        '''#Эликсир защиты от магии Воды
+        '''G000IG0022	1.2
+        '''#Эликсир защиты от магии Земли
+        '''G000IG0023	1.2
+        '''#Эликсир защиты от магии Огня
+        '''G000IG0024	1.2
+        '''#Эликсир защиты от магии Смерти
+        '''G001IG0036	1.2
+        '''#Эликсир защиты от  [rest of string was truncated]&quot;;.
         '''</summary>
         Friend ReadOnly Property LootItemChanceMultiplier() As String
             Get
@@ -575,7 +586,7 @@ Namespace My.Resources
         '''<summary>
         '''  Looks up a localized string similar to #строка, начинающаяся с решетки, игнорируется
         '''#Список играбельных субрас
-        '''
+        ''' 
         '''#империя
         '''1
         '''#нежить
@@ -585,7 +596,8 @@ Namespace My.Resources
         '''#кланы
         '''4
         '''#эльфы
-        '''14.
+        '''14
+        '''.
         '''</summary>
         Friend ReadOnly Property PlayableSubraces() As String
             Get
@@ -689,6 +701,15 @@ Namespace My.Resources
         Friend ReadOnly Property SingleUnits() As String
             Get
                 Return ResourceManager.GetString("SingleUnits", resourceCulture)
+            End Get
+        End Property
+        
+        '''<summary>
+        '''  Looks up a localized string similar to R.
+        '''</summary>
+        Friend ReadOnly Property spellRandomRace() As String
+            Get
+                Return ResourceManager.GetString("spellRandomRace", resourceCulture)
             End Get
         End Property
         

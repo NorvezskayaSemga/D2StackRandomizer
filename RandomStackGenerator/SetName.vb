@@ -109,6 +109,7 @@
                         End If
                     End If
                 Next i
+                'вот здесь нужно корректно обработать случай, если в базе данных есть пустые записи
                 Dim wsum As Double = 0
                 For i As Integer = 0 To UBound(Tn) Step 1
                     wsum += Tw(i)
@@ -122,6 +123,7 @@
             Console.WriteLine(ex.Message)
             AddToLog(-1, "Names downloader: " & ex.Message)
         End Try
+        'завернуть в Try
         If Not IsNothing(Tn) And Not IsNothing(Tw) Then
             Dim added As New Dictionary(Of String, Integer)
             ReDim name(UBound(Tn)), weight(UBound(Tw))
@@ -281,7 +283,7 @@
             result = defaultLordNames(RaceID)(i)
         End If
         Dim LName As String = NameCut(result, LordNameMaxLen)
-        AddToLog(LogID, "Selected lord name for race " & comm.RaceNumberToRaceChar(RaceID) & ": " & LName)
+        AddToLog(LogID, "Selected lord name for race " & comm.defValues.RaceNumberToRaceChar(RaceID) & ": " & LName)
         Return LName
     End Function
 

@@ -80,7 +80,7 @@ Public Class RandStackTest
                                                          RandomStackGenerator.My.Resources.readDefaultFileKeyword}
 
     Friend preservedItemsList() As String = New String() {RandomStackGenerator.My.Resources.readDefaultFileKeyword, _
-                                                         RandomStackGenerator.My.Resources.readDefaultFileKeyword}
+                                                          RandomStackGenerator.My.Resources.readDefaultFileKeyword}
     Friend UnitsList() As AllDataStructues.Unit = Nothing
     Friend ItemsList() As AllDataStructues.Item = Nothing
     Friend AllSpells() As AllDataStructues.Spell = Nothing
