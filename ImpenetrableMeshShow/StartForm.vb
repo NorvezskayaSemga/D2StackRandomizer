@@ -80,8 +80,8 @@ Friend Class StartForm
 
         Dim def() As String = {"%default%"}
 
-        Dim rstack As New RandStack(ReadTestUnits, ReadTestItems, def, def, def, def, def, def, 5)
-        Dim objCont As New ObjectsContentSet(rstack, ReadSpells)
+        Dim rstack As New RandStack(ReadTestUnits, ReadTestItems, ReadSpells, def, def, def, def, def, def, 5)
+        Dim objCont As New ObjectsContentSet(rstack)
 
         Call comm.ReadExcludedObjectsList({"%default%"})
         Dim objSizeArray() As ImpenetrableObjects.GlobalMapDecoration = ReadObjSize()
@@ -129,7 +129,7 @@ Friend Class StartForm
         Console.WriteLine(grid.log.PrintAll)
         LogTextBox.Text = grid.log.PrintAll
 
-        If Not IsNothing(grid) Then
+        If Not IsNothing(grid.board) Then
             Call ShowResult(grid)
             Call shortMapFormat.MapConversion(grid, gsettings, objCont, True)
         End If
@@ -295,13 +295,13 @@ Friend Class StartForm
 
     Private Sub itemGenTest()
 
-        Dim r As New RandStack(ReadTestUnits, ReadTestItems, {GenDefaultValues.wReadDefaultFileKeyword}, _
-                                                             {GenDefaultValues.wReadDefaultFileKeyword}, _
-                                                             {GenDefaultValues.wReadDefaultFileKeyword}, _
-                                                             {GenDefaultValues.wReadDefaultFileKeyword}, _
-                                                             {GenDefaultValues.wReadDefaultFileKeyword}, _
-                                                             {GenDefaultValues.wReadDefaultFileKeyword}, _
-                                                             5)
+        Dim r As New RandStack(ReadTestUnits, ReadTestItems, ReadSpells, {GenDefaultValues.wReadDefaultFileKeyword}, _
+                                                                         {GenDefaultValues.wReadDefaultFileKeyword}, _
+                                                                         {GenDefaultValues.wReadDefaultFileKeyword}, _
+                                                                         {GenDefaultValues.wReadDefaultFileKeyword}, _
+                                                                         {GenDefaultValues.wReadDefaultFileKeyword}, _
+                                                                         {GenDefaultValues.wReadDefaultFileKeyword}, _
+                                                                         5)
 
         Dim items As New List(Of String)
         items.Add("G000IG0004")

@@ -115,8 +115,10 @@ Public Class ImpenetrableMeshGen
                 res.mercenariesMaxExpBar = RandomValue(min.mercenariesMaxExpBar, max.mercenariesMaxExpBar, randomizer)
                 res.mercenariesMinExpBar = RandomValue(min.mercenariesMinExpBar, max.mercenariesMinExpBar, randomizer)
                 res.mercenariesCount = RandomValue(min.mercenariesCount, max.mercenariesCount, randomizer)
-                res.merchMaxItemCost = RandomValue(min.merchMaxItemCost, max.merchMaxItemCost, randomizer)
-                res.merchMinItemCost = RandomValue(min.merchMinItemCost, max.merchMinItemCost, randomizer)
+                res.merchMaxConsumableItemCost = RandomValue(min.merchMaxConsumableItemCost, max.merchMaxConsumableItemCost, randomizer)
+                res.merchMinConsumableItemCost = RandomValue(min.merchMinConsumableItemCost, max.merchMinConsumableItemCost, randomizer)
+                res.merchMaxNonconsumableItemCost = RandomValue(min.merchMaxNonconsumableItemCost, max.merchMaxNonconsumableItemCost, randomizer)
+                res.merchMinNonconsumableItemCost = RandomValue(min.merchMinNonconsumableItemCost, max.merchMinNonconsumableItemCost, randomizer)
                 res.merchItemsCost = RandomValue(min.merchItemsCost, max.merchItemsCost, randomizer)
                 res.scaleContent = RandomValue(min.scaleContent, max.scaleContent, randomizer)
                 res.possibleRaces = RandomValue(min.possibleRaces, max.possibleRaces, randomizer)
@@ -125,7 +127,8 @@ Public Class ImpenetrableMeshGen
 
                 res.mageSpellsMinLevel = Math.Min(res.mageSpellsMinLevel, res.mageSpellsMaxLevel)
                 res.mercenariesMinExpBar = Math.Min(res.mercenariesMinExpBar, res.mercenariesMaxExpBar)
-                res.merchMinItemCost = Math.Min(res.merchMinItemCost, res.merchMaxItemCost)
+                res.merchMinConsumableItemCost = Math.Min(res.merchMinConsumableItemCost, res.merchMaxConsumableItemCost)
+                res.merchMinNonconsumableItemCost = Math.Min(res.merchMinNonconsumableItemCost, res.merchMaxNonconsumableItemCost)
 
                 Return res
             End Function
@@ -3379,9 +3382,6 @@ End Class
 
 Public Class Location
 
-    ''' <summary>ID расы, используемой на локации</summary>
-    Public Race As Integer
-
     ''' <summary>Номер локации, больше ноля</summary>
     Public ID As Integer
     ''' <summary>Положение локации</summary>
@@ -3431,7 +3431,7 @@ Public Class Location
     End Sub
 
     Public Shared Function Copy(ByRef L As Location) As Location
-        Return New Location(L.pos, L.gASize, L.gBSize, L.gAlpha, L.ID, L.IsObtainedBySymmery) With {.Race = L.Race}
+        Return New Location(L.pos, L.gASize, L.gBSize, L.gAlpha, L.ID, L.IsObtainedBySymmery)
     End Function
 
     Friend Shared Function FindLocIDByPosition(ByRef m As Map, ByRef p As Point) As Integer
@@ -3867,17 +3867,17 @@ Public Class shortMapFormat
     Public Class MerchantItemObject
         Inherits simpleObject
         ''' <summary>Список предметов</summary>
-        Dim content() As AllDataStructues.Item
+        Public content() As AllDataStructues.Item
     End Class
     Public Class MerchantSpellObject
         Inherits simpleObject
         ''' <summary>Список заклинаний</summary>
-        Dim content() As AllDataStructues.Spell
+        Public content() As AllDataStructues.Spell
     End Class
     Public Class MerchantUnitObject
         Inherits simpleObject
         ''' <summary>Список юнитов</summary>
-        Dim content() As AllDataStructues.Unit
+        Public content() As AllDataStructues.Unit
     End Class
     Public Class StackObject
         ''' <summary>Положение отряда</summary>
@@ -3885,10 +3885,8 @@ Public Class shortMapFormat
         ''' <summary>Настройки генерации отряда</summary>
         Public stackSettings As AllDataStructues.DesiredStats
         ''' <summary>Отряд</summary>
-        Dim stack As AllDataStructues.Stack
+        Public stack As AllDataStructues.Stack
     End Class
-
-
 
     ''' <summary>Конвертирует карту для более удобной записи в файл</summary>
     ''' <param name="m">Карта</param>
@@ -3910,7 +3908,19 @@ Public Class shortMapFormat
         ReDim res.landscape(UBound(m.board, 1), UBound(m.board, 2))
 
         Dim name As String
-        Dim vendorContent As List(Of String)
+        Dim allMines As New List(Of String)
+
+        Dim log As New Log(New Common)
+
+        For y As Integer = 0 To UBound(m.board, 2) Step 1
+            For x As Integer = 0 To UBound(m.board, 1) Step 1
+                If m.board(x, y).objectID = DefMapObjects.Types.Mine Then
+                    name = m.board(x, y).objectName
+                    Call AddObject(res.mines, x, y, objContent.SetMineType(name))
+                    If Not allMines.Contains(res.mines(UBound(res.mines)).id) Then allMines.Add(res.mines(UBound(res.mines)).id)
+                End If
+            Next x
+        Next y
 
         For y As Integer = 0 To UBound(m.board, 2) Step 1
             For x As Integer = 0 To UBound(m.board, 1) Step 1
@@ -3937,17 +3947,27 @@ Public Class shortMapFormat
                     ElseIf m.board(x, y).objectID = DefMapObjects.Types.City Then
 
                     ElseIf m.board(x, y).objectID = DefMapObjects.Types.Vendor Then
-
+                        Dim content As List(Of String) = objContent.GetMerchantListSettings(m, gLocSettings, x, y)
+                        Dim items As List(Of String) = objContent.MakeMerchantItemsList(New AllDataStructues.DesiredStats With {.shopContent = content}, Nothing, log)
+                        Call AddObject(res.merchantsItems, x, y, name, items, objContent)
                     ElseIf m.board(x, y).objectID = DefMapObjects.Types.Mercenary Then
-
+                        Dim content As List(Of String) = objContent.GetMercenariesListSettings(m, gLocSettings, x, y, settGen.common_settMap.nRaces)
+                        Dim items As List(Of String) = objContent.MakeMercenariesList(New AllDataStructues.DesiredStats With {.shopContent = content}, log)
+                        Call AddObject(res.merchantsUnits, x, y, name, items, objContent)
                     ElseIf m.board(x, y).objectID = DefMapObjects.Types.Mage Then
-
+                        Dim content As List(Of String) = objContent.GetSpellsListSettings(m, gLocSettings, x, y, settGen.common_settMap.nRaces)
+                        Dim items As List(Of String) = objContent.MakeSpellsList(New AllDataStructues.DesiredStats With {.shopContent = content}, allMines, log)
+                        Call AddObject(res.merchantsSpells, x, y, name, items, objContent)
                     ElseIf m.board(x, y).objectID = DefMapObjects.Types.Trainer Then
                         Call AddObject(res.trainers, x, y, name)
                     ElseIf m.board(x, y).objectID = DefMapObjects.Types.Ruins Then
 
                     ElseIf m.board(x, y).objectID = DefMapObjects.Types.Mine Then
-                        Call AddObject(res.mines, x, y, objContent.SetMineType(name))
+                        'do nothing
+                    ElseIf m.board(x, y).objectID = DefMapObjects.Types.None Then
+                        Call AddObject(res.landmarks, x, y, name)
+                    Else
+                        Throw New Exception("shortMapFormat.MapConversion: unknown object type")
                     End If
                 End If
             Next x
@@ -3959,7 +3979,36 @@ Public Class shortMapFormat
         ReDim Preserve AddTo(AddTo.Length)
         AddTo(UBound(AddTo)) = New simpleObject With {.pos = New Point(x, y), .id = name}
     End Sub
-
+    Private Shared Sub AddObject(ByRef AddTo() As MerchantItemObject, ByRef x As Integer, ByRef y As Integer, ByRef name As String, ByRef content As List(Of String), ByRef objContent As ObjectsContentSet)
+        ReDim Preserve AddTo(AddTo.Length)
+        AddTo(UBound(AddTo)) = New MerchantItemObject With {.pos = New Point(x, y), .id = name}
+        ReDim AddTo(UBound(AddTo)).content(content.Count - 1)
+        Dim n As Integer = -1
+        For Each item As String In content
+            n += 1
+            AddTo(UBound(AddTo)).content(n) = objContent.randStack.FindItemStats(item)
+        Next item
+    End Sub
+    Private Shared Sub AddObject(ByRef AddTo() As MerchantSpellObject, ByRef x As Integer, ByRef y As Integer, ByRef name As String, ByRef content As List(Of String), ByRef objContent As ObjectsContentSet)
+        ReDim Preserve AddTo(AddTo.Length)
+        AddTo(UBound(AddTo)) = New MerchantSpellObject With {.pos = New Point(x, y), .id = name}
+        ReDim AddTo(UBound(AddTo)).content(content.Count - 1)
+        Dim n As Integer = -1
+        For Each item As String In content
+            n += 1
+            AddTo(UBound(AddTo)).content(n) = objContent.randStack.FindSpellStats(item)
+        Next item
+    End Sub
+    Private Shared Sub AddObject(ByRef AddTo() As MerchantUnitObject, ByRef x As Integer, ByRef y As Integer, ByRef name As String, ByRef content As List(Of String), ByRef objContent As ObjectsContentSet)
+        ReDim Preserve AddTo(AddTo.Length)
+        AddTo(UBound(AddTo)) = New MerchantUnitObject With {.pos = New Point(x, y), .id = name}
+        ReDim AddTo(UBound(AddTo)).content(content.Count - 1)
+        Dim n As Integer = -1
+        For Each item As String In content
+            n += 1
+            AddTo(UBound(AddTo)).content(n) = objContent.randStack.FindUnitStats(item)
+        Next item
+    End Sub
 
 End Class
 
@@ -4112,10 +4161,14 @@ Public Class Map
         '''<summary>Количество наемников в лагере</summary>
         Dim mercenariesCount As Integer
 
-        '''<summary>Максимальная стоимость предмета у торговца</summary>
-        Dim merchMaxItemCost As Integer
-        '''<summary>Минимальная стоимость предмета у торговца</summary>
-        Dim merchMinItemCost As Integer
+        '''<summary>Максимальная стоимость расходного предмета у торговца</summary>
+        Dim merchMaxConsumableItemCost As Integer
+        '''<summary>Минимальная стоимость расходного предмета у торговца</summary>
+        Dim merchMinConsumableItemCost As Integer
+        '''<summary>Максимальная стоимость нерасходного предмета у торговца</summary>
+        Dim merchMaxNonconsumableItemCost As Integer
+        '''<summary>Минимальная стоимость нерасходного предмета у торговца</summary>
+        Dim merchMinNonconsumableItemCost As Integer
         '''<summary>Полная стоимость лута у торговца</summary>
         Dim merchItemsCost As Integer
 
@@ -4160,8 +4213,10 @@ Public Class Map
             fields.Add("mercenariesMaxExpBar", mercenariesMaxExpBar.ToString)
             fields.Add("mercenariesMinExpBar", mercenariesMinExpBar.ToString)
             fields.Add("mercenariesCount", mercenariesCount.ToString)
-            fields.Add("merchMaxItemCost", merchMaxItemCost.ToString)
-            fields.Add("merchMinItemCost", merchMinItemCost.ToString)
+            fields.Add("merchMaxConsumableItemCost", merchMaxConsumableItemCost.ToString)
+            fields.Add("merchMinConsumableItemCost", merchMinConsumableItemCost.ToString)
+            fields.Add("merchMaxNonconsumableItemCost", merchMaxNonconsumableItemCost.ToString)
+            fields.Add("merchMinNonconsumableItemCost", merchMinNonconsumableItemCost.ToString)
             fields.Add("merchItemsCost", merchItemsCost.ToString)
 
             Dim msg As String = ""
@@ -4184,8 +4239,9 @@ Public Class Map
                 equal0.AddRange({"mercenariesMaxExpBar", "mercenariesMinExpBar", "mercenariesCount"})
             End If
             If maxVendors > 0 Then
-                If merchMaxItemCost < merchMinItemCost Then msg &= vbNewLine & "merchMaxItemCost < merchMinItemCost"
-                equal0.AddRange({"merchMaxItemCost", "merchMinItemCost", "merchItemsCost"})
+                If merchMaxConsumableItemCost < merchMinConsumableItemCost Then msg &= vbNewLine & "merchMaxConsumableItemCost < merchMinConsumableItemCost"
+                If merchMaxNonconsumableItemCost < merchMinNonconsumableItemCost Then msg &= vbNewLine & "merchMaxNonconsumableItemCost < merchMinNonconsumableItemCost"
+                equal0.AddRange({"merchMaxConsumableItemCost", "merchMinConsumableItemCost", "merchMaxNonconsumableItemCost", "merchMinNonconsumableItemCost", "merchItemsCost"})
             End If
             less1.AddRange({"minStackToStackDist"})
             equal1.AddRange({"maxEccentricityDispersion", "maxRadiusDispersion"})
@@ -4251,8 +4307,10 @@ Public Class Map
             .mercenariesMaxExpBar = v.mercenariesMaxExpBar, _
             .mercenariesMinExpBar = v.mercenariesMinExpBar, _
             .mercenariesCount = v.mercenariesCount, _
-            .merchMaxItemCost = v.merchMaxItemCost, _
-            .merchMinItemCost = v.merchMinItemCost, _
+            .merchMaxConsumableItemCost = v.merchMaxConsumableItemCost, _
+            .merchMinConsumableItemCost = v.merchMinConsumableItemCost, _
+            .merchMaxNonConsumableItemCost = v.merchMaxNonconsumableItemCost, _
+            .merchMinNonConsumableItemCost = v.merchMinNonconsumableItemCost, _
             .merchItemsCost = v.merchItemsCost, _
             .scaleContent = v.scaleContent, _
             .possibleRaces = r, _
@@ -4311,8 +4369,10 @@ Public Class Map
             Call Map.ReadValue("mercenariesMaxExpBar", mercenariesMaxExpBar, data, GenDefaultValues.wTemplate_LocationKeyword)
             Call Map.ReadValue("mercenariesMinExpBar", mercenariesMinExpBar, data, GenDefaultValues.wTemplate_LocationKeyword)
             Call Map.ReadValue("mercenariesCount", mercenariesCount, data, GenDefaultValues.wTemplate_LocationKeyword)
-            Call Map.ReadValue("merchMaxItemCost", merchMaxItemCost, data, GenDefaultValues.wTemplate_LocationKeyword)
-            Call Map.ReadValue("merchMinItemCost", merchMinItemCost, data, GenDefaultValues.wTemplate_LocationKeyword)
+            Call Map.ReadValue("merchMaxConsumableItemCost", merchMaxConsumableItemCost, data, GenDefaultValues.wTemplate_LocationKeyword)
+            Call Map.ReadValue("merchMinConsumableItemCost", merchMinConsumableItemCost, data, GenDefaultValues.wTemplate_LocationKeyword)
+            Call Map.ReadValue("merchMaxNonconsumableItemCost", merchMaxNonconsumableItemCost, data, GenDefaultValues.wTemplate_LocationKeyword)
+            Call Map.ReadValue("merchMinNonconsumableItemCost", merchMinNonconsumableItemCost, data, GenDefaultValues.wTemplate_LocationKeyword)
             Call Map.ReadValue("merchItemsCost", merchItemsCost, data, GenDefaultValues.wTemplate_LocationKeyword)
             Call Map.ReadValue("scaleContent", scaleContent, data, GenDefaultValues.wTemplate_LocationKeyword)
             Call Map.ReadValue("possibleRaces", possibleRaces, data, GenDefaultValues.wTemplate_LocationKeyword, CChar(";"))
@@ -5034,7 +5094,7 @@ Public Class StackLocationsGen
         m = tmpm
     End Sub
     Private Function FillLocation(ByRef m As Map, ByRef settMap As Map.SettingsMap, _
-                                  ByVal settLoc As Map.SettingsLoc, ByRef LocID As Integer) As List(Of Point)
+                                  ByRef settLoc As Map.SettingsLoc, ByRef LocID As Integer) As List(Of Point)
 
         Dim b As New Location.Borders With {.minX = Integer.MaxValue, .maxX = Integer.MinValue, _
                                             .miny = Integer.MaxValue, .maxy = Integer.MinValue}
@@ -5405,7 +5465,6 @@ Public Class StackLocationsGen
             rndID.RemoveAt(s)
         Next i
 
-        Dim t0 As Integer = Environment.TickCount
         For currentNLimit As Integer = 0 To UBound(pointsList) Step 1
             bestN = Integer.MinValue
             For i As Integer = 0 To UBound(pointsList) Step 1
@@ -5413,14 +5472,8 @@ Public Class StackLocationsGen
                 bestOutput(i) = -1
             Next i
             Call PlaceGuardLoc(m, pointsList, -1, currentNLimit, bestN, currentOutput, bestOutput, IDs, -1, path, justCheckGuardNecessity, term)
-            If Environment.TickCount - t0 > 5000 Then
-                t0 = t0
-            End If
             If bestN > Integer.MinValue Then Exit For
         Next currentNLimit
-        Dim t1 As Integer = Environment.TickCount
-        Console.WriteLine(t1 - t0)
-
 
         If bestN < 0 Then Return Nothing
 
@@ -6367,9 +6420,9 @@ Public Class ImpenetrableObjects
         Call PlacePlateau(m, free)
         Call PlaceMouintains(m, free)
         Call PlaceOtherObjects(m, free)
-        Call AddSpells(m, settMap, settLoc)
-        Call AddMercenaries(m, settMap, settLoc)
-        Call AddMerchantItems(m, settMap, settLoc)
+        'Call AddSpells(m, settMap, settLoc)
+        'Call AddMercenaries(m, settMap, settLoc)
+        'Call AddMerchantItems(m, settMap, settLoc)
 
         Call m.log.Add("Objects types definition: " & Environment.TickCount - t0 & " ms")
 
@@ -6836,7 +6889,7 @@ Public Class ImpenetrableObjects
                 If raceMana.Item(i)(j).Gold > 0 Then res.Item(i)(j) &= "gold "
                 If raceMana.Item(i)(j).Green > 0 Then res.Item(i)(j) &= "green "
                 If raceMana.Item(i)(j).Red > 0 Then res.Item(i)(j) &= "red "
-                If raceMana.Item(i)(j).White > 0 Then res.Item(i)(j) &= "while "
+                If raceMana.Item(i)(j).White > 0 Then res.Item(i)(j) &= "white "
                 res.Item(i)(j) = res.Item(i)(j).Remove(res.Item(i)(j).Length - 1)
             Next j
             For j As Integer = 1 To UBound(raceMana.Item(i)) - 1 Step 1
@@ -7324,111 +7377,113 @@ Public Class ImpenetrableObjects
         m = tmpm
     End Sub
 
-    Private Sub AddSpells(ByRef m As Map, ByRef settMap As Map.SettingsMap, ByRef settLoc() As Map.SettingsLoc)
-        Dim maxGroupID As Integer = ImpenetrableMeshGen.GetMaxGroupID(m)
-        Dim objList As Dictionary(Of Integer, List(Of Point)) = FindGroupsOfObjects(m, 5)
-        Dim levels As List(Of Integer)
-        Dim r, n As Integer
-        Dim setNewGroup As Boolean
-        For Each g As Integer In objList.Keys
-            Dim pLocID As Integer = pointLoc(m, objList.Item(g).Item(0))
-            If pLocID <= settMap.nRaces Then
-                setNewGroup = False
-                levels = SelectSpellsLevel(settLoc(pLocID - 1))
-                For Each p As Point In objList.Item(g)
-                    r = m.board(p.X, p.Y).objRace.Item(0)
-                    If setNewGroup Then
-                        maxGroupID += 1
-                        n = maxGroupID
-                        m.board(p.X, p.Y).groupID = maxGroupID
-                    Else
-                        setNewGroup = True
-                        n = g
-                    End If
-                    m.groupStats.Add(n, New AllDataStructues.DesiredStats With {.shopContent = SelectSpells(settLoc(pLocID - 1), r, levels)})
-                Next p
-            Else
-                levels = SelectSpellsLevel(settLoc(pLocID - 1))
-                m.groupStats.Add(g, New AllDataStructues.DesiredStats With {.shopContent = SelectSpells(settLoc(pLocID - 1), -1, levels)})
-            End If
-        Next g
-    End Sub
-    Private Function SelectSpells(ByRef settLoc As Map.SettingsLoc, ByRef raceID As Integer, ByRef levels As List(Of Integer)) As List(Of String)
-        Dim res As New List(Of String)
-        Dim v, r As String
-        If raceID = -1 Then
-            r = "R"
-        Else
-            r = raceIdToString.Item(raceID)
-        End If
-        For Each L As Integer In levels
-            v = L.ToString & r
-            If settLoc.mageGlobalSpellsEnabled Then
-                v &= "T"
-            Else
-                v &= "F"
-            End If
-            res.Add(v)
-        Next L
-        Return res
-    End Function
-    Private Function SelectSpellsLevel(ByRef settLoc As Map.SettingsLoc) As List(Of Integer)
-        Dim res As New List(Of Integer)
-        For i As Integer = 1 To settLoc.mageSpellsCount Step 1
-            res.Add(comm.rndgen.RndInt(settLoc.mageSpellsMinLevel, settLoc.mageSpellsMaxLevel, True))
-        Next i
-        Return res
-    End Function
-    Private Function FindGroupsOfObjects(ByRef m As Map, ByRef objType As Integer) As Dictionary(Of Integer, List(Of Point))
-        Dim res As New Dictionary(Of Integer, List(Of Point))
-        For y As Integer = 0 To m.ySize Step 1
-            For x As Integer = 0 To m.xSize Step 1
-                If m.board(x, y).objectID = objType Then
-                    If Not res.ContainsKey(m.board(x, y).groupID) Then res.Add(m.board(x, y).groupID, New List(Of Point))
-                    res.Item(m.board(x, y).groupID).Add(New Point(x, y))
-                End If
-            Next x
-        Next y
-        Return res
-    End Function
-    Private Function pointLoc(ByRef m As Map, ByRef p As Point) As Integer
-        Return m.board(p.X, p.Y).locID(0)
-    End Function
+#Region "Старые версии генераторов контента толрговцев"
+    'Private Sub AddSpells(ByRef m As Map, ByRef settMap As Map.SettingsMap, ByRef settLoc() As Map.SettingsLoc)
+    '    Dim maxGroupID As Integer = ImpenetrableMeshGen.GetMaxGroupID(m)
+    '    Dim objList As Dictionary(Of Integer, List(Of Point)) = FindGroupsOfObjects(m, 5)
+    '    Dim levels As List(Of Integer)
+    '    Dim r, n As Integer
+    '    Dim setNewGroup As Boolean
+    '    For Each g As Integer In objList.Keys
+    '        Dim pLocID As Integer = pointLoc(m, objList.Item(g).Item(0))
+    '        If pLocID <= settMap.nRaces Then
+    '            setNewGroup = False
+    '            levels = SelectSpellsLevel(settLoc(pLocID - 1))
+    '            For Each p As Point In objList.Item(g)
+    '                r = m.board(p.X, p.Y).objRace.Item(0)
+    '                If setNewGroup Then
+    '                    maxGroupID += 1
+    '                    n = maxGroupID
+    '                    m.board(p.X, p.Y).groupID = maxGroupID
+    '                Else
+    '                    setNewGroup = True
+    '                    n = g
+    '                End If
+    '                m.groupStats.Add(n, New AllDataStructues.DesiredStats With {.shopContent = SelectSpells(settLoc(pLocID - 1), r, levels)})
+    '            Next p
+    '        Else
+    '            levels = SelectSpellsLevel(settLoc(pLocID - 1))
+    '            m.groupStats.Add(g, New AllDataStructues.DesiredStats With {.shopContent = SelectSpells(settLoc(pLocID - 1), -1, levels)})
+    '        End If
+    '    Next g
+    'End Sub
+    'Private Function SelectSpells(ByRef settLoc As Map.SettingsLoc, ByRef raceID As Integer, ByRef levels As List(Of Integer)) As List(Of String)
+    '    Dim res As New List(Of String)
+    '    Dim v, r As String
+    '    If raceID = -1 Then
+    '        r = "R"
+    '    Else
+    '        r = raceIdToString.Item(raceID)
+    '    End If
+    '    For Each L As Integer In levels
+    '        v = L.ToString & r
+    '        If settLoc.mageGlobalSpellsEnabled Then
+    '            v &= "T"
+    '        Else
+    '            v &= "F"
+    '        End If
+    '        res.Add(v)
+    '    Next L
+    '    Return res
+    'End Function
+    'Private Function SelectSpellsLevel(ByRef settLoc As Map.SettingsLoc) As List(Of Integer)
+    '    Dim res As New List(Of Integer)
+    '    For i As Integer = 1 To settLoc.mageSpellsCount Step 1
+    '        res.Add(comm.rndgen.RndInt(settLoc.mageSpellsMinLevel, settLoc.mageSpellsMaxLevel, True))
+    '    Next i
+    '    Return res
+    'End Function
+    'Private Function FindGroupsOfObjects(ByRef m As Map, ByRef objType As Integer) As Dictionary(Of Integer, List(Of Point))
+    '    Dim res As New Dictionary(Of Integer, List(Of Point))
+    '    For y As Integer = 0 To m.ySize Step 1
+    '        For x As Integer = 0 To m.xSize Step 1
+    '            If m.board(x, y).objectID = objType Then
+    '                If Not res.ContainsKey(m.board(x, y).groupID) Then res.Add(m.board(x, y).groupID, New List(Of Point))
+    '                res.Item(m.board(x, y).groupID).Add(New Point(x, y))
+    '            End If
+    '        Next x
+    '    Next y
+    '    Return res
+    'End Function
+    'Private Function pointLoc(ByRef m As Map, ByRef p As Point) As Integer
+    '    Return m.board(p.X, p.Y).locID(0)
+    'End Function
 
-    Private Sub AddMercenaries(ByRef m As Map, ByRef settMap As Map.SettingsMap, ByRef settLoc() As Map.SettingsLoc)
-        Dim objList As Dictionary(Of Integer, List(Of Point)) = FindGroupsOfObjects(m, 4)
-        For Each g As Integer In objList.Keys
-            Dim pLocID As Integer = pointLoc(m, objList.Item(g).Item(0))
-            m.groupStats.Add(g, New AllDataStructues.DesiredStats With {.shopContent = SelectMercenaries(settLoc(pLocID - 1))})
-        Next g
-    End Sub
-    Private Function SelectMercenaries(ByRef settLoc As Map.SettingsLoc) As List(Of String)
-        Dim res As New List(Of String)
-        For i As Integer = 1 To settLoc.mercenariesCount Step 1
-            res.Add(comm.rndgen.RndInt(settLoc.mercenariesMinExpBar, settLoc.mercenariesMaxExpBar, True).ToString)
-        Next i
-        Return res
-    End Function
+    'Private Sub AddMercenaries(ByRef m As Map, ByRef settMap As Map.SettingsMap, ByRef settLoc() As Map.SettingsLoc)
+    '    Dim objList As Dictionary(Of Integer, List(Of Point)) = FindGroupsOfObjects(m, 4)
+    '    For Each g As Integer In objList.Keys
+    '        Dim pLocID As Integer = pointLoc(m, objList.Item(g).Item(0))
+    '        m.groupStats.Add(g, New AllDataStructues.DesiredStats With {.shopContent = SelectMercenaries(settLoc(pLocID - 1))})
+    '    Next g
+    'End Sub
+    'Private Function SelectMercenaries(ByRef settLoc As Map.SettingsLoc) As List(Of String)
+    '    Dim res As New List(Of String)
+    '    For i As Integer = 1 To settLoc.mercenariesCount Step 1
+    '        res.Add(comm.rndgen.RndInt(settLoc.mercenariesMinExpBar, settLoc.mercenariesMaxExpBar, True).ToString)
+    '    Next i
+    '    Return res
+    'End Function
 
-    Private Sub AddMerchantItems(ByRef m As Map, ByRef settMap As Map.SettingsMap, ByRef settLoc() As Map.SettingsLoc)
-        Dim objList As Dictionary(Of Integer, List(Of Point)) = FindGroupsOfObjects(m, 3)
-        For Each g As Integer In objList.Keys
-            Dim pLocID As Integer = pointLoc(m, objList.Item(g).Item(0))
-            m.groupStats.Add(g, New AllDataStructues.DesiredStats With {.shopContent = SelectMerchantItems(settLoc(pLocID - 1))})
-        Next g
-    End Sub
-    Private Function SelectMerchantItems(ByRef settLoc As Map.SettingsLoc) As List(Of String)
-        Dim res As New List(Of String)
-        Dim sum, v As Integer
-        If settLoc.merchMinItemCost + settLoc.merchMaxItemCost = 0 Then Return res
-        Do While sum < settLoc.merchItemsCost
-            v = comm.rndgen.RndInt(settLoc.merchMinItemCost, settLoc.merchMaxItemCost, True)
-            If sum + v > settLoc.merchItemsCost Then v = settLoc.merchItemsCost - sum
-            sum += v
-            res.Add(v.ToString)
-        Loop
-        Return res
-    End Function
+    'Private Sub AddMerchantItems(ByRef m As Map, ByRef settMap As Map.SettingsMap, ByRef settLoc() As Map.SettingsLoc)
+    '    Dim objList As Dictionary(Of Integer, List(Of Point)) = FindGroupsOfObjects(m, 3)
+    '    For Each g As Integer In objList.Keys
+    '        Dim pLocID As Integer = pointLoc(m, objList.Item(g).Item(0))
+    '        m.groupStats.Add(g, New AllDataStructues.DesiredStats With {.shopContent = SelectMerchantItems(settLoc(pLocID - 1))})
+    '    Next g
+    'End Sub
+    'Private Function SelectMerchantItems(ByRef settLoc As Map.SettingsLoc) As List(Of String)
+    '    Dim res As New List(Of String)
+    '    Dim sum, v As Integer
+    '    If settLoc.merchMinConsumableItemCost + settLoc.merchMaxConsumableItemCost = 0 Then Return res
+    '    Do While sum < settLoc.merchItemsCost
+    '        v = comm.rndgen.RndInt(settLoc.merchMinItemCost, settLoc.merchMaxItemCost, True)
+    '        If sum + v > settLoc.merchItemsCost Then v = settLoc.merchItemsCost - sum
+    '        sum += v
+    '        res.Add(v.ToString)
+    '    Loop
+    '    Return res
+    'End Function
+#End Region
 
 End Class
 
@@ -7446,20 +7501,34 @@ Public Class ObjectsContentSet
 
     Friend excludedItemType As New List(Of Integer)
 
+    Private typeMinCost(-1), typeMaxCost(-1) As Integer
+
     ''' <param name="RStack">Инициализированный класс</param>
     ''' <param name="AllSpells">Dсе заклинания в игре</param>
-    Public Sub New(ByRef RStack As RandStack, ByRef AllSpells() As AllDataStructues.Spell)
+    Public Sub New(ByRef RStack As RandStack)
 
         randStack = RStack
 
-        excludedItemType.AddRange(New Integer() {GenDefaultValues.ItemTypes.jewel, GenDefaultValues.ItemTypes.special})
-        For i As Integer = 0 To UBound(AllSpells) Step 1
-            If Not randStack.comm.excludedObjects.Contains(AllSpells(i).spellID.ToUpper) Then
-                spells.Add(AllSpells(i).spellID.ToUpper, AllSpells(i))
-            Else
-                excludedSpells.Add(AllSpells(i).spellID.ToUpper, AllSpells(i))
-            End If
+        Dim nTypes As Integer
+        For Each item As AllDataStructues.Item In randStack.AllItems
+            nTypes = Math.Max(nTypes, item.type)
+        Next item
+        ReDim typeMinCost(nTypes), typeMaxCost(nTypes)
+        For i As Integer = 0 To nTypes Step 1
+            typeMinCost(i) = Integer.MaxValue
         Next i
+
+        For Each item As AllDataStructues.Item In randStack.AllItems
+            If Not randStack.comm.IsExcluded(item) Then
+                Dim sum As Integer = AllDataStructues.Cost.Sum(randStack.LootCost(item))
+                If sum > 0 Then
+                    typeMinCost(item.type) = Math.Min(typeMinCost(item.type), sum)
+                    typeMaxCost(item.type) = Math.Max(typeMaxCost(item.type), sum)
+                End If
+            End If
+        Next item
+
+        excludedItemType.AddRange(New Integer() {GenDefaultValues.ItemTypes.jewel, GenDefaultValues.ItemTypes.special})
 
         mines.Add("GOLD", DefMapObjects.mineGold)
         mines.Add("GREEN", DefMapObjects.mineGreen)
