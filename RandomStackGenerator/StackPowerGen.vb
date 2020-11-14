@@ -56,7 +56,9 @@
         Dim t0 As Integer = Environment.TickCount
         Dim guards As Dictionary(Of Integer, StackLoc) = MakeGuardsList(m, settMap)
         Dim LocTotalExp() As Double = MakeLocationsList(m, settMap, settLoc)
+
         m.groupStats = GenStacksStats(m, settMap, guards, LocTotalExp)
+
         m.complited.StacksDesiredStatsGen_Done = True
 
         Call m.log.Add("Stacks stats generation: " & Environment.TickCount - t0 & " ms")
@@ -91,9 +93,9 @@
                                                    .isObjectGuard = m.board(x, y).isObjectGuard, _
                                                    .pos = New Point(x, y), _
                                                    .LocID = m.board(x, y).locID(0)})
-                    If m.board(x, y).objectID = 2 And m.board(x, y).locID(0) > settMap.nRaces Then
+                    If m.board(x, y).objectID = DefMapObjects.Types.City And m.board(x, y).locID(0) > settMap.nRaces Then
                         If g = 0 Then Throw New Exception("Unexpected group ID of city guards")
-                        locs.Add(-g, locs.Item(g))
+                        locs.Add(-g, locs.Item(g)) 'm.groupStats.Add(-
                     End If
                 End If
             Next x
@@ -546,6 +548,11 @@ Public Class RaceGen
         Return LocR
     End Function
     Private Sub SetLocRaceToCells(ByRef m As Map, ByRef LocR() As Integer, ByRef nRaces As Integer, ByRef settLoc() As Map.SettingsLoc)
+
+        For i As Integer = 0 To UBound(LocR) Step 1
+            m.Loc(i).Race = LocR(i)
+        Next i
+
         Dim t As Integer = 0
         For Each item As Integer()() In SRaces
             If Not IsNothing(item) Then t += item.Length

@@ -3382,6 +3382,9 @@ End Class
 
 Public Class Location
 
+    ''' <summary>Базовая раса локации</summary>
+    Public Race As Integer
+
     ''' <summary>Номер локации, больше ноля</summary>
     Public ID As Integer
     ''' <summary>Положение локации</summary>
@@ -3431,7 +3434,7 @@ Public Class Location
     End Sub
 
     Public Shared Function Copy(ByRef L As Location) As Location
-        Return New Location(L.pos, L.gASize, L.gBSize, L.gAlpha, L.ID, L.IsObtainedBySymmery)
+        Return New Location(L.pos, L.gASize, L.gBSize, L.gAlpha, L.ID, L.IsObtainedBySymmery) With {.Race = L.Race}
     End Function
 
     Friend Shared Function FindLocIDByPosition(ByRef m As Map, ByRef p As Point) As Integer
@@ -3806,16 +3809,11 @@ Public Class shortMapFormat
     Public trainers(-1) As simpleObject
     ''' <summary>Отряды</summary>
     Public stacks(-1) As StackObject
+    ''' <summary>Руины</summary>
+    Public ruins(-1) As RuinObject
+    ''' <summary>Руины</summary>
+    Public cities(-1) As CityObject
 
-    ''' <summary>Раса владельца</summary>
-    Public Enum OwnerRace
-        Humans = 1
-        Undead = 2
-        Legions = 3
-        Clans = 4
-        Neutral = 5
-        Elves = 7
-    End Enum
     Public Class simpleObject
         ''' <summary>Положение верхнего левого угла объекта</summary>
         Public pos As Point
@@ -3826,7 +3824,7 @@ Public Class shortMapFormat
         ''' <summary>See here GroundType</summary>
         Public ground As Integer
         ''' <summary>See shortMapFormat.OwnerRace</summary>
-        Public owner As Integer
+        Public owner As String
 
         ''' <summary>Тип местности</summary>
         Public Enum GroundType
@@ -3846,12 +3844,8 @@ Public Class shortMapFormat
     End Class
     Public Class RuinObject
         Inherits ObjectWithInternalStack
-        ''' <summary>Настройки создания награды</summary>
-        Public rewardSettings As AllDataStructues.ItemGenSettings
         ''' <summary>Ресурсы</summary>
         Public resourcesReward As AllDataStructues.Cost
-        ''' <summary>Предмет</summary>
-        Public itemReward As AllDataStructues.Item
     End Class
     Public Class CityObject
         Inherits ObjectWithInternalStack
@@ -3861,8 +3855,8 @@ Public Class shortMapFormat
         Public exteternalStack As AllDataStructues.Stack
         ''' <summary>Уровень города</summary>
         Public level As Integer
-        ''' <summary>See shortMapFormat.OwnerRace</summary>
-        Public owner As Integer
+        ''' <summary>Владелец</summary>
+        Public owner As String
     End Class
     Public Class MerchantItemObject
         Inherits simpleObject
@@ -3892,7 +3886,7 @@ Public Class shortMapFormat
     ''' <param name="m">Карта</param>
     ''' <param name="objContent">Полностью инициализированный класс</param>
     ''' <param name="fullSymmetry">Если карта симметрична, сделать отряды и награды абсолютно симметричными</param>
-    Public Shared Function MapConversion(ByRef m As Map, ByRef settGen As ImpenetrableMeshGen.GenSettings, ByRef objContent As ObjectsContentSet, ByRef fullSymmetry As Boolean) As shortMapFormat
+    Public Shared Function MapConversion(ByRef m As Map, ByRef settGen As ImpenetrableMeshGen.GenSettings, ByRef objContent As ObjectsContentSet, ByRef fullSymmetry As Boolean, ByRef usePlayableRaceUnitsInNeutralStacks As Boolean) As shortMapFormat
 
         Dim gLocSettings() As Map.SettingsLoc
         If settGen.genMode = ImpenetrableMeshGen.GenSettings.genModes.simple Then
@@ -3910,8 +3904,22 @@ Public Class shortMapFormat
         Dim name As String
         Dim allMines As New List(Of String)
 
-        Dim log As New Log(New Common)
+        Dim RuinIGen As New AllDataStructues.LootGenSettings With {.JewelItems = New AllDataStructues.ItemGenSettings With {.exclude = True}}
 
+        Dim lordsList() As String
+        If usePlayableRaceUnitsInNeutralStacks Then
+            ReDim lordsList(settGen.common_settMap.nRaces - 1)
+            Dim raceToLord As New Dictionary(Of Integer, String)
+            For Each key As String In objContent.randStack.comm.LordsRace.Keys
+                Dim v As Integer = objContent.randStack.comm.LordsRace.Item(key)
+                If Not raceToLord.ContainsKey(v) Then raceToLord.Add(v, key)
+            Next key
+            For i As Integer = 0 To settGen.common_settMap.nRaces - 1 Step 1
+                lordsList(i) = raceToLord.Item(m.Loc(i).Race)
+            Next i
+        Else
+            lordsList = Nothing
+        End If
         For y As Integer = 0 To UBound(m.board, 2) Step 1
             For x As Integer = 0 To UBound(m.board, 1) Step 1
                 If m.board(x, y).objectID = DefMapObjects.Types.Mine Then
@@ -3922,62 +3930,127 @@ Public Class shortMapFormat
             Next x
         Next y
 
+        Dim tiles(m.board.Length - 1) As Point
+        Dim tilesList As New List(Of Integer)
+        Dim n As Integer = -1
         For y As Integer = 0 To UBound(m.board, 2) Step 1
             For x As Integer = 0 To UBound(m.board, 1) Step 1
-                'ландшафт
-                res.landscape(x, y).owner = OwnerRace.Neutral
-                If m.board(x, y).isWater Then
-                    res.landscape(x, y).ground = TileState.GroundType.Water
-                Else
-                    If m.board(x, y).isForest Then
-                        res.landscape(x, y).ground = TileState.GroundType.Forest
-                    ElseIf m.board(x, y).isRoad Then
-                        res.landscape(x, y).ground = TileState.GroundType.Road
-                    Else
-                        res.landscape(x, y).ground = TileState.GroundType.Plain
-                    End If
-                End If
-
-                name = m.board(x, y).objectName
-
-                'объекты местности
-                If Not name = "" Then
-                    If m.board(x, y).objectID = DefMapObjects.Types.Capital Then
-                        Call AddObject(res.capitals, x, y, name)
-                    ElseIf m.board(x, y).objectID = DefMapObjects.Types.City Then
-
-                    ElseIf m.board(x, y).objectID = DefMapObjects.Types.Vendor Then
-                        Dim content As List(Of String) = objContent.GetMerchantListSettings(m, gLocSettings, x, y)
-                        Dim items As List(Of String) = objContent.MakeMerchantItemsList(New AllDataStructues.DesiredStats With {.shopContent = content}, Nothing, log)
-                        Call AddObject(res.merchantsItems, x, y, name, items, objContent)
-                    ElseIf m.board(x, y).objectID = DefMapObjects.Types.Mercenary Then
-                        Dim content As List(Of String) = objContent.GetMercenariesListSettings(m, gLocSettings, x, y, settGen.common_settMap.nRaces)
-                        Dim items As List(Of String) = objContent.MakeMercenariesList(New AllDataStructues.DesiredStats With {.shopContent = content}, log)
-                        Call AddObject(res.merchantsUnits, x, y, name, items, objContent)
-                    ElseIf m.board(x, y).objectID = DefMapObjects.Types.Mage Then
-                        Dim content As List(Of String) = objContent.GetSpellsListSettings(m, gLocSettings, x, y, settGen.common_settMap.nRaces)
-                        Dim items As List(Of String) = objContent.MakeSpellsList(New AllDataStructues.DesiredStats With {.shopContent = content}, allMines, log)
-                        Call AddObject(res.merchantsSpells, x, y, name, items, objContent)
-                    ElseIf m.board(x, y).objectID = DefMapObjects.Types.Trainer Then
-                        Call AddObject(res.trainers, x, y, name)
-                    ElseIf m.board(x, y).objectID = DefMapObjects.Types.Ruins Then
-
-                    ElseIf m.board(x, y).objectID = DefMapObjects.Types.Mine Then
-                        'do nothing
-                    ElseIf m.board(x, y).objectID = DefMapObjects.Types.None Then
-                        Call AddObject(res.landmarks, x, y, name)
-                    Else
-                        Throw New Exception("shortMapFormat.MapConversion: unknown object type")
-                    End If
-                End If
+                n += 1
+                tilesList.Add(n)
+                tiles(n) = New Point(x, y)
             Next x
         Next y
+        For i As Integer = 0 To n Step 1
+            Dim pID As Integer = objContent.randStack.comm.RandomSelection(tilesList, True)
+            tilesList.Remove(pID)
+            Dim x As Integer = tiles(pID).X
+            Dim y As Integer = tiles(pID).Y
 
+            'ландшафт
+            res.landscape(x, y).owner = objContent.randStack.comm.defValues.RaceNumberToRaceChar(objContent.randStack.comm.RaceIdentifierToSubrace("Neutral"))
+            If m.board(x, y).isWater Then
+                res.landscape(x, y).ground = TileState.GroundType.Water
+            Else
+                If m.board(x, y).isForest Then
+                    res.landscape(x, y).ground = TileState.GroundType.Forest
+                ElseIf m.board(x, y).isRoad Then
+                    res.landscape(x, y).ground = TileState.GroundType.Road
+                Else
+                    res.landscape(x, y).ground = TileState.GroundType.Plain
+                End If
+            End If
 
+            name = m.board(x, y).objectName
+
+            'объекты местности
+            If Not name = "" Then
+                If m.board(x, y).objectID = DefMapObjects.Types.Capital Then
+                    Call AddObject(res.capitals, x, y, name)
+                ElseIf m.board(x, y).objectID = DefMapObjects.Types.City Then
+                    Dim pos As New Point(x, y)
+                    Dim owner As String = m.board(x, y).City.race
+                    Dim level As Integer = m.board(x, y).City.level
+
+                    Dim desiredStatsExter As AllDataStructues.DesiredStats = Nothing
+                    Dim desiredStatsInter As AllDataStructues.DesiredStats = Nothing
+                    Dim stackExter As AllDataStructues.Stack = Nothing
+                    Dim stackInter As AllDataStructues.Stack = Nothing
+                    If m.groupStats.ContainsKey(m.board(x, y).groupID) Then
+                        desiredStatsExter = m.groupStats.Item(m.board(x, y).groupID)
+                        stackExter = objContent.randStack.Gen(desiredStatsExter, 0, True, False, pos, lordsList)
+                    End If
+                    If m.groupStats.ContainsKey(-m.board(x, y).groupID) Then
+                        desiredStatsInter = m.groupStats.Item(-m.board(x, y).groupID)
+                        stackInter = objContent.randStack.Gen(desiredStatsInter, 0, True, True, pos, lordsList)
+                    End If
+                    Call AddObject(res.cities, x, y, name, desiredStatsExter, desiredStatsInter, stackExter, stackInter, owner, level)
+                ElseIf m.board(x, y).objectID = DefMapObjects.Types.Vendor Then
+                    Dim content As List(Of String) = objContent.GetMerchantListSettings(m, gLocSettings, x, y)
+                    Dim items As List(Of String) = objContent.MakeMerchantItemsList(New AllDataStructues.DesiredStats With {.shopContent = content}, Nothing, m.log)
+                    Call AddObject(res.merchantsItems, x, y, name, items, objContent)
+                ElseIf m.board(x, y).objectID = DefMapObjects.Types.Mercenary Then
+                    Dim content As List(Of String) = objContent.GetMercenariesListSettings(m, gLocSettings, x, y, settGen.common_settMap.nRaces)
+                    Dim items As List(Of String) = objContent.MakeMercenariesList(New AllDataStructues.DesiredStats With {.shopContent = content}, m.log)
+                    Call AddObject(res.merchantsUnits, x, y, name, items, objContent)
+                ElseIf m.board(x, y).objectID = DefMapObjects.Types.Mage Then
+                    Dim content As List(Of String) = objContent.GetSpellsListSettings(m, gLocSettings, x, y, settGen.common_settMap.nRaces)
+                    Dim items As List(Of String) = objContent.MakeSpellsList(New AllDataStructues.DesiredStats With {.shopContent = content}, allMines, m.log)
+                    Call AddObject(res.merchantsSpells, x, y, name, items, objContent)
+                ElseIf m.board(x, y).objectID = DefMapObjects.Types.Trainer Then
+                    Call AddObject(res.trainers, x, y, name)
+                ElseIf m.board(x, y).objectID = DefMapObjects.Types.Ruins Then
+                    Dim pos As New Point(x, y)
+                    Dim desiredStats As AllDataStructues.DesiredStats = m.groupStats.Item(m.board(x, y).groupID)
+                    Dim stack As AllDataStructues.Stack = objContent.randStack.Gen(desiredStats, 0, Not m.board(x, y).isWater, True, pos, lordsList)
+                    Dim itemCost As Integer = objContent.randStack.rndgen.RndInt(CInt(0.25 * desiredStats.LootCost), desiredStats.LootCost, True)
+                    Dim loot As String = objContent.randStack.ThingGen(itemCost, RuinIGen, Nothing, pos)
+                    Dim resources As AllDataStructues.Cost = New AllDataStructues.Cost With {.Gold = desiredStats.LootCost}
+                    If Not loot = "" Then resources.Gold -= AllDataStructues.Cost.Sum(objContent.randStack.LootCost(loot))
+                    stack.items.Clear()
+                    stack.items.Add(loot)
+                    Call AddObject(res.ruins, x, y, name, desiredStats, stack, resources)
+                ElseIf m.board(x, y).objectID = DefMapObjects.Types.Mine Then
+                    'do nothing
+                ElseIf m.board(x, y).objectID = DefMapObjects.Types.None Then
+                    If name.ToUpper.Contains(GenDefaultValues.wObjKeyMountain.ToUpper) Then
+                        Call AddObject(res.mountains, x, y, name)
+                    Else
+                        Call AddObject(res.landmarks, x, y, name)
+                    End If
+                Else
+                    Throw New Exception("shortMapFormat.MapConversion: unknown object type")
+                End If
+            ElseIf m.board(x, y).GuardLoc Or m.board(x, y).PassGuardLoc Or m.board(x, y).isObjectGuard Then
+                Dim desiredStats As AllDataStructues.DesiredStats = m.groupStats.Item(m.board(x, y).groupID)
+                Dim stack As AllDataStructues.Stack = objContent.randStack.Gen(desiredStats, 0, Not m.board(x, y).isWater, False, New Point(x, y), lordsList)
+                Call AddObject(res.stacks, x, y, desiredStats, stack)
+            End If
+        Next i
+        Return res
     End Function
     Private Shared Sub AddObject(ByRef AddTo() As simpleObject, ByRef x As Integer, ByRef y As Integer, ByRef name As String)
         ReDim Preserve AddTo(AddTo.Length)
         AddTo(UBound(AddTo)) = New simpleObject With {.pos = New Point(x, y), .id = name}
+    End Sub
+    Private Shared Sub AddObject(ByRef AddTo() As StackObject, ByRef x As Integer, ByRef y As Integer, _
+                                 ByRef settings As AllDataStructues.DesiredStats, ByRef stack As AllDataStructues.Stack)
+        ReDim Preserve AddTo(AddTo.Length)
+        AddTo(UBound(AddTo)) = New StackObject With {.pos = New Point(x, y), .stack = stack, .stackSettings = settings}
+    End Sub
+    Private Shared Sub AddObject(ByRef AddTo() As RuinObject, ByRef x As Integer, ByRef y As Integer, ByRef name As String, ByRef settings As AllDataStructues.DesiredStats, _
+                                 ByRef stack As AllDataStructues.Stack, ByRef rewardRes As AllDataStructues.Cost)
+        ReDim Preserve AddTo(AddTo.Length)
+        AddTo(UBound(AddTo)) = New RuinObject With {.pos = New Point(x, y), .id = name, .internalStack = stack, .internalStackSettings = settings, _
+                                                    .resourcesReward = rewardRes}
+    End Sub
+    Private Shared Sub AddObject(ByRef AddTo() As CityObject, ByRef x As Integer, ByRef y As Integer, ByRef name As String, _
+                                 ByRef settingsExter As AllDataStructues.DesiredStats, ByRef settingsInter As AllDataStructues.DesiredStats, _
+                                 ByRef stackExter As AllDataStructues.Stack, ByRef stackInter As AllDataStructues.Stack, _
+                                 ByRef owner As String, ByRef level As Integer)
+        ReDim Preserve AddTo(AddTo.Length)
+        AddTo(UBound(AddTo)) = New CityObject With {.pos = New Point(x, y), .id = name, .exteternalStack = stackExter, .internalStack = stackInter, _
+                                                    .externalStackSettings = settingsExter, .internalStackSettings = settingsInter, .owner = owner, _
+                                                    .level = level}
     End Sub
     Private Shared Sub AddObject(ByRef AddTo() As MerchantItemObject, ByRef x As Integer, ByRef y As Integer, ByRef name As String, ByRef content As List(Of String), ByRef objContent As ObjectsContentSet)
         ReDim Preserve AddTo(AddTo.Length)
@@ -4855,8 +4928,8 @@ Public Class Map
         complited = Nothing
     End Sub
 
-    Public Function MapConversion(ByRef r As ObjectsContentSet, ByRef fullSymmetry As Boolean) As shortMapFormat
-        'Return shortMapFormat.MapConversion(Me, r, fullSymmetry)
+    Public Function MapConversion(ByRef settGen As ImpenetrableMeshGen.GenSettings, ByRef objContent As ObjectsContentSet, ByRef fullSymmetry As Boolean, ByRef usePlayableRaceUnitsInNeutralStacks As Boolean) As shortMapFormat
+        Return shortMapFormat.MapConversion(Me, settGen, objContent, fullSymmetry, usePlayableRaceUnitsInNeutralStacks)
     End Function
 
 End Class
@@ -7504,7 +7577,6 @@ Public Class ObjectsContentSet
     Private typeMinCost(-1), typeMaxCost(-1) As Integer
 
     ''' <param name="RStack">Инициализированный класс</param>
-    ''' <param name="AllSpells">Dсе заклинания в игре</param>
     Public Sub New(ByRef RStack As RandStack)
 
         randStack = RStack

@@ -155,7 +155,6 @@ mercenariesMinExpBar		200	250
 #Количество наемников в лагере
 mercenariesCount		3	5
 
-
 #Максимальная стоимость расходуемого предмета у торговца
 merchMaxConsumableItemCost		500		600
 #Минимальная стоимость расходуемого предмета у торговца
@@ -191,7 +190,7 @@ maxRadiusDispersion		0.3
 
 maxGoldMines			1.0	1.0
 maxManaSources			1.0	1.0
-maxCities			0.0
+maxCities			1.0
 maxVendors			0.0
 maxMercenaries			1.0
 maxMages			1.0
