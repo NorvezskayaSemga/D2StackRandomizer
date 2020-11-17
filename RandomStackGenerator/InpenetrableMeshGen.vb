@@ -7759,7 +7759,7 @@ Public Class ObjectsContentSet
                 For spellLevel As Integer = level To 0 Step -1
                     For Each s As AllDataStructues.Spell In spells.Values
                         If Not res.Contains(s.spellID) AndAlso AddSpell(spellLevel, rlist(rr), mass, _
-                                                                     availMana, ignoreAvailMana, s) Then
+                                                                        availMana, ignoreAvailMana, s) Then
                             If type > -1 Then
                                 If s.category = type Then slist.Add(s.spellID)
                             Else
@@ -7782,6 +7782,8 @@ Public Class ObjectsContentSet
     End Function
     Private Function AddSpell(ByRef level As Integer, ByRef race As Integer, ByRef mass As Boolean, _
                               ByRef avail As AllDataStructues.Cost, ByRef ignoreAvail As Boolean, ByRef s As AllDataStructues.Spell) As Boolean
+        If randStack.comm.IsExcluded(s) Then Return False
+
         If Not mass And s.area > 998 Then Return False
         If level > 0 And Not s.level = level Then Return False
 

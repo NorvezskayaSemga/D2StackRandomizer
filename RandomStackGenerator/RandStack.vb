@@ -1921,7 +1921,6 @@ Public Class Common
         Return excludedObjects.Contains(itemType.Item(iType).ToUpper)
     End Function
 
-
     Friend Function IsPreserved(ByRef item As AllDataStructues.Item) As Boolean
         If item.type = GenDefaultValues.ItemTypes.special Then Return True
         If preservedItems.Contains(item.itemID.ToUpper) Then Return True
@@ -2326,7 +2325,7 @@ Public Class Common
     End Function
 
     Delegate Sub readFunction(ByRef paths() As String)
-    ''' <summary>Читает список юнитов и предметов, которые не должен использовать генератор</summary>
+    ''' <summary>Читает список юнитов, предметов и заклинаний, которые не должен использовать генератор</summary>
     ''' <param name="ExcludeLists">Файлы со списками исключенных объектов. Записи в них могут повторяться. 
     ''' Допускается передача неинициализитрованного массива.
     ''' Для чтения из дефолтного листа в массив нужно добавить строчку %default% (наличие этого ключевого в файле запустит чтение дефолтного файла).
@@ -2343,7 +2342,7 @@ Public Class Common
         Next i
         If Not IsNothing(onExcludedListChanged) Then Call onExcludedListChanged()
     End Sub
-    ''' <summary>Читает список юнитов и предметов, которые не должен использовать генератор</summary>
+    ''' <summary>Читает список юнитов, предметов и заклинаний, которые не должен использовать генератор</summary>
     ''' <param name="ExcludeLists">Файлы со списками исключенных объектов. Записи в них могут повторяться. 
     ''' Допускается передача неинициализитрованного массива.
     ''' Не воспринимает ключевые слова</param>
@@ -2503,7 +2502,7 @@ Public Class Common
         Dim s() As String = PlateauConstructionDescription.ToArray
         Call ReadFile(4, s, "", Nothing, Nothing)
     End Sub
-    ''' <summary>Читает список юнитов и предметов, которые не должен использовать генератор</summary>
+    ''' <summary>Читает список юнитов, предметов и заклинаний, которые не должен использовать генератор</summary>
     ''' <param name="PreservedLists">Файлы со списками предметов, которые нельзя перегенерировать. Записи в них могут повторяться. 
     ''' Допускается передача неинициализитрованного массива.
     ''' Для чтения из дефолтного листа в массив нужно добавить строчку %default% (наличие этого ключевого в файле запустит чтение дефолтного файла)</param>
@@ -2517,7 +2516,7 @@ Public Class Common
             Call ReadFile(8, s, PreservedLists(i), AddressOf ReadPreservedItemsList, defaultKeys)
         Next i
     End Sub
-    ''' <summary>Читает список юнитов и предметов, которые не должен использовать генератор</summary>
+    ''' <summary>Читает список юнитов, предметов и заклинаний, которые не должен использовать генератор</summary>
     ''' <param name="PreservedLists">Файлы со списками предметов, которые нельзя перегенерировать. Записи в них могут повторяться. 
     ''' Допускается передача неинициализитрованного массива.
     ''' Не воспринимает ключевые слова</param>
