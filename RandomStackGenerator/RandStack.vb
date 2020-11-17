@@ -1908,7 +1908,7 @@ Public Class Common
     End Function
     Protected Friend Function IsExcluded(ByRef item As AllDataStructues.Item) As Boolean
         If excludedObjects.Contains(item.itemID.ToUpper) Then Return True
-        If excludedObjects.Contains(itemType.Item(item.type).ToUpper) Then Return True
+        If IsExcluded(item.type) Then Return True
         Return False
     End Function
     Protected Friend Function IsExcluded(ByRef unit As AllDataStructues.Unit) As Boolean
@@ -1917,14 +1917,23 @@ Public Class Common
     Protected Friend Function IsExcluded(ByRef spell As AllDataStructues.Spell) As Boolean
         Return excludedObjects.Contains(spell.spellID.ToUpper)
     End Function
-    Protected Friend Function IsExcluded(ByRef ID As String) As Boolean
-        Return excludedObjects.Contains(ID.ToUpper)
+    Protected Friend Function IsExcluded(ByRef iType As Integer) As Boolean
+        Return excludedObjects.Contains(itemType.Item(iType).ToUpper)
     End Function
+
 
     Friend Function IsPreserved(ByRef item As AllDataStructues.Item) As Boolean
         If item.type = GenDefaultValues.ItemTypes.special Then Return True
         If preservedItems.Contains(item.itemID.ToUpper) Then Return True
         If preservedItems.Contains(itemType.Item(item.type).ToUpper) Then Return True
+        Return False
+    End Function
+    Friend Function IsPreserved(ByRef unit As AllDataStructues.Unit) As Boolean
+        If preservedItems.Contains(unit.unitID.ToUpper) Then Return True
+        Return False
+    End Function
+    Friend Function IsPreserved(ByRef spell As AllDataStructues.Spell) As Boolean
+        If preservedItems.Contains(spell.spellID.ToUpper) Then Return True
         Return False
     End Function
 

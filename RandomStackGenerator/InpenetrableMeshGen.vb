@@ -8108,32 +8108,28 @@ Public Class ObjectsContentSet
             output = GetRandomMode(input, {0.25, 1, 1, 1}, AddressOf GetSpellsListSettings)
         ElseIf mode = 1 Then
             output = GetSettingsCommon(input)
-        ElseIf mode = 2 Then
-            For Each item In input
-                spell = randStack.FindSpellStats(item)
-                If Not spell.spellID = "" Then
-                    Dim prop As String = SpellProperties(spell)
-                    output.Add(prop)
-                End If
-            Next item
-        ElseIf mode = 3 Then
-            For Each item In input
-                spell = randStack.FindSpellStats(item)
-                If Not spell.spellID = "" Then
-                    output.Add(spell.category.ToString)
-                End If
-            Next item
-        ElseIf mode = 4 Then
-            For Each item In input
-                spell = randStack.FindSpellStats(item)
-                If Not spell.spellID = "" Then
-                    Dim prop As String = SpellProperties(spell)
-                    output.Add(spell.category.ToString & "#" & prop)
-                End If
-            Next item
         Else
-            Throw New Exception("Unknown mode: " & mode)
-            output = Nothing
+            For Each item As String In input
+                spell = randStack.FindSpellStats(item)
+                If Not spell.spellID = "" Then
+                    If randStack.comm.IsPreserved(spell) Then
+                        output.Add(spell.spellID.ToUpper)
+                    Else
+                        Dim category As String = spell.category.ToString
+                        Dim prop As String = SpellProperties(spell)
+                        If mode = 2 Then
+                            output.Add(prop)
+                        ElseIf mode = 3 Then
+                            output.Add(category)
+                        ElseIf mode = 4 Then
+                            output.Add(category & "#" & prop)
+                        Else
+                            Throw New Exception("Unknown mode: " & mode)
+                            output = Nothing
+                        End If
+                    End If
+                End If
+            Next item
         End If
         Return output
     End Function
@@ -8184,6 +8180,7 @@ Public Class ObjectsContentSet
         Next i
         Return res
     End Function
+
     ''' <summary>Вернет настройки генерации предметов</summary>
     ''' <param name="mode">-1 - случайный мод в каждой строчке, 1 - вернет ID, 2 - Цена, 3 - Тип, 4 - Тип#Цена</param>
     ''' <param name="input">ID заклинаний</param>
@@ -8202,37 +8199,28 @@ Public Class ObjectsContentSet
             output = GetRandomMode(input, {0.25, 1, 1, 1}, AddressOf GetMerchantListSettings)
         ElseIf mode = 1 Then
             output = GetSettingsCommon(input)
-        ElseIf mode = 2 Then
-            For Each item In input
-                thing = randStack.FindItemStats(item)
-                If randStack.comm.IsPreserved(thing) Then
-                    output.Add(item.ToUpper)
-                Else
-                    output.Add(AllDataStructues.Cost.Sum(thing.itemCost).ToString)
-                End If
-            Next item
-        ElseIf mode = 3 Then
-            For Each item In input
-                thing = randStack.FindItemStats(item)
-                If randStack.comm.IsPreserved(thing) Then
-                    output.Add(item.ToUpper)
-                Else
-                    output.Add(randStack.comm.itemType.Item(thing.type))
-                End If
-            Next item
-        ElseIf mode = 4 Then
-            For Each item In input
-                thing = randStack.FindItemStats(item)
-                If randStack.comm.IsPreserved(thing) Then
-                    output.Add(item.ToUpper)
-                Else
-                    output.Add(randStack.comm.itemType.Item(thing.type) & _
-                               "#" & AllDataStructues.Cost.Sum(thing.itemCost))
-                End If
-            Next item
         Else
-            Throw New Exception("Unknown mode: " & mode)
-            output = Nothing
+            For Each item In input
+                thing = randStack.FindItemStats(item)
+                If Not thing.itemID = "" Then
+                    If randStack.comm.IsPreserved(thing) Then
+                        output.Add(item.ToUpper)
+                    Else
+                        Dim cost As String = AllDataStructues.Cost.Sum(thing.itemCost).ToString
+                        Dim type As String = randStack.comm.itemType.Item(thing.type)
+                        If mode = 2 Then
+                            output.Add(cost)
+                        ElseIf mode = 3 Then
+                            output.Add(type)
+                        ElseIf mode = 4 Then
+                            output.Add(type & "#" & cost)
+                        Else
+                            Throw New Exception("Unknown mode: " & mode)
+                            output = Nothing
+                        End If
+                    End If
+                End If
+            Next item
         End If
         Return output
     End Function
@@ -8255,7 +8243,7 @@ Public Class ObjectsContentSet
         Next item
 
         For Each v As Integer In System.Enum.GetValues(GetType(GenDefaultValues.ItemTypes))
-            If randStack.comm.IsExcluded(randStack.comm.itemType.Item(v).ToUpper) AndAlso Not exclude.Contains(v) Then exclude.Add(v)
+            If randStack.comm.IsExcluded(v) AndAlso Not exclude.Contains(v) Then exclude.Add(v)
         Next v
         For Each deltaCost As Integer In {400, 200, 200, 100}
             selected = GenDefaultValues.ItemTypes.healing_elixir
@@ -8317,29 +8305,29 @@ Public Class ObjectsContentSet
             output = GetRandomMode(input, {0.25, 1, 1, 1}, AddressOf GetMercenariesListSettings)
         ElseIf mode = 1 Then
             output = GetSettingsCommon(input)
-        ElseIf mode = 2 Then
-            For Each item In input
-                unit = randStack.FindUnitStats(item)
-                Dim expNext As Integer = unit.EXPnext
-                If Not unit.small Then expNext = CInt(expNext * 0.5)
-                output.Add(expNext.ToString)
-            Next item
-        ElseIf mode = 3 Then
-            For Each item In input
-                unit = randStack.FindUnitStats(item)
-                output.Add(randStack.comm.defValues.RaceNumberToRaceChar(unit.race))
-            Next item
-        ElseIf mode = 4 Then
-            For Each item In input
-                unit = randStack.FindUnitStats(item)
-                Dim expNext As Integer = unit.EXPnext
-                If Not unit.small Then expNext = CInt(expNext * 0.5)
-                output.Add(randStack.comm.defValues.RaceNumberToRaceChar(unit.race) & _
-                           "#" & expNext.ToString)
-            Next item
         Else
-            Throw New Exception("Unknown mode: " & mode)
-            output = Nothing
+            For Each item In input
+                unit = randStack.FindUnitStats(item)
+                If Not unit.unitID = "" Then
+                    If randStack.comm.IsPreserved(unit) Then
+                        output.Add(item.ToUpper)
+                    Else
+                        Dim expNext As Integer = unit.EXPnext
+                        If Not unit.small Then expNext = CInt(expNext * 0.5)
+                        Dim race As String = randStack.comm.defValues.RaceNumberToRaceChar(unit.race)
+                        If mode = 2 Then
+                            output.Add(expNext.ToString)
+                        ElseIf mode = 3 Then
+                            output.Add(race)
+                        ElseIf mode = 4 Then
+                            output.Add(race & "#" & expNext.ToString)
+                        Else
+                            Throw New Exception("Unknown mode: " & mode)
+                            output = Nothing
+                        End If
+                    End If
+                End If
+            Next item
         End If
         Return output
     End Function
