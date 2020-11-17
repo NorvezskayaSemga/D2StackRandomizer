@@ -3786,7 +3786,6 @@ Public Class AttendedObject
     End Sub
 End Class
 
-
 Public Class shortMapFormat
 
     ''' <summary>Состояние тайлов</summary>
@@ -3811,7 +3810,7 @@ Public Class shortMapFormat
     Public stacks(-1) As StackObject
     ''' <summary>Руины</summary>
     Public ruins(-1) As RuinObject
-    ''' <summary>Руины</summary>
+    ''' <summary>Города</summary>
     Public cities(-1) As CityObject
 
     Public Class simpleObject
@@ -3884,9 +3883,12 @@ Public Class shortMapFormat
 
     ''' <summary>Конвертирует карту для более удобной записи в файл</summary>
     ''' <param name="m">Карта</param>
+    ''' <param name="settGen">Настройки генерации карты</param>
     ''' <param name="objContent">Полностью инициализированный класс</param>
-    ''' <param name="fullSymmetry">Если карта симметрична, сделать отряды и награды абсолютно симметричными</param>
-    Public Shared Function MapConversion(ByRef m As Map, ByRef settGen As ImpenetrableMeshGen.GenSettings, ByRef objContent As ObjectsContentSet, ByRef fullSymmetry As Boolean, ByRef usePlayableRaceUnitsInNeutralStacks As Boolean) As shortMapFormat
+    ''' <param name="fullSymmetry">Если карта симметрична, сделать отряды и награды абсолютно симметричными (пока не используется)</param>
+    ''' <param name="usePlayableRaceUnitsInNeutralStacks">Если True, то в нейтральных отрядах будут использованы юниты из веток развития</param>
+    Public Shared Function MapConversion(ByRef m As Map, ByRef settGen As ImpenetrableMeshGen.GenSettings, ByRef objContent As ObjectsContentSet, _
+                                         ByRef fullSymmetry As Boolean, ByRef usePlayableRaceUnitsInNeutralStacks As Boolean) As shortMapFormat
 
         Dim gLocSettings() As Map.SettingsLoc
         If settGen.genMode = ImpenetrableMeshGen.GenSettings.genModes.simple Then
@@ -3908,6 +3910,8 @@ Public Class shortMapFormat
 
         Dim lordsList() As String
         If usePlayableRaceUnitsInNeutralStacks Then
+            lordsList = Nothing
+        Else
             ReDim lordsList(settGen.common_settMap.nRaces - 1)
             Dim raceToLord As New Dictionary(Of Integer, String)
             For Each key As String In objContent.randStack.comm.LordsRace.Keys
@@ -3917,8 +3921,6 @@ Public Class shortMapFormat
             For i As Integer = 0 To settGen.common_settMap.nRaces - 1 Step 1
                 lordsList(i) = raceToLord.Item(m.Loc(i).Race)
             Next i
-        Else
-            lordsList = Nothing
         End If
         For y As Integer = 0 To UBound(m.board, 2) Step 1
             For x As Integer = 0 To UBound(m.board, 1) Step 1
