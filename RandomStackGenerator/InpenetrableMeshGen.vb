@@ -4942,6 +4942,8 @@ Public Class StackLocationsGen
     Private symm As SymmetryOperations
     Private comm As Common
 
+    Private guardBorderPoints() As Point
+
     Public Sub New(Optional ByRef gm As ImpenetrableMeshGen = Nothing)
         If IsNothing(gm) Then
             genmap = New ImpenetrableMeshGen
@@ -4950,6 +4952,26 @@ Public Class StackLocationsGen
         End If
         symm = genmap.symm
         comm = genmap.comm
+
+        ReDim guardBorderPoints(5 * 5 - 3 * 3 - 1)
+        Dim d As Integer = 2
+        Dim n As Integer = -1
+        For i As Integer = -1 To 2 Step 1
+            n += 1
+            guardBorderPoints(n) = New Point(-d, i)
+        Next i
+        For i As Integer = -1 To 2 Step 1
+            n += 1
+            guardBorderPoints(n) = New Point(i, d)
+        Next i
+        For i As Integer = 1 To -2 Step -1
+            n += 1
+            guardBorderPoints(n) = New Point(d, i)
+        Next i
+        For i As Integer = 1 To -2 Step -1
+            n += 1
+            guardBorderPoints(n) = New Point(i, -d)
+        Next i
     End Sub
 
     ''' <summary>Расставляет локации для отрядов на карту с подготовленную в InpenetrableMeshGen
@@ -5579,6 +5601,19 @@ Public Class StackLocationsGen
         Loop
         Return connected
     End Function
+
+    ''' <param name="m">карта</param>
+    ''' <param name="pointsList">список точек прохода</param>
+    ''' <param name="currentN">количество поставленных гвардов - 1</param>
+    ''' <param name="currentNLimit">максимальное количество гвардов</param>
+    ''' <param name="bestN">минимальное количество гвардов, которыми закрыли проход</param>
+    ''' <param name="currentOutput">текущее положение гвардов</param>
+    ''' <param name="bestOutput">лучшее положение гвардов</param>
+    ''' <param name="IDs">id точек для постановки гвардов (в случайном порядке)</param>
+    ''' <param name="selected">id выбранной точки</param>
+    ''' <param name="prevPassage">бэкап состоянияч прохода</param>
+    ''' <param name="justCheckGuardNecessity">просто проверит, нужны ли вообще гварды</param>
+    ''' <param name="term">лимит времени на задачу</param>
     Private Sub PlaceGuardLoc(ByRef m As Map, _
                               ByRef pointsList() As Point, _
                               ByRef currentN As Integer, _
@@ -5610,7 +5645,6 @@ Public Class StackLocationsGen
 
             currentOutput(currentN) = selected
 
-
             Dim b As Location.Borders = ImpenetrableMeshGen.NearestXY(pointsList(selected).X, _
                                                                       pointsList(selected).Y, _
                                                                       changedPassage.Size.X, _
@@ -5630,7 +5664,7 @@ Public Class StackLocationsGen
                 changedPassage.edgePoints(i) = New List(Of Point)
                 If prevPassage.edgePoints(i).Count > 0 Then
                     For Each p As Point In prevPassage.edgePoints(i)
-                        If Math.Abs(p.X - pointsList(selected).X) > 1 Or Math.Abs(p.Y - pointsList(selected).Y) > 1 Then
+                        If Math.Abs(p.X - pointsList(selected).X) > 1 OrElse Math.Abs(p.Y - pointsList(selected).Y) > 1 Then
                             changedPassage.edgePoints(i).Add(p)
                         End If
                     Next p
@@ -5641,7 +5675,7 @@ Public Class StackLocationsGen
         End If
 
         If currentN = currentNLimit Or justCheckGuardNecessity Then
-            If TestPassage(changedPassage, pointsList) Then
+            If TestPassage(changedPassage, pointsList, currentOutput) Then
                 If currentN = -1 Then
                     bestN = -1
                     Exit Sub
@@ -5669,7 +5703,9 @@ Public Class StackLocationsGen
                                bestOutput, IDs_bak, i, changedPassage, justCheckGuardNecessity, term)
         Next i
     End Sub
-    Private Function TestPassage(ByRef p As Passage, ByRef pointsList() As Point) As Boolean
+    Private Function TestPassage(ByRef p As Passage, ByRef pointsList() As Point, ByRef currentOutput() As Integer) As Boolean
+
+        If Not GuardPosFilter(p, pointsList, currentOutput) Then Return False
 
         Dim n As Integer = 0
         For i As Integer = 0 To UBound(p.edgePoints) Step 1
@@ -5743,6 +5779,51 @@ Public Class StackLocationsGen
             Next y1
         End If
         Return True
+    End Function
+    Private Function GuardPosFilter(ByRef p As Passage, ByRef pointsList() As Point, ByRef currentOutput() As Integer) As Boolean
+
+        Dim nGBP As Integer = UBound(guardBorderPoints)
+        Dim nSegments As Integer
+        Dim containEdgePoints As Boolean
+
+        For Each id As Integer In currentOutput
+            If id > -1 Then
+                containEdgePoints = False
+                For i As Integer = 0 To UBound(p.edgePoints) Step 1
+                    If p.edgePoints(i).Count > 0 Then
+                        For Each r As Point In p.edgePoints(i)
+                            If Math.Abs(r.X - pointsList(id).X) <= 1 AndAlso Math.Abs(r.Y - pointsList(id).Y) <= 1 Then
+                                containEdgePoints = True
+                                i = UBound(p.edgePoints)
+                                Exit For
+                            End If
+                        Next r
+                    End If
+                Next i
+                If Not containEdgePoints Then
+                    nSegments = 0
+                    For i As Integer = 1 To nGBP Step 1
+                        If GetPassageTileState(p, pointsList(id).X + guardBorderPoints(i - 1).X, _
+                                                  pointsList(id).Y + guardBorderPoints(i - 1).Y) > -1 _
+                         AndAlso GetPassageTileState(p, pointsList(id).X + guardBorderPoints(i).X, _
+                                                        pointsList(id).Y + guardBorderPoints(i).Y) < 0 Then
+                            nSegments += 1
+                        End If
+                    Next i
+                    If nSegments < 2 Then Return False
+                End If
+            Else
+                Exit For
+            End If
+        Next id
+        Return True
+    End Function
+    Private Function GetPassageTileState(ByRef p As Passage, ByRef x As Integer, ByRef y As Integer) As Integer
+        If x < 0 Then Return -1
+        If y < 0 Then Return -1
+        If x > UBound(p.passTiles, 1) Then Return -1
+        If y > UBound(p.passTiles, 2) Then Return -1
+        Return p.passTiles(x, y)
     End Function
     'Private Function NConnected(ByRef free(,) As Boolean, ByRef m As Map) As Integer
     '    Dim conn()(,) As Boolean = GetConnected(free)

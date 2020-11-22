@@ -67,7 +67,7 @@ minPassWidth	1.1
 minPassDist	7.0
 
 #–асставл€ть ли стражей проходов между локаци€ми
-AddGuardsBetweenLocations	False
+AddGuardsBetweenLocations	True
 
 #ћножитель силы стражей проходов между локаци€ми
 PassGuardsPowerMultiplicator	2.0
