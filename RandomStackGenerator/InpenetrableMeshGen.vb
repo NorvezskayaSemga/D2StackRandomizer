@@ -17,12 +17,6 @@ Public Class DefMapObjects
         Mine = 8
     End Enum
 
-    Public Const capitalEmpire As String = "G000FT0000HU0"
-    Public Const capitalUndead As String = "G000FT0000UN0"
-    Public Const capitalClans As String = "G000FT0000DWC0"
-    Public Const capitalLegions As String = "G000FT0000HE0"
-    Public Const capitalElves As String = "G000FT0000EL0"
-
     Public Const townT1 As String = "G000FT0000NE1"
     Public Const townT2 As String = "G000FT0000NE2"
     Public Const townT3 As String = "G000FT0000NE3"
@@ -3795,7 +3789,7 @@ Public Class shortMapFormat
     ''' <summary>Горы</summary>
     Public mountains(-1) As simpleObject
     ''' <summary>Столицы</summary>
-    Public capitals(-1) As simpleObject
+    Public capitals(-1) As CapitalObject
     ''' <summary>Шахты</summary>
     Public mines(-1) As simpleObject
     ''' <summary>Торговцы предметами</summary>
@@ -3812,6 +3806,20 @@ Public Class shortMapFormat
     Public ruins(-1) As RuinObject
     ''' <summary>Города</summary>
     Public cities(-1) As CityObject
+
+    Public Class OwnerType
+        ''' <summary>Обозначение расы владельца, используемое генератором</summary>
+        Public byGenereator As String
+        ''' <summary>Обозначение расы владельца, используемое игрой</summary>
+        Public byGame As String
+
+        ''' <param name="genR">Обозначение расы в генераторе</param>
+        ''' <param name="d">Инициализированный класс</param>
+        Public Sub New(ByRef genR As String, ByRef d As GenDefaultValues)
+            byGenereator = genr
+            byGame = d.generatorRaceToGameRace(genr.ToUpper)
+        End Sub
+    End Class
 
     Public Class simpleObject
         ''' <summary>Положение верхнего левого угла объекта</summary>
@@ -3854,8 +3862,8 @@ Public Class shortMapFormat
         Public exteternalStack As AllDataStructues.Stack
         ''' <summary>Уровень города</summary>
         Public level As Integer
-        ''' <summary>Владелец</summary>
-        Public owner As String
+        ''' <summary>Обозначение расы владельца</summary>
+        Public owner As OwnerType
     End Class
     Public Class MerchantItemObject
         Inherits simpleObject
@@ -3879,6 +3887,13 @@ Public Class shortMapFormat
         Public stackSettings As AllDataStructues.DesiredStats
         ''' <summary>Отряд</summary>
         Public stack As AllDataStructues.Stack
+        ''' <summary>Обозначение расы владельца</summary>
+        Public owner As OwnerType
+    End Class
+    Public Class CapitalObject
+        Inherits simpleObject
+        ''' <summary>Обозначение расы владельца</summary>
+        Public owner As OwnerType
     End Class
 
     ''' <summary>Конвертирует карту для более удобной записи в файл</summary>
@@ -3967,7 +3982,7 @@ Public Class shortMapFormat
             'объекты местности
             If Not name = "" Then
                 If m.board(x, y).objectID = DefMapObjects.Types.Capital Then
-                    Call AddObject(res.capitals, x, y, name)
+                    Call AddObject(res.capitals, x, y, name, objContent.randStack.comm.defValues)
                 ElseIf m.board(x, y).objectID = DefMapObjects.Types.City Then
                     Dim pos As New Point(x, y)
                     Dim owner As String = m.board(x, y).City.race
@@ -3985,7 +4000,7 @@ Public Class shortMapFormat
                         desiredStatsInter = m.groupStats.Item(-m.board(x, y).groupID)
                         stackInter = objContent.randStack.Gen(desiredStatsInter, 0, True, True, pos, lordsList)
                     End If
-                    Call AddObject(res.cities, x, y, name, desiredStatsExter, desiredStatsInter, stackExter, stackInter, owner, level)
+                    Call AddObject(res.cities, x, y, name, desiredStatsExter, desiredStatsInter, stackExter, stackInter, owner, level, objContent.randStack.comm.defValues)
                 ElseIf m.board(x, y).objectID = DefMapObjects.Types.Vendor Then
                     Dim content As List(Of String) = objContent.GetMerchantListSettings(m, gLocSettings, x, y)
                     Dim items As List(Of String) = objContent.MakeMerchantItemsList(New AllDataStructues.DesiredStats With {.shopContent = content}, Nothing, m.log)
@@ -4025,7 +4040,7 @@ Public Class shortMapFormat
             ElseIf m.board(x, y).GuardLoc Or m.board(x, y).PassGuardLoc Or m.board(x, y).isObjectGuard Then
                 Dim desiredStats As AllDataStructues.DesiredStats = m.groupStats.Item(m.board(x, y).groupID)
                 Dim stack As AllDataStructues.Stack = objContent.randStack.Gen(desiredStats, 0, Not m.board(x, y).isWater, False, New Point(x, y), lordsList)
-                Call AddObject(res.stacks, x, y, desiredStats, stack)
+                Call AddObject(res.stacks, x, y, desiredStats, stack, objContent.randStack.comm.defValues)
             End If
         Next i
         Return res
@@ -4035,9 +4050,11 @@ Public Class shortMapFormat
         AddTo(UBound(AddTo)) = New simpleObject With {.pos = New Point(x, y), .id = name}
     End Sub
     Private Shared Sub AddObject(ByRef AddTo() As StackObject, ByRef x As Integer, ByRef y As Integer, _
-                                 ByRef settings As AllDataStructues.DesiredStats, ByRef stack As AllDataStructues.Stack)
+                                 ByRef settings As AllDataStructues.DesiredStats, ByRef stack As AllDataStructues.Stack, _
+                                 ByRef d As GenDefaultValues)
         ReDim Preserve AddTo(AddTo.Length)
-        AddTo(UBound(AddTo)) = New StackObject With {.pos = New Point(x, y), .stack = stack, .stackSettings = settings}
+        AddTo(UBound(AddTo)) = New StackObject With {.pos = New Point(x, y), .stack = stack, .stackSettings = settings, _
+                                                     .owner = New OwnerType(d.RaceNumberToRaceChar.Item(d.linked_Races.Item("N")), d)}
     End Sub
     Private Shared Sub AddObject(ByRef AddTo() As RuinObject, ByRef x As Integer, ByRef y As Integer, ByRef name As String, ByRef settings As AllDataStructues.DesiredStats, _
                                  ByRef stack As AllDataStructues.Stack, ByRef rewardRes As AllDataStructues.Cost)
@@ -4048,11 +4065,11 @@ Public Class shortMapFormat
     Private Shared Sub AddObject(ByRef AddTo() As CityObject, ByRef x As Integer, ByRef y As Integer, ByRef name As String, _
                                  ByRef settingsExter As AllDataStructues.DesiredStats, ByRef settingsInter As AllDataStructues.DesiredStats, _
                                  ByRef stackExter As AllDataStructues.Stack, ByRef stackInter As AllDataStructues.Stack, _
-                                 ByRef owner As String, ByRef level As Integer)
+                                 ByRef owner As String, ByRef level As Integer, ByRef d As GenDefaultValues)
         ReDim Preserve AddTo(AddTo.Length)
         AddTo(UBound(AddTo)) = New CityObject With {.pos = New Point(x, y), .id = name, .exteternalStack = stackExter, .internalStack = stackInter, _
-                                                    .externalStackSettings = settingsExter, .internalStackSettings = settingsInter, .owner = owner, _
-                                                    .level = level}
+                                                    .externalStackSettings = settingsExter, .internalStackSettings = settingsInter, _
+                                                    .level = level, .owner = New OwnerType(owner, d)}
     End Sub
     Private Shared Sub AddObject(ByRef AddTo() As MerchantItemObject, ByRef x As Integer, ByRef y As Integer, ByRef name As String, ByRef content As List(Of String), ByRef objContent As ObjectsContentSet)
         ReDim Preserve AddTo(AddTo.Length)
@@ -4083,6 +4100,11 @@ Public Class shortMapFormat
             n += 1
             AddTo(UBound(AddTo)).content(n) = objContent.randStack.FindUnitStats(item)
         Next item
+    End Sub
+    Private Shared Sub AddObject(ByRef AddTo() As CapitalObject, ByRef x As Integer, ByRef y As Integer, ByRef name As String, ByRef d As GenDefaultValues)
+        ReDim Preserve AddTo(AddTo.Length)
+        Dim r As String = d.capitalToGeneratorRace(name)
+        AddTo(UBound(AddTo)) = New CapitalObject With {.pos = New Point(x, y), .id = name, .owner = New OwnerType(r, d)}
     End Sub
 
 End Class
@@ -6743,17 +6765,7 @@ Public Class ImpenetrableObjects
         For y As Integer = 0 To m.ySize Step 1
             For x As Integer = 0 To m.xSize Step 1
                 If m.board(x, y).objectID = DefMapObjects.Types.Capital Then
-                    If m.board(x, y).objRace.Item(0) = comm.RaceIdentifierToSubrace("H") Then
-                        m.board(x, y).objectName = DefMapObjects.capitalEmpire
-                    ElseIf m.board(x, y).objRace.Item(0) = comm.RaceIdentifierToSubrace("U") Then
-                        m.board(x, y).objectName = DefMapObjects.capitalUndead
-                    ElseIf m.board(x, y).objRace.Item(0) = comm.RaceIdentifierToSubrace("C") Then
-                        m.board(x, y).objectName = DefMapObjects.capitalClans
-                    ElseIf m.board(x, y).objRace.Item(0) = comm.RaceIdentifierToSubrace("L") Then
-                        m.board(x, y).objectName = DefMapObjects.capitalLegions
-                    ElseIf m.board(x, y).objRace.Item(0) = comm.RaceIdentifierToSubrace("E") Then
-                        m.board(x, y).objectName = DefMapObjects.capitalElves
-                    End If
+                    m.board(x, y).objectName = comm.defValues.generatorRaceToCapitalID(comm.defValues.RaceNumberToRaceChar(m.board(x, y).objRace.Item(0)))
                     locRace.Add(m.board(x, y).locID(0), comm.defValues.RaceNumberToRaceChar(m.board(x, y).objRace.Item(0)))
                 End If
             Next x

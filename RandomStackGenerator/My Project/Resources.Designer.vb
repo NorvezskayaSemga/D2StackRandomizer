@@ -109,6 +109,24 @@ Namespace My.Resources
         
         '''<summary>
         '''  Looks up a localized string similar to #строка, начинающаяся с решетки, игнорируется
+        '''#Соответствие между расами, ID рас в игре и ID столиц
+        '''
+        '''    G000FT0000HU0  H G000RR0000
+        '''    G000FT0000UN0  U G000RR0004
+        '''    G000FT0000DWC0 C G000RR0001
+        '''    G000FT0000HE0  L G000RR0002
+        '''    G000FT0000EL0  E G000RR0005
+        '''    G000FT0000NE0  N G000RR0004
+        '''.
+        '''</summary>
+        Friend ReadOnly Property Capitals() As String
+            Get
+                Return ResourceManager.GetString("Capitals", resourceCulture)
+            End Get
+        End Property
+        
+        '''<summary>
+        '''  Looks up a localized string similar to #строка, начинающаяся с решетки, игнорируется
         '''#файл, определяющий константы, используемые генератором
         '''#Параметр (без пробелов), значение (без пробелов), разделитель таб или пробел
         '''#слэш - перенос строки
@@ -398,7 +416,7 @@ Namespace My.Resources
         '''G000IG0024	1.2
         '''#Эликсир защиты от магии Смерти
         '''G001IG0036	1.2
-        '''#Эликсир защиты от  [rest of string was truncated]&quot;;.
+        '''#Эликсир защиты от м [rest of string was truncated]&quot;;.
         '''</summary>
         Friend ReadOnly Property LootItemChanceMultiplier() As String
             Get

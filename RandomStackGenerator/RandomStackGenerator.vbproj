@@ -132,6 +132,7 @@
     </Content>
   </ItemGroup>
   <ItemGroup>
+    <Content Include="Resources\Capitals.txt" />
     <Content Include="Resources\UnitRace.txt">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>

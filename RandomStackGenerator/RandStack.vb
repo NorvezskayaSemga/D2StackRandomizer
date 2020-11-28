@@ -3529,12 +3529,30 @@ Public Class GenDefaultValues
                 NeutralRaces(UBound(NeutralRaces)) = s.ToUpper
             End If
         Next line
+
+        Dim capitalRace() As String = ValueConverter.TxtSplit(Capitals)
+        generatorRaceToGameRace = New Dictionary(Of String, String)
+        generatorRaceToCapitalID = New Dictionary(Of String, String)
+        capitalToGeneratorRace = New Dictionary(Of String, String)
+        For Each line As String In capitalRace
+            Dim s() As String = line.Split(CChar(" "))
+            Dim cap As String = s(0).ToUpper
+            Dim genR As String = RaceNumberToRaceChar.Item(linked_Races.Item(s(1).ToUpper))
+            Dim gameR As String = s(2).ToUpper
+            generatorRaceToGameRace.Add(genR, gameR)
+            generatorRaceToCapitalID.Add(genR, cap)
+            capitalToGeneratorRace.Add(cap, genR)
+        Next line
     End Sub
+
 
     'common
     Public Property defaultSigma As Double
     Public Property playableRaces As String()
     Public Property neutralRaces As String()
+    Public Property generatorRaceToGameRace As Dictionary(Of String, String)
+    Public Property generatorRaceToCapitalID As Dictionary(Of String, String)
+    Public Property capitalToGeneratorRace As Dictionary(Of String, String)
 
     'units
     Public Property expBarDispersion As Double
@@ -3733,6 +3751,9 @@ Public Class GenDefaultValues
     End Function
     Public Function PlayableSubraces() As String
         Return ReadResources("PlayableSubraces", My.Resources.PlayableSubraces)
+    End Function
+    Public Function Capitals() As String
+        Return ReadResources("Capitals", My.Resources.Capitals)
     End Function
 
 End Class
