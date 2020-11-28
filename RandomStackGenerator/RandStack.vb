@@ -3534,6 +3534,7 @@ Public Class GenDefaultValues
         generatorRaceToGameRace = New Dictionary(Of String, String)
         generatorRaceToCapitalID = New Dictionary(Of String, String)
         capitalToGeneratorRace = New Dictionary(Of String, String)
+        gameRaceToGeneratorRace = New Dictionary(Of String, String)
         For Each line As String In capitalRace
             Dim s() As String = line.Split(CChar(" "))
             Dim cap As String = s(0).ToUpper
@@ -3542,6 +3543,7 @@ Public Class GenDefaultValues
             generatorRaceToGameRace.Add(genR, gameR)
             generatorRaceToCapitalID.Add(genR, cap)
             capitalToGeneratorRace.Add(cap, genR)
+            gameRaceToGeneratorRace.Add(gameR, genR)
         Next line
     End Sub
 
@@ -3553,6 +3555,7 @@ Public Class GenDefaultValues
     Public Property generatorRaceToGameRace As Dictionary(Of String, String)
     Public Property generatorRaceToCapitalID As Dictionary(Of String, String)
     Public Property capitalToGeneratorRace As Dictionary(Of String, String)
+    Public Property gameRaceToGeneratorRace As Dictionary(Of String, String)
 
     'units
     Public Property expBarDispersion As Double

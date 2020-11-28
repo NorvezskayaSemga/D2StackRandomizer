@@ -3894,6 +3894,8 @@ Public Class shortMapFormat
         Inherits simpleObject
         ''' <summary>Обозначение расы владельца</summary>
         Public owner As OwnerType
+        ''' <summary>ID лорда владельца</summary>
+        Public lord As String
     End Class
 
     ''' <summary>Конвертирует карту для более удобной записи в файл</summary>
@@ -3982,7 +3984,7 @@ Public Class shortMapFormat
             'объекты местности
             If Not name = "" Then
                 If m.board(x, y).objectID = DefMapObjects.Types.Capital Then
-                    Call AddObject(res.capitals, x, y, name, objContent.randStack.comm.defValues)
+                    Call AddObject(res.capitals, x, y, name, objContent)
                 ElseIf m.board(x, y).objectID = DefMapObjects.Types.City Then
                     Dim pos As New Point(x, y)
                     Dim owner As String = m.board(x, y).City.race
@@ -4101,10 +4103,11 @@ Public Class shortMapFormat
             AddTo(UBound(AddTo)).content(n) = objContent.randStack.FindUnitStats(item)
         Next item
     End Sub
-    Private Shared Sub AddObject(ByRef AddTo() As CapitalObject, ByRef x As Integer, ByRef y As Integer, ByRef name As String, ByRef d As GenDefaultValues)
+    Private Shared Sub AddObject(ByRef AddTo() As CapitalObject, ByRef x As Integer, ByRef y As Integer, ByRef name As String, ByRef objC As ObjectsContentSet)
         ReDim Preserve AddTo(AddTo.Length)
-        Dim r As String = d.capitalToGeneratorRace(name)
-        AddTo(UBound(AddTo)) = New CapitalObject With {.pos = New Point(x, y), .id = name, .owner = New OwnerType(r, d)}
+        Dim r As String = objC.randStack.comm.defValues.capitalToGeneratorRace(name)
+        AddTo(UBound(AddTo)) = New CapitalObject With {.pos = New Point(x, y), .id = name, .owner = New OwnerType(r, objC.randStack.comm.defValues), _
+                                                       .lord = objC.LordRandomizer(r, False)}
     End Sub
 
 End Class
@@ -8453,6 +8456,29 @@ Public Class ObjectsContentSet
             res.Add(mercRace & "#" & bar)
         Next i
         Return res
+    End Function
+
+    ''' <summary>Вернет ID случайного лорда, соответствующего расе</summary>
+    ''' <param name="race">Раса</param>
+    ''' <param name="isGameRace">True - раса в виде G000RR0000, False - раса обозначена символом, используемым генератором</param>
+    Public Function LordRandomizer(ByRef race As String, ByRef isGameRace As Boolean) As String
+        Dim r As Integer
+        If isGameRace Then
+            r = randStack.comm.RaceIdentifierToSubrace(randStack.comm.defValues.gameRaceToGeneratorRace.Item(race.ToUpper))
+        Else
+            r = randStack.comm.RaceIdentifierToSubrace(race.ToUpper)
+        End If
+        Dim ids As New List(Of Integer)
+        Dim lords(randStack.comm.LordsRace.Count - 1) As String
+        Dim n As Integer = -1
+        For Each lord As String In randStack.comm.LordsRace.Keys
+            n += 1
+            lords(n) = lord
+            If randStack.comm.LordsRace.Item(lord) = r Then ids.Add(n)
+        Next lord
+        If ids.Count = 0 Then Throw New Exception("Нет ни одного лорда, соответствующего заданной расе")
+        Dim selected As Integer = randStack.comm.RandomSelection(ids, True)
+        Return lords(selected)
     End Function
 
 End Class
