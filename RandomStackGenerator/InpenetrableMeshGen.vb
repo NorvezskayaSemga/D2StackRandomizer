@@ -3858,6 +3858,8 @@ Public Class shortMapFormat
         Public pos As Point
         ''' <summary>ID объекта GXXXWWXXXX</summary>
         Public id As String
+        ''' <summary>Размер объекта</summary>
+        Public size As Size
     End Class
     Public Structure TileState
         ''' <summary>See here GroundType</summary>
@@ -3936,8 +3938,14 @@ Public Class shortMapFormat
     ''' <param name="objContent">Полностью инициализированный класс</param>
     ''' <param name="fullSymmetry">Если карта симметрична, сделать отряды и награды абсолютно симметричными (пока не используется)</param>
     ''' <param name="usePlayableRaceUnitsInNeutralStacks">Если True, то в нейтральных отрядах будут использованы юниты из веток развития</param>
-    Public Shared Function MapConversion(ByRef m As Map, ByRef settGen As ImpenetrableMeshGen.GenSettings, ByRef objContent As ObjectsContentSet, _
-                                         ByRef fullSymmetry As Boolean, ByRef usePlayableRaceUnitsInNeutralStacks As Boolean) As shortMapFormat
+    Public Shared Function MapConversion(ByRef m As Map, _
+                                         ByRef settGen As ImpenetrableMeshGen.GenSettings, _
+                                         ByRef ObjectsSize() As ImpenetrableObjects.GlobalMapDecoration, _
+                                         ByRef objContent As ObjectsContentSet, _
+                                         ByRef fullSymmetry As Boolean, _
+                                         ByRef usePlayableRaceUnitsInNeutralStacks As Boolean) As shortMapFormat
+
+        Dim attObjects() As AttendedObject = (New ImpenetrableMeshGen).ActiveObjects
 
         Dim gLocSettings() As Map.SettingsLoc
         If settGen.genMode = ImpenetrableMeshGen.GenSettings.genModes.simple Then
@@ -3975,7 +3983,7 @@ Public Class shortMapFormat
             For x As Integer = 0 To UBound(m.board, 1) Step 1
                 If m.board(x, y).objectID = DefMapObjects.Types.Mine Then
                     name = m.board(x, y).objectName
-                    Call AddObject(res.mines, x, y, objContent.SetMineType(name))
+                    Call AddObject(res.mines, x, y, objContent.SetMineType(name), attObjects(DefMapObjects.Types.Mine).Size)
                     If Not allMines.Contains(res.mines(UBound(res.mines)).id) Then allMines.Add(res.mines(UBound(res.mines)).id)
                 End If
             Next x
@@ -4016,7 +4024,7 @@ Public Class shortMapFormat
             'объекты местности
             If Not name = "" Then
                 If m.board(x, y).objectID = DefMapObjects.Types.Capital Then
-                    Call AddObject(res.capitals, x, y, name, objContent)
+                    Call AddObject(res.capitals, x, y, name, objContent, attObjects)
                 ElseIf m.board(x, y).objectID = DefMapObjects.Types.City Then
                     Dim pos As New Point(x, y)
                     Dim owner As String = m.board(x, y).City.race
@@ -4034,21 +4042,21 @@ Public Class shortMapFormat
                         desiredStatsInter = m.groupStats.Item(-m.board(x, y).groupID)
                         stackInter = objContent.randStack.Gen(desiredStatsInter, 0, True, True, pos, lordsList)
                     End If
-                    Call AddObject(res.cities, x, y, name, desiredStatsExter, desiredStatsInter, stackExter, stackInter, owner, level, objContent.randStack.comm.defValues)
+                    Call AddObject(res.cities, x, y, name, desiredStatsExter, desiredStatsInter, stackExter, stackInter, owner, level, objContent.randStack.comm.defValues, attObjects)
                 ElseIf m.board(x, y).objectID = DefMapObjects.Types.Vendor Then
                     Dim content As List(Of String) = objContent.GetMerchantListSettings(m, gLocSettings, x, y)
                     Dim items As List(Of String) = objContent.MakeMerchantItemsList(New AllDataStructues.DesiredStats With {.shopContent = content}, Nothing, m.log)
-                    Call AddObject(res.merchantsItems, x, y, name, items, objContent)
+                    Call AddObject(res.merchantsItems, x, y, name, items, objContent, attObjects)
                 ElseIf m.board(x, y).objectID = DefMapObjects.Types.Mercenary Then
                     Dim content As List(Of String) = objContent.GetMercenariesListSettings(m, gLocSettings, x, y, settGen.common_settMap.nRaces)
                     Dim items As List(Of String) = objContent.MakeMercenariesList(New AllDataStructues.DesiredStats With {.shopContent = content}, m.log)
-                    Call AddObject(res.merchantsUnits, x, y, name, items, objContent)
+                    Call AddObject(res.merchantsUnits, x, y, name, items, objContent, attObjects)
                 ElseIf m.board(x, y).objectID = DefMapObjects.Types.Mage Then
                     Dim content As List(Of String) = objContent.GetSpellsListSettings(m, gLocSettings, x, y, settGen.common_settMap.nRaces)
                     Dim items As List(Of String) = objContent.MakeSpellsList(New AllDataStructues.DesiredStats With {.shopContent = content}, allMines, m.log)
-                    Call AddObject(res.merchantsSpells, x, y, name, items, objContent)
+                    Call AddObject(res.merchantsSpells, x, y, name, items, objContent, attObjects)
                 ElseIf m.board(x, y).objectID = DefMapObjects.Types.Trainer Then
-                    Call AddObject(res.trainers, x, y, name)
+                    Call AddObject(res.trainers, x, y, name, attObjects(DefMapObjects.Types.Trainer).Size)
                 ElseIf m.board(x, y).objectID = DefMapObjects.Types.Ruins Then
                     Dim pos As New Point(x, y)
                     Dim desiredStats As AllDataStructues.DesiredStats = m.groupStats.Item(m.board(x, y).groupID)
@@ -4059,14 +4067,14 @@ Public Class shortMapFormat
                     If Not loot = "" Then resources.Gold -= AllDataStructues.Cost.Sum(objContent.randStack.LootCost(loot))
                     stack.items.Clear()
                     stack.items.Add(loot)
-                    Call AddObject(res.ruins, x, y, name, desiredStats, stack, resources)
+                    Call AddObject(res.ruins, x, y, name, desiredStats, stack, resources, attObjects)
                 ElseIf m.board(x, y).objectID = DefMapObjects.Types.Mine Then
                     'do nothing
                 ElseIf m.board(x, y).objectID = DefMapObjects.Types.None Then
-                    If name.ToUpper.Contains(GenDefaultValues.wObjKeyMountain.ToUpper) Then
-                        Call AddObject(res.mountains, x, y, name)
+                    If name.ToUpper.StartsWith(GenDefaultValues.wObjKeyMountain.ToUpper) Then
+                        Call AddObject(res.mountains, x, y, name, ImpenetrableObjects.GlobalMapDecoration.MountainSize(name))
                     Else
-                        Call AddObject(res.landmarks, x, y, name)
+                        Call AddObject(res.landmarks, x, y, name, ImpenetrableObjects.GlobalMapDecoration.GetObjectSize(ObjectsSize, name))
                     End If
                 Else
                     Throw New Exception("shortMapFormat.MapConversion: unknown object type")
@@ -4079,35 +4087,60 @@ Public Class shortMapFormat
         Next i
         Return res
     End Function
-    Private Shared Sub AddObject(ByRef AddTo() As simpleObject, ByRef x As Integer, ByRef y As Integer, ByRef name As String)
+    Private Shared Sub AddObject(ByRef AddTo() As simpleObject, ByRef x As Integer, ByRef y As Integer, ByRef name As String, _
+                                 ByRef size As Size)
         ReDim Preserve AddTo(AddTo.Length)
-        AddTo(UBound(AddTo)) = New simpleObject With {.pos = New Point(x, y), .id = name}
+        AddTo(UBound(AddTo)) = New simpleObject With {.pos = New Point(x, y), _
+                                                      .id = name, _
+                                                      .size = New Size(size.Width, size.Height)}
+    End Sub
+    Private Shared Sub AddObject(ByRef AddTo() As simpleObject, ByRef x As Integer, ByRef y As Integer, ByRef name As String, _
+                                 ByRef size As Integer)
+        Call AddObject(AddTo, x, y, name, New Size(size, size))
     End Sub
     Private Shared Sub AddObject(ByRef AddTo() As StackObject, ByRef x As Integer, ByRef y As Integer, _
                                  ByRef settings As AllDataStructues.DesiredStats, ByRef stack As AllDataStructues.Stack, _
                                  ByRef d As GenDefaultValues)
         ReDim Preserve AddTo(AddTo.Length)
-        AddTo(UBound(AddTo)) = New StackObject With {.pos = New Point(x, y), .stack = stack, .stackSettings = settings, _
+        AddTo(UBound(AddTo)) = New StackObject With {.pos = New Point(x, y), _
+                                                     .stack = stack, _
+                                                     .stackSettings = settings, _
                                                      .owner = New OwnerType(d.RaceNumberToRaceChar.Item(d.linked_Races.Item("N")), d)}
     End Sub
     Private Shared Sub AddObject(ByRef AddTo() As RuinObject, ByRef x As Integer, ByRef y As Integer, ByRef name As String, ByRef settings As AllDataStructues.DesiredStats, _
-                                 ByRef stack As AllDataStructues.Stack, ByRef rewardRes As AllDataStructues.Cost)
+                                 ByRef stack As AllDataStructues.Stack, ByRef rewardRes As AllDataStructues.Cost, ByRef attObj() As AttendedObject)
         ReDim Preserve AddTo(AddTo.Length)
-        AddTo(UBound(AddTo)) = New RuinObject With {.pos = New Point(x, y), .id = name, .internalStack = stack, .internalStackSettings = settings, _
-                                                    .resourcesReward = rewardRes}
+        Dim s As Integer = attObj(DefMapObjects.Types.Ruins).Size
+        AddTo(UBound(AddTo)) = New RuinObject With {.pos = New Point(x, y), _
+                                                    .id = name, _
+                                                    .internalStack = stack, _
+                                                    .internalStackSettings = settings, _
+                                                    .resourcesReward = rewardRes, _
+                                                    .size = New Size(s, s)}
     End Sub
     Private Shared Sub AddObject(ByRef AddTo() As CityObject, ByRef x As Integer, ByRef y As Integer, ByRef name As String, _
                                  ByRef settingsExter As AllDataStructues.DesiredStats, ByRef settingsInter As AllDataStructues.DesiredStats, _
                                  ByRef stackExter As AllDataStructues.Stack, ByRef stackInter As AllDataStructues.Stack, _
-                                 ByRef owner As String, ByRef level As Integer, ByRef d As GenDefaultValues)
+                                 ByRef owner As String, ByRef level As Integer, ByRef d As GenDefaultValues, ByRef attObj() As AttendedObject)
         ReDim Preserve AddTo(AddTo.Length)
-        AddTo(UBound(AddTo)) = New CityObject With {.pos = New Point(x, y), .id = name, .exteternalStack = stackExter, .internalStack = stackInter, _
-                                                    .externalStackSettings = settingsExter, .internalStackSettings = settingsInter, _
-                                                    .level = level, .owner = New OwnerType(owner, d)}
+        Dim s As Integer = attObj(DefMapObjects.Types.City).Size
+        AddTo(UBound(AddTo)) = New CityObject With {.pos = New Point(x, y), _
+                                                    .id = name, _
+                                                    .exteternalStack = stackExter, _
+                                                    .internalStack = stackInter, _
+                                                    .externalStackSettings = settingsExter, _
+                                                    .internalStackSettings = settingsInter, _
+                                                    .level = level, _
+                                                    .owner = New OwnerType(owner, d), _
+                                                    .size = New Size(s, s)}
     End Sub
-    Private Shared Sub AddObject(ByRef AddTo() As MerchantItemObject, ByRef x As Integer, ByRef y As Integer, ByRef name As String, ByRef content As List(Of String), ByRef objContent As ObjectsContentSet)
+    Private Shared Sub AddObject(ByRef AddTo() As MerchantItemObject, ByRef x As Integer, ByRef y As Integer, ByRef name As String, _
+                                 ByRef content As List(Of String), ByRef objContent As ObjectsContentSet, ByRef attObj() As AttendedObject)
         ReDim Preserve AddTo(AddTo.Length)
-        AddTo(UBound(AddTo)) = New MerchantItemObject With {.pos = New Point(x, y), .id = name}
+        Dim s As Integer = attObj(DefMapObjects.Types.Vendor).Size
+        AddTo(UBound(AddTo)) = New MerchantItemObject With {.pos = New Point(x, y), _
+                                                            .id = name, _
+                                                            .size = New Size(s, s)}
         ReDim AddTo(UBound(AddTo)).content(content.Count - 1)
         Dim n As Integer = -1
         For Each item As String In content
@@ -4115,9 +4148,13 @@ Public Class shortMapFormat
             AddTo(UBound(AddTo)).content(n) = objContent.randStack.FindItemStats(item)
         Next item
     End Sub
-    Private Shared Sub AddObject(ByRef AddTo() As MerchantSpellObject, ByRef x As Integer, ByRef y As Integer, ByRef name As String, ByRef content As List(Of String), ByRef objContent As ObjectsContentSet)
+    Private Shared Sub AddObject(ByRef AddTo() As MerchantSpellObject, ByRef x As Integer, ByRef y As Integer, ByRef name As String, _
+                                 ByRef content As List(Of String), ByRef objContent As ObjectsContentSet, ByRef attObj() As AttendedObject)
         ReDim Preserve AddTo(AddTo.Length)
-        AddTo(UBound(AddTo)) = New MerchantSpellObject With {.pos = New Point(x, y), .id = name}
+        Dim s As Integer = attObj(DefMapObjects.Types.Mage).Size
+        AddTo(UBound(AddTo)) = New MerchantSpellObject With {.pos = New Point(x, y), _
+                                                             .id = name, _
+                                                             .size = New Size(s, s)}
         ReDim AddTo(UBound(AddTo)).content(content.Count - 1)
         Dim n As Integer = -1
         For Each item As String In content
@@ -4125,9 +4162,13 @@ Public Class shortMapFormat
             AddTo(UBound(AddTo)).content(n) = objContent.randStack.FindSpellStats(item)
         Next item
     End Sub
-    Private Shared Sub AddObject(ByRef AddTo() As MerchantUnitObject, ByRef x As Integer, ByRef y As Integer, ByRef name As String, ByRef content As List(Of String), ByRef objContent As ObjectsContentSet)
+    Private Shared Sub AddObject(ByRef AddTo() As MerchantUnitObject, ByRef x As Integer, ByRef y As Integer, ByRef name As String, _
+                                 ByRef content As List(Of String), ByRef objContent As ObjectsContentSet, ByRef attObj() As AttendedObject)
         ReDim Preserve AddTo(AddTo.Length)
-        AddTo(UBound(AddTo)) = New MerchantUnitObject With {.pos = New Point(x, y), .id = name}
+        Dim s As Integer = attObj(DefMapObjects.Types.Mercenary).Size
+        AddTo(UBound(AddTo)) = New MerchantUnitObject With {.pos = New Point(x, y), _
+                                                            .id = name, _
+                                                            .size = New Size(s, s)}
         ReDim AddTo(UBound(AddTo)).content(content.Count - 1)
         Dim n As Integer = -1
         For Each item As String In content
@@ -4135,11 +4176,15 @@ Public Class shortMapFormat
             AddTo(UBound(AddTo)).content(n) = objContent.randStack.FindUnitStats(item)
         Next item
     End Sub
-    Private Shared Sub AddObject(ByRef AddTo() As CapitalObject, ByRef x As Integer, ByRef y As Integer, ByRef name As String, ByRef objC As ObjectsContentSet)
+    Private Shared Sub AddObject(ByRef AddTo() As CapitalObject, ByRef x As Integer, ByRef y As Integer, ByRef name As String, _
+                                 ByRef objContent As ObjectsContentSet, ByRef attObj() As AttendedObject)
         ReDim Preserve AddTo(AddTo.Length)
-        Dim r As String = objC.randStack.comm.defValues.capitalToGeneratorRace(name)
-        AddTo(UBound(AddTo)) = New CapitalObject With {.pos = New Point(x, y), .id = name, .owner = New OwnerType(r, objC.randStack.comm.defValues), _
-                                                       .lord = objC.LordRandomizer(r, False)}
+        Dim r As String = objContent.randStack.comm.defValues.capitalToGeneratorRace(name)
+        Dim s As Integer = attObj(DefMapObjects.Types.Capital).Size
+        AddTo(UBound(AddTo)) = New CapitalObject With {.pos = New Point(x, y), .id = name, _
+                                                       .owner = New OwnerType(r, objContent.randStack.comm.defValues), _
+                                                       .lord = objContent.LordRandomizer(r, False), _
+                                                       .size = New Size(s, s)}
     End Sub
 
 End Class
@@ -5011,8 +5056,12 @@ Public Class Map
         complited = Nothing
     End Sub
 
-    Public Function MapConversion(ByRef settGen As ImpenetrableMeshGen.GenSettings, ByRef objContent As ObjectsContentSet, ByRef fullSymmetry As Boolean, ByRef usePlayableRaceUnitsInNeutralStacks As Boolean) As shortMapFormat
-        Return shortMapFormat.MapConversion(Me, settGen, objContent, fullSymmetry, usePlayableRaceUnitsInNeutralStacks)
+    Public Function MapConversion(ByRef settGen As ImpenetrableMeshGen.GenSettings,
+                                  ByRef ObjectsSize() As ImpenetrableObjects.GlobalMapDecoration, _
+                                  ByRef objContent As ObjectsContentSet, _
+                                  ByRef fullSymmetry As Boolean, _
+                                  ByRef usePlayableRaceUnitsInNeutralStacks As Boolean) As shortMapFormat
+        Return shortMapFormat.MapConversion(Me, settGen, ObjectsSize, objContent, fullSymmetry, usePlayableRaceUnitsInNeutralStacks)
     End Function
 
 End Class
@@ -6478,6 +6527,24 @@ Public Class ImpenetrableObjects
         Dim ID As String
         ''' <summary>Размеры объекта</summary>
         Dim Size As Size
+
+        ''' <summary>Вернет размер горы</summary>
+        ''' <param name="mountainID">MOMNExxyy</param>
+        Public Shared Function MountainSize(ByRef mountainID As String) As Size
+            Dim s As Integer = CInt(mountainID.Substring(GenDefaultValues.wObjKeyMountain.Length, 2))
+            Return New Size(s, s)
+        End Function
+
+        Public Shared Function GetObjectSize(ByRef allLandmarks() As GlobalMapDecoration, ByRef landmarkID As String) As Size
+            If landmarkID.ToUpper.StartsWith(GenDefaultValues.wObjKeyMountain.ToUpper) Then
+                Return MountainSize(landmarkID)
+            Else
+                Dim id As String = landmarkID.ToUpper
+                For i As Integer = 0 To UBound(allLandmarks) Step 1
+                    If allLandmarks(i).ID.ToUpper = id Then Return New Size(allLandmarks(i).Size.Width, allLandmarks(i).Size.Height)
+                Next i
+            End If
+        End Function
     End Structure
 
     ''' <param name="ObjectsSize">Размеры всех объектов местности</param>

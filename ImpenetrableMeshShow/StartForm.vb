@@ -131,7 +131,7 @@ Friend Class StartForm
 
         If Not IsNothing(grid.board) Then
             Call ShowResult(grid)
-            Call shortMapFormat.MapConversion(grid, gsettings, objCont, True, True)
+            Call shortMapFormat.MapConversion(grid, gsettings, objSizeArray, objCont, True, True)
         End If
 
     End Sub
