@@ -6801,6 +6801,9 @@ Public Class ImpenetrableObjects
                         objList = Nothing
                     End If
                     IDs.Clear()
+                    If IsNothing(objList) Then
+                        Throw New Exception("Список объектов для objectID=" & m.board(x, y).objectID & " пуст (см. DefMapObjects.Types)")
+                    End If
                     For i As Integer = 0 To UBound(objList) Step 1
                         If CheckSurface(m.board(x, y).isWater, objList(i).ground, objList(i).water) _
                         AndAlso CheckRaces(m.board(x, y).objRace, objList(i).race) Then
@@ -6810,6 +6813,7 @@ Public Class ImpenetrableObjects
                     If IDs.Count > 0 Then
                         id = comm.RandomSelection(IDs, True)
                     Else
+                        Throw New Exception("Нет ни одного подходящего объекта для objectID=" & m.board(x, y).objectID & " (см. DefMapObjects.Types)")
                         id = -1
                     End If
                     m.board(x, y).objectName = objList(id).name
