@@ -136,6 +136,11 @@ Public Class ImpenetrableMeshGen
                 Public Function RandomValue(ByRef randomizer As RndValueGen) As Double
                     Return GenSettings.LocationGenSetting.RandomValue(min, max, randomizer)
                 End Function
+
+                Public Shared Function Copy(ByRef v As ValueRange) As ValueRange
+                    Return New ValueRange With {.min = v.min, _
+                                                .max = v.max}
+                End Function
             End Structure
 
             Public Shared Function RandomValue(ByRef min As Double, ByRef max As Double, ByRef randomizer As RndValueGen) As Double
@@ -224,6 +229,22 @@ Public Class ImpenetrableMeshGen
 
             End Sub
 
+            Public Shared Function Copy(ByRef v As LocationGenSetting) As LocationGenSetting
+                Return New LocationGenSetting With {.posX = ValueRange.Copy(v.posX), _
+                                                    .posY = ValueRange.Copy(v.posY), _
+                                                    .AppearanceChance = v.AppearanceChance, _
+                                                    .minValues = Map.SettingsLoc.Copy(v.minValues), _
+                                                    .maxValues = Map.SettingsLoc.Copy(v.maxValues)}
+            End Function
+            Public Shared Function Copy(ByRef v() As LocationGenSetting) As LocationGenSetting()
+                If IsNothing(v) Then Return Nothing
+                Dim r(UBound(v)) As LocationGenSetting
+                For i As Integer = 0 To UBound(v) Step 1
+                    r(i) = LocationGenSetting.Copy(v(i))
+                Next i
+                Return r
+            End Function
+
         End Structure
 
         Public Shared Function Read(ByRef path As String) As GenSettings
@@ -256,6 +277,17 @@ Public Class ImpenetrableMeshGen
             Dim data As Dictionary(Of String, String) = Map.ReadBlock(txt, GenDefaultValues.wTemplate_CreationKeyword, 1, 1, True, path)
             Call Map.ReadValue("genMode", genMode, data, GenDefaultValues.wTemplate_LocationKeyword)
         End Sub
+
+        Public Shared Function Copy(ByRef v As GenSettings) As GenSettings
+            Dim r As New GenSettings
+            r.genMode = v.genMode
+            r.common_settMap = Map.SettingsMap.Copy(v.common_settMap)
+            r.simple_settRaceLoc = Map.SettingsLoc.Copy(v.simple_settRaceLoc)
+            r.simple_settCommLoc = Map.SettingsLoc.Copy(v.simple_settCommLoc)
+            r.template_settLoc = Map.SettingsLoc.Copy(v.template_settLoc)
+            r.template_settGenLoc = LocationGenSetting.Copy(v.template_settGenLoc)
+            Return r
+        End Function
 
     End Structure
 
@@ -4419,6 +4451,7 @@ Public Class Map
             .Checked = v.Checked}
         End Function
         Public Shared Function Copy(ByRef v() As SettingsLoc) As SettingsLoc()
+            If IsNothing(v) Then Return Nothing
             Dim res(UBound(v)) As SettingsLoc
             For i As Integer = 0 To UBound(v) Step 1
                 res(i) = SettingsLoc.Copy(v(i))
@@ -4647,6 +4680,29 @@ Public Class Map
             Call Map.ReadValue("ApplySymmetry", ApplySymmetry, data, GenDefaultValues.wTemplate_MapKeyword)
             Call Map.ReadValue("SymmetryClass", SymmetryClass, data, GenDefaultValues.wTemplate_MapKeyword)
         End Sub
+
+        Public Shared Function Copy(ByRef v As SettingsMap) As SettingsMap
+            Return New SettingsMap With {.xSize = v.xSize, _
+                                         .ySize = v.ySize, _
+                                         .minPassDist = v.minPassDist, _
+                                         .minPassWidth = v.minPassWidth, _
+                                         .nRaces = v.nRaces, _
+                                         .RaceLocsDistTolerance = v.RaceLocsDistTolerance, _
+                                         .AddGuardsBetweenLocations = v.AddGuardsBetweenLocations, _
+                                         .PassGuardsPowerMultiplicator = v.PassGuardsPowerMultiplicator, _
+                                         .ObjectGuardsPowerMultiplicator = v.ObjectGuardsPowerMultiplicator, _
+                                         .LocExpRatio = v.LocExpRatio, _
+                                         .Wealth = v.Wealth, _
+                                         .WaterAmount = v.WaterAmount, _
+                                         .SpellsMaxLevel = v.SpellsMaxLevel, _
+                                         .RoadsAmount = v.RoadsAmount, _
+                                         .ForestAmount = v.ForestAmount, _
+                                         .PassageCreationChance = v.PassageCreationChance, _
+                                         .ApplySymmetry = v.ApplySymmetry, _
+                                         .SymmetryClass = v.SymmetryClass, _
+                                         .Checked = v.Checked}
+        End Function
+
     End Structure
 
     ''' <param name="fileContent">Содержимое файла после ValueConverter.TxtSplit</param>

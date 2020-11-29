@@ -136,7 +136,9 @@ Public Class MapGenWrapper
             Return grid
         End If
 
+        Dim settBak As ImpenetrableMeshGen.GenSettings = ImpenetrableMeshGen.GenSettings.Copy(settGen)
 again:
+        settGen = ImpenetrableMeshGen.GenSettings.Copy(settBak)
         grid = genmesh.GenMap(settGen, genTimeLimit, grid.log)
 
         If Not grid.TestMap = "" Then
@@ -182,6 +184,10 @@ again:
         End Try
 
         Call grid.log.Add(vbNewLine & "Total generation time: " & Environment.TickCount - t0 & " ms")
+
+        If Not settBak.common_settMap.xSize = grid.xSize + 1 Or Not settBak.common_settMap.ySize = grid.ySize + 1 Then
+            Throw New Exception("Map size is not consistent with desired size")
+        End If
 
         Return grid
     End Function
