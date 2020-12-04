@@ -82,6 +82,7 @@
     <Compile Include="ObjectsContentSetTest.vb" />
     <Compile Include="RandStackTest.vb" />
     <Compile Include="RandStack_CostTest.vb" />
+    <Compile Include="StackLocationsGen_PassageGuardPlacerTest.vb" />
     <Compile Include="ValueConverterTest.vb" />
   </ItemGroup>
   <ItemGroup>
