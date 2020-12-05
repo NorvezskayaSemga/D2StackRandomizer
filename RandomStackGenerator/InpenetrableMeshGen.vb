@@ -3930,6 +3930,8 @@ Public Class shortMapFormat
         Public owner As OwnerType
         ''' <summary>ID лорда владельца</summary>
         Public lord As String
+        ''' <summary>Имя лорда владельца</summary>
+        Public lordName As String
     End Class
 
     ''' <summary>Конвертирует карту для более удобной записи в файл</summary>
@@ -4026,7 +4028,11 @@ Public Class shortMapFormat
             'объекты местности
             If Not name = "" Then
                 If m.board(x, y).objectID = DefMapObjects.Types.Capital Then
-                    Call AddObject(res.capitals, x, y, name, objContent, attObjects)
+                    Dim lName As String = sName.LordName(objContent.randStack.comm.RaceIdentifierToSubrace( _
+                                                         objContent.randStack.comm.defValues.capitalToGeneratorRace(name)), _
+                                                         newGen)
+                    newGen = False
+                    Call AddObject(res.capitals, x, y, name, lName, objContent, attObjects)
                 ElseIf m.board(x, y).objectID = DefMapObjects.Types.City Then
                     Dim pos As New Point(x, y)
                     Dim owner As String = m.board(x, y).City.race
@@ -4086,10 +4092,10 @@ Public Class shortMapFormat
                 Dim stack As AllDataStructues.Stack = objContent.randStack.Gen(desiredStats, 0, _
                                                                                Not RaceGen.MayBeWater(m, x, y), _
                                                                                False, New Point(x, y), lordsList)
-                Dim leader As AllDataStructues.Unit = objContent.randStack.FindUnitStats(stack.pos(stack.leaderPos))
                 Call sName.GenName(stack, objContent.randStack, newGen)
                 newGen = False
                 If Not RaceGen.MayBeWater(m, x, y) Then
+                    Dim leader As AllDataStructues.Unit = objContent.randStack.FindUnitStats(stack.pos(stack.leaderPos))
                     If leader.waterOnly Then
                         Dim txt As String = "Water only leader on ground! Pos: " & x & " " & y
                         Console.WriteLine(txt)
@@ -4191,13 +4197,16 @@ Public Class shortMapFormat
         Next item
     End Sub
     Private Shared Sub AddObject(ByRef AddTo() As CapitalObject, ByRef x As Integer, ByRef y As Integer, ByRef name As String, _
+                                 ByRef lordName As String, _
                                  ByRef objContent As ObjectsContentSet, ByRef attObj() As AttendedObject)
         ReDim Preserve AddTo(AddTo.Length)
         Dim r As String = objContent.randStack.comm.defValues.capitalToGeneratorRace(name)
         Dim s As Integer = attObj(DefMapObjects.Types.Capital).Size
-        AddTo(UBound(AddTo)) = New CapitalObject With {.pos = New Point(x, y), .id = name, _
+        AddTo(UBound(AddTo)) = New CapitalObject With {.pos = New Point(x, y), _
+                                                       .id = name, _
                                                        .owner = New OwnerType(r, objContent.randStack.comm.defValues), _
                                                        .lord = objContent.LordRandomizer(r, False), _
+                                                       .lordName = lordName, _
                                                        .size = New Size(s, s)}
     End Sub
 

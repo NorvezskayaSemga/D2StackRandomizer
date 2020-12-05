@@ -227,13 +227,8 @@
     Public Sub GenName(ByRef stack As AllDataStructues.Stack, ByRef R As RandStack, ByVal newMapGen As Boolean, _
                        Optional ByVal LogID As Integer = -1)
         If IsNothing(stack) Or IsNothing(R) Then Exit Sub
-        If Not IsNothing(name) And newMapGen Then
-            AddToLog(LogID, "Refreshing stack names list")
-            commonIDs.Clear()
-            For i As Integer = 0 To UBound(name) Step 1
-                commonIDs.Add(i)
-            Next i
-        End If
+        Call ResetNames(newMapGen, LogID)
+
         If stack.leaderPos > -1 AndAlso Not IsNothing(stack.pos) Then
             stack.name = SetName(stack.pos(stack.leaderPos).ToUpper, R, LogID)
         Else
@@ -268,24 +263,8 @@
     ''' <param name="LogID">Номер задачи. От 0 до Size-1. Если меньше 0, запись будет сделана в общий лог</param>
     Public Function LordName(ByRef RaceID As Integer, ByVal newMapGen As Boolean, _
                              Optional ByVal LogID As Integer = -1) As String
-        If Not IsNothing(name) And newMapGen Then
-            lordIDs.Clear()
-            For i As Integer = 0 To UBound(name) Step 1
-                If weight(i) > LordMinWeight Then lordIDs.Add(i)
-            Next i
-        End If
-        If newMapGen Then
-            AddToLog(LogID, "Refreshing lord names list")
-            defailtLords.Clear()
-            For i As Integer = 0 To UBound(defaultLordNames) Step 1
-                If Not IsNothing(defaultLordNames(i)) Then
-                    defailtLords.Add(i, New List(Of Integer))
-                    For j As Integer = 0 To UBound(defaultLordNames(i)) Step 1
-                        defailtLords.Item(i).Add(j)
-                    Next j
-                End If
-            Next i
-        End If
+        Call ResetNames(newMapGen, LogID)
+
         Dim result As String
         If lordIDs.Count > 0 AndAlso rndgen.PRand(0, 1) > 0.5 Then
             Dim i As Integer = comm.RandomSelection(lordIDs, weight, True)
@@ -301,6 +280,42 @@
         AddToLog(LogID, "Selected lord name for race " & comm.defValues.RaceNumberToRaceChar(RaceID) & ": " & LName)
         Return LName
     End Function
+
+    Private Sub ResetNames(ByRef newMapGen As Boolean, ByRef LogID As Integer)
+        If newMapGen Then
+            Call ResetUsedStackNames(LogID)
+            Call ResetLordsNames(LogID)
+        End If
+    End Sub
+    Private Sub ResetUsedStackNames(ByRef LogID As Integer)
+        If Not IsNothing(name) Then
+            AddToLog(LogID, "Refreshing stack names list")
+            commonIDs.Clear()
+            For i As Integer = 0 To UBound(name) Step 1
+                commonIDs.Add(i)
+            Next i
+        End If
+    End Sub
+    Private Sub ResetLordsNames(ByRef LogID As Integer)
+        AddToLog(LogID, "Refreshing lords names list")
+
+        If Not IsNothing(name) Then
+            lordIDs.Clear()
+            For i As Integer = 0 To UBound(name) Step 1
+                If weight(i) > LordMinWeight Then lordIDs.Add(i)
+            Next i
+        End If
+
+        defailtLords.Clear()
+        For i As Integer = 0 To UBound(defaultLordNames) Step 1
+            If Not IsNothing(defaultLordNames(i)) Then
+                defailtLords.Add(i, New List(Of Integer))
+                For j As Integer = 0 To UBound(defaultLordNames(i)) Step 1
+                    defailtLords.Item(i).Add(j)
+                Next j
+            End If
+        Next i
+    End Sub
 
     Private Sub AddToLog(ByRef LogID As Integer, ByRef Msg As String)
         If LogID > -1 Then
