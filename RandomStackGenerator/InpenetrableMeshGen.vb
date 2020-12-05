@@ -3946,6 +3946,8 @@ Public Class shortMapFormat
                                          ByRef usePlayableRaceUnitsInNeutralStacks As Boolean) As shortMapFormat
 
         Dim attObjects() As AttendedObject = (New ImpenetrableMeshGen).ActiveObjects
+        Dim sName As New SetName
+        Dim newGen As Boolean = True
 
         Dim gLocSettings() As Map.SettingsLoc
         If settGen.genMode = ImpenetrableMeshGen.GenSettings.genModes.simple Then
@@ -4081,7 +4083,19 @@ Public Class shortMapFormat
                 End If
             ElseIf m.board(x, y).GuardLoc Or m.board(x, y).PassGuardLoc Or m.board(x, y).isObjectGuard Then
                 Dim desiredStats As AllDataStructues.DesiredStats = m.groupStats.Item(m.board(x, y).groupID)
-                Dim stack As AllDataStructues.Stack = objContent.randStack.Gen(desiredStats, 0, Not m.board(x, y).isWater, False, New Point(x, y), lordsList)
+                Dim stack As AllDataStructues.Stack = objContent.randStack.Gen(desiredStats, 0, _
+                                                                               Not RaceGen.MayBeWater(m, x, y), _
+                                                                               False, New Point(x, y), lordsList)
+                Dim leader As AllDataStructues.Unit = objContent.randStack.FindUnitStats(stack.pos(stack.leaderPos))
+                Call sName.GenName(stack, objContent.randStack, newGen)
+                newGen = False
+                If Not RaceGen.MayBeWater(m, x, y) Then
+                    If leader.waterOnly Then
+                        Dim txt As String = "Water only leader on ground! Pos: " & x & " " & y
+                        Console.WriteLine(txt)
+                        Call m.log.Add(txt)
+                    End If
+                End If
                 Call AddObject(res.stacks, x, y, desiredStats, stack, objContent.randStack.comm.defValues)
             End If
         Next i
@@ -5671,7 +5685,7 @@ Public Class StackLocationsGen
             For i As Integer = 0 To UBound(pointsList) Step 1
                 currentOutput(i) = -1
             Next i
-            gPlacer = New PassageGuardPlacer(currentNLimit, term, pointsList, m, justCheckGuardNecessity)
+            gPlacer = New PassageGuardPlacer(currentNLimit, term, pointsList, justCheckGuardNecessity)
             Call gPlacer.PlaceGuardLoc(-1, currentOutput, IDs, -1, path)
             If gPlacer.bestN > Integer.MinValue Then Exit For
         Next currentNLimit
@@ -5707,7 +5721,6 @@ Public Class StackLocationsGen
         Return connected
     End Function
 
-
     Class PassageGuardPlacer
 
         '''лучшее положение гвардов
@@ -5720,14 +5733,12 @@ Public Class StackLocationsGen
         Private term As TerminationCondition
         '''проверенные положения гвардов
         Private checkedPositions As New List(Of String)
-        '''карта
-        Private ReadOnly m As Map
         '''список точек прохода
         Private ReadOnly pointsList() As Point
         '''просто проверит, нужны ли вообще гварды
         Private ReadOnly justCheckGuardNecessity As Boolean
 
-        Private guardBorderPoints() As Point
+        Private ReadOnly guardBorderPoints() As Point
 
         Protected Friend Structure Passage
             Dim bias, Size As Point
@@ -5735,12 +5746,11 @@ Public Class StackLocationsGen
             Dim edgePoints() As List(Of Point)
         End Structure
 
-        Public Sub New(ByRef limit As Integer, ByRef t As TerminationCondition, ByRef pl() As Point, ByRef map As Map, _
+        Public Sub New(ByRef limit As Integer, ByRef t As TerminationCondition, ByRef pl() As Point, _
                        ByRef checkGuardsNecessity As Boolean)
             currentNLimit = limit
             term = t
             pointsList = pl
-            m = map
             justCheckGuardNecessity = checkGuardsNecessity
             ReDim bestOutput(UBound(pointsList))
             For i As Integer = 0 To UBound(pointsList) Step 1
@@ -6550,37 +6560,38 @@ Public Class WaterGen
 
 End Class
 
-Class MapObject
-    Inherits DecorationPlacingPropertiesFields
-    ''' <summary>Ширина объекта</summary>
-    Protected Friend xSize As Integer
-    ''' <summary>Высота объекта</summary>
-    Protected Friend ySize As Integer
-    ''' <summary>Имя объекта</summary>
-    Protected Friend name As String
-End Class
-Class Plateau
-    Inherits MapObject
-    ''' <summary>Как скреплять объекты</summary>
-    Protected Friend connectors()() As Point
-    ''' <summary>Эти точки должны быть на границе карты</summary>
-    Protected Friend border As Point
-    ''' <summary>Является ли водопадом</summary>
-    Protected Friend isWaterfall As Boolean
-End Class
 Public Class ImpenetrableObjects
+
+    Class MapObject
+        Inherits DecorationPlacingPropertiesFields
+        ''' <summary>Ширина объекта</summary>
+        Protected Friend xSize As Integer
+        ''' <summary>Высота объекта</summary>
+        Protected Friend ySize As Integer
+        ''' <summary>Имя объекта</summary>
+        Protected Friend name As String
+    End Class
+    Class PlateauObject
+        Inherits MapObject
+        ''' <summary>Как скреплять объекты</summary>
+        Protected Friend connectors()() As Point
+        ''' <summary>Эти точки должны быть на границе карты</summary>
+        Protected Friend border As Point
+        ''' <summary>Является ли водопадом</summary>
+        Protected Friend isWaterfall As Boolean
+    End Class
 
     Private symm As New SymmetryOperations
     Private comm As New Common
     Private objects, mountains, ruins, mages, merchants, mercenaries, trainers As MapObject()
-    Private plateau() As Plateau
+    Private plateau() As PlateauObject
     Private maxPlateauSize As Integer
     Private maxChainLen As Integer = 7
     Private raceSpells() As AllDataStructues.Spell
     Private raceIdToString As New Dictionary(Of Integer, String)
 
     Private Structure PlateauPlacingResult
-        Dim obj() As Plateau
+        Dim obj() As PlateauObject
         Dim pos() As Point
         Dim n As Integer
     End Structure
@@ -6694,7 +6705,7 @@ Public Class ImpenetrableObjects
                         Else
                             ReDim Preserve plateau(plateau.Length)
                         End If
-                        plateau(UBound(plateau)) = New Plateau With {.xSize = g.xSize, _
+                        plateau(UBound(plateau)) = New PlateauObject With {.xSize = g.xSize, _
                                                                      .ySize = g.ySize, _
                                                                      .ground = g.ground, _
                                                                      .water = g.water, _
@@ -6803,7 +6814,7 @@ Public Class ImpenetrableObjects
         Next i
         Return IDs
     End Function
-    Private Function makeIDs(ByRef a() As Plateau, ByRef initOnly As Boolean, ByRef noWaterfalls As Boolean) As List(Of Integer)
+    Private Function makeIDs(ByRef a() As PlateauObject, ByRef initOnly As Boolean, ByRef noWaterfalls As Boolean) As List(Of Integer)
         Dim IDs As New List(Of Integer)
         If initOnly Then
             For i As Integer = 0 To UBound(a) Step 1
@@ -6822,7 +6833,7 @@ Public Class ImpenetrableObjects
         Return MayPlace(m, x, y, free, obj.xSize, obj.ySize, obj.ground, obj.water, obj.race)
     End Function
     Private Function MayPlace(ByRef m As Map, ByRef x As Integer, ByRef y As Integer, _
-                              ByRef free(,) As Boolean, ByRef obj As Plateau, ByRef Connector(,) As Integer) As Boolean
+                              ByRef free(,) As Boolean, ByRef obj As PlateauObject, ByRef Connector(,) As Integer) As Boolean
         If Not IsNothing(obj.border) Then
             If obj.border.X = 0 Then
                 If x > 0 Then Return False
@@ -7287,7 +7298,7 @@ Public Class ImpenetrableObjects
             If IDs.Count = 0 Then Exit For
         Next i
     End Sub
-    Private Function TryToPlace(ByRef m As Map, ByRef basic As Plateau, _
+    Private Function TryToPlace(ByRef m As Map, ByRef basic As PlateauObject, _
                                 ByRef free(,) As Boolean, ByRef connectors(,) As Integer) As Boolean
 
         'сначала пытаемся расположить базовый кусок (в каждом из возможных положений, пока не получится построить цепочку)
@@ -7322,14 +7333,14 @@ Public Class ImpenetrableObjects
     Private Sub PlaceObject(ByRef free(,) As Boolean, ByRef x As Integer, ByRef y As Integer, ByRef obj As MapObject)
         Call PlaceObject(free, x, y, obj.xSize, obj.ySize, False)
     End Sub
-    Private Sub PlaceObject(ByRef free(,) As Boolean, ByRef x As Integer, ByRef y As Integer, ByRef obj As Plateau, ByRef connectors(,) As Integer)
+    Private Sub PlaceObject(ByRef free(,) As Boolean, ByRef x As Integer, ByRef y As Integer, ByRef obj As PlateauObject, ByRef connectors(,) As Integer)
         Call PlaceObject(free, x, y, obj, connectors, 1)
         Call PlaceObject(free, x, y, obj.xSize, obj.ySize, False)
     End Sub
     Private Sub RemoveObject(ByRef free(,) As Boolean, ByRef x As Integer, ByRef y As Integer, ByRef obj As MapObject)
         Call PlaceObject(free, x, y, obj.xSize, obj.ySize, True)
     End Sub
-    Private Sub RemoveObject(ByRef free(,) As Boolean, ByRef x As Integer, ByRef y As Integer, ByRef obj As Plateau, ByRef connectors(,) As Integer)
+    Private Sub RemoveObject(ByRef free(,) As Boolean, ByRef x As Integer, ByRef y As Integer, ByRef obj As PlateauObject, ByRef connectors(,) As Integer)
         Call PlaceObject(free, x, y, obj.xSize, obj.ySize, True)
         Call PlaceObject(free, x, y, obj, connectors, -1)
     End Sub
@@ -7347,7 +7358,7 @@ Public Class ImpenetrableObjects
     End Sub
     Private Sub PlaceObject(ByRef free(,) As Boolean, _
                             ByRef x As Integer, ByRef y As Integer, _
-                            ByRef obj As Plateau, ByRef connectors(,) As Integer, _
+                            ByRef obj As PlateauObject, ByRef connectors(,) As Integer, _
                             ByRef whatAdd As Integer)
         Dim xx, yy As Integer
         For i As Integer = 0 To UBound(obj.connectors) Step 1
@@ -7364,7 +7375,7 @@ Public Class ImpenetrableObjects
         'If connectorRelativePos.X > 0 Then xOut += obj.xSize - 1
         'If connectorRelativePos.Y > 0 Then yOut += obj.ySize - 1
     End Sub
-    Private Function MakeChain(ByRef m As Map, ByRef obj As Plateau, _
+    Private Function MakeChain(ByRef m As Map, ByRef obj As PlateauObject, _
                                ByRef x As Integer, ByRef y As Integer, _
                                ByRef free(,) As Boolean, ByRef connectors(,) As Integer, _
                                ByRef res As PlateauPlacingResult) As Boolean
