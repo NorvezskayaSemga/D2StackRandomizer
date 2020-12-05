@@ -281,7 +281,32 @@
         Return LName
     End Function
 
-    Private Sub ResetNames(ByRef newMapGen As Boolean, ByRef LogID As Integer)
+    Public Function CityName(ByRef ID As String, ByRef RaceID As Integer) As String
+        If comm.defValues.capitalToGeneratorRace.ContainsKey(ID.ToUpper) Then
+            Return "CapitalName " & RaceID
+        ElseIf ID.ToUpper.StartsWith(GenDefaultValues.wObjKeyTown) Then
+            Return "VillageName " & RaceID
+        Else
+            Throw New Exception("Unknown object ID: " & ID)
+        End If
+    End Function
+    Public Function ObjectName(ByRef ID As String) As String
+        If ID.ToUpper.StartsWith(GenDefaultValues.wObjKeyRuin) Then
+            Return "RuinName " & ID
+        ElseIf ID.ToUpper.StartsWith(GenDefaultValues.wObjKeyMerchant) Then
+            Return "MerchItemsName " & ID
+        ElseIf ID.ToUpper.StartsWith(GenDefaultValues.wObjKeyMage) Then
+            Return "MerchSpellsName " & ID
+        ElseIf ID.ToUpper.StartsWith(GenDefaultValues.wObjKeyMercenaries) Then
+            Return "MerchUnitsName " & ID
+        ElseIf ID.ToUpper.StartsWith(GenDefaultValues.wObjKeyTrainer) Then
+            Return "TrainerName " & ID
+        Else
+            Throw New Exception("Unknown object ID: " & ID)
+        End If
+    End Function
+
+    Friend Sub ResetNames(ByRef newMapGen As Boolean, ByRef LogID As Integer)
         If newMapGen Then
             Call ResetUsedStackNames(LogID)
             Call ResetLordsNames(LogID)

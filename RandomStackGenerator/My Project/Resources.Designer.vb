@@ -112,11 +112,11 @@ Namespace My.Resources
         '''#Соответствие между расами, ID рас в игре и ID столиц
         '''
         '''    G000FT0000HU0  H G000RR0000
-        '''    G000FT0000UN0  U G000RR0004
         '''    G000FT0000DWC0 C G000RR0001
         '''    G000FT0000HE0  L G000RR0002
-        '''    G000FT0000EL0  E G000RR0005
+        '''    G000FT0000UN0  U G000RR0003
         '''    G000FT0000NE0  N G000RR0004
+        '''    G000FT0000EL0  E G000RR0005
         '''.
         '''</summary>
         Friend ReadOnly Property Capitals() As String
@@ -554,6 +554,15 @@ Namespace My.Resources
         Friend ReadOnly Property objKeyRuin() As String
             Get
                 Return ResourceManager.GetString("objKeyRuin", resourceCulture)
+            End Get
+        End Property
+        
+        '''<summary>
+        '''  Looks up a localized string similar to G000FT0000.
+        '''</summary>
+        Friend ReadOnly Property objKeyTown() As String
+            Get
+                Return ResourceManager.GetString("objKeyTown", resourceCulture)
             End Get
         End Property
         

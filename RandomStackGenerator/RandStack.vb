@@ -3614,6 +3614,9 @@ Public Class GenDefaultValues
     Public Shared Function wObjKeyTrainer() As String
         Return My.Resources.objKeyTrainer
     End Function
+    Public Shared Function wObjKeyTown() As String
+        Return My.Resources.objKeyTown
+    End Function
     Public Shared Function wReadDefaultFileKeyword() As String
         Return My.Resources.readDefaultFileKeyword
     End Function
