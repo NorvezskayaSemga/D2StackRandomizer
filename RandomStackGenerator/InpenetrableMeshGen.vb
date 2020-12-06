@@ -5727,8 +5727,12 @@ Public Class StackLocationsGen
             Next i
             gPlacer = New PassageGuardPlacer(currentNLimit, term, pointsList, justCheckGuardNecessity)
             Call gPlacer.PlaceGuardLoc(-1, currentOutput, IDs, -1, path)
+            If term.ExitFromLoops And gPlacer.debugTestsRun > 100 Then
+                m.log.Add("Guards: " & currentNLimit + 1 & " Tests: " & gPlacer.debugTestsRun & " simpFilter: " & gPlacer.debugSimpleFilter & " posFilter: " & gPlacer.debugCheckedPosFilter & " passage size: " & pointsList.Length)
+            End If
             If gPlacer.bestN > Integer.MinValue Then Exit For
         Next currentNLimit
+
 
         If gPlacer.bestN < 0 Then Return Nothing
 
@@ -5777,6 +5781,10 @@ Public Class StackLocationsGen
         Private ReadOnly pointsList() As Point
         '''просто проверит, нужны ли вообще гварды
         Private ReadOnly justCheckGuardNecessity As Boolean
+
+        Public debugTestsRun As Integer
+        Public debugSimpleFilter As Integer
+        Public debugCheckedPosFilter As Integer
 
         Private ReadOnly guardBorderPoints() As Point
 
@@ -5836,6 +5844,7 @@ Public Class StackLocationsGen
             If currentN = currentNLimit Then
                 Dim k As String = MakeKey(currentN, currentOutput, selected)
                 If checkedPositions.Contains(k) Then
+                    debugCheckedPosFilter += 1
                     Exit Sub
                 Else
                     checkedPositions.Add(k)
@@ -5917,7 +5926,12 @@ Public Class StackLocationsGen
         End Sub
         Private Function TestPassage(ByRef p As Passage, ByRef pointsList() As Point, ByRef currentOutput() As Integer) As Boolean
 
-            If Not GuardPosFilter(p, pointsList, currentOutput) Then Return False
+            If Not GuardPosFilter(p, pointsList, currentOutput) Then
+                debugSimpleFilter += 1
+                Return False
+            End If
+
+            debugTestsRun += 1
 
             Dim n As Integer = 0
             For i As Integer = 0 To UBound(p.edgePoints) Step 1

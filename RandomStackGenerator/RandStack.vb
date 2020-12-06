@@ -1246,6 +1246,7 @@ Public Class RandStack
                     If PossibleLeaders.Count > 0 Then Exit Do
                     Throw New Exception("Что-то не так в выборе возможных лидеров отряда" & vbNewLine & _
                                         "Имя локации: " & StackStats.LocationName & vbNewLine & _
+                                        "Суша: " & GroundTile & vbNewLine & _
                                         "StackStats:" & vbNewLine & AllDataStructues.DesiredStats.Print(StackStats, comm.defValues.RaceNumberToRaceChar) & vbNewLine & _
                                         "DynStackStats:" & vbNewLine & AllDataStructues.DesiredStats.Print(DynStackStats, comm.defValues.RaceNumberToRaceChar))
                 End If
@@ -1261,6 +1262,7 @@ Public Class RandStack
         If SelectedLeader = -1 Then
             Throw New Exception("Возможно, бесконечный цикл в случайном выборе из массива возможных лидеров" & vbNewLine & _
                                 "Имя локации: " & StackStats.LocationName & vbNewLine & _
+                                "Суша: " & GroundTile & vbNewLine & _
                                 "StackStats:" & vbNewLine & AllDataStructues.DesiredStats.Print(StackStats, comm.defValues.RaceNumberToRaceChar) & vbNewLine & _
                                 "DynStackStats:" & vbNewLine & AllDataStructues.DesiredStats.Print(DynStackStats, comm.defValues.RaceNumberToRaceChar))
         End If
@@ -1326,6 +1328,7 @@ Public Class RandStack
             ElseIf fighter = -2 Then
                 Throw New Exception("Возможно, бесконечный цикл в случайном выборе из массива возможных воинов" & vbNewLine & _
                                     "Имя локации: " & StackStats.LocationName & vbNewLine & _
+                                    "Суша: " & GroundTile & vbNewLine & _
                                     "StackStats:" & vbNewLine & AllDataStructues.DesiredStats.Print(StackStats, comm.defValues.RaceNumberToRaceChar) & vbNewLine & _
                                     "DynStackStats:" & vbNewLine & AllDataStructues.DesiredStats.Print(DynStackStats, comm.defValues.RaceNumberToRaceChar))
             Else
