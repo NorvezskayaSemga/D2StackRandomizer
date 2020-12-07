@@ -141,11 +141,15 @@ again:
         settGen = ImpenetrableMeshGen.GenSettings.Copy(settBak)
         grid = genmesh.GenMap(settGen, genTimeLimit, grid.log)
 
-        If Not grid.TestMap = "" Then
+        If IsNothing(grid.board) Then
+            grid.Clear()
+            Return grid
+        ElseIf Not grid.TestMap = "" Then
             Call grid.log.Add(grid.TestMap)
             grid.Clear()
             Return grid
         End If
+        
 
         If settGen.genMode = ImpenetrableMeshGen.GenSettings.genModes.simple Then
             copiedSettings = Map.SettingsLoc.ToArray(settGen.simple_settRaceLoc, _
