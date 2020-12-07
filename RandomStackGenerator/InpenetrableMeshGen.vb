@@ -3861,6 +3861,19 @@ Public Class shortMapFormat
         ''' <summary>Размер объекта</summary>
         Public size As Size
     End Class
+    Public MustInherit Class ObjectWithName
+        Inherits simpleObject
+        ''' <summary>Название объекта</summary>
+        Public objectName As String
+    End Class
+    Public MustInherit Class ObjectWithInternalStack
+        Inherits ObjectWithName
+        ''' <summary>Настройки генерации внутреннего отряда</summary>
+        Public internalStackSettings As AllDataStructues.DesiredStats
+        ''' <summary>Внутренний стек</summary>
+        Public internalStack As AllDataStructues.Stack
+    End Class
+
     Public Structure TileState
         ''' <summary>See here GroundType</summary>
         Public ground As Integer
@@ -3876,18 +3889,6 @@ Public Class shortMapFormat
             Road = 5
         End Enum
     End Structure
-    Public MustInherit Class ObjectWithInternalStack
-        Inherits ObjectWithName
-        ''' <summary>Настройки генерации внутреннего отряда</summary>
-        Public internalStackSettings As AllDataStructues.DesiredStats
-        ''' <summary>Внутренний стек</summary>
-        Public internalStack As AllDataStructues.Stack
-    End Class
-    Public MustInherit Class ObjectWithName
-        Inherits simpleObject
-        ''' <summary>Название объекта</summary>
-        Public objectName As String
-    End Class
     Public Class RuinObject
         Inherits ObjectWithInternalStack
         ''' <summary>Ресурсы</summary>

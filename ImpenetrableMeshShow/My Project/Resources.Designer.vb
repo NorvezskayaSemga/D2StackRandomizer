@@ -61,16 +61,6 @@ Namespace My.Resources
         End Property
         
         '''<summary>
-        '''  Looks up a localized resource of type System.Byte[].
-        '''</summary>
-        Friend ReadOnly Property randGeneratorData() As Byte()
-            Get
-                Dim obj As Object = ResourceManager.GetObject("randGeneratorData", resourceCulture)
-                Return CType(obj,Byte())
-            End Get
-        End Property
-        
-        '''<summary>
         '''  Looks up a localized string similar to ITEM_CAT	ITEM_ID	VALUE
         '''6	G000IG0001	g0400:r0000:y0000:e0000:w0000
         '''4	G000IG0002	g0200:r0000:y0000:e0000:w0000
