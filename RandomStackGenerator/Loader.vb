@@ -136,6 +136,36 @@ Public Class MapGenWrapper
             Return grid
         End If
 
+        Dim PlayersRaces() As Integer = Nothing
+        If Not IsNothing(settGen.common_settMap.PlayersRaces) Then
+            If Not settGen.common_settMap.PlayersRaces.Length = settGen.common_settMap.nRaces Then
+                Throw New Exception("Список рас не соответствует заданному количеству в nRaces")
+                Return Nothing
+            End If
+            Dim ok As Boolean
+            ReDim PlayersRaces(UBound(settGen.common_settMap.PlayersRaces))
+            For i As Integer = 0 To UBound(settGen.common_settMap.PlayersRaces) Step 1
+                PlayersRaces(i) = genmesh.comm.RaceIdentifierToSubrace(settGen.common_settMap.PlayersRaces(i))
+                ok = False
+                For Each R As String In genmesh.comm.defValues.playableRaces
+                    If PlayersRaces(i) = genmesh.comm.RaceIdentifierToSubrace(R) Then
+                        ok = True
+                        Exit For
+                    End If
+                Next R
+                If Not ok Then
+                    Throw New Exception("Раса " & settGen.common_settMap.PlayersRaces(i) & " не является играбельной")
+                    Return Nothing
+                End If
+                For j As Integer = 0 To i - 1 Step 1
+                    If PlayersRaces(i) = PlayersRaces(j) Then
+                        Throw New Exception("В списке рас игроков присутствуют две одинаковые расы")
+                        Return Nothing
+                    End If
+                Next j
+            Next i
+        End If
+
         Dim settBak As ImpenetrableMeshGen.GenSettings = ImpenetrableMeshGen.GenSettings.Copy(settGen)
 again:
         settGen = ImpenetrableMeshGen.GenSettings.Copy(settBak)
@@ -149,7 +179,7 @@ again:
             grid.Clear()
             Return grid
         End If
-        
+
 
         If settGen.genMode = ImpenetrableMeshGen.GenSettings.genModes.simple Then
             copiedSettings = Map.SettingsLoc.ToArray(settGen.simple_settRaceLoc, _
@@ -179,7 +209,7 @@ again:
         Try
             Call stackstats.Gen(grid, settGen.common_settMap, copiedSettings)
             Call watergenerator.Gen(grid, settGen.common_settMap)
-            Call racegen.Gen(grid, Nothing, copiedSettings)
+            Call racegen.Gen(grid, PlayersRaces, copiedSettings)
             Call objPlace.Gen(grid, settGen.common_settMap, copiedSettings)
             Call penOnjGen.Gen(grid, settGen.common_settMap)
         Catch ex As Exception

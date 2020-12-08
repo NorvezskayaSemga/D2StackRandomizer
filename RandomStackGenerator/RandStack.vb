@@ -2947,6 +2947,24 @@ Public Class AllDataStructues
             Return s
         End Function
 
+        Public Shared Function ToArray(ByVal v As Cost) As Integer()
+            Return New Integer() {v.Gold, _
+                                  v.Blue, _
+                                  v.Red, _
+                                  v.White, _
+                                  v.Black, _
+                                  v.Green}
+        End Function
+        Public Shared Function ToCost(ByVal v() As Integer) As Cost
+            Return New Cost With {.gold = v(0), _
+                                  .Blue = v(1), _
+                                  .Red = v(2), _
+                                  .White = v(3), _
+                                  .Black = v(4), _
+                                  .Green = v(5)}
+        End Function
+
+
         ''' <summary>Вернет суммарную стоимость в золоте и мане</summary>
         ''' <param name="v">цена: золото и мана</param>
         Public Shared Function Sum(ByVal v As Cost) As Integer

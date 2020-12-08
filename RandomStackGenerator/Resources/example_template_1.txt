@@ -26,7 +26,18 @@ genMode		1
 //Common_map_settings		$cms
 
 # оличество рас
-nRaces		4
+nRaces		2
+
+#–асы игроков. –азные, играбельные и соответствующие nRaces. –азделитель - ; (H;U;L;E;C или Humans;Undead;Legions;Clans;Elves)
+#ѕри этом первап€ раса в списке будет на первой локации, втора€ - на второй, и т.д.
+#Nothing, если нужен случайный выбор
+PlayersRaces	H;E
+
+#Ќачальный запас золота
+StartGold		300
+
+#Ќачальный запас родной маны
+StartMana		300
 
 #ћаксимальный уровень заклинаний в столице
 SpellsMaxLevel	5
@@ -67,7 +78,7 @@ minPassWidth	1.1
 minPassDist	7.0
 
 #–асставл€ть ли стражей проходов между локаци€ми
-AddGuardsBetweenLocations	True
+AddGuardsBetweenLocations	False
 
 #ћножитель силы стражей проходов между локаци€ми
 PassGuardsPowerMultiplicator	2.0

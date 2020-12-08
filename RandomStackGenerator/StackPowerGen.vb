@@ -503,9 +503,13 @@ Public Class RaceGen
         End If
         Dim LocR(UBound(m.Loc)) As Integer
         For i As Integer = 1 To nRaces Step 1
-            Dim s As Integer = comm.RandomSelection(selectedRaces, True)
-            selectedRaces.Remove(s)
-            LocR(i - 1) = LRaces(s)
+            If IsNothing(PlayableRaces) Then
+                Dim s As Integer = comm.RandomSelection(selectedRaces, True)
+                selectedRaces.Remove(s)
+                LocR(i - 1) = LRaces(s)
+            Else
+                LocR(i - 1) = PlayableRaces(i - 1)
+            End If
         Next i
 
         'выбор рас для обычных локаций

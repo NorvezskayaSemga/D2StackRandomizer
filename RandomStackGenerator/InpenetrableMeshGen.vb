@@ -3941,6 +3941,8 @@ Public Class shortMapFormat
         Public lord As String
         ''' <summary>Имя лорда владельца</summary>
         Public lordName As String
+        ''' <summary>Начальный запас ресурсов</summary>
+        Public startResources As AllDataStructues.Cost
     End Class
 
     ''' <summary>Конвертирует карту для более удобной записи в файл</summary>
@@ -3959,6 +3961,28 @@ Public Class shortMapFormat
         Dim attObjects() As AttendedObject = (New ImpenetrableMeshGen).ActiveObjects
         Dim sName As New SetName
         Call sName.ResetNames(True, -1)
+
+        Dim allSpells(objContent.spells.Count + objContent.excludedSpells.Count - 1) As AllDataStructues.Spell
+        Dim ns As Integer = -1
+        For Each spellsList As Dictionary(Of String, AllDataStructues.Spell) In {objContent.spells, objContent.excludedSpells}
+            For Each spell As AllDataStructues.Spell In spellsList.Values
+                ns += 1
+                allSpells(ns) = spell
+            Next spell
+        Next spellsList
+        Dim raceMana As Dictionary(Of Integer, AllDataStructues.Cost()) = ImpenetrableObjects.RacesManaUsing(objContent.randStack.comm, allSpells)
+        Dim raceT1mana As New Dictionary(Of Integer, AllDataStructues.Cost)
+        For Each id As Integer In raceMana.Keys
+            Dim a() As Integer = AllDataStructues.Cost.ToArray(raceMana.Item(id)(1))
+            Dim max As Integer = a.Max
+            For k As Integer = 0 To UBound(a) Step 1
+                If a(k) < max Then a(k) = 0
+            Next k
+            For k As Integer = 0 To UBound(a) Step 1
+                If a(k) = max Then a(k) = 1
+            Next k
+            raceT1mana.Add(id, AllDataStructues.Cost.ToCost(a))
+        Next id
 
         Dim gLocSettings() As Map.SettingsLoc
         If settGen.genMode = ImpenetrableMeshGen.GenSettings.genModes.simple Then
@@ -4037,7 +4061,10 @@ Public Class shortMapFormat
             'объекты местности
             If Not name = "" Then
                 If m.board(x, y).objectID = DefMapObjects.Types.Capital Then
-                    Call AddObject(res.capitals, x, y, name, objContent, attObjects, sName)
+                    Dim subrace As Integer = objContent.randStack.comm.RaceIdentifierToSubrace(objContent.randStack.comm.defValues.capitalToGeneratorRace(name))
+                    Dim resources As AllDataStructues.Cost = raceT1mana.Item(subrace) * CDbl(settGen.common_settMap.StartMana / AllDataStructues.Cost.Sum(raceT1mana.Item(subrace)))
+                    resources.Gold += settGen.common_settMap.StartGold
+                    Call AddObject(res.capitals, x, y, name, objContent, attObjects, sName, resources)
                 ElseIf m.board(x, y).objectID = DefMapObjects.Types.City Then
                     Dim pos As New Point(x, y)
                     Dim owner As String = m.board(x, y).City.race
@@ -4227,7 +4254,7 @@ Public Class shortMapFormat
     End Sub
     Private Shared Sub AddObject(ByRef AddTo() As CapitalObject, ByRef x As Integer, ByRef y As Integer, ByRef name As String, _
                                  ByRef objContent As ObjectsContentSet, ByRef attObj() As AttendedObject, _
-                                 ByRef sName As SetName)
+                                 ByRef sName As SetName, ByRef startResources As AllDataStructues.Cost)
         ReDim Preserve AddTo(AddTo.Length)
         Dim r As String = objContent.randStack.comm.defValues.capitalToGeneratorRace(name)
         Dim subrace As Integer = objContent.randStack.comm.RaceIdentifierToSubrace(r)
@@ -4239,7 +4266,8 @@ Public Class shortMapFormat
                                                        .lord = objContent.LordRandomizer(r, False), _
                                                        .lordName = lordName, _
                                                        .size = New Size(s, s), _
-                                                       .objectName = sName.CityName(name, subrace)}
+                                                       .objectName = sName.CityName(name, subrace), _
+                                                       .startResources = AllDataStructues.Cost.Copy(startResources)}
     End Sub
 
 End Class
@@ -4703,6 +4731,13 @@ Public Class Map
         ''' Смотри SymmetryOperations </summary>
         Dim SymmetryClass As Integer
 
+        ''' <summary>Расы игроков. Nothing, если нужны случайные</summary>
+        Dim PlayersRaces() As String
+        '''<summary>Начальное количество золота</summary>
+        Dim StartGold As Integer
+        '''<summary>Начальное количество родной маны</summary>
+        Dim StartMana As Integer
+
         Private Checked As Boolean
         ''' <summary>Проверит корректность параметров. Вернет пустое сообщение, если все нормально</summary>
         Public Function Check() As String
@@ -4779,9 +4814,14 @@ Public Class Map
             Call Map.ReadValue("PassageCreationChance", PassageCreationChance, data, GenDefaultValues.wTemplate_MapKeyword)
             Call Map.ReadValue("ApplySymmetry", ApplySymmetry, data, GenDefaultValues.wTemplate_MapKeyword)
             Call Map.ReadValue("SymmetryClass", SymmetryClass, data, GenDefaultValues.wTemplate_MapKeyword)
+            Call Map.ReadValue("PlayersRaces", PlayersRaces, data, GenDefaultValues.wTemplate_MapKeyword, CChar(";"))
+            Call Map.ReadValue("StartGold", StartGold, data, GenDefaultValues.wTemplate_MapKeyword)
+            Call Map.ReadValue("StartMana", StartMana, data, GenDefaultValues.wTemplate_MapKeyword)
         End Sub
 
         Public Shared Function Copy(ByRef v As SettingsMap) As SettingsMap
+            Dim r() As String = Nothing
+            If Not IsNothing(v.PlayersRaces) Then r = CType(v.PlayersRaces.Clone, String())
             Return New SettingsMap With {.xSize = v.xSize, _
                                          .ySize = v.ySize, _
                                          .minPassDist = v.minPassDist, _
@@ -4800,6 +4840,9 @@ Public Class Map
                                          .PassageCreationChance = v.PassageCreationChance, _
                                          .ApplySymmetry = v.ApplySymmetry, _
                                          .SymmetryClass = v.SymmetryClass, _
+                                         .PlayersRaces = r, _
+                                         .StartGold = v.StartGold, _
+                                         .StartMana = v.StartMana, _
                                          .Checked = v.Checked}
         End Function
 
@@ -7123,7 +7166,7 @@ Public Class ImpenetrableObjects
             End If
         Next i
         'установить для шахт конкретный вид ресурсов
-        Dim raceMana As Dictionary(Of Integer, AllDataStructues.Cost()) = RacesManaUsing()
+        Dim raceMana As Dictionary(Of Integer, AllDataStructues.Cost()) = RacesManaUsing(comm, raceSpells)
         Dim raceManaTier As Dictionary(Of Integer, String()) = ManaTier(raceMana)
         Dim IDs As New List(Of Integer)
         For y As Integer = 0 To m.ySize Step 1
@@ -7145,19 +7188,25 @@ Public Class ImpenetrableObjects
                         ReDim weights(UBound(types))
                         For i As Integer = 0 To UBound(types) Step 1
                             If types(i) = "gold" Then
-                                weights(i) = raceMana(m.board(x, y).objRace(0))(tier).Gold
+                                weights(i) = raceMana.Item(m.board(x, y).objRace(0))(tier).Gold
                             ElseIf types(i) = "green" Then
-                                weights(i) = raceMana(m.board(x, y).objRace(0))(tier).Green
+                                weights(i) = raceMana.Item(m.board(x, y).objRace(0))(tier).Green
                             ElseIf types(i) = "black" Then
-                                weights(i) = raceMana(m.board(x, y).objRace(0))(tier).Black
+                                weights(i) = raceMana.Item(m.board(x, y).objRace(0))(tier).Black
                             ElseIf types(i) = "white" Then
-                                weights(i) = raceMana(m.board(x, y).objRace(0))(tier).White
+                                weights(i) = raceMana.Item(m.board(x, y).objRace(0))(tier).White
                             ElseIf types(i) = "red" Then
-                                weights(i) = raceMana(m.board(x, y).objRace(0))(tier).Red
+                                weights(i) = raceMana.Item(m.board(x, y).objRace(0))(tier).Red
                             ElseIf types(i) = "blue" Then
-                                weights(i) = raceMana(m.board(x, y).objRace(0))(tier).Blue
+                                weights(i) = raceMana.Item(m.board(x, y).objRace(0))(tier).Blue
                             End If
                         Next i
+                        If tier = 1 Then
+                            Dim maxW As Double = weights.Max
+                            For i As Integer = 0 To UBound(types) Step 1
+                                If weights(i) < maxW Then weights(i) = 0
+                            Next i
+                        End If
                     ElseIf mineType(x, y) = My.Resources.mineTypeRandomMana Then
                         types = New String() {My.Resources.mineTypeRandomMana}
                         weights = New Double() {1}
@@ -7279,18 +7328,18 @@ Public Class ImpenetrableObjects
             mineType(p.X, p.Y) = type
         End If
     End Sub
-    Private Function RacesManaUsing() As Dictionary(Of Integer, AllDataStructues.Cost())
-        Dim r() As String = comm.TxtSplit(comm.defValues.Races)
+    Friend Shared Function RacesManaUsing(ByRef c As Common, ByRef rSpells() As AllDataStructues.Spell) As Dictionary(Of Integer, AllDataStructues.Cost())
+        Dim r() As String = c.TxtSplit(c.defValues.Races)
         Dim res As New Dictionary(Of Integer, AllDataStructues.Cost())
         For i As Integer = 0 To UBound(r) Step 1
             Dim s() As String = r(i).Split(CChar(" "))
-            res.Add(comm.RaceIdentifierToSubrace(s(UBound(s))), New AllDataStructues.Cost() {Nothing, Nothing, Nothing, Nothing, Nothing, Nothing})
+            res.Add(c.RaceIdentifierToSubrace(s(UBound(s))), New AllDataStructues.Cost() {Nothing, Nothing, Nothing, Nothing, Nothing, Nothing})
         Next i
-        For s As Integer = 0 To UBound(raceSpells) Step 1
-            If raceSpells(s).researchCost.Count > 0 Then
-                For Each L As String In raceSpells(s).researchCost.Keys
-                    Dim LRace As Integer = comm.LordsRace.Item(L)
-                    res.Item(LRace)(raceSpells(s).level) = raceSpells(s).researchCost.Item(L) + raceSpells(s).castCost
+        For s As Integer = 0 To UBound(rSpells) Step 1
+            If rSpells(s).researchCost.Count > 0 Then
+                For Each L As String In rSpells(s).researchCost.Keys
+                    Dim LRace As Integer = c.LordsRace.Item(L)
+                    res.Item(LRace)(rSpells(s).level) = rSpells(s).researchCost.Item(L) + rSpells(s).castCost
                 Next L
             End If
         Next s
@@ -7920,7 +7969,7 @@ Public Class ObjectsContentSet
     Private manaSourcesTypes() As String = New String() {DefMapObjects.mineGreen, DefMapObjects.mineBlack, DefMapObjects.mineWhite, _
                                                          DefMapObjects.mineRed, DefMapObjects.mineBlue}
 
-    Private spells, excludedSpells As New Dictionary(Of String, AllDataStructues.Spell)
+    Friend spells, excludedSpells As New Dictionary(Of String, AllDataStructues.Spell)
 
     Delegate Function getSettings(ByVal mode As Integer, ByRef input() As String) As List(Of String)
 
@@ -7951,6 +8000,14 @@ Public Class ObjectsContentSet
                     typeMinCost(item.type) = Math.Min(typeMinCost(item.type), sum)
                     typeMaxCost(item.type) = Math.Max(typeMaxCost(item.type), sum)
                 End If
+            End If
+        Next item
+
+        For Each item As AllDataStructues.Spell In randStack.AllSpells
+            If Not randStack.comm.IsExcluded(item) Then
+                spells.Add(item.spellID.ToUpper, AllDataStructues.Spell.Copy(item))
+            Else
+                excludedSpells.Add(item.spellID.ToUpper, AllDataStructues.Spell.Copy(item))
             End If
         Next item
 
