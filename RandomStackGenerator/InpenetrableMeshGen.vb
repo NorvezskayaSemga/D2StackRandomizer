@@ -6918,14 +6918,16 @@ Public Class ImpenetrableObjects
     End Function
     Private Function makeIDs(ByRef a() As PlateauObject, ByRef initOnly As Boolean, ByRef noWaterfalls As Boolean) As List(Of Integer)
         Dim IDs As New List(Of Integer)
-        If initOnly Then
-            For i As Integer = 0 To UBound(a) Step 1
-                If a(i).connectors.Length = 1 Then IDs.Add(i)
-            Next i
-        Else
-            For i As Integer = 0 To UBound(a) Step 1
-                If (noWaterfalls And Not a(i).isWaterfall) Or Not noWaterfalls Then IDs.Add(i)
-            Next i
+        If Not IsNothing(a) Then
+            If initOnly Then
+                For i As Integer = 0 To UBound(a) Step 1
+                    If a(i).connectors.Length = 1 Then IDs.Add(i)
+                Next i
+            Else
+                For i As Integer = 0 To UBound(a) Step 1
+                    If (noWaterfalls And Not a(i).isWaterfall) Or Not noWaterfalls Then IDs.Add(i)
+                Next i
+            End If
         End If
         Return IDs
     End Function
