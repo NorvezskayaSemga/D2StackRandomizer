@@ -7791,12 +7791,15 @@ Public Class ImpenetrableObjects
         Next p
         Dim IDs As New List(Of Integer)
         Dim weight(UBound(mountains)) As Double
-        For n As Integer = 0 To UBound(mountains) Step 1
-            If mountains(n).xSize = size AndAlso CheckRaces(m.board(x, y).objRace, mountains(n).race) Then
-                IDs.Add(n)
-                weight(n) = ObjectWeight(m, mountains(n), x, y)
-            End If
-        Next n
+        For p As Integer = 0 To 1 Step 1
+            For n As Integer = 0 To UBound(mountains) Step 1
+                If mountains(n).xSize = size AndAlso (p = 1 OrElse CheckRaces(m.board(x, y).objRace, mountains(n).race)) Then
+                    IDs.Add(n)
+                    weight(n) = ObjectWeight(m, mountains(n), x, y)
+                End If
+            Next n
+            If IDs.Count > 0 Then Exit For
+        Next p
         Dim selected As Integer = comm.RandomSelection(IDs, weight, True)
         m.board(x, y).objectName = mountains(selected).name
     End Sub
