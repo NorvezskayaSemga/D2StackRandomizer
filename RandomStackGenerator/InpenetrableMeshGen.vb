@@ -4883,7 +4883,11 @@ Public Class Map
                 Call ReadFromOtherFile(baseFilePath, fileName, searchBlockName, readColumn, fields)
             Else
                 If fields.ContainsKey(s(0).ToUpper) Then fields.Remove(s(0).ToUpper)
-                fields.Add(s(0).ToUpper, s(Math.Min(UBound(s), readColumn)))
+                If s.Length > 1 Then
+                    fields.Add(s(0).ToUpper, s(Math.Min(UBound(s), readColumn)))
+                Else
+                    Throw New Exception("Пустой параметр " & s(0) & " в блоке " & blockName & " #" & blockNumber & ". Файл: " & baseFilePath)
+                End If
             End If
         Next i
         Return fields
