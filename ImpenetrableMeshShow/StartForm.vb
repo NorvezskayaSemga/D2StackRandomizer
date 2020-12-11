@@ -80,6 +80,8 @@ Friend Class StartForm
 
         Dim def() As String = {"%default%"}
 
+        Dim treesAmount() As Integer = {0, 20, 20, 20, 20, 20, 0, 0, 0, 0, 0, 0, 0, 0, 20}
+
         Dim rstack As New RandStack(ReadTestUnits, ReadTestItems, ReadSpells, def, def, def, def, def, def, 5)
         Dim objCont As New ObjectsContentSet(rstack)
 
@@ -135,7 +137,7 @@ Friend Class StartForm
 
         If Not IsNothing(grid.board) Then
             Call ShowResult(grid)
-            Call shortMapFormat.MapConversion(grid, gsettings, objSizeArray, objCont, True, True)
+            Call shortMapFormat.MapConversion(grid, gsettings, objSizeArray, objCont, True, True, treesAmount)
         End If
 
     End Sub

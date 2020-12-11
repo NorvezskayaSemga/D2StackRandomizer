@@ -3876,8 +3876,10 @@ Public Class shortMapFormat
     Public Structure TileState
         ''' <summary>See here GroundType</summary>
         Public ground As Integer
-        ''' <summary>See shortMapFormat.OwnerRace</summary>
+        ''' <summary>Раса владельца</summary>
         Public owner As String
+        ''' <summary>ID дерева, если оно есть</summary>
+        Public treeID As Integer
 
         ''' <summary>Тип местности</summary>
         Public Enum GroundType
@@ -3950,12 +3952,14 @@ Public Class shortMapFormat
     ''' <param name="objContent">Полностью инициализированный класс</param>
     ''' <param name="fullSymmetry">Если карта симметрична, сделать отряды и награды абсолютно симметричными (пока не используется)</param>
     ''' <param name="usePlayableRaceUnitsInNeutralStacks">Если True, то в нейтральных отрядах будут использованы юниты из веток развития</param>
+    ''' <param name="treesAmont">Количество деревьев для земли каждой расы. ID рас в Races.txt, последний столбец</param>
     Public Shared Function MapConversion(ByRef m As Map, _
                                          ByRef settGen As ImpenetrableMeshGen.GenSettings, _
                                          ByRef ObjectsSize() As ImpenetrableObjects.GlobalMapDecoration, _
                                          ByRef objContent As ObjectsContentSet, _
                                          ByRef fullSymmetry As Boolean, _
-                                         ByRef usePlayableRaceUnitsInNeutralStacks As Boolean) As shortMapFormat
+                                         ByRef usePlayableRaceUnitsInNeutralStacks As Boolean, _
+                                         ByRef treesAmont() As Integer) As shortMapFormat
 
         Dim attObjects() As AttendedObject = (New ImpenetrableMeshGen).ActiveObjects
         Dim sName As New SetName
@@ -4043,11 +4047,17 @@ Public Class shortMapFormat
 
             'ландшафт
             res.landscape(x, y).owner = objContent.randStack.comm.defValues.RaceNumberToRaceChar(objContent.randStack.comm.RaceIdentifierToSubrace("Neutral"))
+            res.landscape(x, y).treeID = -1
             If m.board(x, y).isWater Then
                 res.landscape(x, y).ground = TileState.GroundType.Water
             Else
                 If m.board(x, y).isForest Then
                     res.landscape(x, y).ground = TileState.GroundType.Forest
+                    Dim max As Integer = treesAmont(objContent.randStack.comm.RaceIdentifierToSubrace(res.landscape(x, y).owner)) - 1
+                    res.landscape(x, y).treeID = objContent.randStack.rndgen.RndInt(0, max, True)
+                    If res.landscape(x, y).treeID > max Then
+                        max = max
+                    End If
                 ElseIf m.board(x, y).isRoad Then
                     res.landscape(x, y).ground = TileState.GroundType.Road
                 Else
@@ -5161,8 +5171,9 @@ Public Class Map
                                   ByRef ObjectsSize() As ImpenetrableObjects.GlobalMapDecoration, _
                                   ByRef objContent As ObjectsContentSet, _
                                   ByRef fullSymmetry As Boolean, _
-                                  ByRef usePlayableRaceUnitsInNeutralStacks As Boolean) As shortMapFormat
-        Return shortMapFormat.MapConversion(Me, settGen, ObjectsSize, objContent, fullSymmetry, usePlayableRaceUnitsInNeutralStacks)
+                                  ByRef usePlayableRaceUnitsInNeutralStacks As Boolean, _
+                                  ByRef treesAmont() As Integer) As shortMapFormat
+        Return shortMapFormat.MapConversion(Me, settGen, ObjectsSize, objContent, fullSymmetry, usePlayableRaceUnitsInNeutralStacks, treesAmont)
     End Function
 
 End Class
