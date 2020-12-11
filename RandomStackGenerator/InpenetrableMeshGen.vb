@@ -29,7 +29,6 @@ Public Class DefMapObjects
     Public Const mineWhite As String = "G000CR0000WH"
     Public Const mineRed As String = "G000CR0000RD"
     Public Const mineBlue As String = "G000CR0000YE"
-
 End Class
 
 Public Class ImpenetrableMeshGen

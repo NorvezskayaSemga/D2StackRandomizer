@@ -3603,6 +3603,7 @@ Public Class GenDefaultValues
     Public Property minLocationRadiusAtAll As Double
     Public Property LocRacesBlocks As String()
     Public Property StackRaceChance As Double()
+    Public Const randomRaceID As Integer = -10001
 
     'ключевые слова
     Public Shared Function wMineTypeGold() As String
@@ -3661,6 +3662,12 @@ Public Class GenDefaultValues
     End Function
     Public Shared Function wTemplate_ReadFromFileKeyword() As String
         Return My.Resources.template_read_from_file
+    End Function
+    Public Shared Function wTemplate_RandomRaceShortKeyword() As String
+        Return My.Resources.template_RandomRaceShortKeyword
+    End Function
+    Public Shared Function wTemplate_RandomRaceLongKeyword() As String
+        Return My.Resources.template_RandomRaceLongKeyword
     End Function
 
     Public Enum ItemTypes As Integer

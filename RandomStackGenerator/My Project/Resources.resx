@@ -247,4 +247,10 @@
   <data name="objKeyTown" xml:space="preserve">
     <value>G000FT0000</value>
   </data>
+  <data name="template_RandomRaceLongKeyword" xml:space="preserve">
+    <value>Random</value>
+  </data>
+  <data name="template_RandomRaceShortKeyword" xml:space="preserve">
+    <value>R</value>
+  </data>
 </root>

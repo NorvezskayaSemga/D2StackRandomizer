@@ -496,11 +496,31 @@ Public Class RaceGen
             Next i
         Else
             selectedRaces.AddRange(PlayableRaces)
+            If PlayableRaces.Length < nRaces Then
+                For i = PlayableRaces.Length + 1 To nRaces Step 1
+                    selectedRaces.Add(GenDefaultValues.randomRaceID)
+                Next i
+            ElseIf PlayableRaces.Length > nRaces Then
+                Do While selectedRaces.Count > nRaces
+                    selectedRaces.RemoveAt(rndgen.RndInt(0, selectedRaces.Count - 1, True))
+                Loop
+            End If
         End If
         If Not selectedRaces.Count = nRaces Then
             Throw New Exception("Количество рас не соответствует количеству столиц на карте")
             Return Nothing
         End If
+        Do While selectedRaces.Contains(GenDefaultValues.randomRaceID)
+            Dim s As New List(Of Integer)
+            For Each r As String In comm.defValues.playableRaces
+                Dim subrace As Integer = comm.RaceIdentifierToSubrace(r)
+                If Not selectedRaces.Contains(subrace) Then
+                    s.Add(subrace)
+                End If
+            Next r
+            selectedRaces.Remove(GenDefaultValues.randomRaceID)
+            selectedRaces.Add(comm.RandomSelection(s, True))
+        Loop
         Dim LocR(UBound(m.Loc)) As Integer
         For i As Integer = 1 To nRaces Step 1
             If IsNothing(PlayableRaces) Then

@@ -789,6 +789,24 @@ Namespace My.Resources
         End Property
         
         '''<summary>
+        '''  Looks up a localized string similar to Random.
+        '''</summary>
+        Friend ReadOnly Property template_RandomRaceLongKeyword() As String
+            Get
+                Return ResourceManager.GetString("template_RandomRaceLongKeyword", resourceCulture)
+            End Get
+        End Property
+        
+        '''<summary>
+        '''  Looks up a localized string similar to R.
+        '''</summary>
+        Friend ReadOnly Property template_RandomRaceShortKeyword() As String
+            Get
+                Return ResourceManager.GetString("template_RandomRaceShortKeyword", resourceCulture)
+            End Get
+        End Property
+        
+        '''<summary>
         '''  Looks up a localized string similar to ReadFromFile.
         '''</summary>
         Friend ReadOnly Property template_read_from_file() As String

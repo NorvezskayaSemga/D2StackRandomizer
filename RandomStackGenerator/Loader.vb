@@ -138,31 +138,36 @@ Public Class MapGenWrapper
 
         Dim PlayersRaces() As Integer = Nothing
         If Not IsNothing(settGen.common_settMap.PlayersRaces) Then
-            If Not settGen.common_settMap.PlayersRaces.Length = settGen.common_settMap.nRaces Then
-                Throw New Exception("Список рас не соответствует заданному количеству в nRaces")
-                Return Nothing
-            End If
+            'If Not settGen.common_settMap.PlayersRaces.Length = settGen.common_settMap.nRaces Then
+            '    Throw New Exception("Список рас не соответствует заданному количеству в nRaces")
+            '    Return Nothing
+            'End If
             Dim ok As Boolean
             ReDim PlayersRaces(UBound(settGen.common_settMap.PlayersRaces))
             For i As Integer = 0 To UBound(settGen.common_settMap.PlayersRaces) Step 1
-                PlayersRaces(i) = genmesh.comm.RaceIdentifierToSubrace(settGen.common_settMap.PlayersRaces(i))
-                ok = False
-                For Each R As String In genmesh.comm.defValues.playableRaces
-                    If PlayersRaces(i) = genmesh.comm.RaceIdentifierToSubrace(R) Then
-                        ok = True
-                        Exit For
-                    End If
-                Next R
-                If Not ok Then
-                    Throw New Exception("Раса " & settGen.common_settMap.PlayersRaces(i) & " не является играбельной")
-                    Return Nothing
-                End If
-                For j As Integer = 0 To i - 1 Step 1
-                    If PlayersRaces(i) = PlayersRaces(j) Then
-                        Throw New Exception("В списке рас игроков присутствуют две одинаковые расы")
+                If settGen.common_settMap.PlayersRaces(i).ToUpper = GenDefaultValues.wTemplate_RandomRaceLongKeyword.ToUpper Or _
+                   settGen.common_settMap.PlayersRaces(i).ToUpper = GenDefaultValues.wTemplate_RandomRaceShortKeyword.ToUpper Then
+                    PlayersRaces(i) = GenDefaultValues.randomRaceID
+                Else
+                    PlayersRaces(i) = genmesh.comm.RaceIdentifierToSubrace(settGen.common_settMap.PlayersRaces(i))
+                    ok = False
+                    For Each R As String In genmesh.comm.defValues.playableRaces
+                        If PlayersRaces(i) = genmesh.comm.RaceIdentifierToSubrace(R) Then
+                            ok = True
+                            Exit For
+                        End If
+                    Next R
+                    If Not ok Then
+                        Throw New Exception("Раса " & settGen.common_settMap.PlayersRaces(i) & " не является играбельной")
                         Return Nothing
                     End If
-                Next j
+                    For j As Integer = 0 To i - 1 Step 1
+                        If PlayersRaces(i) = PlayersRaces(j) Then
+                            Throw New Exception("В списке рас игроков присутствуют две одинаковые расы")
+                            Return Nothing
+                        End If
+                    Next j
+                End If
             Next i
         End If
 
