@@ -9,9 +9,11 @@ g000mg0003	G	H N S
 g000mg0004	G	L
 g000mg0005	G	L
 
-#плато
+#водопады
 #g000mg0006	G	H L C U E N S
 #g000mg0007	G	H L C U E N S
+
+#плато
 #g000mg0008	G	H L C U E N S
 #g000mg0009	G	H L C U E N S
 #g000mg0010	G	H L C U E N S
@@ -84,7 +86,7 @@ g000mg0073	W	H L C U E N S
 g000mg0077	G	H C N
 g000mg0078	G	L
 
-№плато
+#водопады
 #g000mg0079	G	H L C U E N S
 #g000mg0080	G	H L C U E N S
 #g000mg0081	G	H L C U E N S

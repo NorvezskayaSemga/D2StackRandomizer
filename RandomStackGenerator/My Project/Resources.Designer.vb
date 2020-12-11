@@ -416,7 +416,7 @@ Namespace My.Resources
         '''G000IG0024	1.2
         '''#Эликсир защиты от магии Смерти
         '''G001IG0036	1.2
-        '''#Эликсир защиты от м [rest of string was truncated]&quot;;.
+        '''#Эликсир защиты от  [rest of string was truncated]&quot;;.
         '''</summary>
         Friend ReadOnly Property LootItemChanceMultiplier() As String
             Get
@@ -459,16 +459,17 @@ Namespace My.Resources
         '''g000mg0003	G	H N S
         '''g000mg0004	G	L
         '''g000mg0005	G	L
-        '''g000mg0006	G	H L C U E N S
-        '''g000mg0007	G	H L C U E N S
-        '''g000mg0008	G	H L C U E N S
-        '''g000mg0009	G	H L C U E N S
-        '''g000mg0010	G	H L C U E N S
-        '''g000mg0011	G	H L C U E N S
-        '''g000mg0012	G	H L C U E N S
-        '''g000mg0013	G	H L C U E N S
-        '''g000mg0014	G	H L C U E N S
-        '''g000m [rest of string was truncated]&quot;;.
+        '''
+        '''#плато
+        '''#g000mg0006	G	H L C U E N S
+        '''#g000mg0007	G	H L C U E N S
+        '''#g000mg0008	G	H L C U E N S
+        '''#g000mg0009	G	H L C U E N S
+        '''#g000mg0010	G	H L C U E N S
+        '''#g000mg0011	G	H L C U E N S
+        '''#g000mg0012	G	H L C U E N S
+        '''#g000mg0013	G	H L C U E N S
+        '''#g000mg0014	G	H [rest of string was truncated]&quot;;.
         '''</summary>
         Friend ReadOnly Property MapObjectRace() As String
             Get
