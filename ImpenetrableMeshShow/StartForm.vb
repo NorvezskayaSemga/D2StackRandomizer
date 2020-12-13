@@ -79,7 +79,7 @@ Friend Class StartForm
     Private Sub GenButton_Click() Handles GenButton.Click
 
 
-        Dim param() As MapGenWrapper.Parameter = MapGenWrapper.GetPermissibleParametersRange
+        Dim param() As ImpenetrableMeshGen.GenSettings.Parameter = ImpenetrableMeshGen.GenSettings.GetPermissibleParametersRange
 
         Dim def() As String = {"%default%"}
 
