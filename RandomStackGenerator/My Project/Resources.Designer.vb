@@ -369,6 +369,25 @@ Namespace My.Resources
         End Property
         
         '''<summary>
+        '''  Looks up a localized string similar to Map generator by Norvezskaya Semga
+        '''
+        '''#строка, начинающаяся с решетки, игнорируется
+        '''#параметры и их значения не чувствительны к регистру
+        '''#разделитель - пробел или табуляция (может идти несколько подряд)
+        '''
+        '''#внутри блоков настройки могут идти в любом порядке
+        '''#порядок блоков тоже может быть любым с одним исключением:
+        '''#блоки Location для расовых локаций должны стоять выше, чем блоки для обычных локаций (независимо от genMode)
+        '''
+        '''#если в блоке Location параметр имеет два значения, то при генерации будет выб [rest of string was truncated]&quot;;.
+        '''</summary>
+        Friend ReadOnly Property GenParametersRange() As String
+            Get
+                Return ResourceManager.GetString("GenParametersRange", resourceCulture)
+            End Get
+        End Property
+        
+        '''<summary>
         '''  Looks up a localized string similar to #строка, начинающаяся с решетки, игнорируется
         '''#Идентификаторы типов предметов.
         '''0	nonattack_artifact
@@ -460,16 +479,18 @@ Namespace My.Resources
         '''g000mg0004	G	L
         '''g000mg0005	G	L
         '''
-        '''#плато
+        '''#водопады
         '''#g000mg0006	G	H L C U E N S
         '''#g000mg0007	G	H L C U E N S
+        '''
+        '''#плато
         '''#g000mg0008	G	H L C U E N S
         '''#g000mg0009	G	H L C U E N S
         '''#g000mg0010	G	H L C U E N S
         '''#g000mg0011	G	H L C U E N S
         '''#g000mg0012	G	H L C U E N S
         '''#g000mg0013	G	H L C U E N S
-        '''#g000mg0014	G	H [rest of string was truncated]&quot;;.
+        '''#g [rest of string was truncated]&quot;;.
         '''</summary>
         Friend ReadOnly Property MapObjectRace() As String
             Get

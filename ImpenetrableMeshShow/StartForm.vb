@@ -78,6 +78,9 @@ Friend Class StartForm
 
     Private Sub GenButton_Click() Handles GenButton.Click
 
+
+        Dim param() As MapGenWrapper.Parameter = MapGenWrapper.GetPermissibleParametersRange
+
         Dim def() As String = {"%default%"}
 
         Dim treesAmount() As Integer = {0, 20, 20, 20, 20, 20, 0, 0, 0, 0, 0, 0, 0, 0, 20}
