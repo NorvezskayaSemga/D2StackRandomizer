@@ -3986,6 +3986,15 @@ Public Class shortMapFormat
         Inherits ObjectWithInternalStack
         ''' <summary>Ресурсы</summary>
         Public resourcesReward As AllDataStructues.Cost
+
+        ''' <summary>Вернет ID предмета-награды, если таковой имеется. Если нет - Nothing</summary>
+        Public Function ItemReward() As String
+            If IsNothing(internalStack.items) OrElse internalStack.items.Count = 0 Then
+                Return Nothing
+            Else
+                Return internalStack.items.Item(0)
+            End If
+        End Function
     End Class
     Public Class CityObject
         Inherits ObjectWithInternalStack
