@@ -4045,6 +4045,8 @@ Public Class shortMapFormat
         Public lordName As String
         ''' <summary>Начальный запас ресурсов</summary>
         Public startResources As AllDataStructues.Cost
+        ''' <summary>Предметы в столице</summary>
+        Public items() As AllDataStructues.Item
     End Class
 
     ''' <summary>Конвертирует карту для более удобной записи в файл</summary>
@@ -4088,15 +4090,9 @@ Public Class shortMapFormat
             raceT1mana.Add(id, AllDataStructues.Cost.ToCost(a))
         Next id
 
-        Dim gLocSettings() As Map.SettingsLoc
-        If settGen.genMode = ImpenetrableMeshGen.GenSettings.genModes.simple Then
-            gLocSettings = Map.SettingsLoc.ToArray(settGen.simple_settRaceLoc, _
-                                                   settGen.simple_settCommLoc, _
-                                                   settGen.common_settMap.nRaces, _
-                                                   m.Loc.Length)
-        Else
-            gLocSettings = Map.SettingsLoc.Copy(settGen.template_settLoc)
-        End If
+        Dim gLocSettings() As Map.SettingsLoc = copySettings(m, settGen)
+
+        Dim startItems() As AllDataStructues.Item = GenStartItems(objContent)
 
         Dim res As New shortMapFormat
         ReDim res.landscape(UBound(m.board, 1), UBound(m.board, 2))
@@ -4156,9 +4152,6 @@ Public Class shortMapFormat
                     res.landscape(x, y).ground = TileState.GroundType.Forest
                     Dim max As Integer = treesAmont(objContent.randStack.comm.RaceIdentifierToSubrace(res.landscape(x, y).owner)) - 1
                     res.landscape(x, y).treeID = objContent.randStack.rndgen.RndInt(0, max, True)
-                    If res.landscape(x, y).treeID > max Then
-                        max = max
-                    End If
                 ElseIf m.board(x, y).isRoad Then
                     res.landscape(x, y).ground = TileState.GroundType.Road
                 Else
@@ -4174,7 +4167,7 @@ Public Class shortMapFormat
                     Dim subrace As Integer = objContent.randStack.comm.RaceIdentifierToSubrace(objContent.randStack.comm.defValues.capitalToGeneratorRace(name))
                     Dim resources As AllDataStructues.Cost = raceT1mana.Item(subrace) * CDbl(settGen.common_settMap.StartMana / AllDataStructues.Cost.Sum(raceT1mana.Item(subrace)))
                     resources.Gold += settGen.common_settMap.StartGold
-                    Call AddObject(res.capitals, x, y, name, objContent, attObjects, sName, resources)
+                    Call AddObject(res.capitals, x, y, name, objContent, attObjects, sName, resources, startItems)
                 ElseIf m.board(x, y).objectID = DefMapObjects.Types.City Then
                     Dim pos As New Point(x, y)
                     Dim owner As String = m.board(x, y).City.race
@@ -4364,7 +4357,7 @@ Public Class shortMapFormat
     End Sub
     Private Shared Sub AddObject(ByRef AddTo() As CapitalObject, ByRef x As Integer, ByRef y As Integer, ByRef name As String, _
                                  ByRef objContent As ObjectsContentSet, ByRef attObj() As AttendedObject, _
-                                 ByRef sName As SetName, ByRef startResources As AllDataStructues.Cost)
+                                 ByRef sName As SetName, ByRef startResources As AllDataStructues.Cost, ByRef startItems() As AllDataStructues.Item)
         ReDim Preserve AddTo(AddTo.Length)
         Dim r As String = objContent.randStack.comm.defValues.capitalToGeneratorRace(name)
         Dim subrace As Integer = objContent.randStack.comm.RaceIdentifierToSubrace(r)
@@ -4377,9 +4370,66 @@ Public Class shortMapFormat
                                                        .lordName = lordName, _
                                                        .size = New Size(s, s), _
                                                        .objectName = sName.CityName(name, subrace), _
-                                                       .startResources = AllDataStructues.Cost.Copy(startResources)}
+                                                       .startResources = AllDataStructues.Cost.Copy(startResources), _
+                                                       .items = startItems}
     End Sub
 
+    Private Shared Function copySettings(ByRef m As Map, ByRef settGen As ImpenetrableMeshGen.GenSettings) As Map.SettingsLoc()
+        If settGen.genMode = ImpenetrableMeshGen.GenSettings.genModes.simple Then
+            Return Map.SettingsLoc.ToArray(settGen.simple_settRaceLoc, _
+                                           settGen.simple_settCommLoc, _
+                                           settGen.common_settMap.nRaces, _
+                                           m.Loc.Length)
+        Else
+            Return Map.SettingsLoc.Copy(settGen.template_settLoc)
+        End If
+    End Function
+
+    Private Shared Function GenStartItems(ByRef objContent As ObjectsContentSet) As AllDataStructues.Item()
+        Dim startItems(-1) As AllDataStructues.Item
+        For Each item As AllDataStructues.Item In objContent.randStack.AllItems
+            If Not objContent.randStack.comm.IsExcluded(item) AndAlso item.type = GenDefaultValues.ItemTypes.ressurection_elixir Then
+                For i As Integer = 0 To 2 Step 1
+                    ReDim Preserve startItems(startItems.Length)
+                    startItems(UBound(startItems)) = AllDataStructues.Item.Copy(item)
+                Next i
+                Exit For
+            End If
+        Next item
+        Dim healPotCost As Integer = 1300
+        Dim forceExit As Boolean = True
+        Dim maxCost As Integer
+        Dim minCost As Integer = Integer.MaxValue
+        Dim s As Integer
+        For Each item As AllDataStructues.Item In objContent.randStack.AllItems
+            If Not objContent.randStack.comm.IsExcluded(item) _
+            AndAlso item.type = GenDefaultValues.ItemTypes.healing_elixir Then
+                s = AllDataStructues.Cost.Sum(item.itemCost)
+                maxCost = Math.Max(maxCost, s)
+                minCost = Math.Min(minCost, s)
+            End If
+        Next item
+        Do While healPotCost > 0
+            For Each item As AllDataStructues.Item In objContent.randStack.AllItems
+                s = AllDataStructues.Cost.Sum(item.itemCost)
+                If Not objContent.randStack.comm.IsExcluded(item) _
+                AndAlso item.type = GenDefaultValues.ItemTypes.healing_elixir _
+                AndAlso s > 0 Then
+                    If s < maxCost OrElse minCost = maxCost Then
+                        forceExit = False
+                        If objContent.randStack.rndgen.Rand(0, 1, True) < 0.1 * Math.Min(1, healPotCost / s) Then
+                            ReDim Preserve startItems(startItems.Length)
+                            startItems(UBound(startItems)) = AllDataStructues.Item.Copy(item)
+                            healPotCost -= s
+                            If healPotCost <= 0 Then Exit Do
+                        End If
+                    End If
+                End If
+            Next item
+            If forceExit Then Exit Do
+        Loop
+        Return startItems
+    End Function
 End Class
 
 Public Class Map
@@ -8775,7 +8825,7 @@ Public Class ObjectsContentSet
             exclude.Add(item)
         Next item
 
-        For Each v As Integer In System.Enum.GetValues(GetType(GenDefaultValues.ItemTypes))
+        For Each v As GenDefaultValues.ItemTypes In System.Enum.GetValues(GetType(GenDefaultValues.ItemTypes))
             If randStack.comm.IsExcluded(v) AndAlso Not exclude.Contains(v) Then exclude.Add(v)
         Next v
         For Each deltaCost As Integer In {400, 200, 200, 100}

@@ -1920,7 +1920,7 @@ Public Class Common
     Protected Friend Function IsExcluded(ByRef spell As AllDataStructues.Spell) As Boolean
         Return excludedObjects.Contains(spell.spellID.ToUpper)
     End Function
-    Protected Friend Function IsExcluded(ByRef iType As Integer) As Boolean
+    Protected Friend Function IsExcluded(ByRef iType As GenDefaultValues.ItemTypes) As Boolean
         Return excludedObjects.Contains(itemType.Item(iType).ToUpper)
     End Function
 
@@ -3026,7 +3026,7 @@ Public Class AllDataStructues
         ''' <summary>GxxxIGxxxx</summary>
         Dim itemID As String
         ''' <summary>Описание типов в ./Resources/Items.txt</summary>
-        Dim type As Integer
+        Dim type As GenDefaultValues.ItemTypes
         ''' <summary>Цена покупки предмета. При продаже цена в пять раз меньше</summary>
         Dim itemCost As Cost
         ''' <summary>Сумма полей itemCost</summary>
