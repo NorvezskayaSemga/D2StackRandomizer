@@ -6127,19 +6127,21 @@ Public Class StackLocationsGen
             Dim rnd As RndValueGen = Nothing
             If trueRandomIDsOrder Then rnd = New RndValueGen
 
-            Dim m As Long = 123
-            For i As Integer = 0 To 3 * n Step 1
-                If trueRandomIDsOrder Then
-                    m = CInt(rnd.RndInt(0, n - 1, True))
-                Else
-                    m = CLng(i + 1) * CLng(i + n) * CLng(i + 112) * CLng(n + 1) * CLng(n + 1021) _
-                      + CLng(m + n + 1) * CLng(i + 3) + CLng(m / 2)
-                    m = m Mod n
-                End If
-                Dim tmpV As Integer = input_IDs(CInt(m))
-                input_IDs(CInt(m)) = input_IDs(n)
-                input_IDs(n) = tmpV
-            Next i
+            If IDs_UpperBound > 0 Then
+                Dim m As Long = 123
+                For i As Integer = 0 To 3 * IDs_UpperBound Step 1
+                    If trueRandomIDsOrder Then
+                        m = CInt(rnd.RndInt(0, IDs_UpperBound - 1, True))
+                    Else
+                        m = CLng(i + 1) * CLng(i + IDs_UpperBound) * CLng(i + 112) * CLng(IDs_UpperBound + 1) * CLng(IDs_UpperBound + 1021) _
+                          + CLng(m + IDs_UpperBound + 1) * CLng(i + 3) + CLng(m / 2)
+                        m = m Mod IDs_UpperBound
+                    End If
+                    Dim tmpV As Integer = input_IDs(CInt(m))
+                    input_IDs(CInt(m)) = input_IDs(IDs_UpperBound)
+                    input_IDs(IDs_UpperBound) = tmpV
+                Next i
+            End If
 
             ReDim disableWhenSelected(path.Size.X, path.Size.Y), cloneEdgePoints(path.Size.X, path.Size.Y), bordersT1(path.Size.X, path.Size.Y)
             For y As Integer = 0 To path.Size.Y Step 1
