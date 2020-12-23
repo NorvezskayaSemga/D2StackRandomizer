@@ -78,6 +78,7 @@ Friend Class StartForm
 
     Private Sub GenButton_Click() Handles GenButton.Click
 
+        Call StackLocationsGen.PassageGuardPlacer.speedBanchmark()
 
         Dim param() As ImpenetrableMeshGen.GenSettings.Parameter = ImpenetrableMeshGen.GenSettings.GetPermissibleParametersRange
 
