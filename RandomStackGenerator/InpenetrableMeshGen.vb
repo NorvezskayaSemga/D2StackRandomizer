@@ -535,6 +535,7 @@ newtry:
                 Call m.log.Add("Passages creating: " & Environment.TickCount - t0 & " ms")
                 t0 = Environment.TickCount
                 Call PlaceActiveObjects(m, settGen.common_settMap, copiedSettings, term)
+                term.maxTime += Environment.TickCount - t0
                 Call m.log.Add("Active objects creating: " & Environment.TickCount - t0 & " ms")
                 t0 = Environment.TickCount
                 Call MakeLabyrinth(m, settGen.common_settMap, term)
@@ -2509,32 +2510,23 @@ newtry:
          End Sub)
 
         Dim GroupID As Integer = 1
-        Term = New TerminationCondition(Term.maxTime)
+        Dim maxTime As Long = Term.maxTime
         Dim warning As String = FillLocation(GroupID, 1, tmpm, LocsPlacing, LocArea, settMap, settLoc, _
-                                             tmpm.symmID, True, LocSymmMult, LocFreeCells, Term)
-        If Term.ExitFromLoops Then Exit Sub
+                                             tmpm.symmID, True, LocSymmMult, LocFreeCells, maxTime)
         If Not warning = "" Then Throw New Exception(warning)
 
-        Dim TT(UBound(tmpm.Loc)) As TerminationCondition
-        Dim maxTime As Long = Term.maxTime
         Dim warnings(UBound(tmpm.Loc)) As String
         Parallel.For(settMap.nRaces, tmpm.Loc.Length, _
          Sub(i As Integer)
              'For i As Integer = settMap.nRaces To UBound(tmpm.Loc) Step 1
              If Not tmpm.Loc(i).IsObtainedBySymmery Then
-                 TT(i) = New TerminationCondition(maxTime)
-                 For j As Integer = 0 To UBound(tmpm.Loc) Step 1
-                     If Not IsNothing(TT(j)) Then TT(i).ExitFromLoops = TT(i).ExitFromLoops Or TT(j).ExitFromLoops
-                 Next j
-                 If TT(i).ExitFromLoops Then Exit Sub
                  warnings(i) = FillLocation(GroupID, tmpm.Loc(i).ID, tmpm, LocsPlacing, LocArea, settMap, settLoc, _
-                                            tmpm.symmID, False, LocSymmMult, LocFreeCells, TT(i))
+                                            tmpm.symmID, False, LocSymmMult, LocFreeCells, maxTime)
              End If
              'Next i
          End Sub)
         For i As Integer = 0 To UBound(tmpm.Loc) Step 1
             If Not warnings(i) = "" Then warning = warnings(i)
-            If Not IsNothing(TT(i)) Then Term.ExitFromLoops = Term.ExitFromLoops Or TT(i).ExitFromLoops
         Next i
         If Term.ExitFromLoops Then Exit Sub
         If Not warning = "" Then Throw New Exception(warning)
@@ -2590,13 +2582,12 @@ newtry:
                                        ByRef m As Map, ByRef settMap As Map.SettingsMap, _
                                        ByRef LocsPlacing() As Location.Borders, _
                                        ByRef FreeCells(,) As Boolean, _
-                                       ByRef output() As Point, ByRef Term As TerminationCondition)
+                                       ByRef output() As Point, ByRef maxTime As Long)
+
+        Dim Term As New TerminationCondition(maxTime)
 
         Dim locCenter As New Point(m.Loc(locID - 1).pos.X - LocsPlacing(locID - 1).minX, _
                                    m.Loc(locID - 1).pos.Y - LocsPlacing(locID - 1).minY)
-
-        Call Term.CheckTime()
-        If Term.ExitFromLoops Then Exit Sub
 
         Dim objPlacer As New ActiveObjectsPlacer(comm, ActiveObjects, locCenter, placingObjects, Term, FreeCells)
         Call objPlacer.PlaceObjRow(0, FreeCells)
@@ -2902,25 +2893,23 @@ newtry:
     Private Function FillLocation(ByRef GroupID As Integer, ByVal LocId As Integer, ByRef m As Map, ByRef LocsPlacing() As Location.Borders, _
                                   ByRef LocArea()() As Integer, ByVal settMap As Map.SettingsMap, ByVal settLoc() As Map.SettingsLoc, _
                                   ByVal symmId As Integer, ByVal IsRaceLoc As Boolean, LocSymmMult() As Double, _
-                                  ByRef LocFreeCells()(,) As Boolean, ByRef Term As TerminationCondition) As String
+                                  ByRef LocFreeCells()(,) As Boolean, ByVal maxTime As Long) As String
         Dim tmpm As Map = m
         Dim tmpLocsPlacing() As Location.Borders = LocsPlacing
         Dim tmpLocFreeCells()(,) As Boolean = LocFreeCells
-        Dim TT As TerminationCondition = Term
+        Dim TT As New TerminationCondition(maxTime)
         Dim places()() As ActiveObjectsPlacer.ObjectPlacingSettings = Nothing
         Dim ok As Boolean = False
         Do While Not ok
             Call TT.CheckTime()
-            If TT.ExitFromLoops Then
-                Term = TT
-                Exit Do
-            End If
+            If TT.ExitFromLoops Then Exit Do
+
             Dim v()() As Point = Nothing
             If symmId > -1 Or Not IsRaceLoc Then
                 ReDim v(0), places(0)
                 Call MakeLocObjectsList(places(0), m.Loc(LocId - 1), settLoc(LocId - 1), IsRaceLoc, LocArea(LocId - 1), LocSymmMult(LocId - 1), tmpm)
                 Call ObjectsPlacingVariants(places(0), LocId, tmpm, settMap, tmpLocsPlacing, _
-                                            tmpLocFreeCells(LocId - 1), v(0), TT)
+                                            tmpLocFreeCells(LocId - 1), v(0), CLng(Math.Max(1000, maxTime / 3)))
             Else
                 ReDim v(settMap.nRaces - 1), places(settMap.nRaces - 1)
                 For i As Integer = 0 To settMap.nRaces - 1 Step 1
@@ -2929,13 +2918,16 @@ newtry:
                 Parallel.For(0, settMap.nRaces, _
                  Sub(i As Integer)
                      Call ObjectsPlacingVariants(places(i), i + 1, tmpm, settMap, tmpLocsPlacing, _
-                                                 tmpLocFreeCells(i), v(i), TT)
+                                                 tmpLocFreeCells(i), v(i), CLng(Math.Max(1000, maxTime / 3)))
                  End Sub)
             End If
-            If TT.ExitFromLoops Then
-                Term = TT
-                Exit Do
-            End If
+            'If TT.ExitFromLoops Then
+            '    Term = TT
+            '    Exit Do
+            'End If
+            '#######################
+            'ТЕСТ ПОЛУЧИВШЕЙСЯ РАССТАНОВКИ
+            '#######################
             Dim minN As Integer = Integer.MaxValue
             For i As Integer = 0 To UBound(v) Step 1
                 If IsNothing(v(i)) Then
@@ -2974,6 +2966,11 @@ newtry:
                 maxRmetric = Math.Max(maxRmetric, (Rsum / Math.Sqrt(tolerance)) / (v(i).Length ^ 2))
             Next i
             If minRmetric < maxRmetric Then ok = False
+
+
+            '#######################
+            'РАССТАНОВКА ОБЪЕКТОВ
+            '#######################
             If ok Then
                 Dim ex As Boolean = False
                 Dim tmp_G As Integer = GroupID
