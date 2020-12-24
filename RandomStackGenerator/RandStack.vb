@@ -1178,10 +1178,15 @@ Public Class RandStack
                  End If
              End If
 
+             Dim deltaExpKilled As Integer = 0
              Dim SelectedFighters As List(Of Integer) = GenFingters(StackStats, DynStackStats(jobID), FreeMeleeSlots, _
-                                                                    SelectedLeader, GroundTile, BaseStackSize, MapLordsRaces, _
+                                                                    SelectedLeader, GroundTile, BaseStackSize, NoLeader, _
+                                                                    MapLordsRaces, deltaExpKilled, _
                                                                     CDbl(jobID / units.Length), jobID)
              units(jobID) = GenUnitsList(SelectedFighters, SelectedLeader, NoLeader)
+
+             DynStackStats(jobID).LootCost = CInt(CDbl(DynStackStats(jobID).LootCost) _
+                                                  * (1 + CDbl(deltaExpKilled) / StackStats.ExpStackKilled))
 
              If Not NoLeader Then leaderExpKilled(jobID) = AllUnits(SelectedLeader).EXPkilled
 
@@ -1305,34 +1310,46 @@ Public Class RandStack
                                  ByRef DynStackStats As AllDataStructues.DesiredStats, _
                                  ByRef FreeMeleeSlots As Integer, ByRef SelectedLeader As Integer, _
                                  ByRef GroundTile As Boolean, ByRef BaseStackSize As Integer, _
-                                 ByRef MapLordsRaces As List(Of Integer), _
+                                 ByVal NoLeader As Boolean, ByRef MapLordsRaces As List(Of Integer), _
+                                 ByRef output_delta_expKilled As Integer, _
                                  ByRef Bias As Double, ByRef LogID As Integer) As List(Of Integer)
         Dim SelectedFighters As New List(Of Integer)
         Dim fighter As Integer
-        Do While DynStackStats.StackSize > 0
-            'создаем список воинов, которых можно использовать
-            fighter = SelectFighters(False, False, DynStackStats, FreeMeleeSlots, SelectedLeader, _
-                                     SelectedFighters, BaseStackSize, MapLordsRaces, Bias, LogID)
-            If fighter = -1 Then
-                fighter = SelectFighters(True, False, DynStackStats, FreeMeleeSlots, SelectedLeader, _
+        Dim deltaExpKilledIncrement As Integer = 10
+        Do While SelectedFighters.Count = 0
+            Do While DynStackStats.StackSize > 0
+                'создаем список воинов, которых можно использовать
+                fighter = SelectFighters(False, False, DynStackStats, FreeMeleeSlots, SelectedLeader, _
                                          SelectedFighters, BaseStackSize, MapLordsRaces, Bias, LogID)
-                If fighter = -1 Then fighter = SelectFighters(True, True, DynStackStats, FreeMeleeSlots, SelectedLeader, _
-                                                              SelectedFighters, BaseStackSize, MapLordsRaces, Bias, LogID)
-            End If
-            If fighter = -1 Then
-                If DynStackStats.MeleeCount > 0 Then
-                    DynStackStats.MeleeCount = 0
-                Else
-                    Exit Do
+                If fighter = -1 Then
+                    fighter = SelectFighters(True, False, DynStackStats, FreeMeleeSlots, SelectedLeader, _
+                                             SelectedFighters, BaseStackSize, MapLordsRaces, Bias, LogID)
+                    If fighter = -1 Then fighter = SelectFighters(True, True, DynStackStats, FreeMeleeSlots, SelectedLeader, _
+                                                                  SelectedFighters, BaseStackSize, MapLordsRaces, Bias, LogID)
                 End If
-            ElseIf fighter = -2 Then
-                Throw New Exception("Возможно, бесконечный цикл в случайном выборе из массива возможных воинов" & vbNewLine & _
-                                    "Имя локации: " & StackStats.LocationName & vbNewLine & _
-                                    "Суша: " & GroundTile & vbNewLine & _
-                                    "StackStats:" & vbNewLine & AllDataStructues.DesiredStats.Print(StackStats, comm.defValues.RaceNumberToRaceChar) & vbNewLine & _
-                                    "DynStackStats:" & vbNewLine & AllDataStructues.DesiredStats.Print(DynStackStats, comm.defValues.RaceNumberToRaceChar))
+                If fighter = -1 Then
+                    If DynStackStats.MeleeCount > 0 Then
+                        DynStackStats.MeleeCount = 0
+                    Else
+                        Exit Do
+                    End If
+                ElseIf fighter = -2 Then
+                    Throw New Exception("Возможно, бесконечный цикл в случайном выборе из массива возможных воинов" & vbNewLine & _
+                                        "Имя локации: " & StackStats.LocationName & vbNewLine & _
+                                        "Суша: " & GroundTile & vbNewLine & _
+                                        "StackStats:" & vbNewLine & AllDataStructues.DesiredStats.Print(StackStats, comm.defValues.RaceNumberToRaceChar) & vbNewLine & _
+                                        "DynStackStats:" & vbNewLine & AllDataStructues.DesiredStats.Print(DynStackStats, comm.defValues.RaceNumberToRaceChar))
+                Else
+                    SelectedFighters.Add(fighter)
+                End If
+            Loop
+            If NoLeader Then
+                If SelectedFighters.Count = 0 Then
+                    output_delta_expKilled += deltaExpKilledIncrement
+                    DynStackStats.ExpStackKilled += deltaExpKilledIncrement
+                End If
             Else
-                SelectedFighters.Add(fighter)
+                Exit Do
             End If
         Loop
         Return SelectedFighters
