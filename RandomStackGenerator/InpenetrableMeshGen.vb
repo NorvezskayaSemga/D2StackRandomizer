@@ -5879,6 +5879,34 @@ Public Class StackLocationsGen
             Next x
         Next y
 
+        Dim corners As New List(Of Point)
+        For y As Integer = 0 To ySize Step 1
+            For x As Integer = 0 To xSize Step 1
+                If m.board(x, y).objectID = DefMapObjects.Types.Capital Then
+                    For j As Integer = 0 To 1 Step 1
+                        For i As Integer = 0 To 1 Step 1
+                            corners.Add(New Point(x + i * (genmap.ActiveObjects(DefMapObjects.Types.Capital).Size - 1), _
+                                                  y + j * (genmap.ActiveObjects(DefMapObjects.Types.Capital).Size - 1)))
+                        Next i
+                    Next j
+                End If
+            Next x
+        Next y
+        If corners.Count > 0 Then
+            For y As Integer = 0 To ySize Step 1
+                For x As Integer = 0 To xSize Step 1
+                    If isPossiblePoint(x, y) Then
+                        For Each p As Point In corners
+                            If p.Dist(x, y) < 3 Then
+                                isPossiblePoint(x, y) = False
+                                Exit For
+                            End If
+                        Next p
+                    End If
+                Next x
+            Next y
+        End If
+
         Dim StackPos(Math.Max(24, Environment.ProcessorCount * 6) - 1) As List(Of Point)
         Dim rms(UBound(StackPos)) As Double
         Dim r(), rcut, averR As Double
