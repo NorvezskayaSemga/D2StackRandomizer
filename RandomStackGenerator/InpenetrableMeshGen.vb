@@ -3325,6 +3325,26 @@ newtry:
             Next x
         Next y
 
+        For j As Integer = 0 To ySize Step 1
+            For i As Integer = 0 To xSize Step 1
+                If m.board(i + LPos.X, j + LPos.Y).objectID = DefMapObjects.Types.Capital Then
+                    Dim center As New Point(CInt(i + (ActiveObjects(DefMapObjects.Types.Capital).Size - 1) * 0.5), _
+                                            CInt(j + (ActiveObjects(DefMapObjects.Types.Capital).Size - 1) * 0.5))
+                    Dim R As Double = 7
+                    For y As Integer = 0 To ySize Step 1
+                        For x As Integer = 0 To xSize Step 1
+                            Dim d As Double = center.Dist(x, y)
+                            If isLifeField(x, y) And d < R Then
+                                Dim delChance As Double = settLoc(m.board(x + LPos.X, y + LPos.Y).locID(0) - 1).DecorationsAmount
+                                delChance *= 0.75 * (R - d) / R
+                                If delChance = 1 OrElse delChance > rndgen.Rand(0, 1) Then free(x, y) = True
+                            End If
+                        Next x
+                    Next y
+                End If
+            Next i
+        Next j
+
         For y As Integer = 0 To ySize Step 1
             For x As Integer = 0 To xSize Step 1
                 If isLifeField(x, y) Then
