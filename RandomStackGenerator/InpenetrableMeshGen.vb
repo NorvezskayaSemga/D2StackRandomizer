@@ -2797,6 +2797,7 @@ newtry:
                     If places(j).objectType = DefMapObjects.Types.Mine And places(j).placeNearWith = -1 Then
                         places(j).placeNearWith = i
                         places(j).SetDistanceSettings(places(places(j).placeNearWith).objectType, ActiveObjects, rndgen)
+                        Exit For
                     End If
                 Next j
             End If

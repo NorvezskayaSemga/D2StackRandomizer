@@ -61,11 +61,11 @@ Public Class StackLocationsGen_PassageGuardPlacerTest
      DeploymentItem("RandomStackGenerator.dll")> _
     Public Sub PointToBStrTest()
         Dim ok As Boolean = True
-        Dim expected As Integer = StackLocationsGen_Accessor.PassageGuardPlacer.PointToBStr(New Point(100000, 100000)).Length
+        Dim expected As Integer = Point.ToByteStr(New Point(100000, 100000)).Length
         If Not expected = 8 Then ok = False
         For i As Integer = 0 To 100 Step 1
             For j As Integer = 0 To 100 Step 1
-                If Not expected = StackLocationsGen_Accessor.PassageGuardPlacer.PointToBStr(New Point(i, j)).Length Then
+                If Not expected = Point.ToByteStr(New Point(i, j)).Length Then
                     ok = False
                     Exit For
                 End If
