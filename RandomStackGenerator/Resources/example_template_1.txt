@@ -128,6 +128,9 @@ maxEccentricityDispersion	0.15
 # огда свободного места станет недостаточно R начнет постепенно уменьшатьс€ до половины от начального значени€
 maxRadiusDispersion		0.0
 
+#ѕлотность непроходимых объектов внутри локации (0 - нет, 1 - максимальное количество)
+DecorationsAmount		0.8
+
 # оличество золотых шахт на локацию
 maxGoldMines			1.0	2.0
 # оличество источников маны на локацию
@@ -199,6 +202,8 @@ AverageRadius			17
 maxEccentricityDispersion	0.4
 
 maxRadiusDispersion		0.3
+
+DecorationsAmount		0.75
 
 maxGoldMines			1.0	1.0
 maxManaSources			1.0	1.0

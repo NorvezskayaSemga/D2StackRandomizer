@@ -95,18 +95,18 @@
         End If
 
         If settGen.genMode = ImpenetrableMeshGen.GenSettings.genModes.simple Then
-            checkResult = settGen.simple_settRaceLoc.Check
-            If checkResult.Length > 0 Then
-                invalidSettings = True
-                Call grid.log.Add("Invalid settings detected in Race Locations settings:")
-                Call grid.log.Add(checkResult)
-            End If
-            checkResult = settGen.simple_settCommLoc.Check
-            If checkResult.Length > 0 Then
-                invalidSettings = True
-                Call grid.log.Add("Invalid settings detected in Common Locations settings:")
-                Call grid.log.Add(checkResult)
-            End If
+            'checkResult = settGen.simple_settRaceLoc.Check
+            'If checkResult.Length > 0 Then
+            '    invalidSettings = True
+            '    Call grid.log.Add("Invalid settings detected in Race Locations settings:")
+            '    Call grid.log.Add(checkResult)
+            'End If
+            'checkResult = settGen.simple_settCommLoc.Check
+            'If checkResult.Length > 0 Then
+            '    invalidSettings = True
+            '    Call grid.log.Add("Invalid settings detected in Common Locations settings:")
+            '    Call grid.log.Add(checkResult)
+            'End If
         ElseIf settGen.genMode = ImpenetrableMeshGen.GenSettings.genModes.template Then
             'For i As Integer = 0 To UBound(settGen.template_settLoc) Step 1
             '    checkResult = settGen.template_settLoc(i).Check

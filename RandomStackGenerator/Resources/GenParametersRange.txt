@@ -33,9 +33,10 @@ LocExpRatio		[Double]	0.00001	10000.0
 
 Wealth			[Double]		0.0	10000.0
 
-WaterAmount		[Double]		0.0	1.0
-RoadsAmount		[Double]		0.0	1.0
-ForestAmount	[Double]		0.0	1.0
+WaterAmount			[Double]		0.0	1.0
+RoadsAmount			[Double]		0.0	1.0
+ForestAmount		[Double]		0.0	1.0
+DecorationsAmount	[Double]		0.0	1.0
 
 posX				[Double]	0.0	1.0
 posY				[Double]	0.0	1.0

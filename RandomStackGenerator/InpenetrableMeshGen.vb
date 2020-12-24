@@ -97,6 +97,7 @@ Public Class ImpenetrableMeshGen
                 res.AverageRadius = RandomValue(min.AverageRadius, max.AverageRadius, randomizer)
                 res.maxEccentricityDispersion = RandomValue(min.maxEccentricityDispersion, max.maxEccentricityDispersion, randomizer)
                 res.maxRadiusDispersion = RandomValue(min.maxRadiusDispersion, max.maxRadiusDispersion, randomizer)
+                res.DecorationsAmount = RandomValue(min.DecorationsAmount, max.DecorationsAmount, randomizer)
                 res.maxGoldMines = RandomValue(min.maxGoldMines, max.maxGoldMines, randomizer)
                 res.maxManaSources = RandomValue(min.maxManaSources, max.maxManaSources, randomizer)
                 res.maxCities = RandomValue(min.maxCities, max.maxCities, randomizer)
@@ -468,8 +469,8 @@ Public Class ImpenetrableMeshGen
 
         If Not settGen.common_settMap.isChecked Then Throw New Exception("Check parameters via settGen.common_settMap.Check()")
         If settGen.genMode = GenSettings.genModes.simple Then
-            If Not settGen.simple_settRaceLoc.isChecked Then Throw New Exception("Check parameters via settGen.simple_settRaceLoc.Check()")
-            If Not settGen.simple_settCommLoc.isChecked Then Throw New Exception("Check parameters via settGen.simple_settCommLoc.Check()")
+            '    If Not settGen.simple_settRaceLoc.isChecked Then Throw New Exception("Check parameters via settGen.simple_settRaceLoc.Check()")
+            '    If Not settGen.simple_settCommLoc.isChecked Then Throw New Exception("Check parameters via settGen.simple_settCommLoc.Check()")
         ElseIf settGen.genMode = GenSettings.genModes.template Then
             '    For i As Integer = 0 To UBound(settGen.template_settLoc) Step 1
             '        If Not settGen.template_settLoc(i).isChecked Then Throw New Exception("Check parameters via settGen.template_settLoc(" & i & ").Check()")
@@ -538,7 +539,7 @@ newtry:
                 term.maxTime += Environment.TickCount - t0
                 Call m.log.Add("Active objects creating: " & Environment.TickCount - t0 & " ms")
                 t0 = Environment.TickCount
-                Call MakeLabyrinth(m, settGen.common_settMap, term)
+                Call MakeLabyrinth(m, settGen.common_settMap, copiedSettings, term)
                 Call m.log.Add("Impassable tiles creating: " & Environment.TickCount - t0 & " ms")
                 AttemptsN += 1
                 If Not term.ExitFromLoops Then
@@ -591,7 +592,7 @@ newtry:
         Dim attempt1, attempt2 As Integer
         Dim exitLoop1, exitLoop2 As Boolean
         Dim lsett() As Map.SettingsLoc = Nothing
-        Dim checkResult As String
+        'Dim checkResult As String
         Dim invalidSettings As Boolean = False
         Dim errortext As String = "It was not possible to properly place locations in accordance with the specified template"
         Dim deltaI As Integer
@@ -614,12 +615,12 @@ newtry:
                                                               settGen.template_settGenLoc(i).maxValues, _
                                                               rndgen)
                         Call lsett(i - deltaI).IncrementOwner(0, settGen.common_settMap.nRaces)
-                        checkResult = lsett(i - deltaI).Check
-                        If checkResult.Length > 0 Then
-                            invalidSettings = True
-                            Call res.log.Add("Invalid settings detected in settings #" & i + 1 & ":")
-                            Call res.log.Add(checkResult)
-                        End If
+                        'checkResult = lsett(i - deltaI).Check
+                        'If checkResult.Length > 0 Then
+                        '    invalidSettings = True
+                        '    Call res.log.Add("Invalid settings detected in settings #" & i + 1 & ":")
+                        '    Call res.log.Add(checkResult)
+                        'End If
                     Else
                         deltaI += 1
                     End If
@@ -3015,7 +3016,8 @@ newtry:
 
 
     ''' <summary>Запускаем сразу после PlaceActiveObjects. После выполнения идем как в примере</summary>
-    Public Sub MakeLabyrinth(ByRef m As Map, ByVal settMap As Map.SettingsMap, ByRef Term As TerminationCondition)
+    Public Sub MakeLabyrinth(ByRef m As Map, ByVal settMap As Map.SettingsMap, ByVal settLoc() As Map.SettingsLoc, _
+                             ByRef Term As TerminationCondition)
         If Term.ExitFromLoops Then Exit Sub
         Dim tmpm As Map = m
         Dim TT(UBound(tmpm.Loc)) As TerminationCondition
@@ -3025,7 +3027,7 @@ newtry:
          Sub(i As Integer)
              If Not tmpm.Loc(i).IsObtainedBySymmery Then
                  TT(i) = New TerminationCondition(maxTime)
-                 ex(i) = MakeLabyrinth(tmpm, settMap, tmpm.Loc(i).ID, TT(i))
+                 ex(i) = MakeLabyrinth(tmpm, settMap, settLoc, tmpm.Loc(i).ID, TT(i))
              End If
          End Sub)
         For i As Integer = 0 To UBound(tmpm.Loc) Step 1
@@ -3043,8 +3045,8 @@ newtry:
         Call ConnectDisconnectedAreas(tmpm, sm, Term)
         m = tmpm
     End Sub
-    Private Function MakeLabyrinth(ByRef m As Map, ByRef settMap As Map.SettingsMap, ByRef LocId As Integer, _
-                                   ByRef Term As TerminationCondition) As String
+    Private Function MakeLabyrinth(ByRef m As Map, ByRef settMap As Map.SettingsMap, ByRef settLoc() As Map.SettingsLoc, _
+                                   ByRef LocId As Integer, ByRef Term As TerminationCondition) As String
         Try
             Dim b As New Location.Borders With {.minX = Integer.MaxValue, .minY = Integer.MaxValue, _
                                                 .maxX = Integer.MinValue, .maxY = Integer.MinValue}
@@ -3131,7 +3133,7 @@ newtry:
                 End If
 
                 For i As Integer = 0 To UBound(conn) Step 1
-                    Call LifeAlgo(m, settMap, conn(i), init(i), New Point(b.minX, b.minY), Term)
+                    Call LifeAlgo(m, settMap, settLoc, conn(i), init(i), New Point(b.minX, b.minY), Term)
                 Next i
             End If
 
@@ -3180,7 +3182,8 @@ newtry:
         End Try
         Return ""
     End Function
-    Private Sub LifeAlgo(ByRef m As Map, ByRef settMap As Map.SettingsMap, ByRef connected(,) As Boolean, _
+    Private Sub LifeAlgo(ByRef m As Map, ByRef settMap As Map.SettingsMap, ByRef settLoc() As Map.SettingsLoc, _
+                         ByRef connected(,) As Boolean, _
                          ByRef init As Point, ByRef LPos As Point, ByRef Term As TerminationCondition)
 
         Dim xSize As Integer = UBound(connected, 1)
@@ -3302,8 +3305,21 @@ newtry:
                 If W(x, y) > 0 AndAlso W(x, y) > rndgen.Rand(0, maxW) Then
                     free(x, y) = Not free(x, y)
                     Dim tconn(,) As Boolean = FindConnected(free, init)
-                    If Not CompareConnection(free, connected, tconn) Then
-                        free(x, y) = Not free(x, y)
+                    If Not CompareConnection(free, connected, tconn) Then free(x, y) = Not free(x, y)
+                End If
+            Next x
+        Next y
+
+        For y As Integer = 0 To ySize Step 1
+            For x As Integer = 0 To xSize Step 1
+                If isLifeField(x, y) And Not free(x, y) Then
+                    Dim decAmount As Double = settLoc(m.board(x + LPos.X, y + LPos.Y).locID(0) - 1).DecorationsAmount
+                    If decAmount < 1 Then
+                        If decAmount > 0 Then
+                            If decAmount < rndgen.Rand(0, 1) Then free(x, y) = True
+                        Else
+                            free(x, y) = True
+                        End If
                     End If
                 End If
             Next x
@@ -4751,6 +4767,9 @@ Public Class Map
         ''' Когда свободного места станет недостаточно R начнет постепенно уменьшаться до половины от начального значения</summary>
         Dim maxRadiusDispersion As Double
 
+        ''' <summary>Плотность непроходимых объектов внутри локации (0 - нет, 1 - максимальное количество)</summary>
+        Dim DecorationsAmount As Double
+
         '''<summary>Количество золотых шахт на локацию</summary>
         Dim maxGoldMines As Double
         '''<summary>Количество источников маны на локацию</summary>
@@ -4816,75 +4835,75 @@ Public Class Map
         ''' <summary>True, если локация должна быть соединена с соседними независимо от глобальных настроек</summary>
         Dim ConnectWithAllNeighboringLocations As Boolean
 
-        Private Checked As Boolean
-        ''' <summary>Проверит корректность параметров. Вернет пустое сообщение, если все нормально</summary>
-        Public Function Check() As String
-
-            Dim fields As New Dictionary(Of String, String)
-
-            fields.Add("AverageRadius", AverageRadius.ToString)
-            fields.Add("maxEccentricityDispersion", maxEccentricityDispersion.ToString)
-            fields.Add("maxRadiusDispersion", maxRadiusDispersion.ToString)
-            fields.Add("maxGoldMines", maxGoldMines.ToString)
-            fields.Add("maxManaSources", maxManaSources.ToString)
-            fields.Add("maxCities", maxCities.ToString)
-            fields.Add("maxVendors", maxVendors.ToString)
-            fields.Add("maxMercenaries", maxMercenaries.ToString)
-            fields.Add("maxMages", maxMages.ToString)
-            fields.Add("maxTrainers", maxTrainers.ToString)
-            fields.Add("maxRuins", maxRuins.ToString)
-            fields.Add("minStackToStackDist", minStackToStackDist.ToString)
-            fields.Add("expAmount", expAmount.ToString)
-            fields.Add("mageSpellsMaxLevel", mageSpellsMaxLevel.ToString)
-            fields.Add("mageSpellsMinLevel", mageSpellsMinLevel.ToString)
-            fields.Add("mageSpellsCount", mageSpellsCount.ToString)
-            'fields.Add("mageGlobalSpellsEnabled", mageGlobalSpellsEnabled.ToString)
-            fields.Add("mercenariesMaxExpBar", mercenariesMaxExpBar.ToString)
-            fields.Add("mercenariesMinExpBar", mercenariesMinExpBar.ToString)
-            fields.Add("mercenariesCount", mercenariesCount.ToString)
-            fields.Add("merchMaxConsumableItemCost", merchMaxConsumableItemCost.ToString)
-            fields.Add("merchMinConsumableItemCost", merchMinConsumableItemCost.ToString)
-            fields.Add("merchMaxNonconsumableItemCost", merchMaxNonconsumableItemCost.ToString)
-            fields.Add("merchMinNonconsumableItemCost", merchMinNonconsumableItemCost.ToString)
-            fields.Add("merchItemsCost", merchItemsCost.ToString)
-
-            Dim msg As String = ""
-            Dim less0 As New List(Of String)
-            Dim equal0 As New List(Of String)
-            Dim less1 As New List(Of String)
-            Dim equal1 As New List(Of String)
-            Dim greater1 As New List(Of String)
-
-            For Each k As String In fields.Keys
-                less0.Add(k)
-            Next k
-            equal0.AddRange({"AverageRadius", "expAmount"})
-            If maxMages > 0 Then
-                If mageSpellsMaxLevel < mageSpellsMinLevel Then msg &= vbNewLine & "mageSpellsMaxLevel < mageSpellsMinLevel"
-                equal0.AddRange({"mageSpellsMaxLevel", "mageSpellsMinLevel", "mageSpellsCount"})
-            End If
-            If maxMercenaries > 0 Then
-                If mercenariesMaxExpBar < mercenariesMinExpBar Then msg &= vbNewLine & "mercenariesMaxExpBar < mercenariesMinExpBar"
-                equal0.AddRange({"mercenariesMaxExpBar", "mercenariesMinExpBar", "mercenariesCount"})
-            End If
-            If maxVendors > 0 Then
-                If merchMaxConsumableItemCost < merchMinConsumableItemCost Then msg &= vbNewLine & "merchMaxConsumableItemCost < merchMinConsumableItemCost"
-                If merchMaxNonconsumableItemCost < merchMinNonconsumableItemCost Then msg &= vbNewLine & "merchMaxNonconsumableItemCost < merchMinNonconsumableItemCost"
-                equal0.AddRange({"merchMaxConsumableItemCost", "merchMinConsumableItemCost", "merchMaxNonconsumableItemCost", "merchMinNonconsumableItemCost", "merchItemsCost"})
-            End If
-            less1.AddRange({"minStackToStackDist"})
-            equal1.AddRange({"maxEccentricityDispersion", "maxRadiusDispersion"})
-            greater1.AddRange({"maxEccentricityDispersion", "maxRadiusDispersion"})
-
-            msg &= Map.CheckGenParameters(fields, less0, equal0, less1, equal1, greater1)
-            If msg.Length > 0 Then msg = msg.Substring(1)
-            Checked = True
-            Return msg
-        End Function
-        ''' <summary>True, если проверка параметров запускалась</summary>
-        Public Function isChecked() As Boolean
-            Return Checked
-        End Function
+        '    Private Checked As Boolean
+        '    ''' <summary>Проверит корректность параметров. Вернет пустое сообщение, если все нормально</summary>
+        '    Public Function Check() As String
+        '
+        '        Dim fields As New Dictionary(Of String, String)
+        '
+        '        fields.Add("AverageRadius", AverageRadius.ToString)
+        '        fields.Add("maxEccentricityDispersion", maxEccentricityDispersion.ToString)
+        '        fields.Add("maxRadiusDispersion", maxRadiusDispersion.ToString)
+        '        fields.Add("maxGoldMines", maxGoldMines.ToString)
+        '        fields.Add("maxManaSources", maxManaSources.ToString)
+        '        fields.Add("maxCities", maxCities.ToString)
+        '        fields.Add("maxVendors", maxVendors.ToString)
+        '        fields.Add("maxMercenaries", maxMercenaries.ToString)
+        '        fields.Add("maxMages", maxMages.ToString)
+        '        fields.Add("maxTrainers", maxTrainers.ToString)
+        '        fields.Add("maxRuins", maxRuins.ToString)
+        '        fields.Add("minStackToStackDist", minStackToStackDist.ToString)
+        '        fields.Add("expAmount", expAmount.ToString)
+        '        fields.Add("mageSpellsMaxLevel", mageSpellsMaxLevel.ToString)
+        '        fields.Add("mageSpellsMinLevel", mageSpellsMinLevel.ToString)
+        '        fields.Add("mageSpellsCount", mageSpellsCount.ToString)
+        '        'fields.Add("mageGlobalSpellsEnabled", mageGlobalSpellsEnabled.ToString)
+        '        fields.Add("mercenariesMaxExpBar", mercenariesMaxExpBar.ToString)
+        '        fields.Add("mercenariesMinExpBar", mercenariesMinExpBar.ToString)
+        '        fields.Add("mercenariesCount", mercenariesCount.ToString)
+        '        fields.Add("merchMaxConsumableItemCost", merchMaxConsumableItemCost.ToString)
+        '        fields.Add("merchMinConsumableItemCost", merchMinConsumableItemCost.ToString)
+        '        fields.Add("merchMaxNonconsumableItemCost", merchMaxNonconsumableItemCost.ToString)
+        '        fields.Add("merchMinNonconsumableItemCost", merchMinNonconsumableItemCost.ToString)
+        '        fields.Add("merchItemsCost", merchItemsCost.ToString)
+        '
+        '        Dim msg As String = ""
+        '        Dim less0 As New List(Of String)
+        '        Dim equal0 As New List(Of String)
+        '        Dim less1 As New List(Of String)
+        '        Dim equal1 As New List(Of String)
+        '        Dim greater1 As New List(Of String)
+        '
+        '        For Each k As String In fields.Keys
+        '            less0.Add(k)
+        '        Next k
+        '        equal0.AddRange({"AverageRadius", "expAmount"})
+        '        If maxMages > 0 Then
+        '            If mageSpellsMaxLevel < mageSpellsMinLevel Then msg &= vbNewLine & "mageSpellsMaxLevel < mageSpellsMinLevel"
+        '            equal0.AddRange({"mageSpellsMaxLevel", "mageSpellsMinLevel", "mageSpellsCount"})
+        '        End If
+        '        If maxMercenaries > 0 Then
+        '            If mercenariesMaxExpBar < mercenariesMinExpBar Then msg &= vbNewLine & "mercenariesMaxExpBar < mercenariesMinExpBar"
+        '            equal0.AddRange({"mercenariesMaxExpBar", "mercenariesMinExpBar", "mercenariesCount"})
+        '        End If
+        '        If maxVendors > 0 Then
+        '            If merchMaxConsumableItemCost < merchMinConsumableItemCost Then msg &= vbNewLine & "merchMaxConsumableItemCost < merchMinConsumableItemCost"
+        '            If merchMaxNonconsumableItemCost < merchMinNonconsumableItemCost Then msg &= vbNewLine & "merchMaxNonconsumableItemCost < merchMinNonconsumableItemCost"
+        '            equal0.AddRange({"merchMaxConsumableItemCost", "merchMinConsumableItemCost", "merchMaxNonconsumableItemCost", "merchMinNonconsumableItemCost", "merchItemsCost"})
+        '        End If
+        '        less1.AddRange({"minStackToStackDist"})
+        '        equal1.AddRange({"maxEccentricityDispersion", "maxRadiusDispersion"})
+        '        greater1.AddRange({"maxEccentricityDispersion", "maxRadiusDispersion"})
+        '
+        '        msg &= Map.CheckGenParameters(fields, less0, equal0, less1, equal1, greater1)
+        '        If msg.Length > 0 Then msg = msg.Substring(1)
+        '        Checked = True
+        '        Return msg
+        '    End Function
+        '    ''' <summary>True, если проверка параметров запускалась</summary>
+        '    Public Function isChecked() As Boolean
+        '        Return Checked
+        '    End Function
 
         ''' <summary>Сменить владельцев в RaceCities, если номер локации расы-владельца больше 0.
         ''' Если полученный номер станет больше nRaces, то уменьшится на nRaces</summary>
@@ -4919,6 +4938,7 @@ Public Class Map
             .AverageRadius = v.AverageRadius, _
             .maxEccentricityDispersion = v.maxEccentricityDispersion, _
             .maxRadiusDispersion = v.maxRadiusDispersion, _
+            .DecorationsAmount = v.DecorationsAmount, _
             .maxGoldMines = v.maxGoldMines, _
             .maxManaSources = v.maxManaSources, _
             .maxCities = v.maxCities, _
@@ -4944,8 +4964,7 @@ Public Class Map
             .scaleContent = v.scaleContent, _
             .possibleRaces = r, _
             .RaceCities = SettingsRaceCity.Copy(v.RaceCities), _
-            .ConnectWithAllNeighboringLocations = v.ConnectWithAllNeighboringLocations, _
-            .Checked = v.Checked}
+            .ConnectWithAllNeighboringLocations = v.ConnectWithAllNeighboringLocations}
         End Function
         Public Shared Function Copy(ByRef v() As SettingsLoc) As SettingsLoc()
             If IsNothing(v) Then Return Nothing
@@ -4982,6 +5001,7 @@ Public Class Map
             Call Map.ReadValue("AverageRadius", AverageRadius, data, GenDefaultValues.wTemplate_LocationKeyword)
             Call Map.ReadValue("maxEccentricityDispersion", maxEccentricityDispersion, data, GenDefaultValues.wTemplate_LocationKeyword)
             Call Map.ReadValue("maxRadiusDispersion", maxRadiusDispersion, data, GenDefaultValues.wTemplate_LocationKeyword)
+            Call Map.ReadValue("DecorationsAmount", DecorationsAmount, data, GenDefaultValues.wTemplate_LocationKeyword)
             Call Map.ReadValue("maxGoldMines", maxGoldMines, data, GenDefaultValues.wTemplate_LocationKeyword)
             Call Map.ReadValue("maxManaSources", maxManaSources, data, GenDefaultValues.wTemplate_LocationKeyword)
             Call Map.ReadValue("maxCities", maxCities, data, GenDefaultValues.wTemplate_LocationKeyword)
@@ -5571,8 +5591,8 @@ Public Class StackLocationsGen
                         ByVal settRaceLoc As Map.SettingsLoc, _
                         ByVal settCommLoc As Map.SettingsLoc, _
                         ByRef maxGenTime As Integer) As Boolean
-        If Not settRaceLoc.isChecked Then Throw New Exception("Check parameters via settRaceLoc.Check()")
-        If Not settCommLoc.isChecked Then Throw New Exception("Check parameters via settCommLoc.Check()")
+        'If Not settRaceLoc.isChecked Then Throw New Exception("Check parameters via settRaceLoc.Check()")
+        'If Not settCommLoc.isChecked Then Throw New Exception("Check parameters via settCommLoc.Check()")
         Dim a() As Map.SettingsLoc = Map.SettingsLoc.ToArray(settRaceLoc, settCommLoc, settMap.nRaces, m.Loc.Length)
         Return Gen(m, settMap, a, maxGenTime)
     End Function
@@ -5596,9 +5616,9 @@ Public Class StackLocationsGen
                         ByRef maxGenTime As Integer) As Boolean
 
         If Not settMap.isChecked Then Throw New Exception("Check parameters via settMap.Check()")
-        For i As Integer = 0 To UBound(settLoc) Step 1
-            If Not settLoc(i).isChecked Then Throw New Exception("Check parameters via settLoc(" & i & ").Check()")
-        Next i
+        'For i As Integer = 0 To UBound(settLoc) Step 1
+        '    If Not settLoc(i).isChecked Then Throw New Exception("Check parameters via settLoc(" & i & ").Check()")
+        'Next i
 
         If Not m.complited.LoationsCreation_Done Or Not m.complited.MeshTestI_Done Then
             Throw New Exception("Сначала нужно выполнить ImpenetrableMeshGen.SymmGen или " & _
@@ -7358,8 +7378,8 @@ Public Class ImpenetrableObjects
     ''' Значение количества объектов для каждой локации будет умножаться на отношение площади локации к площади средней локации (Pi*AverageRadius^2).
     ''' Дробная часть определяет шанс округления в большую сторону</param>
     Public Sub Gen(ByRef m As Map, ByRef settMap As Map.SettingsMap, ByRef settRaceLoc As Map.SettingsLoc, ByRef settCommLoc As Map.SettingsLoc)
-        If Not settRaceLoc.isChecked Then Throw New Exception("Check parameters via settRaceLoc.Check()")
-        If Not settCommLoc.isChecked Then Throw New Exception("Check parameters via settCommLoc.Check()")
+        'If Not settRaceLoc.isChecked Then Throw New Exception("Check parameters via settRaceLoc.Check()")
+        'If Not settCommLoc.isChecked Then Throw New Exception("Check parameters via settCommLoc.Check()")
         Dim a() As Map.SettingsLoc = Map.SettingsLoc.ToArray(settRaceLoc, settCommLoc, settMap.nRaces, m.Loc.Length)
         Call Gen(m, settMap, a)
     End Sub
@@ -7376,9 +7396,9 @@ Public Class ImpenetrableObjects
     Public Sub Gen(ByRef m As Map, ByRef settMap As Map.SettingsMap, ByRef settLoc() As Map.SettingsLoc)
 
         If Not settMap.isChecked Then Throw New Exception("Check parameters via settMap.Check()")
-        For i As Integer = 0 To UBound(settLoc) Step 1
-            If Not settLoc(i).isChecked Then Throw New Exception("Check parameters via settLoc(" & i & ").Check()")
-        Next i
+        'For i As Integer = 0 To UBound(settLoc) Step 1
+        '    If Not settLoc(i).isChecked Then Throw New Exception("Check parameters via settLoc(" & i & ").Check()")
+        'Next i
 
         If Not m.complited.StacksRaceGen_Done Then
             Throw New Exception("Сначала нужно выполнить RaceGen.Gen")

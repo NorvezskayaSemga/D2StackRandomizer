@@ -25,8 +25,8 @@
                    ByRef settMap As Map.SettingsMap, _
                    ByRef settRaceLoc As Map.SettingsLoc, _
                    ByRef settCommLoc As Map.SettingsLoc)
-        If Not settRaceLoc.isChecked Then Throw New Exception("Check parameters via settRaceLoc.Check()")
-        If Not settCommLoc.isChecked Then Throw New Exception("Check parameters via settCommLoc.Check()")
+        'If Not settRaceLoc.isChecked Then Throw New Exception("Check parameters via settRaceLoc.Check()")
+        'If Not settCommLoc.isChecked Then Throw New Exception("Check parameters via settCommLoc.Check()")
         Dim a() As Map.SettingsLoc = Map.SettingsLoc.ToArray(settRaceLoc, settCommLoc, settMap.nRaces, m.Loc.Length)
         Call Gen(m, settMap, a)
     End Sub
@@ -44,9 +44,9 @@
                    ByRef settLoc() As Map.SettingsLoc)
 
         If Not settMap.isChecked Then Throw New Exception("Check parameters via settMap.Check()")
-        For i As Integer = 0 To UBound(settLoc) Step 1
-            If Not settLoc(i).isChecked Then Throw New Exception("Check parameters via settLoc(" & i & ").Check()")
-        Next i
+        'For i As Integer = 0 To UBound(settLoc) Step 1
+        '    If Not settLoc(i).isChecked Then Throw New Exception("Check parameters via settLoc(" & i & ").Check()")
+        'Next i
 
         If Not m.complited.StacksPlacing_Done Or Not m.complited.MeshTestII_Done Then
             Throw New Exception("Сначала нужно выполнить StackLocations.Gen " & _
