@@ -17,7 +17,7 @@ Friend Class StartForm
 
     Private Sub RndTest() Handles RndTestButton.Click
         Dim r As New RndValueGen
-        Dim vanillaR As New OriginalRndGenerator
+        'Dim vanillaR As New OriginalRndGenerator
         Dim maxInt As Integer = Short.MaxValue
 
         Dim steps As Integer = 10 ^ 7
@@ -43,7 +43,8 @@ Friend Class StartForm
 
         Dim t21 As Integer = Environment.TickCount
         For i As Integer = 0 To steps Step 1
-            result(i) = vanillaR.randomNumberUpTo(maxInt) / (maxInt - 1)
+            'result(i) = vanillaR.randomNumberUpTo(maxInt) / (maxInt - 1)
+            result(i) = r.RndDblFast(0, 1)
         Next i
         Dim t22 As Integer = Environment.TickCount
         Dim u2 As Double = CalcUniformity(makeDistribution(result))
@@ -79,6 +80,7 @@ Friend Class StartForm
     Private Sub GenButton_Click() Handles GenButton.Click
 
         'Call StackLocationsGen.PassageGuardPlacer.speedBanchmark()
+        Call ImpenetrableMeshGen.ActiveObjectsPlacer.speedBanchmark()
 
         Dim param() As ImpenetrableMeshGen.GenSettings.Parameter = ImpenetrableMeshGen.GenSettings.GetPermissibleParametersRange
 

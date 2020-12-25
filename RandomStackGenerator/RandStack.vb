@@ -774,8 +774,8 @@ Public Class RandStack
         Dim result As Double
         For i As Integer = 0 To UBound(CostBar) Step 1
             If comm.ItemTypesLists(i).Contains(item.type) Then
-                result = comm.Gauss(AllDataStructues.Cost.Sum(LootCost(item)), _
-                                    CostBar(i), multiItemGenSigmaMultiplier * itemGenSigma)
+                result = Common.Gauss(AllDataStructues.Cost.Sum(LootCost(item)), _
+                                      CostBar(i), multiItemGenSigmaMultiplier * itemGenSigma)
                 Exit For
             End If
         Next i
@@ -1696,11 +1696,18 @@ End Class
 Public Class RndValueGen
     Private betTick, lastRAM As Double
     Private tempPat, delimiterBias As Integer
+    Private fastModeSeed, fastModeTicks As Long
+    Private Const seedMaxVal As Long = Integer.MaxValue - 10
 
-    Public Sub New()
+    Public Sub New(Optional ByVal seed As Integer = -1)
         For i As Integer = 0 To 10 Step 1
             Call RndDbl()
         Next i
+        If seed = -1 Then
+            fastModeSeed = Math.Min(Math.Abs(Environment.TickCount), seedMaxVal)
+        Else
+            fastModeSeed = Math.Min(Math.Abs(seed), seedMaxVal)
+        End If
     End Sub
 
     Private Function RndDbl() As Double
@@ -1807,6 +1814,249 @@ Public Class RndValueGen
     ''' <param name="serial">True, if use in serial code</param>
     Public Function RndInt(ByRef min As Integer, ByRef max As Integer, ByRef serial As Boolean) As Integer
         Return min - 1 + RndPos(max - min + 1, serial)
+    End Function
+
+    '''<summary>Returns random value with uniform distribution from min to max.
+    ''' Runs approximately 100 times faster than regular.
+    ''' Use in the serial execution mode only.</summary>
+    Public Function RndDblFast(ByRef min As Double, ByRef max As Double) As Double
+        Return min + (max - min) * RndIntFast(seedMaxVal) / seedMaxVal
+    End Function
+    '''<summary>Returns random value with uniform distribution from min to max.
+    ''' Runs approximately 100 times faster than regular.
+    ''' Use in the serial execution mode only.</summary>
+    Public Function RndIntFast(ByRef min As Integer, ByRef max As Integer) As Integer
+        Return min + RndIntFast(max - min)
+    End Function
+    Private Function RndIntFast(ByRef max As Integer) As Integer
+
+        Dim m As Long
+        Dim b As Long = CLng(max)
+
+        Dim c1 As Long = fastModeTicks + fastModeSeed + 11
+        Dim c2 As Long = fastModeTicks + b
+        Dim c3 As Long = fastModeTicks + 112
+        Dim c4 As Long = b + b + 1
+        Dim c5 As Long = b + 1021
+
+        Dim d1 As Long = fastModeSeed + b + 1
+        Dim d2 As Long = fastModeTicks + 3
+
+        Dim e1 As Long = CLng(0.5 * fastModeSeed)
+
+        If c1 > seedMaxVal Then c1 -= seedMaxVal
+        If c1 > seedMaxVal Then c1 -= seedMaxVal
+        If c2 > seedMaxVal Then c2 -= seedMaxVal
+        If c3 > seedMaxVal Then c3 -= seedMaxVal
+        If c4 > seedMaxVal Then c4 -= seedMaxVal
+        If c5 > seedMaxVal Then c5 -= seedMaxVal
+        If d1 > seedMaxVal Then d1 -= seedMaxVal
+        If d2 > seedMaxVal Then d2 -= seedMaxVal
+        If e1 > seedMaxVal Then e1 -= seedMaxVal
+
+        Dim s1, s2 As Long
+        s1 = c1 * c2
+        If s1 > seedMaxVal Then s1 = s1 Mod seedMaxVal
+        s1 *= c3
+        If s1 > seedMaxVal Then s1 = s1 Mod seedMaxVal
+        s1 *= c4
+        If s1 > seedMaxVal Then s1 = s1 Mod seedMaxVal
+        s1 *= c5
+        If s1 > seedMaxVal Then s1 = s1 Mod seedMaxVal
+        s2 = d1 * d2
+        If s2 > seedMaxVal Then s2 = s2 Mod seedMaxVal
+
+        m = s1 + s2 + e1
+
+        fastModeSeed = (fastModeSeed + m + fastModeTicks) Mod seedMaxVal
+        fastModeTicks += 1
+        If fastModeTicks > seedMaxVal Then fastModeTicks -= seedMaxVal
+
+        Return CInt(m Mod (max + 1))
+    End Function
+
+    ''' <summary>Dыбирает случайным образом запись из списка</summary>
+    ''' <param name="IDs">Список намеров записей, из которых делается выбор.
+    ''' Если массивы Stats (v) и DesiredStats (d) инициализированы, то каждой записи на их основании будет присвоен стат. вес в соответствие с распределением Гаусса g(v,d).
+    ''' Если Stats (v1, v2, v3...) содержит несколько массивов, то DesiredStats (d1, d2, d3...) должен содержать соответствующее кол-во значений, и в этом случае для получения полного стат. веса стат. веса от каждого параметра будут перемножены g=g(v1,d1)*g(v2,d2)*g(v3,d3)...
+    ''' Если же оба массива не инициализированы, то у всех записей будет одинаковый стат. вес</param>
+    ''' <param name="Stats">Массивы параметров, по которым выбираем запись</param>
+    ''' <param name="DesiredStats">Какое значение будет иметь наибольший стат. вес (по одному на каждый массив значений)</param>
+    ''' <param name="mult">Множитель "желаемого" значения, отражающий особенности выбираемого объекта (например, размер юнита или тип предмета).
+    ''' Если не инициализирован, то считается что множитель для всех записей равен единице</param>
+    ''' <param name="BaseSmearing">Множитель для Сигмы в распределении Гаусса. Сигма=Множитель*Желаемое_значение</param>
+    ''' <param name="serial">True, if use in serial code</param>
+    ''' <param name="fastMode">Generate random value faster. Don't recomended for parallel execution</param>
+    Public Function RandomSelection(ByRef IDs As List(Of Integer), ByRef Stats()() As Double, _
+                                    ByRef DesiredStats() As Double, ByRef mult() As Double, _
+                                    ByVal BaseSmearing As Double, ByVal serial As Boolean, _
+                                    Optional ByVal fastMode As Boolean = False) As Integer
+        Dim noValue As Boolean = False
+        If IsNothing(Stats) And IsNothing(DesiredStats) Then
+            noValue = True
+        ElseIf Not IsNothing(Stats) = IsNothing(DesiredStats) Then
+            Throw New Exception("RandomSelection: Только один из массивов инициализирован")
+            Return -1
+        Else
+            For i As Integer = 1 To UBound(Stats) Step 1
+                If Not Stats(0).Length = Stats(i).Length Then
+                    Throw New Exception("RandomSelection: Массивы статов должны иметь одинаковую длину")
+                    Return -1
+                End If
+            Next i
+            If Not Stats.Length = DesiredStats.Length Then
+                Throw New Exception("RandomSelection: Количество массивов статов должно соответствовать количеству ""желаемых"" статов")
+                Return -1
+            End If
+            If Not IsNothing(mult) AndAlso Not Stats(0).Length = mult.Length Then
+                Throw New Exception("RandomSelection: Если массив множителей инициализирован, то он должен иметь одинаковую длину с массивами статов")
+                Return -1
+            End If
+        End If
+
+        Dim WeightsSum As Double = 0
+        Dim Weight() As Double
+        Dim smearing As Double = 0
+        Dim m As Double
+
+        If noValue Then
+            ReDim Weight(IDs.Max)
+        Else
+            ReDim Weight(UBound(Stats(0)))
+            If BaseSmearing <= 0 Then
+                Throw New Exception("RandomSelection: BaseSmearing должно быть положительным числом")
+                Return -1
+            End If
+        End If
+        Dim maxSmearing As Double = Math.Max(10 * BaseSmearing, 10)
+        Do While WeightsSum = 0
+            smearing += BaseSmearing
+            For Each i As Integer In IDs
+                Weight(i) = 1
+                If Not noValue Then
+                    If Not IsNothing(mult) Then
+                        m = mult(i)
+                    Else
+                        m = 1
+                    End If
+                    For j As Integer = 0 To UBound(Stats) Step 1
+                        Weight(i) *= Common.Gauss(Stats(j)(i), m * DesiredStats(j), smearing)
+                    Next j
+                End If
+                WeightsSum += Weight(i)
+            Next i
+            If smearing > maxSmearing AndAlso WeightsSum = 0 Then
+                If Not noValue Then
+                    Dim minAbs(UBound(Stats)) As Double
+                    For j As Integer = 0 To UBound(Stats) Step 1
+                        minAbs(j) = Double.MaxValue
+                    Next j
+                    For Each i As Integer In IDs
+                        If Not IsNothing(mult) Then
+                            m = mult(i)
+                        Else
+                            m = 1
+                        End If
+                        Dim invM As Double = 1 / m
+                        For j As Integer = 0 To UBound(Stats) Step 1
+                            minAbs(j) = Math.Min(minAbs(j), Math.Abs(DesiredStats(j) - Stats(j)(i) * invM))
+                        Next j
+                    Next i
+
+                    WeightsSum = 0
+                    Dim s, d As Double
+                    For Each i As Integer In IDs
+                        Weight(i) = 1
+                        If Not IsNothing(mult) Then
+                            m = mult(i)
+                        Else
+                            m = 1
+                        End If
+                        For j As Integer = 0 To UBound(Stats) Step 1
+                            d = m * DesiredStats(j)
+                            s = Stats(j)(i)
+                            If s < d Then
+                                s += minAbs(j) * m
+                            Else
+                                s -= minAbs(j) * m
+                            End If
+                            Weight(i) *= Common.Gauss(s, d, BaseSmearing)
+                        Next j
+                        WeightsSum += Weight(i)
+                    Next i
+                End If
+                If WeightsSum = 0 Then
+                    For Each i As Integer In IDs
+                        Weight(i) = 1
+                    Next i
+                End If
+                Exit Do
+            End If
+        Loop
+        Return RandomSelection(IDs, Weight, serial, fastMode)
+    End Function
+    ''' <summary>Dыбирает случайным образом запись из списка</summary>
+    ''' <param name="IDs">Список намеров записей, из которых делается выбор.
+    ''' Если массивы Stats (v) и DesiredStats (d) инициализированы, то каждой записи на их основании будет присвоен стат. вес в соответствие с распределением Гаусса g(v,d).
+    ''' Если Stats (v1, v2, v3...) содержит несколько массивов, то DesiredStats (d1, d2, d3...) должен содержать соответствующее кол-во значений, и в этом случае для получения полного стат. веса стат. веса от каждого параметра будут перемножены g=g(v1,d1)*g(v2,d2)*g(v3,d3)...
+    ''' Если же оба массива не инициализированы, то у всех записей будет одинаковый стат. вес</param>
+    ''' <param name="Stats">Массивы параметров, по которым выбираем запись</param>
+    ''' <param name="DesiredStats">Какое значение будет иметь наибольший стат. вес (по одному на каждый массив значений)</param>
+    ''' <param name="BaseSmearing">Множитель для Сигмы в распределении Гаусса. Сигма=Множитель*Желаемое_значение</param>
+    ''' <param name="serial">True, if use in serial code</param>
+    ''' <param name="fastMode">Generate random value faster. Don't recomended for parallel execution</param>
+    Public Function RandomSelection(ByRef IDs As List(Of Integer), ByRef Stats()() As Double, _
+                                    ByRef DesiredStats() As Double, ByVal BaseSmearing As Double, _
+                                    ByVal serial As Boolean, Optional ByVal fastMode As Boolean = False) As Integer
+        Return RandomSelection(IDs, Stats, DesiredStats, Nothing, BaseSmearing, serial, fastMode)
+    End Function
+    ''' <summary>Dыбирает случайным образом запись из списка, считая, что у всех записей будет одинаковый стат. вес</summary>
+    ''' <param name="IDs">Список намеров записей, из которых делается выбор</param>
+    ''' <param name="serial">True, if use in serial code</param>
+    ''' <param name="fastMode">Generate random value faster. Don't recomended for parallel execution</param>
+    Public Function RandomSelection(ByRef IDs As List(Of Integer), _
+                                    ByVal serial As Boolean, Optional ByVal fastMode As Boolean = False) As Integer
+        Return RandomSelection(IDs, Nothing, Nothing, 0, serial, fastMode)
+    End Function
+    ''' <summary>Dыбирает случайным образом запись из списка</summary>
+    ''' <param name="IDs">Список намеров записей, из которых делается выбор.
+    ''' Если массив Weight не инициализирован, то у всех записей будет одинаковый стат. вес</param>
+    ''' <param name="Weight">Вероятность выбрать запись прямо пропорциональна величине стат. веса. Сумма весов может быть не равна единице</param>
+    ''' <param name="serial">True, if use in serial code</param>
+    ''' <param name="fastMode">Generate random value faster. Don't recomended for parallel execution</param>
+    Public Function RandomSelection(ByRef IDs As List(Of Integer), ByRef Weight() As Double, _
+                                    ByVal serial As Boolean, Optional ByVal fastMode As Boolean = False) As Integer
+        Dim tWeight() As Double
+        If IsNothing(Weight) Then
+            ReDim tWeight(IDs.Max)
+            For Each i In IDs
+                tWeight(i) = 1
+            Next i
+        Else
+            tWeight = Weight
+        End If
+        Dim WeightsSum As Double
+        For Each i As Integer In IDs
+            WeightsSum += tWeight(i)
+        Next i
+        Dim R As Double
+        If Not fastMode Then
+            R = Rand(0, WeightsSum, serial)
+        Else
+            R = RndDblFast(0, WeightsSum)
+        End If
+        Dim W As Double = 0
+        Dim SelectedItem As Integer = -1
+        For Each i In IDs
+            If tWeight(i) < 0 Then Throw New Exception("Отрицательный стат вес")
+            W += tWeight(i)
+            If W > R Then
+                SelectedItem = i
+                Exit For
+            End If
+        Next i
+        If SelectedItem = -1 Then SelectedItem = IDs.Item(IDs.Count - 1)
+        Return SelectedItem
     End Function
 End Class
 
@@ -2173,6 +2423,7 @@ Public Class Common
         Return ValueConverter.TxtSplit(TXT, transferChar)
     End Function
 
+
     ''' <summary>Dыбирает случайным образом запись из списка</summary>
     ''' <param name="IDs">Список намеров записей, из которых делается выбор.
     ''' Если массивы Stats (v) и DesiredStats (d) инициализированы, то каждой записи на их основании будет присвоен стат. вес в соответствие с распределением Гаусса g(v,d).
@@ -2184,112 +2435,12 @@ Public Class Common
     ''' Если не инициализирован, то считается что множитель для всех записей равен единице</param>
     ''' <param name="BaseSmearing">Множитель для Сигмы в распределении Гаусса. Сигма=Множитель*Желаемое_значение</param>
     ''' <param name="serial">True, if use in serial code</param>
+    ''' <param name="fastMode">Generate random value faster. Don't recomended for parallel execution</param>
     Public Function RandomSelection(ByRef IDs As List(Of Integer), ByRef Stats()() As Double, _
                                     ByRef DesiredStats() As Double, ByRef mult() As Double, _
-                                    ByVal BaseSmearing As Double, ByVal serial As Boolean) As Integer
-        Dim noValue As Boolean = False
-        If IsNothing(Stats) And IsNothing(DesiredStats) Then
-            noValue = True
-        ElseIf Not IsNothing(Stats) = IsNothing(DesiredStats) Then
-            Throw New Exception("RandomSelection: Только один из массивов инициализирован")
-            Return -1
-        Else
-            For i As Integer = 1 To UBound(Stats) Step 1
-                If Not Stats(0).Length = Stats(i).Length Then
-                    Throw New Exception("RandomSelection: Массивы статов должны иметь одинаковую длину")
-                    Return -1
-                End If
-            Next i
-            If Not Stats.Length = DesiredStats.Length Then
-                Throw New Exception("RandomSelection: Количество массивов статов должно соответствовать количеству ""желаемых"" статов")
-                Return -1
-            End If
-            If Not IsNothing(mult) AndAlso Not Stats(0).Length = mult.Length Then
-                Throw New Exception("RandomSelection: Если массив множителей инициализирован, то он должен иметь одинаковую длину с массивами статов")
-                Return -1
-            End If
-        End If
-
-        Dim WeightsSum As Double = 0
-        Dim Weight() As Double
-        Dim smearing As Double = 0
-        Dim m As Double
-
-        If noValue Then
-            ReDim Weight(IDs.Max)
-        Else
-            ReDim Weight(UBound(Stats(0)))
-            If BaseSmearing <= 0 Then
-                Throw New Exception("RandomSelection: BaseSmearing должно быть положительным числом")
-                Return -1
-            End If
-        End If
-        Dim maxSmearing As Double = Math.Max(10 * BaseSmearing, 10)
-        Do While WeightsSum = 0
-            smearing += BaseSmearing
-            For Each i As Integer In IDs
-                Weight(i) = 1
-                If Not noValue Then
-                    If Not IsNothing(mult) Then
-                        m = mult(i)
-                    Else
-                        m = 1
-                    End If
-                    For j As Integer = 0 To UBound(Stats) Step 1
-                        Weight(i) *= Gauss(Stats(j)(i), m * DesiredStats(j), smearing)
-                    Next j
-                End If
-                WeightsSum += Weight(i)
-            Next i
-            If smearing > maxSmearing AndAlso WeightsSum = 0 Then
-                If Not noValue Then
-                    Dim minAbs(UBound(Stats)) As Double
-                    For j As Integer = 0 To UBound(Stats) Step 1
-                        minAbs(j) = Double.MaxValue
-                    Next j
-                    For Each i As Integer In IDs
-                        If Not IsNothing(mult) Then
-                            m = mult(i)
-                        Else
-                            m = 1
-                        End If
-                        Dim invM As Double = 1 / m
-                        For j As Integer = 0 To UBound(Stats) Step 1
-                            minAbs(j) = Math.Min(minAbs(j), Math.Abs(DesiredStats(j) - Stats(j)(i) * invM))
-                        Next j
-                    Next i
-
-                    WeightsSum = 0
-                    Dim s, d As Double
-                    For Each i As Integer In IDs
-                        Weight(i) = 1
-                        If Not IsNothing(mult) Then
-                            m = mult(i)
-                        Else
-                            m = 1
-                        End If
-                        For j As Integer = 0 To UBound(Stats) Step 1
-                            d = m * DesiredStats(j)
-                            s = Stats(j)(i)
-                            If s < d Then
-                                s += minAbs(j) * m
-                            Else
-                                s -= minAbs(j) * m
-                            End If
-                            Weight(i) *= Gauss(s, d, BaseSmearing)
-                        Next j
-                        WeightsSum += Weight(i)
-                    Next i
-                End If
-                If WeightsSum = 0 Then
-                    For Each i As Integer In IDs
-                        Weight(i) = 1
-                    Next i
-                End If
-                Exit Do
-            End If
-        Loop
-        Return RandomSelection(IDs, Weight, serial)
+                                    ByVal BaseSmearing As Double, ByVal serial As Boolean, _
+                                    Optional ByVal fastMode As Boolean = False) As Integer
+        Return rndgen.RandomSelection(IDs, Stats, DesiredStats, mult, BaseSmearing, serial, fastMode)
     End Function
     ''' <summary>Dыбирает случайным образом запись из списка</summary>
     ''' <param name="IDs">Список намеров записей, из которых делается выбор.
@@ -2300,54 +2451,33 @@ Public Class Common
     ''' <param name="DesiredStats">Какое значение будет иметь наибольший стат. вес (по одному на каждый массив значений)</param>
     ''' <param name="BaseSmearing">Множитель для Сигмы в распределении Гаусса. Сигма=Множитель*Желаемое_значение</param>
     ''' <param name="serial">True, if use in serial code</param>
+    ''' <param name="fastMode">Generate random value faster. Don't recomended for parallel execution</param>
     Public Function RandomSelection(ByRef IDs As List(Of Integer), ByRef Stats()() As Double, _
                                     ByRef DesiredStats() As Double, ByVal BaseSmearing As Double, _
-                                    ByVal serial As Boolean) As Integer
-        Return RandomSelection(IDs, Stats, DesiredStats, Nothing, BaseSmearing, serial)
+                                    ByVal serial As Boolean, Optional ByVal fastMode As Boolean = False) As Integer
+        Return rndgen.RandomSelection(IDs, Stats, DesiredStats, BaseSmearing, serial, fastMode)
     End Function
     ''' <summary>Dыбирает случайным образом запись из списка, считая, что у всех записей будет одинаковый стат. вес</summary>
     ''' <param name="IDs">Список намеров записей, из которых делается выбор</param>
     ''' <param name="serial">True, if use in serial code</param>
+    ''' <param name="fastMode">Generate random value faster. Don't recomended for parallel execution</param>
     Public Function RandomSelection(ByRef IDs As List(Of Integer), _
-                                    ByVal serial As Boolean) As Integer
-        Return RandomSelection(IDs, Nothing, Nothing, 0, serial)
+                                    ByVal serial As Boolean, Optional ByVal fastMode As Boolean = False) As Integer
+        Return rndgen.RandomSelection(IDs, serial, fastMode)
     End Function
     ''' <summary>Dыбирает случайным образом запись из списка</summary>
     ''' <param name="IDs">Список намеров записей, из которых делается выбор.
     ''' Если массив Weight не инициализирован, то у всех записей будет одинаковый стат. вес</param>
     ''' <param name="Weight">Вероятность выбрать запись прямо пропорциональна величине стат. веса. Сумма весов может быть не равна единице</param>
     ''' <param name="serial">True, if use in serial code</param>
+    ''' <param name="fastMode">Generate random value faster. Don't recomended for parallel execution</param>
     Public Function RandomSelection(ByRef IDs As List(Of Integer), ByRef Weight() As Double, _
-                                    ByVal serial As Boolean) As Integer
-        Dim tWeight() As Double
-        If IsNothing(Weight) Then
-            ReDim tWeight(IDs.Max)
-            For Each i In IDs
-                tWeight(i) = 1
-            Next i
-        Else
-            tWeight = Weight
-        End If
-        Dim WeightsSum As Double
-        For Each i As Integer In IDs
-            WeightsSum += tWeight(i)
-        Next i
-        Dim R As Double = rndgen.Rand(0, WeightsSum, serial)
-        Dim W As Double = 0
-        Dim SelectedItem As Integer = -1
-        For Each i In IDs
-            If tWeight(i) < 0 Then Throw New Exception("Отрицательный стат вес")
-            W += tWeight(i)
-            If W > R Then
-                SelectedItem = i
-                Exit For
-            End If
-        Next i
-        If SelectedItem = -1 Then SelectedItem = IDs.Item(IDs.Count - 1)
-        Return SelectedItem
+                                    ByVal serial As Boolean, Optional ByVal fastMode As Boolean = False) As Integer
+        Return rndgen.RandomSelection(IDs, Weight, serial, fastMode)
     End Function
+
     ''' <summary>e^(-0.5 * ((X - avX) / (sigma * avX)) ^ 2)</summary>
-    Public Function Gauss(ByVal X As Double, ByVal avX As Double, ByVal sigma As Double) As Double
+    Public Shared Function Gauss(ByVal X As Double, ByVal avX As Double, ByVal sigma As Double) As Double
         Return Math.Exp(-0.5 * ((X - avX) / (sigma * avX)) ^ 2)
     End Function
 

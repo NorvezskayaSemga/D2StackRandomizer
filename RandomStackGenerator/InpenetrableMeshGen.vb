@@ -1934,6 +1934,8 @@ newtry:
         Private mayPlaceIfClean()(,) As Boolean
         Private weightLayer()()(,) As Double
 
+        Private currentWeight()() As Double
+
         Private free_initial_points() As Point
         Private free_initial_point_id(,) As Integer
 
@@ -1995,6 +1997,16 @@ newtry:
                 Next x
             Next y
             ReDim Preserve free_initial_points(n)
+
+            ReDim currentWeight(UBound(placingObjects))
+            For i As Integer = 0 To UBound(currentWeight) Step 1
+                ReDim currentWeight(i)(UBound(free_initial_points))
+                If i = 0 Then
+                    For j = 0 To UBound(free_initial_points) Step 1
+                        currentWeight(i)(j) = 1
+                    Next j
+                End If
+            Next i
         End Sub
 
         Public Shared Sub speedBanchmark()
@@ -2099,10 +2111,9 @@ newtry:
             'считаем weightlayer(n)
             Call CalcLayerWeight(n - 1)
 
-            Dim Weight() As Double = Nothing
             Dim pID As List(Of Integer) = Nothing
 
-            Call CalcWeight(freeCells, n, Weight, pID)
+            Call CalcWeight(freeCells, n, currentWeight(n), pID)
 
             If pID.Count = 0 Then
                 output(n) = -1
@@ -2112,7 +2123,7 @@ newtry:
             Dim checkN As Integer = Math.Min(10, pID.Count)
             If n < UBound(placingObjects) Then
                 Do While pID.Count > 0
-                    selected = comm.RandomSelection(pID, Weight, False)
+                    selected = comm.RandomSelection(pID, currentWeight(n), False)
                     pID.Remove(selected)
                     output(n) = selected
                     Call ChangeObjectState(freeCells, placingObjects(n).objectType, _
@@ -2136,7 +2147,7 @@ newtry:
                 Loop
                 If output(n + 1) = -1 Then output(n) = -1
             Else
-                selected = comm.RandomSelection(pID, Weight, False)
+                selected = comm.RandomSelection(pID, currentWeight(n), False)
                 pID.Clear()
                 output(n) = selected
             End If
@@ -2172,7 +2183,6 @@ newtry:
         Private Sub CalcWeight(ByRef fc_bak(,) As Boolean, ByRef n As Integer, _
                                ByRef Weight() As Double, _
                                ByRef pID As List(Of Integer))
-            ReDim Weight(UBound(free_initial_points))
             pID = New List(Of Integer)
 
             If placingObjects(n).placeNearWith > -1 Or placingObjects(n).objectType = DefMapObjects.Types.Capital Then
@@ -2188,7 +2198,7 @@ newtry:
                         Else
                             R = GetDist(LocCenter, freeP)
                         End If
-                        Weight(id) = comm.Gauss(R, placingObjects(n).prefferedDistance, placingObjects(n).sigma)
+                        Weight(id) = Common.Gauss(R, placingObjects(n).prefferedDistance, placingObjects(n).sigma)
                         If placingObjects(n).applyUniformity Then
                             Weight(id) *= weightLayer(0)(n - 1)(x, y)
                         End If
@@ -6191,7 +6201,7 @@ Public Class StackLocationsGen
             For i As Integer = 0 To n Step 1
                 currentOutput(i) = -1
             Next i
-            gPlacer = New PassageGuardPlacer(currentNLimit, term, path, True, justCheckGuardNecessity)
+            gPlacer = New PassageGuardPlacer(currentNLimit, term, path, justCheckGuardNecessity)
             Call gPlacer.PlaceGuardLoc(-1, currentOutput, gPlacer.input_IDs, -1, path)
             If term.ExitFromLoops And gPlacer.debugTestsRun > 100 Then
                 m.log.Add("Guards: " & currentNLimit + 1 & " Tests: " & gPlacer.debugTestsRun & " simpFilter: " & gPlacer.debugSimpleFilter & " passage size: " & gPlacer.pointsList.Length)
@@ -6335,7 +6345,7 @@ Public Class StackLocationsGen
                 out(i) = -1
             Next i
 
-            Dim pgp As New PassageGuardPlacer(3, New TerminationCondition(10000), passage, False, False)
+            Dim pgp As New PassageGuardPlacer(3, New TerminationCondition(10000), passage, False)
             Dim t0 As Integer = Environment.TickCount
             Call pgp.PlaceGuardLoc(-1, out, pgp.input_IDs, -1, passage)
 
@@ -6355,7 +6365,6 @@ Public Class StackLocationsGen
 
         Public Sub New(ByRef limit As Integer, ByRef t As TerminationCondition, _
                        ByRef path As PassageGuardPlacer.Passage, _
-                       ByRef trueRandomIDsOrder As Boolean, _
                        ByRef checkGuardsNecessity As Boolean)
             currentNLimit = limit
             term = t
@@ -6402,21 +6411,13 @@ Public Class StackLocationsGen
                 guardBorderPoints(n) = New Point(i, -d)
             Next i
 
-            Dim rnd As RndValueGen = Nothing
-            If trueRandomIDsOrder Then rnd = New RndValueGen
 
             If IDs_UpperBound > 0 Then
-                Dim m As Long = 123
+                Dim rnd As New RndValueGen
                 For i As Integer = 0 To 3 * IDs_UpperBound Step 1
-                    If trueRandomIDsOrder Then
-                        m = CInt(rnd.RndInt(0, IDs_UpperBound - 1, True))
-                    Else
-                        m = CLng(i + 1) * CLng(i + IDs_UpperBound) * CLng(i + 112) * CLng(IDs_UpperBound + 1) * CLng(IDs_UpperBound + 1021) _
-                          + CLng(m + IDs_UpperBound + 1) * CLng(i + 3) + CLng(m / 2)
-                        m = m Mod IDs_UpperBound
-                    End If
-                    Dim tmpV As Integer = input_IDs(CInt(m))
-                    input_IDs(CInt(m)) = input_IDs(IDs_UpperBound)
+                    Dim m As Integer = rnd.RndIntFast(0, IDs_UpperBound - 1)
+                    Dim tmpV As Integer = input_IDs(m)
+                    input_IDs(m) = input_IDs(IDs_UpperBound)
                     input_IDs(IDs_UpperBound) = tmpV
                 Next i
             End If
