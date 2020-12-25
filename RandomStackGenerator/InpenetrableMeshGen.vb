@@ -5897,7 +5897,7 @@ Public Class StackLocationsGen
                 For x As Integer = 0 To xSize Step 1
                     If isPossiblePoint(x, y) Then
                         For Each p As Point In corners
-                            If p.Dist(x, y) < 3 Then
+                            If p.Dist(x, y) < 3.5 Then
                                 isPossiblePoint(x, y) = False
                                 Exit For
                             End If
