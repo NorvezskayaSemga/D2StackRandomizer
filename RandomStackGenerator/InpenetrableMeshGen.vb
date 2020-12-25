@@ -536,7 +536,7 @@ newtry:
                 Call m.log.Add("Passages creating: " & Environment.TickCount - t0 & " ms")
                 t0 = Environment.TickCount
                 Call PlaceActiveObjects(m, settGen.common_settMap, copiedSettings, term)
-                term.maxTime += Environment.TickCount - t0
+                term = New TerminationCondition(term.maxTime)
                 Call m.log.Add("Active objects creating: " & Environment.TickCount - t0 & " ms")
                 t0 = Environment.TickCount
                 Call MakeLabyrinth(m, settGen.common_settMap, copiedSettings, term)
@@ -2183,8 +2183,8 @@ newtry:
                                ByRef pID As List(Of Integer))
             pID = New List(Of Integer)
 
+            Dim R As Double
             If placingObjects(n).placeNearWith > -1 Or placingObjects(n).objectType = DefMapObjects.Types.Capital Then
-                Dim R As Double
                 For Each freeP As Point In free_initial_points
                     Dim x As Integer = freeP.X
                     Dim y As Integer = freeP.Y
@@ -2210,6 +2210,14 @@ newtry:
                     If mayPlaceIfClean(n)(x, y) AndAlso MayPlaceObject(fc_bak, placingObjects(n).objectType, x, y, ActiveObjects) Then
                         Dim id As Integer = free_initial_point_id(x, y)
                         pID.Add(id)
+                        If placingObjects(n).objectType = DefMapObjects.Types.Mine Then
+                            For i As Integer = 0 To n - 1 Step 1
+                                If placingObjects(i).objectType = DefMapObjects.Types.Mine Then
+                                    R = GetDist(free_initial_points(output(i)), x, y)
+                                    Weight(id) *= (1 + 0.2 * R * R)
+                                End If
+                            Next i
+                        End If
                         If n > 0 Then Weight(id) = Math.Max(weightLayer(1)(n - 1)(x, y), 0.000001)
                     End If
                 Next freeP
