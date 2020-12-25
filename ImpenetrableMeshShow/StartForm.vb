@@ -82,7 +82,11 @@ Friend Class StartForm
         'Call StackLocationsGen.PassageGuardPlacer.speedBanchmark()
         'Call ImpenetrableMeshGen.ActiveObjectsPlacer.speedBanchmark()
 
-        Dim param() As ImpenetrableMeshGen.GenSettings.Parameter = ImpenetrableMeshGen.GenSettings.GetPermissibleParametersRange
+        For Each lang As ImpenetrableMeshGen.GenSettings.Parameter.DescriptionLanguage In System.Enum.GetValues(GetType(ImpenetrableMeshGen.GenSettings.Parameter.DescriptionLanguage))
+            Call ImpenetrableMeshGen.GenSettings.GetPermissibleParametersRange(lang)
+        Next lang
+
+        Dim param() As ImpenetrableMeshGen.GenSettings.Parameter = ImpenetrableMeshGen.GenSettings.GetPermissibleParametersRange(ImpenetrableMeshGen.GenSettings.Parameter.DescriptionLanguage.Rus)
 
         Dim def() As String = {"%default%"}
 

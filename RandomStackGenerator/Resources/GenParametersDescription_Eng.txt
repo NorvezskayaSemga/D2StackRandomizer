@@ -1,0 +1,93 @@
+﻿
+
+genMode genMode = 1 Common_map_settings block and two Location blocks will be used - for starting and all other locations, respectively/ngenMode = 2 Common_map_settings block and all Location blocks will be used - individual settings for each location
+
+
+nRaces Number of races
+
+PlayersRaces Player races. Different and playable. Delimiter - ; (H;U;L;E;C;R or Humans;Undead;Legions;Elves;Clans;Random)/nIn this case, the first race in the list will be on the first location, the second on the second, etc./nIf races less than nRaces, then random will be added, if more, then a random selection will be made from the list/nNothing, if a random selection is needed
+
+StartGold Initial gold supply
+StartMana Initial race mana supply
+
+SpellsMaxLevel Maximum spell level in the capital
+
+ApplySymmetry Whether to apply symmetry operations
+
+SymmetryClass -1 - random symmetry, if .ApplySymmetry = True, ignored if .ApplySymmetry = False./nFor two races: 0 - L2, 1 - xM, 2 - yM, 3 - xy1M, 4 - xy2M./nFor four races: 0 - L4, 1 - xM+yM, 2 - xy1M+xy2M./nL2 - turn 180 degrees around the axis located in the center of the map/nL4 - rotate 90 degrees around the axis located in the center of the map. Only for square maps/nxM - reflection in a plane parallel to the Ox axis and passing through the center of the map/nyM - reflection in a plane parallel to the Oy axis and passing through the center of the map/nxy1M - reflection in a plane parallel to the diagonal {x, y}, and passing through the center of the map. For square maps only/nxy2M - reflection in a plane parallel to the diagonal {-x, y} and passing through the center of the map. For square maps only
+
+xSize Right border of the map (for example, if we generate a 24x48 map, then write 24 here)
+ySize Upper border of the map (for example, if we generate a 24x48 map, then we write 48 here)
+
+RaceLocsDistTolerance Generator will arrange locations with capitals so that for each location the following condition is met:/nR1*(1+RaceLocsDistTolerance)>=R2, with R2>R1, where R1 and R2 are the distance to the two nearest locations with capitals
+
+PassageCreationChance Determines the freedom of movement around the map./n0 - the generator does not try to connect locations,/n1 - generator will connect each location with each neighboring one (but tries not to connect the starting ones in any case)
+
+minPassWidth Minimum width of passages between locations
+minPassDist Minimum distance between passages
+
+AddGuardsBetweenLocations Whether to place guardians of aisles between locations
+PassGuardsPowerMultiplicator Power multiplier of guards of passages between locations
+ObjectGuardsPowerMultiplicator Visited object guards power multiplier
+
+LocExpRatio Ratio of the maximum experience gained for clearing a average-sized location to the minimum./nThe further the location is from the nearest capital and the closer to the center, the more experience for clearing it
+
+Wealth Neutral loot cost multiplier
+
+WaterAmount Amount of water on the map. 0 - no water, 1 - a lot
+RoadsAmount Amount of roads on the map. 0 - no roads, 1 - maximum number
+ForestAmount Amount of forest on the map. 0 - no forest, 1 - maximum amount
+
+# ------------------------------------------------- ---------------------------------
+
+# these settings are only used if genMode = 2
+################
+RaceCities	Definitely add the city(s) owned by a certain race/nformat: city_level#owner_location_number ";" - separator, if you need to add several cities/nif city_level = 0, then a random level from 1 to 3 will be selected/nif owner_location_number = 0, then the city will be neutral/nif the symmetry operation is applied to the location, then the cities obtained using symmetry will have a different one owner/nNothing, if you do not need to create such cities
+posX X coordinate of the location on the map (the number will be multiplied by the map size in X)
+posY Y coordinate of the location on the map (the number will be multiplied by the map size in Y)
+AppearanceChance Chance that the location will appear. 0 to 1
+################
+
+AverageRadius Average radius of locations
+
+maxEccentricityDispersion Locations will be in the form of ellipses with random eccentricity from (1-D)/(1+D) to (1+D)/(1-D)
+
+maxRadiusDispersion If there is enough space, locations with sizes from (1-D)*R to (1+D)*R will be created./nWhen there is not enough free space, R will gradually decrease to half of the initial value
+
+DecorationsAmount Density of impassable objects inside the location (0 - no, 1 - maximum number)
+
+maxGoldMines Number of gold mines per location
+maxManaSources Number of mana sources per location
+maxCities Number of neutral cities per location
+maxVendors Number of merchants per location
+maxMercenaries Number of mercenary camps per location
+maxMages Number of mage towers per location
+maxTrainers Number of trainers per location
+maxRuins Number of ruins per location
+
+minStackToStackDist Minimum distance between squads
+
+expAmount Approximate amount of experience for killing all units in the location
+
+mageSpellsMaxLevel Maximum level of spells in the mage's shop
+mageSpellsMinLevel Minimum spell level in the mage’s shop
+mageSpellsCount Number of spells in the mage's shop
+mageGlobalSpellsEnabled Whether spells that affect the entire map can be found in the mage's shop
+
+mercenariesMaxExpBar Maximum experience bar for small mercenaries (twice as high for large ones)
+mercenariesMinExpBar Minimum experience bar for small mercenaries (twice as high for large ones)
+mercenariesCount Number of mercenaries in the camp
+
+merchMaxConsumableItemCost Maximum cost of a consumable item at the merchant
+merchMinConsumableItemCost Minimum cost of a consumable item at the merchant
+merchMaxNonconsumableItemCost Maximum cost of a non-consumable item at the merchant
+merchMinNonconsumableItemCost Minimum cost of a non-consumable item at the merchant
+
+merchItemsCost Full cost of loot from the merchant
+
+scaleContent Scale the number of visited objects and experience for killing all units in the location
+
+possibleRaces List of possible base races for the location. Delimiter - ; (N;S;H;U;L;E;C)/nIn the case of locations of playable races, determines the races of neutral units in the location./nList of races can be found in Resources\Constants.txt, parameter LocRacesBlocks./nNothing, if you need a random one choice
+
+ConnectWithAllNeighboringLocations True if the location should be connected to neighboring locations regardless of global settings
+

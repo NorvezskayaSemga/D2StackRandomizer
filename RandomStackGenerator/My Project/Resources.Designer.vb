@@ -369,17 +369,57 @@ Namespace My.Resources
         End Property
         
         '''<summary>
-        '''  Looks up a localized string similar to Map generator by Norvezskaya Semga
+        '''  Looks up a localized string similar to .
+        '''</summary>
+        Friend ReadOnly Property GenParametersDescription_Eng() As String
+            Get
+                Return ResourceManager.GetString("GenParametersDescription_Eng", resourceCulture)
+            End Get
+        End Property
+        
+        '''<summary>
+        '''  Looks up a localized string similar to 
         '''
-        '''#строка, начинающаяся с решетки, игнорируется
-        '''#параметры и их значения не чувствительны к регистру
-        '''#разделитель - пробел или табуляция (может идти несколько подряд)
+        '''genMode			genMode=1 Будет использован блок Common_map_settings и два блока Location - для стартовых и всех остальных локаций, соответственно/ngenMode=2 Будет использован блок Common_map_settings и все блоки Location - для каждой локации индивидуальные настройки
         '''
-        '''#внутри блоков настройки могут идти в любом порядке
-        '''#порядок блоков тоже может быть любым с одним исключением:
-        '''#блоки Location для расовых локаций должны стоять выше, чем блоки для обычных локаций (независимо от genMode)
         '''
-        '''#если в блоке Location параметр имеет два значения, то при генерации будет выб [rest of string was truncated]&quot;;.
+        '''nRaces			Количество рас
+        '''
+        '''PlayersRaces	Расы игроков. Разные и играбельные. Разделитель - ; (H;U;L;E;C;R или Humans;Undead;Legions;Elves;Clans;Random)/nПри этом первая раса в списке будет на первой локации, вторая - на второй, и т.д./nЕсли р [rest of string was truncated]&quot;;.
+        '''</summary>
+        Friend ReadOnly Property GenParametersDescription_Rus() As String
+            Get
+                Return ResourceManager.GetString("GenParametersDescription_Rus", resourceCulture)
+            End Get
+        End Property
+        
+        '''<summary>
+        '''  Looks up a localized string similar to 
+        '''genMode	[Integer]	1	2
+        '''
+        '''nRaces	[Integer]	2	4
+        '''
+        '''#[Humans;Undead;Legions;Elves;Clans;Random]
+        '''PlayersRaces	[StringArray]%;	[Nothing]%[H;U;L;E;C;R]
+        '''
+        '''StartGold	[Integer]	0	9999
+        '''StartMana	[Integer]	0	9999
+        '''
+        '''SpellsMaxLevel	[Integer]	1	5
+        '''
+        '''ApplySymmetry	[Boolean]	False	True
+        '''
+        '''SymmetryClass	[Integer]	-1	4
+        '''
+        '''xSize	[Integer]	24	144
+        '''ySize	[Integer]	24	144
+        '''
+        '''RaceLocsDistTolerance	[Double]	0.1	10.0
+        '''
+        '''PassageCreationChance	[Double]	0.0	1.0
+        '''
+        '''minPassWidth	[Double]	1.0	10000.0
+        '''minPassDist		[Double]	2.0	1000 [rest of string was truncated]&quot;;.
         '''</summary>
         Friend ReadOnly Property GenParametersRange() As String
             Get
@@ -435,7 +475,7 @@ Namespace My.Resources
         '''G000IG0024	1.2
         '''#Эликсир защиты от магии Смерти
         '''G001IG0036	1.2
-        '''#Эликсир защиты от  [rest of string was truncated]&quot;;.
+        '''#Эликсир защиты от м [rest of string was truncated]&quot;;.
         '''</summary>
         Friend ReadOnly Property LootItemChanceMultiplier() As String
             Get

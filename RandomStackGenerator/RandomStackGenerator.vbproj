@@ -119,6 +119,8 @@
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>
     <None Include="Resources\PlayableSubraces.txt" />
+    <Content Include="Resources\GenParametersDescription_Eng.txt" />
+    <Content Include="Resources\GenParametersDescription_Rus.txt" />
     <Content Include="Resources\PreservedItems.txt">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>

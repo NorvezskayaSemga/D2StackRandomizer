@@ -38,6 +38,8 @@ RoadsAmount			[Double]		0.0	1.0
 ForestAmount		[Double]		0.0	1.0
 DecorationsAmount	[Double]		0.0	1.0
 
+#[Humans;Undead;Legions;Elves;Clans;Random]
+RaceCities	[StringArray]%;	[Nothing]%[city_level(int0-5)#owner_location_number(int>=0)]
 posX				[Double]	0.0	1.0
 posY				[Double]	0.0	1.0
 AppearanceChance	[Double]	0.0	1.0

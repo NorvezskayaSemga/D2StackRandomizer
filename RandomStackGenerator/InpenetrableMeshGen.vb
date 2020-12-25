@@ -256,6 +256,8 @@ Public Class ImpenetrableMeshGen
         Public Structure Parameter
             ''' <summary>Название параметра</summary>
             Public name As String
+            ''' <summary>Описание параметра</summary>
+            Public description As String
             ''' <summary>Тип значения</summary>
             Public type As ValueType
 
@@ -274,6 +276,10 @@ Public Class ImpenetrableMeshGen
                 vInteger = 3
                 vBoolean = 4
             End Enum
+            Enum DescriptionLanguage
+                Rus = 1
+                Eng = 2
+            End Enum
 
             Friend Const wArray As String = "[StringArray]"
             Friend Const wDouble As String = "[Double]"
@@ -281,8 +287,16 @@ Public Class ImpenetrableMeshGen
             Friend Const wBoolean As String = "[Boolean]"
 
         End Structure
-        Public Shared Function GetPermissibleParametersRange() As Parameter()
+        Public Shared Function GetPermissibleParametersRange(ByRef lang As Parameter.DescriptionLanguage) As Parameter()
             Dim r() As String = ValueConverter.TxtSplit(My.Resources.GenParametersRange)
+            Dim d() As String
+            If lang = Parameter.DescriptionLanguage.Rus Then
+                d = ValueConverter.TxtSplit(My.Resources.GenParametersDescription_Rus)
+            ElseIf lang = Parameter.DescriptionLanguage.Eng Then
+                d = ValueConverter.TxtSplit(My.Resources.GenParametersDescription_Eng)
+            Else
+                Throw New Exception("Unexpected lang")
+            End If
             Dim test() As String = ValueConverter.TxtSplit(My.Resources.example_template_1)
 
             Dim res(UBound(r)) As Parameter
@@ -291,17 +305,33 @@ Public Class ImpenetrableMeshGen
             Dim minField As Integer = 2
             Dim maxField As Integer = 3
 
-            Dim splR(UBound(r))() As String
+            Dim splR(UBound(r))(), splD(UBound(d))() As String
             Dim testExampleNames, testParametersNames As New List(Of String)
+            Dim testParametersDescriptions As New Dictionary(Of String, String)
             For i As Integer = 0 To UBound(r) Step 1
                 splR(i) = r(i).Split(CChar(" "))
                 Dim t As String = splR(i)(nameField).ToUpper
                 If Not testParametersNames.Contains(t) Then
                     testParametersNames.Add(t)
                 Else
-                    Throw New Exception("Дублирование параметра " & splR(i)(nameField) & " в файле с доиустимыми значениями (GenParametersRange.txt)")
+                    Throw New Exception("Дублирование параметра " & splR(i)(nameField) & " в файле с допустимыми значениями (GenParametersRange.txt)")
                 End If
             Next i
+            For i As Integer = 0 To UBound(d) Step 1
+                splD(i) = d(i).Split(CChar(" "))
+                Dim t As String = splD(i)(nameField).ToUpper
+                If Not testParametersDescriptions.ContainsKey(t) Then
+                    Dim desc As String = ""
+                    For k As Integer = 1 To UBound(splD(i)) Step 1
+                        If k > 1 Then desc &= " "
+                        desc &= splD(i)(k).Replace("/n", vbNewLine)
+                    Next k
+                    testParametersDescriptions.Add(t, desc)
+                Else
+                    Throw New Exception("Дублирование параметра " & splD(i)(nameField) & " в файле с описаниями параметров (GenParametersDescriptions.txt)")
+                End If
+            Next i
+
             For i As Integer = 1 To UBound(test) Step 1
                 Dim t As String = test(i).Split(CChar(" "))(nameField).ToUpper
                 If Not t.StartsWith(My.Resources.template_new_Block) Then
@@ -313,6 +343,9 @@ Public Class ImpenetrableMeshGen
             Next t
             For Each t As String In testExampleNames
                 If Not testParametersNames.Contains(t) Then Throw New Exception("Не могу найти параметр " & t & " в файле с доиустимыми значениями (GenParametersRange.txt)")
+            Next t
+            For Each t As String In testExampleNames
+                If Not testParametersDescriptions.ContainsKey(t) Then Throw New Exception("Не могу найти параметр " & t & " в файле с описаниями параметров (GenParametersDescriptions.txt)")
             Next t
 
             For i As Integer = 0 To UBound(r) Step 1
@@ -328,6 +361,7 @@ Public Class ImpenetrableMeshGen
                 Else
                     Throw New Exception("Неожиданный тип переменной: " & splR(i)(1) & " параметра " & splR(i)(0))
                 End If
+                res(i).description = testParametersDescriptions.Item(res(i).name.ToUpper)
                 If Not res(i).type = Parameter.ValueType.vStringArray Then
                     res(i).minValue = splR(i)(minField)
                     res(i).maxValue = splR(i)(maxField)
@@ -341,6 +375,8 @@ Public Class ImpenetrableMeshGen
                         res(i).possibleArrayValues(j) = arrays(j).Replace("[", "").Replace("]", "").Split(d2)
                     Next j
                 End If
+                Console.WriteLine(res(i).description)
+                Console.WriteLine("----------------")
             Next i
             Return res
         End Function
