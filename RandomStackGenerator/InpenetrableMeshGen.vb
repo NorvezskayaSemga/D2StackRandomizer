@@ -6052,7 +6052,7 @@ Public Class StackLocationsGen
                          Dim b As Location.Borders = ImpenetrableMeshGen.NearestXY(x, y, m.xSize, m.ySize, 1)
                          For q As Integer = b.minY To b.maxY Step 1
                              For p As Integer = b.minX To b.maxX Step 1
-                                 If connected(i)(p, q) Then
+                                 If connected(i)(p, q) And Not m.board(x, y).isBorder And Not m.board(x, y).isAttended Then
                                      passages(i).edgePoints(m.board(x, y).locID(0) - 1).Add(New Point(x - minx, y - miny))
                                      p = b.maxX
                                      q = b.maxY
