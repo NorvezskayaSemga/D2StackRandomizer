@@ -1917,7 +1917,7 @@ newtry:
     Class ActiveObjectsPlacer
 
         Private ReadOnly ActiveObjects() As AttendedObject
-        Private ReadOnly comm As Common
+        Private ReadOnly rndgen As New RndValueGen
         Private ReadOnly LocCenter As Point
         Private ReadOnly placingObjects() As ObjectPlacingSettings
         Private Term As TerminationCondition
@@ -1941,10 +1941,9 @@ newtry:
 
         Private ReadOnly rWeightMultiplier() As Double = New Double() {0.1, 0.15}
 
-        Public Sub New(ByRef c As Common, ByRef ao() As AttendedObject, ByRef lc As Point, _
+        Public Sub New(ByRef ao() As AttendedObject, ByRef lc As Point, _
                        ByRef po() As ObjectPlacingSettings, ByRef t As TerminationCondition, _
                        ByRef freeCells(,) As Boolean)
-            comm = c
             ActiveObjects = ao
             LocCenter = lc
             placingObjects = po
@@ -2013,7 +2012,6 @@ newtry:
 
             Dim locSize As Integer = 29
 
-            Dim c As New Common
             Dim actObj() As AttendedObject = (New ImpenetrableMeshGen).ActiveObjects
             Dim center As New Point(CInt(locSize / 2), CInt(locSize / 2))
             Dim free(locSize, locSize) As Boolean
@@ -2040,7 +2038,7 @@ newtry:
                 New ObjectPlacingSettings With {.objectType = DefMapObjects.Types.Ruins, .placeNearWith = -1, .applyUniformity = False, .prefferedDistance = 4, .sigma = 0.2}, _
                 New ObjectPlacingSettings With {.objectType = DefMapObjects.Types.Trainer, .placeNearWith = -1, .applyUniformity = False, .prefferedDistance = 4, .sigma = 0.2}}
 
-            Dim aop As New ActiveObjectsPlacer(c, actObj, center, po, New TerminationCondition(10000), free)
+            Dim aop As New ActiveObjectsPlacer(actObj, center, po, New TerminationCondition(10000), free)
 
             Dim t0 As Integer = Environment.TickCount
             Call aop.PlaceObjRow(0, free)
@@ -2123,7 +2121,7 @@ newtry:
             Dim checkN As Integer = Math.Min(10, pID.Count)
             If n < UBound(placingObjects) Then
                 Do While pID.Count > 0
-                    selected = comm.RandomSelection(pID, currentWeight(n), False)
+                    selected = rndgen.RandomSelection(pID, currentWeight(n), False, True)
                     pID.Remove(selected)
                     output(n) = selected
                     Call ChangeObjectState(freeCells, placingObjects(n).objectType, _
@@ -2147,7 +2145,7 @@ newtry:
                 Loop
                 If output(n + 1) = -1 Then output(n) = -1
             Else
-                selected = comm.RandomSelection(pID, currentWeight(n), False)
+                selected = rndgen.RandomSelection(pID, currentWeight(n), False, True)
                 pID.Clear()
                 output(n) = selected
             End If
@@ -2600,7 +2598,7 @@ newtry:
         Dim locCenter As New Point(m.Loc(locID - 1).pos.X - LocsPlacing(locID - 1).minX, _
                                    m.Loc(locID - 1).pos.Y - LocsPlacing(locID - 1).minY)
 
-        Dim objPlacer As New ActiveObjectsPlacer(comm, ActiveObjects, locCenter, placingObjects, Term, FreeCells)
+        Dim objPlacer As New ActiveObjectsPlacer(ActiveObjects, locCenter, placingObjects, Term, FreeCells)
         Call objPlacer.PlaceObjRow(0, FreeCells)
         output = objPlacer.bestOutput
         If objPlacer.maxN = 0 And IsNothing(output(0)) Then
