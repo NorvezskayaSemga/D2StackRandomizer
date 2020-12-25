@@ -1347,6 +1347,13 @@ Public Class RandStack
                 If SelectedFighters.Count = 0 Then
                     output_delta_expKilled += deltaExpKilledIncrement
                     DynStackStats.ExpStackKilled += deltaExpKilledIncrement
+                    If DynStackStats.ExpStackKilled > 9999 Then
+                        DynStackStats.ExpStackKilled -= output_delta_expKilled
+                        output_delta_expKilled = 0
+                        DynStackStats.MeleeCount = 1
+                        DynStackStats.MaxGiants = 1
+                        DynStackStats.StackSize = 2
+                    End If
                 End If
             Else
                 Exit Do
