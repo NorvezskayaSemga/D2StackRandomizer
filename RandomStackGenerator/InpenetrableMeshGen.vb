@@ -6236,15 +6236,11 @@ Public Class StackLocationsGen
                 If path.passTiles(i, j) > -1 Then n = Math.Max(n, path.passTiles(i, j))
             Next i
         Next j
-        Dim currentOutput(n) As Integer
         Dim gPlacer As PassageGuardPlacer = Nothing
 
         For currentNLimit As Integer = 0 To n Step 1
-            For i As Integer = 0 To n Step 1
-                currentOutput(i) = -1
-            Next i
             gPlacer = New PassageGuardPlacer(currentNLimit, term, path, justCheckGuardNecessity)
-            Call gPlacer.PlaceGuardLoc(-1, currentOutput, gPlacer.input_IDs, -1, path)
+            Call gPlacer.PlaceGuardLoc(-1, -1, path)
             If term.ExitFromLoops And gPlacer.debugTestsRun > 100 Then
                 m.log.Add("Guards: " & currentNLimit + 1 & " Tests: " & gPlacer.debugTestsRun & " simpFilter: " & gPlacer.debugSimpleFilter & " passage size: " & gPlacer.pointsList.Length)
             End If
@@ -6313,12 +6309,14 @@ Public Class StackLocationsGen
         Private ReadOnly bordersT1(,) As Location.Borders
 
         ''' <summary>Отправляй в качестве инпута в поле IDs</summary>
-        Public input_IDs() As Integer
+        Private input_IDs() As Integer
+        Private currentIDs()() As Integer
+        Private currentOutput() As Integer
 
         Public Shared Sub speedBanchmark()
 
             Dim size As Integer = 70
-            Dim pwidth As Integer = 3
+            Dim pwidth As Integer = 4
 
             Dim passage As New Passage With {.bias = New Point(0, 0), .Size = New Point(size, size)}
             ReDim passage.passTiles(size, size)
@@ -6382,21 +6380,16 @@ Public Class StackLocationsGen
                 Console.Write(vbNewLine)
             Next j
 
-            Dim out(n) As Integer
-            For i As Integer = 0 To n Step 1
-                out(i) = -1
-            Next i
-
-            Dim pgp As New PassageGuardPlacer(3, New TerminationCondition(10000), passage, False)
+            Dim pgp As New PassageGuardPlacer(7, New TerminationCondition(10000), passage, False)
             Dim t0 As Integer = Environment.TickCount
-            Call pgp.PlaceGuardLoc(-1, out, pgp.input_IDs, -1, passage)
+            Call pgp.PlaceGuardLoc(-1, -1, passage)
 
             Console.WriteLine("' " & pgp.debugSimpleFilter & vbTab & pgp.debugTestsRun)
             Console.WriteLine("' " & pgp.bestN)
             Console.WriteLine("' " & Environment.TickCount - t0 & vbTab & pgp.debugTestPassTime)
-            ' 54456	3550
-            ' 3
-            ' 1061	546
+            ' 1547526	0
+            ' -2147483648
+            ' 10015	0
         End Sub
 
         Public Structure Passage
@@ -6418,7 +6411,8 @@ Public Class StackLocationsGen
                     If path.passTiles(i, j) > -1 Then IDs_UpperBound += 1
                 Next i
             Next j
-            ReDim pointsList(IDs_UpperBound), input_IDs(IDs_UpperBound)
+            ReDim pointsList(IDs_UpperBound), input_IDs(IDs_UpperBound), currentIDs(currentNLimit)
+
             For j As Integer = 0 To path.Size.Y Step 1
                 For i As Integer = 0 To path.Size.X Step 1
                     If path.passTiles(i, j) > -1 Then
@@ -6428,9 +6422,10 @@ Public Class StackLocationsGen
                 Next i
             Next j
 
-            ReDim bestOutput(UBound(pointsList))
+            ReDim bestOutput(UBound(pointsList)), currentOutput(UBound(pointsList))
             For i As Integer = 0 To UBound(pointsList) Step 1
                 bestOutput(i) = -1
+                currentOutput(i) = -1
             Next i
 
             ReDim guardBorderPoints(5 * 5 - 3 * 3 - 1)
@@ -6463,6 +6458,12 @@ Public Class StackLocationsGen
                     input_IDs(IDs_UpperBound) = tmpV
                 Next i
             End If
+            For i As Integer = 0 To currentNLimit Step 1
+                ReDim currentIDs(i)(IDs_UpperBound)
+                For k As Integer = 0 To IDs_UpperBound Step 1
+                    currentIDs(i)(k) = input_IDs(k)
+                Next k
+            Next i
 
             ReDim disableWhenSelected(path.Size.X, path.Size.Y), cloneEdgePoints(path.Size.X, path.Size.Y), bordersT1(path.Size.X, path.Size.Y)
             For y As Integer = 0 To path.Size.Y Step 1
@@ -6494,13 +6495,9 @@ Public Class StackLocationsGen
         End Sub
 
         ''' <param name="currentN">количество поставленных гвардов - 1</param>
-        ''' <param name="currentOutput">текущее положение гвардов</param>
-        ''' <param name="IDs">id точек для постановки гвардов (в случайном порядке)</param>
         ''' <param name="selected_I">id выбранной точки</param>
         ''' <param name="prevPassage">бэкап состоянияч прохода</param>
         Protected Friend Sub PlaceGuardLoc(ByRef currentN As Integer, _
-                                           ByRef currentOutput() As Integer, _
-                                           ByRef IDs() As Integer, _
                                            ByRef selected_I As Integer, _
                                            ByRef prevPassage As Passage)
             term.CheckTime()
@@ -6511,18 +6508,27 @@ Public Class StackLocationsGen
             Dim changedPassage As New Passage With {.bias = prevPassage.bias, _
                                                     .passTiles = CType(prevPassage.passTiles.Clone, Integer(,)), _
                                                     .Size = prevPassage.Size}
-            Dim IDs_bak() As Integer = CType(IDs.Clone, Integer())
+            If currentN > 0 Then
+                Dim prevN As Integer = currentN - 1
+                For i As Integer = 0 To IDs_UpperBound Step 1
+                    currentIDs(currentN)(i) = currentIDs(prevN)(i)
+                Next i
+            Else
+                For i As Integer = 0 To IDs_UpperBound Step 1
+                    currentIDs(0)(i) = input_IDs(i)
+                Next i
+            End If
 
             If selected_I > -1 Then
                 'Если здесь гвардов >= гвардов в лучшем результате, то выходим
                 If currentN >= bestN And bestN > Integer.MinValue Then Exit Sub
 
-                Dim selPoint As Point = pointsList(IDs_bak(selected_I))
-                currentOutput(currentN) = IDs_bak(selected_I)
+                Dim selPoint As Point = pointsList(currentIDs(currentN)(selected_I))
+                currentOutput(currentN) = currentIDs(currentN)(selected_I)
 
                 For Each p As Point In disableWhenSelected(selPoint.X, selPoint.Y)
                     If changedPassage.passTiles(p.X, p.Y) > -1 Then
-                        IDs_bak(changedPassage.passTiles(p.X, p.Y)) = -1
+                        currentIDs(currentN)(changedPassage.passTiles(p.X, p.Y)) = -1
                         changedPassage.passTiles(p.X, p.Y) = -1
                     End If
                 Next p
@@ -6566,17 +6572,23 @@ Public Class StackLocationsGen
                     bestN = 1
                     Exit Sub
                 Else
+                    currentOutput(currentN) = -1
                     Exit Sub
                 End If
             End If
-
-            For i As Integer = selected_I + 1 To IDs_UpperBound Step 1
-                If IDs_bak(i) > -1 Then
-                    Call PlaceGuardLoc(currentN + 1, CType(currentOutput.Clone, Integer()), _
-                                       IDs_bak, i, changedPassage)
+            If currentN > -1 Then
+                For i As Integer = selected_I + 1 To IDs_UpperBound Step 1
+                    If currentIDs(currentN)(i) > -1 Then
+                        Call PlaceGuardLoc(currentN + 1, i, changedPassage)
+                        If bestN > -1 Then Exit Sub
+                    End If
+                Next i
+            Else
+                For i As Integer = selected_I + 1 To IDs_UpperBound Step 1
+                    Call PlaceGuardLoc(currentN + 1, i, changedPassage)
                     If bestN > -1 Then Exit Sub
-                End If
-            Next i
+                Next i
+            End If
         End Sub
         Private Function TestPassage(ByRef p As Passage, ByRef pointsList() As Point, ByRef currentOutput() As Integer) As Boolean
 
