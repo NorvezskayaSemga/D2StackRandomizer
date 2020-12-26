@@ -6380,16 +6380,16 @@ Public Class StackLocationsGen
                 Console.Write(vbNewLine)
             Next j
 
-            Dim pgp As New PassageGuardPlacer(7, New TerminationCondition(10000), passage, False)
+            Dim pgp As New PassageGuardPlacer(7, New TerminationCondition(10000), passage, False, 123456)
             Dim t0 As Integer = Environment.TickCount
             Call pgp.PlaceGuardLoc(-1, -1, passage)
 
             Console.WriteLine("' " & pgp.debugSimpleFilter & vbTab & pgp.debugTestsRun)
             Console.WriteLine("' " & pgp.bestN)
             Console.WriteLine("' " & Environment.TickCount - t0 & vbTab & pgp.debugTestPassTime)
-            ' 1547526	0
+            ' 1346962	0
             ' -2147483648
-            ' 10015	0
+            ' 10016	0
         End Sub
 
         Public Structure Passage
@@ -6400,7 +6400,8 @@ Public Class StackLocationsGen
 
         Public Sub New(ByRef limit As Integer, ByRef t As TerminationCondition, _
                        ByRef path As PassageGuardPlacer.Passage, _
-                       ByRef checkGuardsNecessity As Boolean)
+                       ByRef checkGuardsNecessity As Boolean, _
+                       Optional ByVal seed As Integer = -1)
             currentNLimit = limit
             term = t
             IDs_UpperBound = -1
@@ -6450,7 +6451,7 @@ Public Class StackLocationsGen
 
 
             If IDs_UpperBound > 0 Then
-                Dim rnd As New RndValueGen
+                Dim rnd As New RndValueGen(seed)
                 For i As Integer = 0 To 3 * IDs_UpperBound Step 1
                     Dim m As Integer = rnd.RndIntFast(0, IDs_UpperBound - 1)
                     Dim tmpV As Integer = input_IDs(m)
@@ -6510,7 +6511,7 @@ Public Class StackLocationsGen
                                                     .Size = prevPassage.Size}
             If currentN > 0 Then
                 Dim prevN As Integer = currentN - 1
-                For i As Integer = 0 To IDs_UpperBound Step 1
+                For i As Integer = selected_I To IDs_UpperBound Step 1
                     currentIDs(currentN)(i) = currentIDs(prevN)(i)
                 Next i
             Else
