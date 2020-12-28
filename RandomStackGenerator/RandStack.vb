@@ -2219,6 +2219,8 @@ Public Class Common
     Public Sub PrintResourcesToLog(ByRef log As Log, ByRef rStack As RandStack)
         If Not log.IsEnabled Then Exit Sub
 
+        log.Add(GenDefaultValues.PrintVersion)
+
         Dim Races As New Dictionary(Of String, String)
         Dim t() As String = TxtSplit(defValues.Races)
         For Each s As String In t
@@ -3722,6 +3724,10 @@ Public Class GenDefaultValues
         Next line
     End Sub
 
+    Public Const myVersion As String = "28.12.2020.23.17"
+    Public Shared Function PrintVersion() As String
+        Return "Semga's DLL version: " & myVersion
+    End Function
 
     'common
     Public Property defaultSigma As Double

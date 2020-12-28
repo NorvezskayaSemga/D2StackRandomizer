@@ -85,6 +85,8 @@
         Dim grid As New Map(0, 0, -1, New Common)
         Dim copiedSettings() As Map.SettingsLoc
 
+        grid.log.Add(GenDefaultValues.PrintVersion)
+
         Dim invalidSettings As Boolean = False
         Dim checkResult As String
         checkResult = settGen.common_settMap.Check
