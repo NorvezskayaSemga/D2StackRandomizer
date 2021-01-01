@@ -5955,8 +5955,8 @@ Public Class StackLocationsGen
         Next y
 
         Dim corners As New List(Of Point)
-        For y As Integer = 0 To ySize Step 1
-            For x As Integer = 0 To xSize Step 1
+        For y As Integer = 0 To m.ySize Step 1
+            For x As Integer = 0 To m.xSize Step 1
                 If m.board(x, y).objectID = DefMapObjects.Types.Capital Then
                     For j As Integer = 0 To 1 Step 1
                         For i As Integer = 0 To 1 Step 1
@@ -5968,11 +5968,12 @@ Public Class StackLocationsGen
             Next x
         Next y
         If corners.Count > 0 Then
+            Dim minSqDist As Integer = CInt(3.2 ^ 2)
             For y As Integer = 0 To ySize Step 1
                 For x As Integer = 0 To xSize Step 1
                     If isPossiblePoint(x, y) Then
                         For Each p As Point In corners
-                            If p.SqDist(x, y) < 100 Then
+                            If p.SqDist(x + b.minX, y + b.minY) < minSqDist Then
                                 isPossiblePoint(x, y) = False
                                 Exit For
                             End If
