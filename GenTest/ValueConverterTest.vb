@@ -71,4 +71,26 @@ Public Class ValueConverterTest
         Next i
         If Not ok Then Assert.Inconclusive("Verify the correctness of this test method.")
     End Sub
+
+    '''<summary>
+    '''A test for JoinToLong
+    '''</summary>
+    <TestMethod()> _
+    Public Sub BitJoinTest()
+        Dim d As String = "."
+        Dim L As Long
+        Dim s1, s2, s3 As String
+        Dim ok As Boolean = True
+        For v1 As Integer = 0 To 1024 Step 1
+            s2 = String.Join(d, BitConverter.GetBytes(v1)) & d
+            For v2 As Integer = 0 To 1024 Step 1
+                L = ValueConverter.BitJoin(v1, v2)
+                s1 = String.Join(d, BitConverter.GetBytes(L))
+                s3 = s2 & String.Join(d, BitConverter.GetBytes(v2))
+                If Not s1 = s3 Then ok = False
+            Next v2
+        Next v1
+
+        If Not ok Then Assert.Inconclusive("Verify the correctness of this test method.")
+    End Sub
 End Class

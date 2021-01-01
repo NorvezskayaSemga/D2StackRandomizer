@@ -3376,6 +3376,61 @@ Friend Class ValueConverter
         End If
     End Function
 
+    Friend Shared Function IntToByteArray(ByRef v As Integer) As String
+        Dim res As String = ""
+        Dim bytes() As Byte = BitConverter.GetBytes(v)
+        For j As Integer = 0 To 3 Step 1
+            res &= Chr(bytes(j))
+        Next j
+        Return res
+    End Function
+
+    Friend Shared Function BitJoin(ByRef v1 As Integer, ByRef v2 As Integer) As Long
+        Return CLng(v1) Or CLng(v2) << 32
+    End Function
+    Friend Shared Function BitJoin(ByRef v1 As Short, ByRef v2 As Short) As Integer
+        Return CInt(v1) Or CInt(v2) << 16
+    End Function
+
+    Friend Shared Function ToChrString(ByRef v As Long) As String
+        Dim bytes() As Byte = BitConverter.GetBytes(v)
+        Return Chr(bytes(0)) & _
+               Chr(bytes(1)) & _
+               Chr(bytes(2)) & _
+               Chr(bytes(3)) & _
+               Chr(bytes(4)) & _
+               Chr(bytes(5)) & _
+               Chr(bytes(6)) & _
+               Chr(bytes(7))
+    End Function
+    Friend Shared Function ToChrString(ByRef v As Integer) As String
+        Dim bytes() As Byte = BitConverter.GetBytes(v)
+        Return Chr(bytes(0)) & _
+               Chr(bytes(1)) & _
+               Chr(bytes(2)) & _
+               Chr(bytes(3))
+    End Function
+
+    Friend Shared Function BoolArrayToStr(ByRef v() As Boolean) As String
+        Return BoolArrayToStr(v, UBound(v))
+    End Function
+    Friend Shared Function BoolArrayToStr(ByRef v() As Boolean, ByRef convertTo As Integer) As String
+        Dim vout As Byte = 0
+        Dim bitPos As Integer = 0
+        Dim strOut As String = ""
+        For i As Integer = 0 To convertTo Step 1
+            If v(i) Then vout = vout Or CByte(1 << bitPos)
+            bitPos += 1
+            If bitPos = 8 Then
+                strOut &= Chr(vout)
+                bitPos = 0
+                vout = 0
+            End If
+        Next i
+        If bitPos > 0 Then strOut &= Chr(vout)
+        Return strOut
+    End Function
+
     ''' <summary>Разбивает на строки текст по разделителям Chr(10) и Chr(13). Заменяет все табы на пробелы, удаляет повторяющиеся подряд пробелы, удаляет пробелы в начале и конце строки. Не добавляет в выходной массив строки, начинающиеся с #</summary>
     ''' <param name="TXT">Какой-нибудь текст</param>
     Protected Friend Shared Function TxtSplit(ByRef TXT As String) As String()

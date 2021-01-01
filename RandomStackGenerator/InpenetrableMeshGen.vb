@@ -1959,12 +1959,14 @@ newtry:
     Class ActiveObjectsPlacer
 
         Private ReadOnly ActiveObjects() As AttendedObject
-        Private ReadOnly rndgen As New RndValueGen
+        Private ReadOnly rndgen As RndValueGen
         Private ReadOnly LocCenter As Point
         Private ReadOnly placingObjects() As ObjectPlacingSettings
         Private Term As TerminationCondition
         Public bestOutput() As Point
-        Private output() As Integer
+        Private output() As Short
+        Private joinedOutput() As Integer
+
         Public maxN As Integer = 0
 
         Private checkedVariants As New List(Of String)
@@ -1988,11 +1990,12 @@ newtry:
 
         Public Sub New(ByRef ao() As AttendedObject, ByRef lc As Point, _
                        ByRef po() As ObjectPlacingSettings, ByRef t As TerminationCondition, _
-                       ByRef freeCells(,) As Boolean)
+                       ByRef freeCells(,) As Boolean, Optional ByVal seed As Integer = -1)
             ActiveObjects = ao
             LocCenter = lc
             placingObjects = po
             Term = t
+            rndgen = New RndValueGen(seed)
 
             Dim freeSizeX As Integer = UBound(freeCells, 1)
             Dim freeSizeY As Integer = UBound(freeCells, 2)
@@ -2000,6 +2003,7 @@ newtry:
             ReDim bestOutput(UBound(placingObjects)), output(UBound(placingObjects)), _
                   distacnce(UBound(freeCells, 1), UBound(freeCells, 2)), mayPlaceIfClean(UBound(placingObjects)), _
                   weightLayer(1)
+            ReDim joinedOutput(UBound(output))
             For i As Integer = 0 To UBound(placingObjects) Step 1
                 output(i) = -1
             Next i
@@ -2025,13 +2029,13 @@ newtry:
             Next i
 
             ReDim free_initial_points(freeCells.Length - 1), free_initial_point_id(freeSizeX, freeSizeY)
-            Dim n As Integer = -1
+            Dim freePointsCount As Integer = -1
             For y As Integer = 0 To freeSizeY Step 1
                 For x As Integer = 0 To freeSizeX Step 1
                     If freeCells(x, y) Then
-                        n += 1
-                        free_initial_points(n) = New Point(x, y)
-                        free_initial_point_id(x, y) = n
+                        freePointsCount += 1
+                        free_initial_points(freePointsCount) = New Point(x, y)
+                        free_initial_point_id(x, y) = freePointsCount
                         For i As Integer = 0 To 1 Step 1
                             weightLayer(i)(0)(x, y) = 1
                         Next i
@@ -2040,7 +2044,7 @@ newtry:
                     End If
                 Next x
             Next y
-            ReDim Preserve free_initial_points(n)
+            ReDim Preserve free_initial_points(freePointsCount)
 
             ReDim currentWeight(UBound(placingObjects))
             For i As Integer = 0 To UBound(currentWeight) Step 1
@@ -2083,15 +2087,14 @@ newtry:
                 New ObjectPlacingSettings With {.objectType = DefMapObjects.Types.Ruins, .placeNearWith = -1, .applyUniformity = False, .prefferedDistance = 4, .sigma = 0.2}, _
                 New ObjectPlacingSettings With {.objectType = DefMapObjects.Types.Trainer, .placeNearWith = -1, .applyUniformity = False, .prefferedDistance = 4, .sigma = 0.2}}
 
-            Dim aop As New ActiveObjectsPlacer(actObj, center, po, New TerminationCondition(10000), free)
+            Dim aop As New ActiveObjectsPlacer(actObj, center, po, New TerminationCondition(10000), free, 1234567)
 
             Dim t0 As Integer = Environment.TickCount
             Call aop.PlaceObjRow(0, free)
             Console.WriteLine("' " & aop.debug_checked & vbTab & aop.debug_discarded)
             Console.WriteLine("' " & Environment.TickCount - t0)
-            ' 29491	3745
-            ' 10015
-
+            ' 34010	5792
+            ' 10000
         End Sub
 
         Public Structure ObjectPlacingSettings
@@ -2168,7 +2171,7 @@ newtry:
                 Do While pID.Count > 0
                     selected = rndgen.RandomSelection(pID, currentWeight(n), False, True)
                     pID.Remove(selected)
-                    output(n) = selected
+                    output(n) = CShort(selected)
                     Call ChangeObjectState(freeCells, placingObjects(n).objectType, _
                                            free_initial_points(output(n)), _
                                            ActiveObjects, False)
@@ -2192,7 +2195,7 @@ newtry:
             Else
                 selected = rndgen.RandomSelection(pID, currentWeight(n), False, True)
                 pID.Clear()
-                output(n) = selected
+                output(n) = CShort(selected)
             End If
         End Sub
 
@@ -2384,13 +2387,19 @@ newtry:
                 Next i
             Next j
         End Sub
-        Private Function PlacedObjectsKey(ByRef n As Integer, ByRef output() As Integer) As String
-            Dim res(n) As String
+        Private Function PlacedObjectsKey(ByRef n As Integer, ByRef output() As Short) As String
+            joinedOutput(n) = ValueConverter.BitJoin(ActiveObjects(placingObjects(n).objectType).sArea, output(n))
+            Dim res(n) As Integer
             For i As Integer = 0 To n Step 1
-                res(i) = ActiveObjects(placingObjects(i).objectType).Area & "_" & output(i)
+                res(i) = joinedOutput(i)
             Next i
+            'Console.WriteLine(String.Join(".", res))
             Call Array.Sort(res)
-            Return String.Join(",", res)
+            Dim result As String = ""
+            For i As Integer = 0 To n Step 1
+                result &= ValueConverter.ToChrString(res(i))
+            Next i
+            Return result
         End Function
     End Class
 
@@ -4194,6 +4203,8 @@ Public Class AttendedObject
     Friend ReadOnly Area As Integer
     ''' <summary>Положение объекта по X и Y относительно положения области, выделенной под него</summary>
     Friend ReadOnly dxy As Integer
+    ''' <summary>То же, что и Area</summary>
+    Friend ReadOnly sArea As Short
 
     'ByVal objName As String,
     Public Sub New(ByVal objSize As Integer, ByVal objTypeID As DefMapObjects.Types, _
@@ -4206,6 +4217,7 @@ Public Class AttendedObject
         dxy = 1
         If hasExternalGuard Then dxy += 1
         Area = CInt((Size + 2 * dxy) ^ 2)
+        sArea = CShort(Area)
     End Sub
 End Class
 
@@ -6390,13 +6402,7 @@ Public Class StackLocationsGen
                 Public Sub EnableAllAtStep(ByRef currentStep As Integer)
                     For i As Integer = 0 To disabledAtStep(currentStep).count Step 1
                         enabledCount += 1
-                        If content(disabledAtStep(currentStep).list(i)).enabled Then
-                            Throw New Exception
-                        End If
                         content(disabledAtStep(currentStep).list(i)).enabled = True
-                        If disabledAtStep(currentStep).list(i) = -1 Then
-                            Throw New Exception
-                        End If
                         disabledAtStep(currentStep).list(i) = -1
                     Next i
                     disabledAtStep(currentStep).count = -1
@@ -6404,14 +6410,8 @@ Public Class StackLocationsGen
                 Public Sub Disable(ByRef currentStep As Integer, ByRef n As Integer)
                     If Not content(n).enabled Then Exit Sub
                     enabledCount -= 1
-                    If content(n).enabled = False Then
-                        Throw New Exception
-                    End If
                     content(n).enabled = False
                     disabledAtStep(currentStep).count += 1
-                    If disabledAtStep(currentStep).list(disabledAtStep(currentStep).count) <> -1 Then
-                        Throw New Exception
-                    End If
                     disabledAtStep(currentStep).list(disabledAtStep(currentStep).count) = n
                 End Sub
             End Structure
