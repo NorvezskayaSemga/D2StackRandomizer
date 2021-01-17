@@ -555,7 +555,7 @@ newtry:
                 ElseIf settGen.genMode = GenSettings.genModes.template Then
                     t0 = Environment.TickCount
                     m = PlaceLocationsByTemplate(settGen, selectedSymmetryClass, logString)
-                    If IsNothing(m.board) Then Exit Try
+                    If IsNothing(m.board) Then GoTo clearandexit
                     copiedSettings = Map.SettingsLoc.Copy(settGen.template_settLoc)
                     Call m.log.Add("Locations creating with template: " & Environment.TickCount - t0 & " ms")
                 Else
@@ -595,6 +595,7 @@ newtry:
                 End If
             End Try
         Loop
+clearandexit:
         m.Clear()
         Return m
     End Function
@@ -1586,7 +1587,7 @@ newtry:
 
         Call DisconnectRandomLocations(tmpm, settMap, settLoc)
 
-        Call RecheckPassStatus(tmpm)
+        Call RecheckPassStatus(tmpm, settMap)
 
         Parallel.For(0, tmpm.ySize + 1, _
          Sub(y As Integer)
@@ -1601,24 +1602,28 @@ newtry:
 
         m = tmpm
     End Sub
-    Protected Friend Shared Sub RecheckPassStatus(ByRef m As Map)
+    Protected Friend Shared Sub RecheckPassStatus(ByRef m As Map, ByVal settMap As Map.SettingsMap)
         Dim tmpm As Map = m
         Parallel.For(0, tmpm.ySize + 1, _
          Sub(y As Integer)
              For x As Integer = 0 To tmpm.xSize Step 1
                  If tmpm.board(x, y).isPass Then
-                     Dim removePathStatus As Boolean = True
-                     Dim b As Location.Borders = NearestXY(x, y, tmpm.xSize, tmpm.ySize, 1)
-                     For j As Integer = b.minY To b.maxY Step 1
-                         For i As Integer = b.minX To b.maxX Step 1
-                             If Not tmpm.board(x, y).locID(0) = tmpm.board(i, j).locID(0) And Not tmpm.board(i, j).isBorder Then
-                                 removePathStatus = False
-                                 i = b.maxX
-                                 j = b.maxY
-                             End If
-                         Next i
-                     Next j
-                     tmpm.board(x, y).isPass = Not removePathStatus
+                     If settMap.AddGuardsBetweenLocations Then
+                         Dim removePathStatus As Boolean = True
+                         Dim b As Location.Borders = NearestXY(x, y, tmpm.xSize, tmpm.ySize, 1)
+                         For j As Integer = b.minY To b.maxY Step 1
+                             For i As Integer = b.minX To b.maxX Step 1
+                                 If Not tmpm.board(x, y).locID(0) = tmpm.board(i, j).locID(0) And Not tmpm.board(i, j).isBorder Then
+                                     removePathStatus = False
+                                     i = b.maxX
+                                     j = b.maxY
+                                 End If
+                             Next i
+                         Next j
+                         tmpm.board(x, y).isPass = Not removePathStatus
+                     Else
+                         tmpm.board(x, y).isPass = False
+                     End If
                  End If
              Next x
          End Sub)
@@ -5802,7 +5807,7 @@ Public Class StackLocationsGen
                                 "ImpenetrableMeshGen.UnsymmGen и протестировать результат с помощью m.TestMap")
         End If
 
-        Call ImpenetrableMeshGen.RecheckPassStatus(m)
+        Call ImpenetrableMeshGen.RecheckPassStatus(m, settMap)
 
         Dim tmpm As Map = m
         Dim GroupID As Integer
@@ -6164,6 +6169,7 @@ Public Class StackLocationsGen
     Protected Friend Function PlasePassesGuards(ByVal m As Map, ByRef settMap As Map.SettingsMap, _
                                                 ByVal unmarkPassagesWithoutGuard As Boolean, _
                                                 ByRef term As TerminationCondition) As Point()()
+        If Not settMap.AddGuardsBetweenLocations Then Return Nothing
         Dim passTile(m.xSize, m.ySize) As Boolean
         For y As Integer = 0 To m.ySize Step 1
             For x As Integer = 0 To m.xSize Step 1
