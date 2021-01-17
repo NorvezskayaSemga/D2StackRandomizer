@@ -215,6 +215,14 @@ again:
             Throw New Exception("Map size is not consistent with desired size")
         End If
 
+        grid.log.Add("-------Settings-------")
+        grid.log.Add("Map")
+        grid.log.Add(Map.SettingsMap.Print(settGen.common_settMap))
+        For i As Integer = 0 To UBound(copiedSettings) Step 1
+            grid.log.Add("------------------" & vbNewLine & "Location " & i + 1)
+            grid.log.Add(Map.SettingsLoc.Print(copiedSettings(i)))
+        Next i
+
         Return grid
     End Function
 

@@ -5167,6 +5167,64 @@ Public Class Map
 
         End Structure
 
+        Public Shared Function Print(ByRef v As SettingsLoc) As String
+            Dim res As String = ""
+            res &= vbNewLine & Print("AverageRadius", v.AverageRadius)
+            res &= vbNewLine & Print("maxEccentricityDispersion", v.maxEccentricityDispersion)
+            res &= vbNewLine & Print("maxRadiusDispersion", v.maxRadiusDispersion)
+            res &= vbNewLine & Print("DecorationsAmount", v.DecorationsAmount)
+            res &= vbNewLine & Print("maxGoldMines", v.maxGoldMines)
+            res &= vbNewLine & Print("maxManaSources", v.maxManaSources)
+            res &= vbNewLine & Print("maxCities", v.maxCities)
+            res &= vbNewLine & Print("maxVendors", v.maxVendors)
+            res &= vbNewLine & Print("maxMercenaries", v.maxMercenaries)
+            res &= vbNewLine & Print("maxMages", v.maxMages)
+            res &= vbNewLine & Print("maxTrainers", v.maxTrainers)
+            res &= vbNewLine & Print("maxRuins", v.maxRuins)
+            res &= vbNewLine & Print("minStackToStackDist", v.minStackToStackDist)
+            res &= vbNewLine & Print("expAmount", v.expAmount)
+            res &= vbNewLine & Print("mageSpellsMaxLevel", v.mageSpellsMaxLevel)
+            res &= vbNewLine & Print("mageSpellsMinLevel", v.mageSpellsMinLevel)
+            res &= vbNewLine & Print("mageSpellsCount", v.mageSpellsCount)
+            res &= vbNewLine & Print("mageGlobalSpellsEnabled", v.mageGlobalSpellsEnabled)
+            res &= vbNewLine & Print("mercenariesMaxExpBar", v.mercenariesMaxExpBar)
+            res &= vbNewLine & Print("mercenariesMinExpBar", v.mercenariesMinExpBar)
+            res &= vbNewLine & Print("mercenariesCount", v.mercenariesCount)
+            res &= vbNewLine & Print("merchMaxConsumableItemCost", v.merchMaxConsumableItemCost)
+            res &= vbNewLine & Print("merchMinConsumableItemCost", v.merchMinConsumableItemCost)
+            res &= vbNewLine & Print("merchMaxNonconsumableItemCost", v.merchMaxNonconsumableItemCost)
+            res &= vbNewLine & Print("merchMinNonconsumableItemCost", v.merchMinNonconsumableItemCost)
+            res &= vbNewLine & Print("merchItemsCost", v.merchItemsCost)
+            res &= vbNewLine & Print("scaleContent", v.scaleContent)
+            res &= vbNewLine & Print("possibleRaces", v.possibleRaces)
+            res &= vbNewLine & Print("ConnectWithAllNeighboringLocations", v.ConnectWithAllNeighboringLocations)
+            Return res.Substring(1)
+        End Function
+        Friend Shared Function Print(ByRef name As String, ByRef v As String) As String
+            Return name & " = " & v
+        End Function
+        Friend Shared Function Print(ByRef name As String, ByRef v As Integer) As String
+            Return Print(name, v.ToString)
+        End Function
+        Friend Shared Function Print(ByRef name As String, ByRef v As Double) As String
+            Return Print(name, v.ToString)
+        End Function
+        Friend Shared Function Print(ByRef name As String, ByRef v As Boolean) As String
+            Return Print(name, v.ToString)
+        End Function
+        Friend Shared Function Print(ByRef name As String, ByRef v() As String) As String
+            Dim r As String = ""
+            If IsNothing(v) Then
+                r = "Nothing"
+            Else
+                r = v(0)
+                For i As Integer = 1 To UBound(v) Step 1
+                    r &= ";" & v(i)
+                Next i
+            End If
+            Return Print(name, r)
+        End Function
+
     End Structure
     Public Structure SettingsMap
         ''' <summary>Правая граница карты (например, если генерируем карту 24x48, то сюда пишем 24)</summary>
@@ -5326,6 +5384,32 @@ Public Class Map
                                          .StartGold = v.StartGold, _
                                          .StartMana = v.StartMana, _
                                          .Checked = v.Checked}
+        End Function
+
+        Public Shared Function Print(ByRef v As SettingsMap) As String
+            Dim res As String = ""
+            res &= SettingsLoc.Print("xSize", v.xSize)
+            res &= SettingsLoc.Print("ySize", v.ySize)
+            res &= SettingsLoc.Print("minPassDist", v.minPassDist)
+            res &= SettingsLoc.Print("minPassWidth", v.minPassWidth)
+            res &= SettingsLoc.Print("nRaces", v.nRaces)
+            res &= SettingsLoc.Print("RaceLocsDistTolerance", v.RaceLocsDistTolerance)
+            res &= SettingsLoc.Print("AddGuardsBetweenLocations", v.AddGuardsBetweenLocations)
+            res &= SettingsLoc.Print("PassGuardsPowerMultiplicator", v.PassGuardsPowerMultiplicator)
+            res &= SettingsLoc.Print("ObjectGuardsPowerMultiplicator", v.ObjectGuardsPowerMultiplicator)
+            res &= SettingsLoc.Print("LocExpRatio", v.LocExpRatio)
+            res &= SettingsLoc.Print("Wealth", v.Wealth)
+            res &= SettingsLoc.Print("WaterAmount", v.WaterAmount)
+            res &= SettingsLoc.Print("SpellsMaxLevel", v.SpellsMaxLevel)
+            res &= SettingsLoc.Print("RoadsAmount", v.RoadsAmount)
+            res &= SettingsLoc.Print("ForestAmount", v.ForestAmount)
+            res &= SettingsLoc.Print("PassageCreationChance", v.PassageCreationChance)
+            res &= SettingsLoc.Print("ApplySymmetry", v.ApplySymmetry)
+            res &= SettingsLoc.Print("SymmetryClass", v.SymmetryClass)
+            res &= SettingsLoc.Print("PlayersRaces", v.PlayersRaces)
+            res &= SettingsLoc.Print("StartGold", v.StartGold)
+            res &= SettingsLoc.Print("StartMana", v.StartMana)
+            Return res.Substring(1)
         End Function
 
     End Structure
