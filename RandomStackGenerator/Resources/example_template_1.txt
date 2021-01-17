@@ -189,6 +189,15 @@ merchMinNonconsumableItemCost		900
 #Полная стоимость лута у торговца
 merchItemsCost			7000	9500
 
+#Множитель силы отряда в руинах
+ruinsPowerMultiplicator		1.65
+#Множитель ценности лута в руинах
+ruinsWealthMultiplicator	1.75
+#Множитель силы отрядов в городах
+citiesPowerMultiplicator	1.35
+#Множитель ценности лута в городах
+citiesWealthMultiplicator	1.20
+
 #Масштабировать количество посещаемых объектов и опыт за убийство всех отрядов в локации
 scaleContent			False
 
@@ -240,6 +249,11 @@ merchMinConsumableItemCost		75
 merchMaxNonconsumableItemCost		1500	2000
 merchMinNonconsumableItemCost		900
 merchItemsCost			12000	15000
+
+ruinsPowerMultiplicator		1.65
+ruinsWealthMultiplicator	1.75
+citiesPowerMultiplicator	1.35
+citiesWealthMultiplicator	1.20
 
 scaleContent			True
 

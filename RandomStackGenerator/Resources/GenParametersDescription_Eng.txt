@@ -85,6 +85,11 @@ merchMinNonconsumableItemCost Minimum cost of a non-consumable item at the merch
 
 merchItemsCost Full cost of loot from the merchant
 
+ruinsPowerMultiplicator Stack strength multiplier in ruins
+ruinsWealthMultiplicator Loot value multiplier in ruins
+citiesPowerMultiplicator City stacks strength multiplier
+citiesWealthMultiplicator Loot value multiplier in cities
+
 scaleContent Scale the number of visited objects and experience for killing all units in the location
 
 possibleRaces List of possible base races for the location. Delimiter - ; (N;S;H;U;L;E;C)/nIn the case of locations of playable races, determines the races of neutral units in the location./nList of races can be found in Resources\Constants.txt, parameter LocRacesBlocks./nNothing, if you need a random one choice

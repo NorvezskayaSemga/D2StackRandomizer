@@ -1,0 +1,54 @@
+
+//Location					$empty
+
+AppearanceChance	1.0
+
+RaceCities	Nothing
+
+AverageRadius			17
+
+maxEccentricityDispersion	0
+
+maxRadiusDispersion		0
+
+DecorationsAmount		0.75
+
+maxGoldMines			0	0
+maxManaSources			0	0
+maxCities			0
+maxVendors			0.0
+maxMercenaries			0
+maxMages			0
+maxTrainers			0
+maxRuins			0
+
+minStackToStackDist		5.0
+
+expAmount			1000
+
+mageSpellsMaxLevel		2
+mageSpellsMinLevel		1
+mageSpellsCount		4
+mageGlobalSpellsEnabled	False
+
+mercenariesMaxExpBar		1900
+mercenariesMinExpBar		1000
+mercenariesCount		4
+
+merchMaxConsumableItemCost		500	600
+merchMinConsumableItemCost		75
+merchMaxNonconsumableItemCost		2000
+merchMinNonconsumableItemCost		900
+merchItemsCost			12000	15000
+
+ruinsPowerMultiplicator		1.65
+ruinsWealthMultiplicator	1.75
+citiesPowerMultiplicator	1.35
+citiesWealthMultiplicator	1.20
+
+scaleContent			False
+
+possibleRaces			Nothing
+
+ConnectWithAllNeighboringLocations	False
+

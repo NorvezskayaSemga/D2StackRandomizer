@@ -134,7 +134,7 @@ ThisBag_SameItems_ChanceMultiplier nonattack_artifact=0.01;/
                                    special=1
 
 #Генератор случайных карт нее будет пытаться создавать локации с радиусом меньше minLocationRadiusAtAll
-minLocationRadiusAtAll		5.0
+minLocationRadiusAtAll		7.0
 
 #Humans             H
 #Undead             U

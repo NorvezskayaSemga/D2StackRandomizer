@@ -57,7 +57,7 @@
         Dim guards As Dictionary(Of Integer, StackLoc) = MakeGuardsList(m, settMap)
         Dim LocTotalExp() As Double = MakeLocationsList(m, settMap, settLoc)
 
-        m.groupStats = GenStacksStats(m, settMap, guards, LocTotalExp)
+        m.groupStats = GenStacksStats(m, settMap, settLoc, guards, LocTotalExp)
 
         m.complited.StacksDesiredStatsGen_Done = True
 
@@ -196,6 +196,7 @@
 
     Private Function GenStacksStats(ByRef m As Map, _
                                     ByRef settMap As Map.SettingsMap, _
+                                    ByRef settLoc() As Map.SettingsLoc, _
                                     ByRef guards As Dictionary(Of Integer, StackLoc), _
                                     ByRef LocTotalExp() As Double) As Dictionary(Of Integer, AllDataStructues.DesiredStats)
 
@@ -220,10 +221,17 @@
             For Each id As Integer In guards.Keys
                 If i = guards.Item(id).LocID - 1 Then
                     If Not guards.Item(id).isPassGuard Then
+                        Dim x As Integer = guards.Item(id).pos.X
+                        Dim y As Integer = guards.Item(id).pos.Y
                         Dim r As Double = rndgen.PRand(0.85, 1.15)
                         Dim t As Double = CapitalDistWeight(guards.Item(id).CapDist, minCapDist, maxCapDist)
                         If i >= settMap.nRaces Then t += CenterDistWeight(guards.Item(id).CenDist, minCenDist, maxCenDist)
                         t *= r
+                        If m.board(x, y).objectID = DefMapObjects.Types.Ruins Then
+                            t *= settLoc(m.board(x, y).locID(0) - 1).ruinsPowerMultiplicator
+                        ElseIf m.board(x, y).objectID = DefMapObjects.Types.City Then
+                            t *= settLoc(m.board(x, y).locID(0) - 1).citiesPowerMultiplicator
+                        End If
                         W.Add(id, t)
                         Wsum(guards.Item(id).LocID - 1) += t
                     Else
@@ -239,6 +247,8 @@
         Dim expKilled, LootCost As New Dictionary(Of Integer, Double)
         For Each id As Integer In guards.Keys
             If Not guards.Item(id).isPassGuard Then
+                Dim x As Integer = guards.Item(id).pos.X
+                Dim y As Integer = guards.Item(id).pos.Y
                 Dim stackPowerMultiplier As Double
                 If guards.Item(id).isObjectGuard Then
                     stackPowerMultiplier = settMap.ObjectGuardsPowerMultiplicator
@@ -248,6 +258,11 @@
                 Dim e As Double = stackPowerMultiplier * LocTotalExp(guards.Item(id).LocID - 1) * W.Item(id) / Wsum(guards.Item(id).LocID - 1)
                 expKilled.Add(id, e)
                 Dim t As Double = e * rndgen.PRand(minD, maxD)
+                If m.board(x, y).objectID = DefMapObjects.Types.Ruins Then
+                    t *= settLoc(m.board(x, y).locID(0) - 1).ruinsWealthMultiplicator
+                ElseIf m.board(x, y).objectID = DefMapObjects.Types.City Then
+                    t *= settLoc(m.board(x, y).locID(0) - 1).citiesWealthMultiplicator
+                End If
                 WLoot.Add(id, t)
                 WLootSum(guards.Item(id).LocID - 1) += t
             End If

@@ -109,6 +109,12 @@
     </None>
   </ItemGroup>
   <ItemGroup>
+    <Content Include="Resources\48x48_unsymm_simple.txt">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
+    <Content Include="Resources\emptyloc.txt">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
     <Content Include="Resources\example_template_1.txt">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>

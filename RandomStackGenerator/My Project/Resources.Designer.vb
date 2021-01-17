@@ -61,6 +61,25 @@ Namespace My.Resources
         End Property
         
         '''<summary>
+        '''  Looks up a localized string similar to Map generator by Norvezskaya Semga
+        '''
+        '''#строка, начинающаяся с решетки, игнорируется
+        '''#параметры и их значения не чувствительны к регистру
+        '''#разделитель - пробел или табуляция (может идти несколько подряд)
+        '''
+        '''#внутри блоков настройки могут идти в любом порядке
+        '''#порядок блоков тоже может быть любым с одним исключением:
+        '''#блоки Location для расовых локаций должны стоять выше, чем блоки для обычных локаций (независимо от genMode)
+        '''
+        '''#если в блоке Location параметр имеет два значения, то при генерации будет выб [rest of string was truncated]&quot;;.
+        '''</summary>
+        Friend ReadOnly Property _48x48_unsymm_simple() As String
+            Get
+                Return ResourceManager.GetString("_48x48_unsymm_simple", resourceCulture)
+            End Get
+        End Property
+        
+        '''<summary>
         '''  Looks up a localized string similar to #строка, начинающаяся с решетки, игнорируется
         '''#ID юнитов и минимальный размер стэка
         '''
@@ -141,6 +160,52 @@ Namespace My.Resources
         Friend ReadOnly Property Constants() As String
             Get
                 Return ResourceManager.GetString("Constants", resourceCulture)
+            End Get
+        End Property
+        
+        '''<summary>
+        '''  Looks up a localized string similar to 
+        '''//Location					$empty
+        '''
+        '''AppearanceChance	1.0
+        '''
+        '''RaceCities	Nothing
+        '''
+        '''AverageRadius			17
+        '''
+        '''maxEccentricityDispersion	0
+        '''
+        '''maxRadiusDispersion		0
+        '''
+        '''DecorationsAmount		0.75
+        '''
+        '''maxGoldMines			0	0
+        '''maxManaSources			0	0
+        '''maxCities			0
+        '''maxVendors			0.0
+        '''maxMercenaries			0
+        '''maxMages			0
+        '''maxTrainers			0
+        '''maxRuins			0
+        '''
+        '''minStackToStackDist		5.0
+        '''
+        '''expAmount			1000
+        '''
+        '''mageSpellsMaxLevel		2
+        '''mageSpellsMinLevel		1
+        '''mageSpellsCount		4
+        '''mageGlobalSpellsEnabled	False
+        '''
+        '''mercenariesMaxExpBar		1900
+        '''mercenariesMinExpBar		1000
+        '''mercenariesCount		4
+        '''
+        '''me [rest of string was truncated]&quot;;.
+        '''</summary>
+        Friend ReadOnly Property emptyloc() As String
+            Get
+                Return ResourceManager.GetString("emptyloc", resourceCulture)
             End Get
         End Property
         
@@ -254,6 +319,7 @@ Namespace My.Resources
         '''#последователь
         '''g000uu8276
         '''#уста богов
+        '''g000uu2024
         '''g000uu8277
         '''#божественная длань
         '''g000uu8278
@@ -262,7 +328,11 @@ Namespace My.Resources
         '''g001uu8298
         '''#каратель
         '''g000uu7560
-        '''g001uu7560.
+        '''g001uu7560
+        '''#мастер культа
+        '''g000uu7585
+        '''g001uu7585
+        '''.
         '''</summary>
         Friend ReadOnly Property ExcludeIDs_ModLore() As String
             Get
@@ -369,7 +439,14 @@ Namespace My.Resources
         End Property
         
         '''<summary>
-        '''  Looks up a localized string similar to .
+        '''  Looks up a localized string similar to 
+        '''
+        '''genMode genMode = 1 Common_map_settings block and two Location blocks will be used - for starting and all other locations, respectively/ngenMode = 2 Common_map_settings block and all Location blocks will be used - individual settings for each location
+        '''
+        '''
+        '''nRaces Number of races
+        '''
+        '''PlayersRaces Player races. Different and playable. Delimiter - ; (H;U;L;E;C;R or Humans;Undead;Legions;Elves;Clans;Random)/nIn this case, the first race in the list will be on the first location, the second on the second, etc [rest of string was truncated]&quot;;.
         '''</summary>
         Friend ReadOnly Property GenParametersDescription_Eng() As String
             Get
@@ -466,16 +543,16 @@ Namespace My.Resources
         '''G001IG0082	0.1
         '''
         '''#Эликсир защиты от магии Воздуха
-        '''G000IG0021	1.2
+        '''G000IG0021	1.4
         '''#Эликсир защиты от магии Воды
-        '''G000IG0022	1.2
+        '''G000IG0022	1.4
         '''#Эликсир защиты от магии Земли
-        '''G000IG0023	1.2
+        '''G000IG0023	1.4
         '''#Эликсир защиты от магии Огня
-        '''G000IG0024	1.2
+        '''G000IG0024	1.4
         '''#Эликсир защиты от магии Смерти
-        '''G001IG0036	1.2
-        '''#Эликсир защиты от м [rest of string was truncated]&quot;;.
+        '''G001IG0036	1.4
+        '''#Эликсир защиты от  [rest of string was truncated]&quot;;.
         '''</summary>
         Friend ReadOnly Property LootItemChanceMultiplier() As String
             Get

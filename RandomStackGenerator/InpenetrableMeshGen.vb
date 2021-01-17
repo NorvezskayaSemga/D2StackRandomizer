@@ -124,6 +124,10 @@ Public Class ImpenetrableMeshGen
                 res.possibleRaces = RandomValue(min.possibleRaces, max.possibleRaces, randomizer)
                 res.RaceCities = RandomValue(min.RaceCities, max.RaceCities, randomizer)
                 res.ConnectWithAllNeighboringLocations = RandomValue(min.ConnectWithAllNeighboringLocations, max.ConnectWithAllNeighboringLocations, randomizer)
+                res.ruinsPowerMultiplicator = RandomValue(min.ruinsPowerMultiplicator, max.ruinsPowerMultiplicator, randomizer)
+                res.ruinsWealthMultiplicator = RandomValue(min.ruinsWealthMultiplicator, max.ruinsWealthMultiplicator, randomizer)
+                res.citiesPowerMultiplicator = RandomValue(min.citiesPowerMultiplicator, max.citiesPowerMultiplicator, randomizer)
+                res.citiesWealthMultiplicator = RandomValue(min.citiesWealthMultiplicator, max.citiesWealthMultiplicator, randomizer)
 
                 res.mageSpellsMinLevel = Math.Min(res.mageSpellsMinLevel, res.mageSpellsMaxLevel)
                 res.mercenariesMinExpBar = Math.Min(res.mercenariesMinExpBar, res.mercenariesMaxExpBar)
@@ -4918,6 +4922,15 @@ Public Class Map
         '''<summary>Полная стоимость лута у торговца</summary>
         Dim merchItemsCost As Integer
 
+        '''<summary>Множитель силы отряда в руинах</summary>
+        Dim ruinsPowerMultiplicator As Double
+        '''<summary>Множитель ценности лута в руинах</summary>
+        Dim ruinsWealthMultiplicator As Double
+        '''<summary>Множитель силы отрядов в городах</summary>
+        Dim citiesPowerMultiplicator As Double
+        '''<summary>Множитель ценности лута в городах</summary>
+        Dim citiesWealthMultiplicator As Double
+
         '''<summary>Города, принадлежащие играбельным расам</summary>
         Dim RaceCities() As SettingsRaceCity
 
@@ -5062,7 +5075,11 @@ Public Class Map
             .scaleContent = v.scaleContent, _
             .possibleRaces = r, _
             .RaceCities = SettingsRaceCity.Copy(v.RaceCities), _
-            .ConnectWithAllNeighboringLocations = v.ConnectWithAllNeighboringLocations}
+            .ConnectWithAllNeighboringLocations = v.ConnectWithAllNeighboringLocations, _
+            .ruinsPowerMultiplicator = v.ruinsPowerMultiplicator, _
+            .ruinsWealthMultiplicator = v.ruinsWealthMultiplicator, _
+            .citiesPowerMultiplicator = v.citiesPowerMultiplicator, _
+            .citiesWealthMultiplicator = v.citiesWealthMultiplicator}
         End Function
         Public Shared Function Copy(ByRef v() As SettingsLoc) As SettingsLoc()
             If IsNothing(v) Then Return Nothing
@@ -5125,6 +5142,10 @@ Public Class Map
             Call Map.ReadValue("scaleContent", scaleContent, data, GenDefaultValues.wTemplate_LocationKeyword)
             Call Map.ReadValue("possibleRaces", possibleRaces, data, GenDefaultValues.wTemplate_LocationKeyword, CChar(";"))
             Call Map.ReadValue("ConnectWithAllNeighboringLocations", ConnectWithAllNeighboringLocations, data, GenDefaultValues.wTemplate_LocationKeyword)
+            Call Map.ReadValue("ruinsPowerMultiplicator", ruinsPowerMultiplicator, data, GenDefaultValues.wTemplate_LocationKeyword)
+            Call Map.ReadValue("ruinsWealthMultiplicator", ruinsWealthMultiplicator, data, GenDefaultValues.wTemplate_LocationKeyword)
+            Call Map.ReadValue("citiesPowerMultiplicator", citiesPowerMultiplicator, data, GenDefaultValues.wTemplate_LocationKeyword)
+            Call Map.ReadValue("citiesWealthMultiplicator", citiesWealthMultiplicator, data, GenDefaultValues.wTemplate_LocationKeyword)
         End Sub
 
         Public Structure SettingsRaceCity
@@ -5203,6 +5224,11 @@ Public Class Map
             res &= vbNewLine & Print("scaleContent", v.scaleContent)
             res &= vbNewLine & Print("possibleRaces", v.possibleRaces)
             res &= vbNewLine & Print("ConnectWithAllNeighboringLocations", v.ConnectWithAllNeighboringLocations)
+            res &= vbNewLine & Print("ruinsPowerMultiplicator", v.ruinsPowerMultiplicator)
+            res &= vbNewLine & Print("ruinsWealthMultiplicator", v.ruinsWealthMultiplicator)
+            res &= vbNewLine & Print("citiesPowerMultiplicator", v.citiesPowerMultiplicator)
+            res &= vbNewLine & Print("citiesWealthMultiplicator", v.citiesWealthMultiplicator)
+
             Return res.Substring(1)
         End Function
         Friend Shared Function Print(ByRef name As String, ByRef v As String) As String
