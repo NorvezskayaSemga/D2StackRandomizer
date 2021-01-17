@@ -528,7 +528,7 @@ Public Class RaceGen
                 selectedRaces.Remove(s)
                 LocR(i - 1) = LRaces(s)
             Else
-                LocR(i - 1) = PlayableRaces(i - 1)
+                LocR(i - 1) = selectedRaces.Item(i - 1)
             End If
         Next i
 

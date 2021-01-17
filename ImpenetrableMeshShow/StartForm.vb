@@ -105,8 +105,8 @@ Friend Class StartForm
 
         Dim path As String = ".\Resources\"
 
-        If False Then
-            path &= "48x48_test_template.txt"
+        If True Then
+            path &= "my_example_template_2_unsymm.txt"
         Else
             If Not UseTemplateCheckBox.Checked Then
                 path &= "example_template_1.txt"
