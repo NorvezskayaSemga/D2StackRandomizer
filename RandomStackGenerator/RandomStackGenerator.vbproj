@@ -109,7 +109,7 @@
     </None>
   </ItemGroup>
   <ItemGroup>
-    <Content Include="Resources\48x48_unsymm_simple.txt">
+    <Content Include="Resources\template_48x48_unsymm_simple.txt">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>
     <Content Include="Resources\emptyloc.txt">

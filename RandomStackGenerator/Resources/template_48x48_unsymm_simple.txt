@@ -122,7 +122,7 @@ maxRuins			1.0
 #блок настроек для локации
 //Location
 
-ReadFromFile 48x48_unsymm_simple.txt $rloc
+ReadFromFile template_48x48_unsymm_simple.txt.txt $rloc
 posX		0.9
 posY		0.1
 
@@ -145,7 +145,7 @@ ConnectWithAllNeighboringLocations	True
 
 //Location
 
-ReadFromFile 48x48_unsymm_simple.txt $city
+ReadFromFile template_48x48_unsymm_simple.txt.txt $city
 posX		0.45
 posY		0.25
 
@@ -168,7 +168,7 @@ maxVendors		1.0
 
 //Location
 
-ReadFromFile 48x48_unsymm_simple.txt $city2
+ReadFromFile template_48x48_unsymm_simple.txt.txt $city2
 posX		0.9
 posY		0.5
 

@@ -61,25 +61,6 @@ Namespace My.Resources
         End Property
         
         '''<summary>
-        '''  Looks up a localized string similar to Map generator by Norvezskaya Semga
-        '''
-        '''#строка, начинающаяся с решетки, игнорируется
-        '''#параметры и их значения не чувствительны к регистру
-        '''#разделитель - пробел или табуляция (может идти несколько подряд)
-        '''
-        '''#внутри блоков настройки могут идти в любом порядке
-        '''#порядок блоков тоже может быть любым с одним исключением:
-        '''#блоки Location для расовых локаций должны стоять выше, чем блоки для обычных локаций (независимо от genMode)
-        '''
-        '''#если в блоке Location параметр имеет два значения, то при генерации будет выб [rest of string was truncated]&quot;;.
-        '''</summary>
-        Friend ReadOnly Property _48x48_unsymm_simple() As String
-            Get
-                Return ResourceManager.GetString("_48x48_unsymm_simple", resourceCulture)
-            End Get
-        End Property
-        
-        '''<summary>
         '''  Looks up a localized string similar to #строка, начинающаяся с решетки, игнорируется
         '''#ID юнитов и минимальный размер стэка
         '''
@@ -888,6 +869,25 @@ Namespace My.Resources
         Friend ReadOnly Property StackStatsFields() As String
             Get
                 Return ResourceManager.GetString("StackStatsFields", resourceCulture)
+            End Get
+        End Property
+        
+        '''<summary>
+        '''  Looks up a localized string similar to Map generator by Norvezskaya Semga
+        '''
+        '''#строка, начинающаяся с решетки, игнорируется
+        '''#параметры и их значения не чувствительны к регистру
+        '''#разделитель - пробел или табуляция (может идти несколько подряд)
+        '''
+        '''#внутри блоков настройки могут идти в любом порядке
+        '''#порядок блоков тоже может быть любым с одним исключением:
+        '''#блоки Location для расовых локаций должны стоять выше, чем блоки для обычных локаций (независимо от genMode)
+        '''
+        '''#если в блоке Location параметр имеет два значения, то при генерации будет выб [rest of string was truncated]&quot;;.
+        '''</summary>
+        Friend ReadOnly Property template_48x48_unsymm_simple() As String
+            Get
+                Return ResourceManager.GetString("template_48x48_unsymm_simple", resourceCulture)
             End Get
         End Property
         
