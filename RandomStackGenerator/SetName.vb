@@ -65,9 +65,9 @@
             Dim d As String = Text.Encoding.UTF8.GetString(byteData)
             Dim str() As String = d.Replace(Chr(10), vbNewLine).Split(CChar(vbNewLine))
             Dim base As String = ""
-            For Each s As String In str
-                If s.Contains("var warmupData") Then
-                    base = s
+            For s As Integer = 0 To UBound(str) Step 1
+                If str(s).Contains("!-- warmup data start") Then
+                    base = str(s + 1)
                     Exit For
                 End If
             Next s
