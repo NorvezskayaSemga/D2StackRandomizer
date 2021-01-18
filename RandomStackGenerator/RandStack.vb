@@ -1000,9 +1000,11 @@ Public Class RandStack
     Public Function Gen(ByRef StackStats As AllDataStructues.DesiredStats, _
                         ByVal deltaLeadership As Integer, ByVal GroundTile As Boolean, _
                         ByVal NoLeader As Boolean, ByRef pos As Point, ByRef MapLords() As String) As AllDataStructues.Stack
-
+        'IO.File.WriteAllText("./stats.txt", pos.X & " " & pos.Y & vbNewLine & _
+        '                     AllDataStructues.DesiredStats.Print(StackStats, comm.defValues.RaceNumberToRaceChar))
         If Not IsNothing(StackStats.shopContent) Then Return Nothing
 
+        Dim result As New AllDataStructues.Stack
         Dim DynStackStats As AllDataStructues.DesiredStats = AllDataStructues.DesiredStats.Copy(StackStats)
         DynStackStats.Race.Clear()
         For Each i As Integer In StackStats.Race
@@ -1019,7 +1021,15 @@ Public Class RandStack
         End If
         Call log.Add(DynStackStats, False)
 
-        Dim result As AllDataStructues.Stack = GenStackMultithread(StackStats, DynStackStats, deltaLeadership, GroundTile, NoLeader, MapLords)
+        If StackStats.StackSize > 0 Then
+            result = GenStackMultithread(StackStats, DynStackStats, deltaLeadership, GroundTile, NoLeader, MapLords)
+        Else
+            result.leaderPos = -1
+            ReDim result.pos(UBound(busytransfer)), result.level(UBound(busytransfer))
+            For i As Integer = 0 To UBound(result.pos) Step 1
+                result.pos(i) = emptyItem
+            Next i
+        End If
 
         result.items = ItemsGen(DynStackStats.LootCost, DynStackStats.IGen, Nothing, pos)
 
@@ -3784,7 +3794,7 @@ Public Class GenDefaultValues
         Next line
     End Sub
 
-    Public Const myVersion As String = "19.01.2021.01.31"
+    Public Const myVersion As String = "19.01.2021.01.58"
     Public Shared Function PrintVersion() As String
         Return "Semga's DLL version: " & myVersion
     End Function
