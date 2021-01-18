@@ -172,7 +172,6 @@ again:
             Return grid
         End If
 
-
         If settGen.genMode = ImpenetrableMeshGen.GenSettings.genModes.simple Then
             copiedSettings = Map.SettingsLoc.ToArray(settGen.simple_settRaceLoc, _
                                                      settGen.simple_settCommLoc, _
@@ -198,16 +197,16 @@ again:
             Return grid
         End If
 
-        'Try
-        Call stackstats.Gen(grid, settGen.common_settMap, copiedSettings)
-        Call watergenerator.Gen(grid, settGen.common_settMap)
-        Call racegen.Gen(grid, PlayersRaces, copiedSettings)
-        Call objPlace.Gen(grid, settGen.common_settMap, copiedSettings)
-        Call penOnjGen.Gen(grid, settGen.common_settMap)
-        'Catch ex As Exception
-        '    grid.log.Add(ex.Message & vbNewLine & ex.StackTrace)
-        '    GoTo again
-        'End Try
+        Try
+            Call stackstats.Gen(grid, settGen.common_settMap, copiedSettings)
+            Call watergenerator.Gen(grid, settGen.common_settMap)
+            Call racegen.Gen(grid, PlayersRaces, copiedSettings)
+            Call objPlace.Gen(grid, settGen.common_settMap, copiedSettings)
+            Call penOnjGen.Gen(grid, settGen.common_settMap)
+        Catch ex As Exception
+            grid.log.Add(ex.Message & vbNewLine & ex.StackTrace)
+            GoTo again
+        End Try
 
         Call grid.log.Add(vbNewLine & "Total generation time: " & Environment.TickCount - t0 & " ms")
 

@@ -2589,27 +2589,32 @@ clearandexit:
              End If
          End Sub)
 
-        Dim GroupID As Integer = 1
+        Dim GroupID As Integer = 0
         Dim maxTime As Long = Term.maxTime
-        Dim warning As String = FillLocation(GroupID, 1, tmpm, LocsPlacing, LocArea, settMap, settLoc, _
-                                             tmpm.symmID, True, LocSymmMult, LocFreeCells, maxTime)
-        If Not warning = "" Then Throw New Exception(warning)
+        Dim R0 As ObjectPlacingResult = FillLocation(1, tmpm, LocsPlacing, LocArea, settMap, settLoc, _
+                                                     tmpm.symmID, True, LocSymmMult, LocFreeCells, maxTime)
+        If Not R0.msg = "" Then Throw New Exception(R0.msg)
 
-        Dim warnings(UBound(tmpm.Loc)) As String
+        Dim R1(UBound(tmpm.Loc)) As ObjectPlacingResult
         Parallel.For(settMap.nRaces, tmpm.Loc.Length, _
          Sub(i As Integer)
              'For i As Integer = settMap.nRaces To UBound(tmpm.Loc) Step 1
              If Not tmpm.Loc(i).IsObtainedBySymmery Then
-                 warnings(i) = FillLocation(GroupID, tmpm.Loc(i).ID, tmpm, LocsPlacing, LocArea, settMap, settLoc, _
-                                            tmpm.symmID, False, LocSymmMult, LocFreeCells, maxTime)
+                 R1(i) = FillLocation(tmpm.Loc(i).ID, tmpm, LocsPlacing, LocArea, settMap, settLoc, _
+                                      tmpm.symmID, False, LocSymmMult, LocFreeCells, maxTime)
              End If
              'Next i
          End Sub)
-        For i As Integer = 0 To UBound(tmpm.Loc) Step 1
-            If Not warnings(i) = "" Then warning = warnings(i)
+        For i As Integer = settMap.nRaces To UBound(tmpm.Loc) Step 1
+            If Not R1(i).msg = "" Then Throw New Exception(R1(i).msg)
         Next i
+
+        Call PlaceSelectedObjects(tmpm, settMap, settLoc, R0, GroupID)
+        For i As Integer = settMap.nRaces To UBound(tmpm.Loc) Step 1
+            Call PlaceSelectedObjects(tmpm, settMap, settLoc, R1(i), GroupID)
+        Next i
+
         If Term.ExitFromLoops Then Exit Sub
-        If Not warning = "" Then Throw New Exception(warning)
 
         Dim maxGroupID As Integer = ImpenetrableMeshGen.GetMaxGroupID(tmpm)
 
@@ -2970,21 +2975,23 @@ clearandexit:
         If Not IsNothing(nObj) Then nObj(id) -= 1
         p += 1
     End Sub
-    Private Function FillLocation(ByRef GroupID As Integer, ByVal LocId As Integer, ByRef m As Map, ByRef LocsPlacing() As Location.Borders, _
+    Private Function FillLocation(ByVal LocId As Integer, ByRef m As Map, ByRef LocsPlacing() As Location.Borders, _
                                   ByRef LocArea()() As Integer, ByVal settMap As Map.SettingsMap, ByVal settLoc() As Map.SettingsLoc, _
                                   ByVal symmId As Integer, ByVal IsRaceLoc As Boolean, LocSymmMult() As Double, _
-                                  ByRef LocFreeCells()(,) As Boolean, ByVal maxTime As Long) As String
+                                  ByRef LocFreeCells()(,) As Boolean, ByVal maxTime As Long) As ObjectPlacingResult
         Dim tmpm As Map = m
         Dim tmpLocsPlacing() As Location.Borders = LocsPlacing
         Dim tmpLocFreeCells()(,) As Boolean = LocFreeCells
         Dim TT As New TerminationCondition(maxTime)
         Dim places()() As ActiveObjectsPlacer.ObjectPlacingSettings = Nothing
         Dim ok As Boolean = False
+        Dim msg As String = ""
+        Dim v()() As Point = Nothing
         Do While Not ok
             Call TT.CheckTime()
             If TT.ExitFromLoops Then Exit Do
 
-            Dim v()() As Point = Nothing
+            v = Nothing
             If symmId > -1 Or Not IsRaceLoc Then
                 ReDim v(0), places(0)
                 Call MakeLocObjectsList(places(0), m.Loc(LocId - 1), settLoc(LocId - 1), IsRaceLoc, LocArea(LocId - 1), LocSymmMult(LocId - 1), tmpm)
@@ -3012,12 +3019,14 @@ clearandexit:
             For i As Integer = 0 To UBound(v) Step 1
                 If IsNothing(v(i)) Then
                     If IsRaceLoc Then
-                        Return "Как минимум одна из стартовых локаций настолько маленькая, что я не могу разместить даже столицу"
+                        msg = "Как минимум одна из стартовых локаций настолько маленькая, что я не могу разместить даже столицу"
+                        GoTo exitfunction
                     Else
                         Dim sL As Map.SettingsLoc = settLoc(LocId - 1)
                         If sL.maxCities + sL.maxGoldMines + sL.maxManaSources _
                          + sL.maxMages + sL.maxMercenaries + sL.maxRuins + sL.maxTrainers + sL.maxVendors > 1 Then
-                            Return "Не получилось ничего вместить в локацию"
+                            msg = "Не получилось ничего вместить в локацию"
+                            GoTo exitfunction
                         Else
                             Exit Do
                         End If
@@ -3051,37 +3060,45 @@ clearandexit:
             '#######################
             'РАССТАНОВКА ОБЪЕКТОВ
             '#######################
-            If ok Then
-                Dim ex As Boolean = False
-                Dim tmp_G As Integer = GroupID
-                Parallel.For(0, v.Length, _
-                 Sub(i As Integer)
-                     Dim lensum As Integer = 0
-                     Dim g As Integer = tmp_G
-                     For j As Integer = 0 To i - 1 Step 1
-                         g += v(i).Length
-                     Next j
-                     Dim nPlacedCities As Integer = 0
-                     'Dim g As Integer = tmp_G + i * (minN + 1)
-                     For n As Integer = 0 To UBound(v(i)) Step 1
-                         Call ActiveObjectsPlacer.PlaceObject(tmpm, places(i)(n).objectType, v(i)(n).X, v(i)(n).Y, _
-                                                              g + n, nPlacedCities, settLoc(i + LocId - 1), settMap, _
-                                                              ActiveObjects, symm)
-                     Next n
-                     If Not IsNothing(settLoc(i + LocId - 1).RaceCities) AndAlso
-                      nPlacedCities < settLoc(i + LocId - 1).RaceCities.Length Then
-                         ex = True
-                     End If
-                 End Sub)
-                For i As Integer = 0 To UBound(v) Step 1
-                    GroupID += v(i).Length
-                Next i
-                If ex Then Throw New Exception("Одна из локаций слишком маленькая, чтобы вместить города, обязательные для добавления")
-                'GroupID += v.Length * (minN + 1)
-            End If
+            'If ok Then
+            '    Dim ex As Boolean = False
+            '    Dim tmp_G As Integer = GroupID
+            '    Parallel.For(0, v.Length, _
+            '     Sub(i As Integer)
+            '         Dim lensum As Integer = 0
+            '         Dim g As Integer = tmp_G
+            '         For j As Integer = 0 To i - 1 Step 1
+            '             g += v(i).Length
+            '         Next j
+            '         Dim nPlacedCities As Integer = 0
+            '         'Dim g As Integer = tmp_G + i * (minN + 1)
+            '         For n As Integer = 0 To UBound(v(i)) Step 1
+            '             Call ActiveObjectsPlacer.PlaceObject(tmpm, places(i)(n).objectType, v(i)(n).X, v(i)(n).Y, _
+            '                                                  g + n, nPlacedCities, settLoc(i + LocId - 1), settMap, _
+            '                                                  ActiveObjects, symm)
+            '         Next n
+            '         If Not IsNothing(settLoc(i + LocId - 1).RaceCities) AndAlso
+            '          nPlacedCities < settLoc(i + LocId - 1).RaceCities.Length Then
+            '             ex = True
+            '         End If
+            '     End Sub)
+            '    For i As Integer = 0 To UBound(v) Step 1
+            '        GroupID += v(i).Length
+            '    Next i
+            '    If ex Then Throw New Exception("Одна из локаций слишком маленькая, чтобы вместить города, обязательные для добавления")
+            '    'GroupID += v.Length * (minN + 1)
+            'End If
         Loop
+exitfunction:
         m = tmpm
-        Return ""
+        Dim res As ObjectPlacingResult
+        res.msg = msg
+        res.ok = ok
+        res.positions = v
+        res.places = places
+        res.LocID = LocId
+
+        Return res
     End Function
     Friend Shared Function GetMaxGroupID(ByRef m As Map) As Integer
         Dim maxGroupID As Integer = -1
@@ -3092,7 +3109,39 @@ clearandexit:
         Next y
         Return maxGroupID
     End Function
+    Private Sub PlaceSelectedObjects(ByRef m As Map, ByRef settMap As Map.SettingsMap, ByRef settLoc() As Map.SettingsLoc, _
+                                     ByRef objects As ObjectPlacingResult, ByRef GroupID As Integer)
+        If Not objects.ok Then Exit Sub
+        For i As Integer = 0 To UBound(objects.positions) Step 1
+            Dim lensum As Integer = 0
+            Dim nPlacedCities As Integer = 0
+            Dim locID As Integer = i + objects.LocID - 1
+            'Dim g As Integer = tmp_G + i * (minN + 1)
+            For n As Integer = 0 To UBound(objects.positions(i)) Step 1
+                GroupID += 1
+                Call ActiveObjectsPlacer.PlaceObject(m, objects.places(i)(n).objectType, _
+                                                     objects.positions(i)(n).X, objects.positions(i)(n).Y, _
+                                                     GroupID, nPlacedCities, settLoc(locID), settMap, _
+                                                     ActiveObjects, symm)
+            Next n
+            If Not IsNothing(settLoc(locID).RaceCities) AndAlso
+             nPlacedCities < settLoc(locID).RaceCities.Length Then
+                Throw New Exception("Одна из локаций слишком маленькая, чтобы вместить города, обязательные для добавления")
+            End If
+        Next i
+        'For i As Integer = 0 To UBound(v) Step 1
+        '    GroupID += v(i).Length
+        'Next i
 
+        'GroupID += v.Length * (minN + 1)
+    End Sub
+    Private Structure ObjectPlacingResult
+        Dim msg As String
+        Dim places()() As ActiveObjectsPlacer.ObjectPlacingSettings
+        Dim positions()() As Point
+        Dim LocID As Integer
+        Dim ok As Boolean
+    End Structure
 
     ''' <summary>Запускаем сразу после PlaceActiveObjects. После выполнения идем как в примере</summary>
     Public Sub MakeLabyrinth(ByRef m As Map, ByVal settMap As Map.SettingsMap, ByVal settLoc() As Map.SettingsLoc, _
@@ -4376,6 +4425,61 @@ Public Class shortMapFormat
         Public items() As AllDataStructues.Item
     End Class
 
+    'Public Shared Sub checkgroups(ByRef m As Map)
+    '    Dim groups As New List(Of Integer)
+    '    For y As Integer = 0 To UBound(m.board, 2) Step 1
+    '        For x As Integer = 0 To UBound(m.board, 1) Step 1
+    '            If m.board(x, y).objectID > DefMapObjects.Types.None Or m.board(x, y).GuardLoc Or m.board(x, y).isObjectGuard Or m.board(x, y).PassGuardLoc Then
+    '                Dim group As Integer = m.board(x, y).groupID
+    '                If groups.Contains(group) Then
+    '                    MsgBox("")
+    '                End If
+    '                groups.Add(group)
+    '            End If
+    '        Next x
+    '    Next y
+    'End Sub
+    'Public Shared Sub checkraces(ByRef m As Map)
+    '    For y As Integer = 0 To UBound(m.board, 2) Step 1
+    '        For x As Integer = 0 To UBound(m.board, 1) Step 1
+    '            Call checkraces(m, x, y)
+    '        Next x
+    '    Next y
+    'End Sub
+    'Public Shared Sub checkraces(ByRef m As Map, x As Integer, y As Integer)
+    '
+    '    If m.board(x, y).objectID = DefMapObjects.Types.City Then
+    '        Dim pos As New Point(x, y)
+    '        Dim owner As String = m.board(x, y).City.race
+    '        Dim level As Integer = m.board(x, y).City.level
+    '        Dim isGround As Boolean = Not RaceGen.MayBeWater(m, x, y)
+    '
+    '        Dim desiredStatsExter As AllDataStructues.DesiredStats = Nothing
+    '        Dim desiredStatsInter As AllDataStructues.DesiredStats = Nothing
+    '        Dim stackExter As AllDataStructues.Stack = Nothing
+    '        Dim stackInter As AllDataStructues.Stack = Nothing
+    '        If m.groupStats.ContainsKey(m.board(x, y).groupID) Then
+    '            desiredStatsExter = m.groupStats.Item(m.board(x, y).groupID)
+    '            If desiredStatsExter.Race.Count = 1 AndAlso desiredStatsExter.Race.Item(0) = RaceGen.WaterRace Then
+    '                MsgBox("")
+    '            End If
+    '        End If
+    '        If m.groupStats.ContainsKey(-m.board(x, y).groupID) Then
+    '            desiredStatsInter = m.groupStats.Item(-m.board(x, y).groupID)
+    '            If desiredStatsInter.Race.Count = 1 AndAlso desiredStatsInter.Race.Item(0) = RaceGen.WaterRace Then
+    '                MsgBox("")
+    '            End If
+    '        End If
+    '    ElseIf m.board(x, y).objectID = DefMapObjects.Types.Ruins Then
+    '    ElseIf m.board(x, y).GuardLoc Or m.board(x, y).PassGuardLoc Or m.board(x, y).isObjectGuard Then
+    '        Dim desiredStats As AllDataStructues.DesiredStats = m.groupStats.Item(m.board(x, y).groupID)
+    '        Dim isGround As Boolean = Not RaceGen.MayBeWater(m, x, y)
+    '        If desiredStats.Race.Count = 1 AndAlso desiredStats.Race.Item(0) = RaceGen.WaterRace And isGround Then
+    '            MsgBox("")
+    '        End If
+    '    End If
+    'End Sub
+
     ''' <summary>Конвертирует карту для более удобной записи в файл</summary>
     ''' <param name="m">Карта</param>
     ''' <param name="settGen">Настройки генерации карты</param>
@@ -4551,10 +4655,10 @@ Public Class shortMapFormat
                 End If
             ElseIf m.board(x, y).GuardLoc Or m.board(x, y).PassGuardLoc Or m.board(x, y).isObjectGuard Then
                 Dim desiredStats As AllDataStructues.DesiredStats = m.groupStats.Item(m.board(x, y).groupID)
-                Dim stack As AllDataStructues.Stack = objContent.randStack.Gen(desiredStats, 0, _
-                                                                               Not RaceGen.MayBeWater(m, x, y), _
+                Dim isGround As Boolean = Not RaceGen.MayBeWater(m, x, y)
+                Dim stack As AllDataStructues.Stack = objContent.randStack.Gen(desiredStats, 0, isGround, _
                                                                                False, New Point(x, y), lordsList)
-                If Not RaceGen.MayBeWater(m, x, y) Then
+                If isGround Then
                     Dim leader As AllDataStructues.Unit = objContent.randStack.FindUnitStats(stack.pos(stack.leaderPos))
                     If leader.waterOnly Then
                         Dim txt As String = "Water only leader on ground! Pos: " & x & " " & y
@@ -8546,7 +8650,18 @@ Public Class ImpenetrableObjects
                                          ByRef x As Integer, ByRef y As Integer) As Boolean
         If Not free(x, y) Then Return False
         If Not m.board(x, y).isBorder Then Return False
-        'If m.board(x, y).isWater Then Return False
+        If m.board(x, y).isWater Then
+            Dim b As Location.Borders = ImpenetrableMeshGen.NearestXY(x, y, m.xSize, m.ySize, 1)
+            For p As Integer = b.minY To b.maxY Step 1
+                For q As Integer = b.minX To b.maxX Step 1
+                    If m.board(q, p).isWater And (m.board(q, p).GuardLoc Or _
+                                                  m.board(q, p).isObjectGuard Or _
+                                                  m.board(q, p).PassGuardLoc) Then
+                        Return False
+                    End If
+                Next q
+            Next p
+        End If
         Return True
     End Function
     Private Sub PlaceMountainBlock(ByRef m As Map, ByRef free(,) As Boolean, _

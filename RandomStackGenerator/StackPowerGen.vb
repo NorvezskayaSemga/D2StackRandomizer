@@ -376,6 +376,8 @@ Public Class RaceGen
     Dim rndgen As New RndValueGen
     Dim symm As New SymmetryOperations
 
+    Public Const WaterRace As Integer = 11
+
     'Private commonBlock As String = "D," & "W," & "A,AS,AW,A+AW+AG"
     ''Private commonBlock As String = "D,D+A+AW+AG," & "W," & "A,AS,AW,A+AW+AG"
     '
@@ -452,6 +454,7 @@ Public Class RaceGen
         Dim nRaces As Integer = RacesAmount(m)
         Dim LocR() As Integer = GenLocRace(m, nRaces, PlayableRaces, settLoc)
         Call SetLocRaceToCells(m, LocR, nRaces, settLoc)
+
         For y As Integer = 0 To m.ySize Step 1
             For x As Integer = 0 To m.xSize Step 1
                 If m.board(x, y).GuardLoc Or m.board(x, y).PassGuardLoc Then
@@ -469,6 +472,7 @@ Public Class RaceGen
                 End If
             Next x
         Next y
+
         For Each key As Integer In m.groupStats.Keys
             If IsNothing(m.groupStats.Item(key).Race) OrElse m.groupStats.Item(key).Race.Count = 0 Then
                 Throw New Exception("Группа с ID " & key & " не имеет расы")
@@ -620,6 +624,7 @@ Public Class RaceGen
                 Next r
             Next x
         Next y
+
     End Sub
     Private Sub SetCellRace(ByRef m As Map, ByRef LocR() As Integer, ByRef nRaces As Integer, ByRef races() As List(Of Integer), _
                             ByRef weight() As Double, ByRef x As Integer, ByRef y As Integer, ByRef settLoc() As Map.SettingsLoc)
@@ -639,7 +644,7 @@ Public Class RaceGen
                         For q As Integer = 0 To UBound(SRaces(r)(i)) Step 1
                             str &= SRaces(r)(i)(q).ToString & "_"
                         Next q
-                        If str = "11_" AndAlso Not added.Contains(str) Then
+                        If str = WaterRace & "_" AndAlso Not added.Contains(str) Then
                             If Not isWaterCell Then added.Add(str)
                         End If
                         If Not added.Contains(str) Then
@@ -674,7 +679,7 @@ Public Class RaceGen
                 Dim add As Boolean
                 For i As Integer = 0 To UBound(SRaces(baseNeutralStacksRace)) Step 1
                     add = True
-                    If SRaces(baseNeutralStacksRace)(i).Length = 1 AndAlso SRaces(baseNeutralStacksRace)(i)(0) = 11 Then add = isWaterCell
+                    If SRaces(baseNeutralStacksRace)(i).Length = 1 AndAlso SRaces(baseNeutralStacksRace)(i)(0) = WaterRace Then add = isWaterCell
                     If add Then Call AddPossibleRace(t, baseNeutralStacksRace, i, races, weight)
                 Next i
             End If
@@ -688,7 +693,7 @@ Public Class RaceGen
                 rS.Add(item)
             Next item
         Else
-            rS.Add(11)
+            rS.Add(WaterRace)
         End If
         If m.symmID > -1 Then
             Dim pp() As Point = symm.ApplySymm(New Point(x, y), nRaces, m, 1)

@@ -95,6 +95,12 @@ Friend Class StartForm
         Dim rstack As New RandStack(ReadTestUnits, ReadTestItems, ReadSpells, def, def, def, def, def, def, 5)
         Dim objCont As New ObjectsContentSet(rstack)
 
+        'Dim ds As New AllDataStructues.DesiredStats With {.ExpBarAverage = 50, .ExpStackKilled = 56, .MaxGiants = 3, _
+        '                                                  .MeleeCount = 3, .Race = New List(Of Integer), .StackSize = 6}
+        'ds.Race.Add(16)
+        'Dim dds As AllDataStructues.DesiredStats = AllDataStructues.DesiredStats.Copy(ds)
+        'Call rstack.GenFingters(ds, dds, 3, -1, True, 6, True, New List(Of Integer), 0, 0.5, -1)
+
         Call comm.ReadExcludedObjectsList({"%default%"})
         Dim objSizeArray() As ImpenetrableObjects.GlobalMapDecoration = ReadObjSize()
 
@@ -106,7 +112,7 @@ Friend Class StartForm
         Dim path As String = ".\Resources\"
 
         If True Then
-            path &= "48x48_unsymm_simple.txt"
+            path &= "template_48x48_unsymm_simple.txt"
         Else
             If Not UseTemplateCheckBox.Checked Then
                 path &= "example_template_1.txt"
@@ -135,9 +141,9 @@ Friend Class StartForm
             gsettings.common_settMap.ApplySymmetry = SymmCheckBox.Checked
             gsettings.common_settMap.SymmetryClass = -1
         End If
-        gsettings.common_settMap.RoadsAmount = 0
-        gsettings.common_settMap.WaterAmount = 0
-        gsettings.common_settMap.ForestAmount = 0
+        'gsettings.common_settMap.RoadsAmount = 0
+        'gsettings.common_settMap.WaterAmount = 0
+        'gsettings.common_settMap.ForestAmount = 0
         '###
 
         grid = New MapGenWrapper(objplace).CommonGen(gsettings, genTimeLimit)

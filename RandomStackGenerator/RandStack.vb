@@ -1316,6 +1316,7 @@ Public Class RandStack
         Dim SelectedFighters As New List(Of Integer)
         Dim fighter As Integer
         Dim deltaExpKilledIncrement As Integer = 10
+        Dim resetStackSettings As Boolean
         Do While SelectedFighters.Count = 0
             Do While DynStackStats.StackSize > 0
                 'создаем список воинов, которых можно использовать
@@ -1342,6 +1343,7 @@ Public Class RandStack
                 Else
                     SelectedFighters.Add(fighter)
                 End If
+                If resetStackSettings And SelectedFighters.Count > 0 Then Exit Do
             Loop
             If NoLeader Then
                 If SelectedFighters.Count = 0 Then
@@ -1350,6 +1352,9 @@ Public Class RandStack
                     If DynStackStats.ExpStackKilled > 9999 Then
                         DynStackStats.ExpStackKilled -= output_delta_expKilled
                         output_delta_expKilled = 0
+                        resetStackSettings = True
+                    End If
+                    If resetStackSettings Then
                         DynStackStats.MeleeCount = 1
                         DynStackStats.MaxGiants = 1
                         DynStackStats.StackSize = 2
