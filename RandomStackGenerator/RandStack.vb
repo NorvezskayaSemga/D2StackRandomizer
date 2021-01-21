@@ -3794,10 +3794,15 @@ Public Class GenDefaultValues
         Next line
     End Sub
 
-    Public Const myVersion As String = "19.01.2021.01.58"
+    Public Const myVersion As String = "22.01.2021.02.38"
     Public Shared Function PrintVersion() As String
         Return "Semga's DLL version: " & myVersion
     End Function
+
+    Enum TextLanguage
+        Rus = 1
+        Eng = 2
+    End Enum
 
     'common
     Public Property defaultSigma As Double
@@ -4020,6 +4025,226 @@ Public Class GenDefaultValues
         Return ReadResources("Capitals", My.Resources.Capitals)
     End Function
 
+    Public Class ObjectsNames
+        ''' <summary>ID лорда, список имен</summary>
+        Private Lords As New Dictionary(Of String, TxTList)
+        ''' <summary>ID столицы, список названий</summary>
+        Private Capitals As New Dictionary(Of String, TxTList)
+        ''' <summary>CityID@ID расы, список названий</summary>
+        Private Cities As New Dictionary(Of String, TxTList)
+        ''' <summary>ID руин, список названий</summary>
+        Private Ruins As New Dictionary(Of String, TxTList)
+        ''' <summary>ID башни мага, список названий</summary>
+        Private Mages As New Dictionary(Of String, TxTList)
+        ''' <summary>ID торговца, список названий</summary>
+        Private Vendors As New Dictionary(Of String, TxTList)
+        ''' <summary>ID торговца, список названий</summary>
+        Private Mercenaries As New Dictionary(Of String, TxTList)
+        ''' <summary>ID торговца, список названий</summary>
+        Private Trainers As New Dictionary(Of String, TxTList)
+        ''' <summary>ID типа объекта, описание</summary>
+        Private Descriptions As New Dictionary(Of String, TxTList)
+
+        Private rndVal As New RndValueGen
+
+        Private Class TxTList
+            Dim list As New List(Of String)
+            Dim key As String
+            Dim lang As GenDefaultValues.TextLanguage
+
+            Public Sub New(ByVal keyStr As String, ByVal langKey As GenDefaultValues.TextLanguage)
+                key = keyStr
+                lang = langKey
+            End Sub
+            Public Function GetRndItem(ByRef r As RndValueGen) As String
+                If Count() = 0 Then Call Read()
+                Dim i As Integer = r.RndInt(0, Count() - 1, True)
+                Dim res As String = list.Item(i)
+                list.RemoveAt(i)
+                Return res
+            End Function
+            Public Sub AddItem(ByRef v As String)
+                list.Add(v)
+            End Sub
+            Public Sub Read()
+                Dim content() As String = GetText(lang)
+                For Each s As String In content
+                    Dim splited() As String = s.Split(CChar("_"))
+                    If splited(0).ToUpper.StartsWith(key.ToUpper) Then
+                        For j As Integer = 1 To UBound(splited) Step 1
+                            Call AddItem(splited(j))
+                        Next j
+                    End If
+                Next s
+            End Sub
+            Public Sub Clear()
+                list.Clear()
+            End Sub
+            Public Function Count() As Integer
+                Return list.Count
+            End Function
+            Public Function ToArray() As String()
+                Return list.ToArray
+            End Function
+        End Class
+
+
+        Private objectsWithDescriptions() As String = {"G000SI0000MAGE", "G000SI0000MERH", "G000SI0000MERC", "G000SI0000TRAI"}
+        Private key() As String = {"G000LR", "G000FT0000NE@", "G000FT", "G000RU"}
+        Private Const descriptionKey As String = "D"
+
+
+        Public Sub New(ByRef lang As GenDefaultValues.TextLanguage)
+            ReDim Preserve key(UBound(key) + objectsWithDescriptions.Length)
+            For i As Integer = 0 To UBound(objectsWithDescriptions) Step 1
+                key(UBound(key) - UBound(objectsWithDescriptions) + i) = objectsWithDescriptions(i)
+            Next i
+            Call ReadFields(lang)
+        End Sub
+
+        Private Function GetValue(ByRef list As Dictionary(Of String, TxTList), ByRef id As String) As String
+            If list.ContainsKey(id.ToUpper) Then
+                Return list.Item(id.ToUpper).GetRndItem(rndVal)
+            Else
+                Return id & "_name"
+            End If
+        End Function
+        Private Function GetArray(ByRef list As Dictionary(Of String, TxTList), ByRef id As String) As String()
+            If list.ContainsKey(id.ToUpper) Then
+                Return list.Item(id.ToUpper).ToArray
+            Else
+                Return {id & "_name"}
+            End If
+        End Function
+        Public Function GetDescription(ByRef ID As String) As String
+            For Each v As String In objectsWithDescriptions
+                If ID.ToUpper.StartsWith(v.ToUpper) Then Return GetValue(Descriptions, descriptionKey & v.ToUpper)
+            Next v
+            Return ID & "_description"
+        End Function
+        Public Function DescriptionsArray(ByRef ID As String) As String()
+            For Each v As String In objectsWithDescriptions
+                If ID.ToUpper.StartsWith(v.ToUpper) Then Return GetArray(Descriptions, descriptionKey & v.ToUpper)
+            Next v
+            Return {ID & "_description"}
+        End Function
+        Public Function GetLordName(ByRef ID As String) As String
+            Return GetValue(Lords, ID)
+        End Function
+        Public Function LordNamesArray(ByRef ID As String) As String()
+            Return GetArray(Lords, ID)
+        End Function
+        Public Function GetCityName(ByRef ID As String) As String
+            Return GetValue(Cities, ID)
+        End Function
+        Public Function CityNamesArray(ByRef ID As String) As String()
+            Return GetArray(Cities, ID)
+        End Function
+        Public Function GetCapitalName(ByRef ID As String) As String
+            Return GetValue(Capitals, ID)
+        End Function
+        Public Function CapitalNamesArray(ByRef ID As String) As String()
+            Return GetArray(Capitals, ID)
+        End Function
+        Public Function GetRuinName(ByRef ID As String) As String
+            Return GetValue(Ruins, ID)
+        End Function
+        Public Function RuinNamesArray(ByRef ID As String) As String()
+            Return GetArray(Ruins, ID)
+        End Function
+        Public Function GetMageName(ByRef ID As String) As String
+            Return GetValue(Mages, ID)
+        End Function
+        Public Function MageNamesArray(ByRef ID As String) As String()
+            Return GetArray(Mages, ID)
+        End Function
+        Public Function GetMercenaryName(ByRef ID As String) As String
+            Return GetValue(Mercenaries, ID)
+        End Function
+        Public Function MercenaryNamesArray(ByRef ID As String) As String()
+            Return GetArray(Mercenaries, ID)
+        End Function
+        Public Function GetVendorName(ByRef ID As String) As String
+            Return GetValue(Vendors, ID)
+        End Function
+        Public Function VendorNamesArray(ByRef ID As String) As String()
+            Return GetArray(Vendors, ID)
+        End Function
+        Public Function GetTrainerName(ByRef ID As String) As String
+            Return GetValue(Trainers, ID)
+        End Function
+        Public Function TrainerNamesArray(ByRef ID As String) As String()
+            Return GetArray(Trainers, ID)
+        End Function
+
+        Private Shared Function GetText(ByRef lang As GenDefaultValues.TextLanguage) As String()
+            Dim content() As String = Nothing
+            If lang = GenDefaultValues.TextLanguage.Rus Then
+                content = ValueConverter.TxtSplit(My.Resources.Names_Rus)
+            ElseIf lang = GenDefaultValues.TextLanguage.Eng Then
+                content = ValueConverter.TxtSplit(My.Resources.Names_Eng)
+            Else
+                Throw New Exception("Unexpected language")
+            End If
+            Return content
+        End Function
+        Private Sub ReadFields(ByRef lang As GenDefaultValues.TextLanguage)
+            Dim d() As Dictionary(Of String, TxTList) = ToArray()
+            For i As Integer = 0 To UBound(d) Step 1
+                If IsNothing(d(i)) Then
+                    d(i) = New Dictionary(Of String, TxTList)()
+                Else
+                    d(i).Clear()
+                End If
+            Next i
+            Dim content() As String = GetText(lang)
+            For Each s As String In content
+                Dim splited() As String = s.Split(CChar("_"))
+                For i As Integer = 0 To UBound(key) Step 1
+                    If splited(0).ToUpper.StartsWith(key(i).ToUpper) Then
+                        If Not d(i).ContainsKey(key(i).ToUpper) Then d(i).Add(splited(0).ToUpper, New TxTList(splited(0).ToUpper, lang))
+                        Exit For
+                    End If
+                Next i
+            Next s
+            For i As Integer = 0 To UBound(d) Step 1
+                For Each f As TxTList In d(i).Values
+                    Call f.Read()
+                Next f
+            Next i
+            Call ToFields(d)
+            For i As Integer = 0 To UBound(objectsWithDescriptions) Step 1
+                Dim k As String = descriptionKey & objectsWithDescriptions(i).ToUpper
+                Descriptions.Add(k, New TxTList(k, lang))
+                Call Descriptions.Item(k).Read()
+            Next i
+        End Sub
+        Public Sub Clear()
+            Dim d() As Dictionary(Of String, TxTList) = ToArray()
+            For i As Integer = 0 To UBound(d) Step 1
+                If IsNothing(d(i)) Then
+                    For Each k As String In d(i).Keys
+                        d(i).Item(k).Clear()
+                    Next k
+                End If
+            Next i
+            Call ToFields(d)
+        End Sub
+
+        Private Function ToArray() As Dictionary(Of String, TxTList)()
+            Return {Lords, Cities, Capitals, Ruins, Mages, Vendors, Mercenaries, Trainers}
+        End Function
+        Private Sub ToFields(ByRef d() As Dictionary(Of String, TxTList))
+            Lords = d(0)
+            Cities = d(1)
+            Capitals = d(2)
+            Ruins = d(3)
+            Mages = d(4)
+            Vendors = d(5)
+            Mercenaries = d(6)
+            Trainers = d(7)
+        End Sub
+    End Class
 End Class
 
 Public Class Log

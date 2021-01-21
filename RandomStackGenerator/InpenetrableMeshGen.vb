@@ -280,10 +280,6 @@ Public Class ImpenetrableMeshGen
                 vInteger = 3
                 vBoolean = 4
             End Enum
-            Enum DescriptionLanguage
-                Rus = 1
-                Eng = 2
-            End Enum
 
             Friend Const wArray As String = "[StringArray]"
             Friend Const wDouble As String = "[Double]"
@@ -291,15 +287,15 @@ Public Class ImpenetrableMeshGen
             Friend Const wBoolean As String = "[Boolean]"
 
         End Structure
-        Public Shared Function GetPermissibleParametersRange(ByRef lang As Parameter.DescriptionLanguage) As Parameter()
+        Public Shared Function GetPermissibleParametersRange(ByRef descriptionLanguage As GenDefaultValues.TextLanguage) As Parameter()
             Dim r() As String = ValueConverter.TxtSplit(My.Resources.GenParametersRange)
             Dim d() As String
-            If lang = Parameter.DescriptionLanguage.Rus Then
+            If descriptionLanguage = GenDefaultValues.TextLanguage.Rus Then
                 d = ValueConverter.TxtSplit(My.Resources.GenParametersDescription_Rus)
-            ElseIf lang = Parameter.DescriptionLanguage.Eng Then
+            ElseIf descriptionLanguage = GenDefaultValues.TextLanguage.Eng Then
                 d = ValueConverter.TxtSplit(My.Resources.GenParametersDescription_Eng)
             Else
-                Throw New Exception("Unexpected lang")
+                Throw New Exception("Unexpected language")
             End If
             Dim test() As String = ValueConverter.TxtSplit(My.Resources.example_template_1)
 
@@ -4333,6 +4329,11 @@ Public Class shortMapFormat
         ''' <summary>Название объекта</summary>
         Public objectName As String
     End Class
+    Public MustInherit Class ObjectWithDescription
+        Inherits ObjectWithName
+        ''' <summary>Описание объекта</summary>
+        Public objectDescription As String
+    End Class
     Public MustInherit Class ObjectWithInternalStack
         Inherits ObjectWithName
         ''' <summary>Настройки генерации внутреннего отряда</summary>
@@ -4384,22 +4385,22 @@ Public Class shortMapFormat
         Public owner As OwnerType
     End Class
     Public Class MerchantItemObject
-        Inherits ObjectWithName
+        Inherits ObjectWithDescription
         ''' <summary>Список предметов</summary>
         Public content() As AllDataStructues.Item
     End Class
     Public Class MerchantSpellObject
-        Inherits ObjectWithName
+        Inherits ObjectWithDescription
         ''' <summary>Список заклинаний</summary>
         Public content() As AllDataStructues.Spell
     End Class
     Public Class MerchantUnitObject
-        Inherits ObjectWithName
+        Inherits ObjectWithDescription
         ''' <summary>Список юнитов</summary>
         Public content() As AllDataStructues.Unit
     End Class
     Public Class TrainerObject
-        Inherits ObjectWithName
+        Inherits ObjectWithDescription
     End Class
     Public Class StackObject
         ''' <summary>Положение отряда</summary>
@@ -4493,10 +4494,11 @@ Public Class shortMapFormat
                                          ByRef objContent As ObjectsContentSet, _
                                          ByRef fullSymmetry As Boolean, _
                                          ByRef usePlayableRaceUnitsInNeutralStacks As Boolean, _
-                                         ByRef treesAmont() As Integer) As shortMapFormat
+                                         ByRef treesAmont() As Integer, _
+                                         ByRef lang As GenDefaultValues.TextLanguage) As shortMapFormat
 
         Dim attObjects() As AttendedObject = (New ImpenetrableMeshGen).ActiveObjects
-        Dim sName As New SetName
+        Dim sName As New SetName(lang)
         Call sName.ResetNames(True, -1)
 
         Dim allSpells(objContent.spells.Count + objContent.excludedSpells.Count - 1) As AllDataStructues.Spell
@@ -4603,6 +4605,7 @@ Public Class shortMapFormat
                     Dim pos As New Point(x, y)
                     Dim owner As String = m.board(x, y).City.race
                     Dim level As Integer = m.board(x, y).City.level
+                    Dim landRace As Integer = m.board(x, y).objRace.Item(0)
 
                     Dim desiredStatsExter As AllDataStructues.DesiredStats = Nothing
                     Dim desiredStatsInter As AllDataStructues.DesiredStats = Nothing
@@ -4616,7 +4619,7 @@ Public Class shortMapFormat
                         desiredStatsInter = m.groupStats.Item(-m.board(x, y).groupID)
                         stackInter = objContent.randStack.Gen(desiredStatsInter, 0, True, True, pos, lordsList)
                     End If
-                    Call AddObject(res.cities, x, y, name, desiredStatsExter, desiredStatsInter, stackExter, stackInter, owner, level, objContent, attObjects, sName)
+                    Call AddObject(res.cities, x, y, name, desiredStatsExter, desiredStatsInter, stackExter, stackInter, owner, level, objContent, attObjects, landRace, sName)
                 ElseIf m.board(x, y).objectID = DefMapObjects.Types.Vendor Then
                     Dim content As List(Of String) = objContent.GetMerchantListSettings(m, gLocSettings, x, y)
                     Dim items As List(Of String) = objContent.MakeMerchantItemsList(New AllDataStructues.DesiredStats With {.shopContent = content}, Nothing, m.log)
@@ -4712,7 +4715,7 @@ Public Class shortMapFormat
                                  ByRef settingsExter As AllDataStructues.DesiredStats, ByRef settingsInter As AllDataStructues.DesiredStats, _
                                  ByRef stackExter As AllDataStructues.Stack, ByRef stackInter As AllDataStructues.Stack, _
                                  ByRef owner As String, ByRef level As Integer, ByRef objContent As ObjectsContentSet, ByRef attObj() As AttendedObject, _
-                                 ByRef sName As SetName)
+                                 ByRef landRace As Integer, ByRef sName As SetName)
         ReDim Preserve AddTo(AddTo.Length)
         Dim d As GenDefaultValues = objContent.randStack.comm.defValues
         Dim s As Integer = attObj(DefMapObjects.Types.City).Size
@@ -4725,7 +4728,7 @@ Public Class shortMapFormat
                                                     .level = level, _
                                                     .owner = New OwnerType(owner, d), _
                                                     .size = New Size(s, s), _
-                                                    .objectName = sName.CityName(name, d.linked_Races.Item(owner))}
+                                                    .objectName = sName.CityName(name, landRace)}
     End Sub
     Private Shared Sub AddObject(ByRef AddTo() As MerchantItemObject, ByRef x As Integer, ByRef y As Integer, _
                                  ByRef name As String, ByRef content As List(Of String), _
@@ -4736,7 +4739,8 @@ Public Class shortMapFormat
         AddTo(UBound(AddTo)) = New MerchantItemObject With {.pos = New Point(x, y), _
                                                             .id = name, _
                                                             .size = New Size(s, s), _
-                                                            .objectName = sName.ObjectName(name)}
+                                                            .objectName = sName.ObjectName(name), _
+                                                            .objectDescription = sName.ObjectDescription(name)}
         ReDim AddTo(UBound(AddTo)).content(content.Count - 1)
         Dim n As Integer = -1
         For Each item As String In content
@@ -4752,7 +4756,8 @@ Public Class shortMapFormat
         AddTo(UBound(AddTo)) = New MerchantSpellObject With {.pos = New Point(x, y), _
                                                              .id = name, _
                                                              .size = New Size(s, s), _
-                                                             .objectName = sName.ObjectName(name)}
+                                                             .objectName = sName.ObjectName(name), _
+                                                             .objectDescription = sName.ObjectDescription(name)}
         ReDim AddTo(UBound(AddTo)).content(content.Count - 1)
         Dim n As Integer = -1
         For Each item As String In content
@@ -4768,7 +4773,8 @@ Public Class shortMapFormat
         AddTo(UBound(AddTo)) = New MerchantUnitObject With {.pos = New Point(x, y), _
                                                             .id = name, _
                                                             .size = New Size(s, s), _
-                                                            .objectName = sName.ObjectName(name)}
+                                                            .objectName = sName.ObjectName(name), _
+                                                            .objectDescription = sName.ObjectDescription(name)}
         ReDim AddTo(UBound(AddTo)).content(content.Count - 1)
         Dim n As Integer = -1
         For Each item As String In content
@@ -4784,7 +4790,8 @@ Public Class shortMapFormat
         AddTo(UBound(AddTo)) = New TrainerObject With {.pos = New Point(x, y), _
                                                        .id = name, _
                                                        .size = New Size(s, s), _
-                                                       .objectName = sName.ObjectName(name)}
+                                                       .objectName = sName.ObjectName(name), _
+                                                       .objectDescription = sName.ObjectDescription(name)}
     End Sub
     Private Shared Sub AddObject(ByRef AddTo() As CapitalObject, ByRef x As Integer, ByRef y As Integer, ByRef name As String, _
                                  ByRef objContent As ObjectsContentSet, ByRef attObj() As AttendedObject, _
@@ -5864,8 +5871,9 @@ Public Class Map
                                   ByRef objContent As ObjectsContentSet, _
                                   ByRef fullSymmetry As Boolean, _
                                   ByRef usePlayableRaceUnitsInNeutralStacks As Boolean, _
-                                  ByRef treesAmont() As Integer) As shortMapFormat
-        Return shortMapFormat.MapConversion(Me, settGen, ObjectsSize, objContent, fullSymmetry, usePlayableRaceUnitsInNeutralStacks, treesAmont)
+                                  ByRef treesAmont() As Integer, _
+                                  ByRef lang As GenDefaultValues.TextLanguage) As shortMapFormat
+        Return shortMapFormat.MapConversion(Me, settGen, ObjectsSize, objContent, fullSymmetry, usePlayableRaceUnitsInNeutralStacks, treesAmont, lang)
     End Function
 
 End Class

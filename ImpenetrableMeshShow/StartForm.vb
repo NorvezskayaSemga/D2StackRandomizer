@@ -82,11 +82,11 @@ Friend Class StartForm
         'Call StackLocationsGen.PassageGuardPlacer.speedBanchmark()
         'Call ImpenetrableMeshGen.ActiveObjectsPlacer.speedBanchmark()
 
-        For Each lang As ImpenetrableMeshGen.GenSettings.Parameter.DescriptionLanguage In System.Enum.GetValues(GetType(ImpenetrableMeshGen.GenSettings.Parameter.DescriptionLanguage))
+        For Each lang As GenDefaultValues.TextLanguage In System.Enum.GetValues(GetType(GenDefaultValues.TextLanguage))
             Call ImpenetrableMeshGen.GenSettings.GetPermissibleParametersRange(lang)
         Next lang
 
-        Dim param() As ImpenetrableMeshGen.GenSettings.Parameter = ImpenetrableMeshGen.GenSettings.GetPermissibleParametersRange(ImpenetrableMeshGen.GenSettings.Parameter.DescriptionLanguage.Rus)
+        Dim param() As ImpenetrableMeshGen.GenSettings.Parameter = ImpenetrableMeshGen.GenSettings.GetPermissibleParametersRange(GenDefaultValues.TextLanguage.Rus)
 
         Dim def() As String = {"%default%"}
 
@@ -153,7 +153,7 @@ Friend Class StartForm
 
         If Not IsNothing(grid.board) Then
             Call ShowResult(grid)
-            Call shortMapFormat.MapConversion(grid, gsettings, objSizeArray, objCont, True, True, treesAmount)
+            Call shortMapFormat.MapConversion(grid, gsettings, objSizeArray, objCont, True, True, treesAmount, GenDefaultValues.TextLanguage.Rus)
         End If
 
     End Sub

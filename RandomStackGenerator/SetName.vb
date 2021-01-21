@@ -15,22 +15,25 @@
     Private LordMinWeight As Double
     Private defaultLordNames(14)() As String
     Private lordDonationThreshold As Double = 999
+    Public customObjectsNames As GenDefaultValues.ObjectsNames
 
     ''' <summary>Сюда генератор пишет лог</summary>
     Public log As Log
 
-    Public Sub New()
+    Public Sub New(ByVal lang As GenDefaultValues.TextLanguage)
 
         log = New Log(comm)
+
+        customObjectsNames = New GenDefaultValues.ObjectsNames(lang)
 
         Call log.Enable()
         Call AddToLog(-1, "-----Names creator initialization started-----")
 
-        defaultLordNames(1) = New String() {"Алексис", "Лотай", "Келли", "Моар"}
-        defaultLordNames(2) = New String() {"Заориш", "Сагот", "Абрааль", "Интар"}
-        defaultLordNames(3) = New String() {"Дхагот", "Ишангхти", "Абрааль", "Сагорат"}
-        defaultLordNames(4) = New String() {"Магнерик", "Дагарик", "Атаульф", "Бродульф"}
-        defaultLordNames(14) = New String() {"Лемваер", "Име'ель", "Рха'ане", "Гиндель"}
+        For Each k As String In comm.LordsRace.Keys
+            If IsNothing(defaultLordNames(comm.LordsRace.Item(k))) Then
+                defaultLordNames(comm.LordsRace.Item(k)) = customObjectsNames.LordNamesArray(k)
+            End If
+        Next k
 
         Dim t As Date = ReadNames()
         Dim download As Boolean = False
@@ -283,27 +286,30 @@
 
     Public Function CityName(ByRef ID As String, ByRef RaceID As Integer) As String
         If comm.defValues.capitalToGeneratorRace.ContainsKey(ID.ToUpper) Then
-            Return "CapitalName " & RaceID
+            Return customObjectsNames.GetCapitalName(comm.defValues.generatorRaceToCapitalID(comm.defValues.RaceNumberToRaceChar(RaceID)))
         ElseIf ID.ToUpper.StartsWith(GenDefaultValues.wObjKeyTown) Then
-            Return "VillageName " & RaceID
+            Return customObjectsNames.GetCityName(ID.Remove(ID.Length - 1) & "@" & comm.defValues.RaceNumberToRaceChar(RaceID))
         Else
             Throw New Exception("Unknown object ID: " & ID)
         End If
     End Function
     Public Function ObjectName(ByRef ID As String) As String
         If ID.ToUpper.StartsWith(GenDefaultValues.wObjKeyRuin) Then
-            Return "RuinName " & ID
+            Return customObjectsNames.GetRuinName(ID)
         ElseIf ID.ToUpper.StartsWith(GenDefaultValues.wObjKeyMerchant) Then
-            Return "MerchItemsName " & ID
+            Return customObjectsNames.GetVendorName(ID)
         ElseIf ID.ToUpper.StartsWith(GenDefaultValues.wObjKeyMage) Then
-            Return "MerchSpellsName " & ID
+            Return customObjectsNames.GetMageName(ID)
         ElseIf ID.ToUpper.StartsWith(GenDefaultValues.wObjKeyMercenaries) Then
-            Return "MerchUnitsName " & ID
+            Return customObjectsNames.GetMercenaryName(ID)
         ElseIf ID.ToUpper.StartsWith(GenDefaultValues.wObjKeyTrainer) Then
-            Return "TrainerName " & ID
+            Return customObjectsNames.GetTrainerName(ID)
         Else
             Throw New Exception("Unknown object ID: " & ID)
         End If
+    End Function
+    Public Function ObjectDescription(ByRef ID As String) As String
+        Return customObjectsNames.GetDescription(ID)
     End Function
 
     Friend Sub ResetNames(ByRef newMapGen As Boolean, ByRef LogID As Integer)

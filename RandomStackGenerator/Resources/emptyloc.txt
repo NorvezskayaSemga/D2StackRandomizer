@@ -16,8 +16,8 @@ DecorationsAmount		0.75
 maxGoldMines			0	0
 maxManaSources			0	0
 maxCities			0
-maxVendors			0.0
-maxMercenaries			0
+maxVendors			0
+maxMercenaries		0
 maxMages			0
 maxTrainers			0
 maxRuins			0
@@ -28,7 +28,7 @@ expAmount			1000
 
 mageSpellsMaxLevel		2
 mageSpellsMinLevel		1
-mageSpellsCount		4
+mageSpellsCount			4
 mageGlobalSpellsEnabled	False
 
 mercenariesMaxExpBar		1900

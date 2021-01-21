@@ -633,6 +633,37 @@ Namespace My.Resources
         End Property
         
         '''<summary>
+        '''  Looks up a localized string similar to #строка, начинающаяся с решетки, игнорируется
+        '''#ID объекта, в остальных столбцах возможные названия
+        '''#разделитель - _
+        '''.
+        '''</summary>
+        Friend ReadOnly Property Names_Eng() As String
+            Get
+                Return ResourceManager.GetString("Names_Eng", resourceCulture)
+            End Get
+        End Property
+        
+        '''<summary>
+        '''  Looks up a localized string similar to #строка, начинающаяся с решетки, игнорируется
+        '''#ID объекта, в остальных столбцах возможные названия
+        '''#разделитель - _
+        '''
+        '''#лорды Humans Clans Legions Undead Elvens (имена доллжны походить как девочкам, так и мальчикам. За исключением Кланов)
+        '''g000LR0001_Алексис_Лотай_Келли_Моар_Дориа
+        '''g000LR0002_Алексис_Лотай_Келли_Моар_Дориа
+        '''g000LR0003_Алексис_Лотай_Келли_Моар_Дориа
+        '''g000LR0004_Орхтар_Дархорд_Фуррт_Бордольт_Неромт
+        '''g000LR0005_Орхтар_Дархорд_Фуррт_Бордольт_Неромт
+        '''g000LR0006_Орхтар_Дархорд_Фуррт_Бордольт_Не [rest of string was truncated]&quot;;.
+        '''</summary>
+        Friend ReadOnly Property Names_Rus() As String
+            Get
+                Return ResourceManager.GetString("Names_Rus", resourceCulture)
+            End Get
+        End Property
+        
+        '''<summary>
         '''  Looks up a localized string similar to G000SI0000MAGE.
         '''</summary>
         Friend ReadOnly Property objKeyMage() As String
