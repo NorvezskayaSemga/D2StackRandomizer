@@ -3559,6 +3559,7 @@ Public Class GenDefaultValues
 
         'map
         Call SetProperty(minLocationRadiusAtAll, "minLocationRadiusAtAll", RConstants, DConstants)
+        Call SetProperty(smallLocationRadius, "smallLocationRadius", RConstants, DConstants)
 
         Dim commonRacesBlock As String = ""
         Call SetProperty(commonRacesBlock, "commonRacesBlock", RConstants, DConstants)
@@ -3607,6 +3608,7 @@ Public Class GenDefaultValues
 
             'map
             log.Add("minLocationRadiusAtAll = " & minLocationRadiusAtAll)
+            log.Add("smallLocationRadius = " & smallLocationRadius)
             log.Add("LocRacesBlocks = " & vbNewLine & spaces & String.Join(vbNewLine & spaces, LocRacesBlocks))
             log.Add("StackRaceChance = " & StackRaceChanceStr)
         End If
@@ -3836,6 +3838,7 @@ Public Class GenDefaultValues
 
     'map
     Public Property minLocationRadiusAtAll As Double
+    Public Property smallLocationRadius As Double
     Public Property LocRacesBlocks As String()
     Public Property StackRaceChance As Double()
     Public Const randomRaceID As Integer = -10001

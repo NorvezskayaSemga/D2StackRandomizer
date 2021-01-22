@@ -1341,7 +1341,9 @@ clearandexit:
         borderRadius = Nothing
         Dim nNeighbours(tmpm.xSize, tmpm.ySize) As Integer
 
-        For repeatloop As Integer = 0 To 2 Step 1
+        Dim nRepeatLoop As Integer = 2
+        Dim nRepeatLoopSmall As Integer = 3
+        For repeatloop As Integer = 0 To Math.Max(nRepeatLoop, nRepeatLoopSmall) Step 1
             Parallel.For(0, tmpm.ySize + 1, _
              Sub(y As Integer)
                  Dim n As Integer
@@ -1363,19 +1365,23 @@ clearandexit:
              End Sub)
             For y As Integer = 0 To tmpm.ySize Step 1
                 For x As Integer = 0 To tmpm.xSize Step 1
-                    If nNeighbours(x, y) > 1 Then
-                        Dim r As Integer = rndgen.RndPos(5, False)
-                        If Math.Abs(nNeighbours(x, y) - 5) > r Then del(x, y) = True
-                        nNeighbours(x, y) = 0
-                        If tmpm.symmID > -1 Then
-                            Dim p() As Point = symm.ApplySymm(New Point(x, y), settMap.nRaces, tmpm, 1)
-                            For i As Integer = 0 To UBound(p) Step 1
-                                nNeighbours(p(i).X, p(i).Y) = nNeighbours(x, y)
-                                del(p(i).X, p(i).Y) = del(x, y)
-                            Next i
+                    Dim averageR As Double = 0.5 * (tmpm.Loc(tmpm.board(x, y).locID(0) - 1).gASize _
+                                                  + tmpm.Loc(tmpm.board(x, y).locID(0) - 1).gBSize)
+                    If repeatloop <= nRepeatLoop Or averageR <= comm.defValues.smallLocationRadius Then
+                        If nNeighbours(x, y) > 1 Then
+                            Dim r As Integer = rndgen.RndPos(5, False)
+                            If Math.Abs(nNeighbours(x, y) - 5) > r Then del(x, y) = True
+                            nNeighbours(x, y) = 0
+                            If tmpm.symmID > -1 Then
+                                Dim p() As Point = symm.ApplySymm(New Point(x, y), settMap.nRaces, tmpm, 1)
+                                For i As Integer = 0 To UBound(p) Step 1
+                                    nNeighbours(p(i).X, p(i).Y) = nNeighbours(x, y)
+                                    del(p(i).X, p(i).Y) = del(x, y)
+                                Next i
+                            End If
+                        ElseIf nNeighbours(x, y) = 1 Then
+                            nNeighbours(x, y) = 0
                         End If
-                    ElseIf nNeighbours(x, y) = 1 Then
-                        nNeighbours(x, y) = 0
                     End If
                 Next x
             Next y
