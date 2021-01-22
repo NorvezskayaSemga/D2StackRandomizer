@@ -4349,8 +4349,8 @@ Public Class shortMapFormat
     End Class
 
     Public Structure TileState
-        ''' <summary>See here GroundType</summary>
-        Public ground As Integer
+        ''' <summary>Тип местности</summary>
+        Public ground As GroundType
         ''' <summary>Раса владельца</summary>
         Public owner As String
         ''' <summary>ID дерева, если оно есть</summary>
@@ -4537,7 +4537,7 @@ Public Class shortMapFormat
         ReDim res.landscape(UBound(m.board, 1), UBound(m.board, 2))
 
         Dim name As String
-        Dim allMines As New List(Of String)
+        Dim allMines, playableRaces As New List(Of String)
 
         Dim RuinIGen As New AllDataStructues.LootGenSettings With {.JewelItems = New AllDataStructues.ItemGenSettings With {.exclude = True}}
 
@@ -4573,6 +4573,9 @@ Public Class shortMapFormat
                 n += 1
                 tilesList.Add(n)
                 tiles(n) = New Point(x, y)
+                If m.board(x, y).objectID = DefMapObjects.Types.Capital Then
+                    playableRaces.Add(objContent.randStack.comm.defValues.capitalToGeneratorRace(m.board(x, y).objectName))
+                End If
             Next x
         Next y
         For i As Integer = 0 To n Step 1
@@ -4587,6 +4590,9 @@ Public Class shortMapFormat
             If m.board(x, y).isWater Then
                 res.landscape(x, y).ground = TileState.GroundType.Water
             Else
+                If Not playableRaces.Contains(objContent.randStack.comm.defValues.RaceNumberToRaceChar(m.board(x, y).objRace.Item(0))) Then
+                    res.landscape(x, y).owner = objContent.randStack.comm.defValues.RaceNumberToRaceChar(m.board(x, y).objRace.Item(0))
+                End If
                 If m.board(x, y).isForest Then
                     res.landscape(x, y).ground = TileState.GroundType.Forest
                     Dim max As Integer = treesAmont(objContent.randStack.comm.RaceIdentifierToSubrace(res.landscape(x, y).owner)) - 1
@@ -4678,6 +4684,34 @@ Public Class shortMapFormat
                 Call AddObject(res.stacks, x, y, desiredStats, stack, objContent, sName)
             End If
         Next i
+
+        For y As Integer = 0 To UBound(m.board, 2) Step 1
+            For x As Integer = 0 To UBound(m.board, 1) Step 1
+                name = m.board(x, y).objectName
+                If Not IsNothing(name) AndAlso Not name = "" Then
+                    Dim owner As String = ""
+                    Dim size As Integer
+                    If m.board(x, y).objectID = DefMapObjects.Types.Capital Then
+                        owner = objContent.randStack.comm.defValues.capitalToGeneratorRace(name)
+                        size = attObjects(m.board(x, y).objectID).Size
+                    ElseIf m.board(x, y).objectID = DefMapObjects.Types.City Then
+                        owner = m.board(x, y).City.race
+                        size = attObjects(m.board(x, y).objectID).Size
+                    ElseIf name.ToUpper.StartsWith(GenDefaultValues.wObjKeyMountain.ToUpper) Then
+                        owner = objContent.randStack.comm.defValues.RaceNumberToRaceChar(objContent.randStack.comm.RaceIdentifierToSubrace("Neutral"))
+                        size = ImpenetrableObjects.GlobalMapDecoration.MountainSize(name).Width
+                    End If
+                    If Not owner = "" Then
+                        For x1 As Integer = 0 To size - 1 Step 1
+                            For y1 As Integer = 0 To size - 1 Step 1
+                                res.landscape(x + x1, y + y1).owner = owner
+                            Next y1
+                        Next x1
+                    End If
+                End If
+            Next x
+        Next y
+
         Return res
     End Function
     Private Shared Sub AddObject(ByRef AddTo() As simpleObject, ByRef x As Integer, ByRef y As Integer, ByRef name As String, _
