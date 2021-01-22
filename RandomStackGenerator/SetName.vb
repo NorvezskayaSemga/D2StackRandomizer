@@ -20,7 +20,7 @@
     Private LordMinWeight As Double
     Private defaultLordNames(14)() As String
     Private lordDonationThreshold As Double = 999
-    Public customObjectsNames As GenDefaultValues.ObjectsNames
+    Public customObjectsNames As GenDefaultValues.MapObjectsText
 
     ''' <summary>Сюда генератор пишет лог</summary>
     Public log As Log
@@ -29,7 +29,7 @@
 
         log = New Log(comm)
 
-        customObjectsNames = New GenDefaultValues.ObjectsNames(lang)
+        customObjectsNames = New GenDefaultValues.MapObjectsText(lang, comm.defValues)
 
         Call log.Enable()
         Call AddToLog(-1, "-----Names creator initialization started-----")

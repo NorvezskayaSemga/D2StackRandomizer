@@ -109,8 +109,8 @@
     </None>
   </ItemGroup>
   <ItemGroup>
-    <Content Include="Resources\Names_Eng.txt" />
-    <Content Include="Resources\Names_Rus.txt" />
+    <Content Include="Resources\ObjectsText_Eng.txt" />
+    <Content Include="Resources\ObjectsText_Rus.txt" />
     <Content Include="Resources\template_48x48_unsymm_simple.txt">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>

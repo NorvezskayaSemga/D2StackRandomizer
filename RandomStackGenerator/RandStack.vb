@@ -3796,7 +3796,7 @@ Public Class GenDefaultValues
         Next line
     End Sub
 
-    Public Const myVersion As String = "22.01.2021.02.38"
+    Public Const myVersion As String = "22.01.2021.15.40"
     Public Shared Function PrintVersion() As String
         Return "Semga's DLL version: " & myVersion
     End Function
@@ -4027,8 +4027,19 @@ Public Class GenDefaultValues
     Public Function Capitals() As String
         Return ReadResources("Capitals", My.Resources.Capitals)
     End Function
+    Public Function ObjectsText(ByVal lang As GenDefaultValues.TextLanguage) As String
+        Dim content As String = Nothing
+        If lang = GenDefaultValues.TextLanguage.Rus Then
+            content = ReadResources("ObjectsText_Rus", My.Resources.ObjectsText_Rus)
+        ElseIf lang = GenDefaultValues.TextLanguage.Eng Then
+            content = ReadResources("ObjectsText_Eng", My.Resources.ObjectsText_Eng)
+        Else
+            Throw New Exception("Unexpected language")
+        End If
+        Return content
+    End Function
 
-    Public Class ObjectsNames
+    Public Class MapObjectsText
         ''' <summary>ID лорда, список имен</summary>
         Private Lords As New Dictionary(Of String, TxTList)
         ''' <summary>ID столицы, список названий</summary>
@@ -4049,15 +4060,18 @@ Public Class GenDefaultValues
         Private Descriptions As New Dictionary(Of String, TxTList)
 
         Private rndVal As New RndValueGen
+        Private genDefValues As GenDefaultValues
 
         Private Class TxTList
             Dim list As New List(Of String)
             Dim key As String
             Dim lang As GenDefaultValues.TextLanguage
+            Dim genDefValues As GenDefaultValues
 
-            Public Sub New(ByVal keyStr As String, ByVal langKey As GenDefaultValues.TextLanguage)
+            Public Sub New(ByVal keyStr As String, ByVal langKey As GenDefaultValues.TextLanguage, ByRef g As GenDefaultValues)
                 key = keyStr
                 lang = langKey
+                genDefValues = g
             End Sub
             Public Function GetRndItem(ByRef r As RndValueGen) As String
                 If Count() = 0 Then Call Read()
@@ -4070,7 +4084,7 @@ Public Class GenDefaultValues
                 list.Add(v)
             End Sub
             Public Sub Read()
-                Dim content() As String = GetText(lang)
+                Dim content() As String = ValueConverter.TxtSplit(genDefValues.ObjectsText(lang))
                 For Each s As String In content
                     Dim splited() As String = s.Split(CChar("_"))
                     If splited(0).ToUpper.StartsWith(key.ToUpper) Then
@@ -4105,7 +4119,8 @@ Public Class GenDefaultValues
                                            SetName.MerchantNameMaxLen, _
                                            SetName.MerchantNameMaxLen}
 
-        Public Sub New(ByRef lang As GenDefaultValues.TextLanguage)
+        Public Sub New(ByRef lang As GenDefaultValues.TextLanguage, ByRef g As GenDefaultValues)
+            genDefValues = g
             ReDim Preserve key(UBound(key) + objectsWithDescriptions.Length)
             For i As Integer = 0 To UBound(objectsWithDescriptions) Step 1
                 key(UBound(key) - UBound(objectsWithDescriptions) + i) = objectsWithDescriptions(i)
@@ -4188,17 +4203,6 @@ Public Class GenDefaultValues
             Return GetArray(Trainers, ID)
         End Function
 
-        Private Shared Function GetText(ByRef lang As GenDefaultValues.TextLanguage) As String()
-            Dim content() As String = Nothing
-            If lang = GenDefaultValues.TextLanguage.Rus Then
-                content = ValueConverter.TxtSplit(My.Resources.Names_Rus)
-            ElseIf lang = GenDefaultValues.TextLanguage.Eng Then
-                content = ValueConverter.TxtSplit(My.Resources.Names_Eng)
-            Else
-                Throw New Exception("Unexpected language")
-            End If
-            Return content
-        End Function
         Private Sub ReadFields(ByRef lang As GenDefaultValues.TextLanguage)
             Dim d() As Dictionary(Of String, TxTList) = ToArray()
             For i As Integer = 0 To UBound(d) Step 1
@@ -4208,12 +4212,12 @@ Public Class GenDefaultValues
                     d(i).Clear()
                 End If
             Next i
-            Dim content() As String = GetText(lang)
+            Dim content() As String = ValueConverter.TxtSplit(genDefValues.ObjectsText(lang))
             For Each s As String In content
                 Dim splited() As String = s.Split(CChar("_"))
                 For i As Integer = 0 To UBound(key) Step 1
                     If splited(0).ToUpper.StartsWith(key(i).ToUpper) Then
-                        If Not d(i).ContainsKey(key(i).ToUpper) Then d(i).Add(splited(0).ToUpper, New TxTList(splited(0).ToUpper, lang))
+                        If Not d(i).ContainsKey(key(i).ToUpper) Then d(i).Add(splited(0).ToUpper, New TxTList(splited(0).ToUpper, lang, genDefValues))
                         Exit For
                     End If
                 Next i
@@ -4226,7 +4230,7 @@ Public Class GenDefaultValues
             Call ToFields(d)
             For i As Integer = 0 To UBound(objectsWithDescriptions) Step 1
                 Dim k As String = descriptionKey & objectsWithDescriptions(i).ToUpper
-                Descriptions.Add(k, New TxTList(k, lang))
+                Descriptions.Add(k, New TxTList(k, lang, genDefValues))
                 Call Descriptions.Item(k).Read()
             Next i
 

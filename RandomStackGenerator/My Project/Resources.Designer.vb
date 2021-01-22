@@ -163,8 +163,8 @@ Namespace My.Resources
         '''maxGoldMines			0	0
         '''maxManaSources			0	0
         '''maxCities			0
-        '''maxVendors			0.0
-        '''maxMercenaries			0
+        '''maxVendors			0
+        '''maxMercenaries		0
         '''maxMages			0
         '''maxTrainers			0
         '''maxRuins			0
@@ -175,14 +175,14 @@ Namespace My.Resources
         '''
         '''mageSpellsMaxLevel		2
         '''mageSpellsMinLevel		1
-        '''mageSpellsCount		4
+        '''mageSpellsCount			4
         '''mageGlobalSpellsEnabled	False
         '''
         '''mercenariesMaxExpBar		1900
         '''mercenariesMinExpBar		1000
         '''mercenariesCount		4
         '''
-        '''me [rest of string was truncated]&quot;;.
+        '''merc [rest of string was truncated]&quot;;.
         '''</summary>
         Friend ReadOnly Property emptyloc() As String
             Get
@@ -638,9 +638,9 @@ Namespace My.Resources
         '''#разделитель - _
         '''.
         '''</summary>
-        Friend ReadOnly Property Names_Eng() As String
+        Friend ReadOnly Property ObjectsText_Eng() As String
             Get
-                Return ResourceManager.GetString("Names_Eng", resourceCulture)
+                Return ResourceManager.GetString("ObjectsText_Eng", resourceCulture)
             End Get
         End Property
         
@@ -657,9 +657,9 @@ Namespace My.Resources
         '''g000LR0005_Орхтар_Дархорд_Фуррт_Бордольт_Неромт
         '''g000LR0006_Орхтар_Дархорд_Фуррт_Бордольт_Не [rest of string was truncated]&quot;;.
         '''</summary>
-        Friend ReadOnly Property Names_Rus() As String
+        Friend ReadOnly Property ObjectsText_Rus() As String
             Get
-                Return ResourceManager.GetString("Names_Rus", resourceCulture)
+                Return ResourceManager.GetString("ObjectsText_Rus", resourceCulture)
             End Get
         End Property
         

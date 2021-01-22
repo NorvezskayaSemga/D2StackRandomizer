@@ -268,10 +268,10 @@
   <data name="template_48x48_unsymm_simple" type="System.Resources.ResXFileRef, System.Windows.Forms">
     <value>..\resources\template_48x48_unsymm_simple.txt;System.String, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089;windows-1251</value>
   </data>
-  <data name="Names_Eng" type="System.Resources.ResXFileRef, System.Windows.Forms">
-    <value>..\resources\names_eng.txt;System.String, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089;utf-8</value>
+  <data name="ObjectsText_Eng" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\resources\objectstext_eng.txt;System.String, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089;utf-8</value>
   </data>
-  <data name="Names_Rus" type="System.Resources.ResXFileRef, System.Windows.Forms">
-    <value>..\resources\names_rus.txt;System.String, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089;utf-8</value>
+  <data name="ObjectsText_Rus" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\resources\objectstext_rus.txt;System.String, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089;utf-8</value>
   </data>
 </root>
