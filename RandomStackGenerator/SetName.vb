@@ -8,8 +8,13 @@
     Private rndgen As New RndValueGen
     Private exclude As New List(Of String)
     Private excludeRace As New List(Of Integer)
-    Private StackNameMaxLen As Integer = 30
-    Private LordNameMaxLen As Integer = 15
+    Friend Const StackNameMaxLen As Integer = 30
+    Friend Const LordNameMaxLen As Integer = 15
+    Friend Const CityNameMaxLen As Integer = 20
+    Friend Const CapitalNameMaxLen As Integer = 20
+    Friend Const MerchantNameMaxLen As Integer = 35
+    Friend Const RuinsNameMaxLen As Integer = 25
+    Friend Const DescriptionMaxLen As Integer = 100
     Private commonIDs, lordIDs As New List(Of Integer)
     Private defailtLords As New Dictionary(Of Integer, List(Of Integer))
     Private LordMinWeight As Double

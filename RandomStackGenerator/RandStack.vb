@@ -4093,6 +4093,14 @@ Public Class GenDefaultValues
         Private key() As String = {"G000LR", "G000FT0000NE@", "G000FT", "G000RU"}
         Private Const descriptionKey As String = "D"
 
+        Private maxNameLen() As Integer = {SetName.LordNameMaxLen, _
+                                           SetName.CityNameMaxLen, _
+                                           SetName.CapitalNameMaxLen, _
+                                           SetName.RuinsNameMaxLen, _
+                                           SetName.MerchantNameMaxLen, _
+                                           SetName.MerchantNameMaxLen, _
+                                           SetName.MerchantNameMaxLen, _
+                                           SetName.MerchantNameMaxLen}
 
         Public Sub New(ByRef lang As GenDefaultValues.TextLanguage)
             ReDim Preserve key(UBound(key) + objectsWithDescriptions.Length)
@@ -4218,6 +4226,34 @@ Public Class GenDefaultValues
                 Descriptions.Add(k, New TxTList(k, lang))
                 Call Descriptions.Item(k).Read()
             Next i
+
+            Dim allNames, allDescriptions As New List(Of String)
+            For i As Integer = 0 To UBound(d) Step 1
+                For Each k As String In d(i).Keys
+                    For Each v As String In d(i).Item(k).ToArray
+                        If v.Length > maxNameLen(i) Then
+                            Throw New Exception("Name of " & k & " is too long: " & v)
+                        ElseIf allNames.Contains(v.ToUpper) Then
+                            If Not k.ToUpper.StartsWith(key(0).ToUpper) Then
+                                Throw New Exception("Duplicated name: " & v)
+                            End If
+                        Else
+                            allNames.Add(v.ToUpper)
+                        End If
+                    Next v
+                Next k
+            Next i
+            For Each k As String In Descriptions.Keys
+                For Each v As String In GetArray(Descriptions, k)
+                    If v.Length > SetName.DescriptionMaxLen Then
+                        Throw New Exception("Description of " & k & " is too long: " & v)
+                    ElseIf allDescriptions.Contains(v.ToUpper) Then
+                        Throw New Exception("Duplicated description: " & v)
+                    Else
+                        allDescriptions.Add(v.ToUpper)
+                    End If
+                Next v
+            Next k
         End Sub
         Public Sub Clear()
             Dim d() As Dictionary(Of String, TxTList) = ToArray()
