@@ -7661,6 +7661,7 @@ Public Class ImpenetrableObjects
     Private maxChainLen As Integer = 7
     Private raceSpells() As AllDataStructues.Spell
     Private raceIdToString As New Dictionary(Of Integer, String)
+    Private constructorMsg As String = ""
 
     Private Structure PlateauPlacingResult
         Dim obj() As PlateauObject
@@ -7818,6 +7819,28 @@ Public Class ImpenetrableObjects
             raceIdToString.Add(CInt(splited(UBound(splited))), splited(1).ToUpper)
         Next s
 
+
+        constructorMsg = vbNewLine & "------------------" & vbNewLine & _
+                         "Landscape content:" & vbNewLine &
+                         "Ruins amount: " & ruins.Length & vbNewLine & _
+                         "Vendors amount: " & merchants.Length & vbNewLine & _
+                         "Mages amount: " & mages.Length & vbNewLine & _
+                         "Mercenaries amount: " & mercenaries.Length & vbNewLine & _
+                         "Trainers amount: " & trainers.Length & vbNewLine & _
+                         "Landmarks amount: " & objects.Length & vbNewLine & _
+                         "Mountains amount: "
+        Dim mountainSizeAmount(-1) As Integer
+        For i As Integer = 0 To UBound(mountains) Step 1
+            If mountains(i).xSize > UBound(mountainSizeAmount) Then ReDim Preserve mountainSizeAmount(mountains(i).xSize)
+            mountainSizeAmount(mountains(i).xSize) += 1
+        Next i
+        For i As Integer = 0 To UBound(mountainSizeAmount) Step 1
+            If mountainSizeAmount(i) > 0 Then
+                constructorMsg &= i & ":" & mountainSizeAmount(i) & " | "
+            End If
+        Next i
+        constructorMsg = constructorMsg.Remove(constructorMsg.Length - 3) & vbNewLine & _
+                         "------------------" & vbNewLine
     End Sub
     ''' <summary>Определит ID объектов и настройки содержимого лавок</summary>
     ''' <param name="m">Карта со сгенерированными расами отрядов</param>
@@ -7873,6 +7896,8 @@ Public Class ImpenetrableObjects
         'Call AddSpells(m, settMap, settLoc)
         'Call AddMercenaries(m, settMap, settLoc)
         'Call AddMerchantItems(m, settMap, settLoc)
+
+        m.log.Add(constructorMsg)
 
         Call m.log.Add("Objects types definition: " & Environment.TickCount - t0 & " ms")
 
