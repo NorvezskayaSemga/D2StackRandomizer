@@ -2510,7 +2510,6 @@ clearandexit:
                                  Dim ty As Integer = p(i).Y - dy
                                  If Not tx = x Or Not ty = y Then
                                      If tx > -1 And ty > -1 And tx <= UBound(freeCells, 1) And ty <= UBound(freeCells, 2) Then
-
                                          Dim b As Location.Borders = NearestXY(tx, ty, UBound(freeCells, 1), UBound(freeCells, 2), 1)
                                          For q As Integer = b.minY To b.maxY Step 1
                                              For w As Integer = b.minX To b.maxX Step 1
@@ -3027,7 +3026,7 @@ clearandexit:
                         Dim sL As Map.SettingsLoc = settLoc(LocId - 1)
                         If sL.maxCities + sL.maxGoldMines + sL.maxManaSources _
                          + sL.maxMages + sL.maxMercenaries + sL.maxRuins + sL.maxTrainers + sL.maxVendors > 1 Then
-                            msg = "Не получилось ничего вместить в локацию"
+                            'msg = "Не получилось ничего вместить в локацию"
                             GoTo exitfunction
                         Else
                             Exit Do
