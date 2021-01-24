@@ -109,8 +109,12 @@
     </None>
   </ItemGroup>
   <ItemGroup>
-    <Content Include="Resources\ObjectsText_Eng.txt" />
-    <Content Include="Resources\ObjectsText_Rus.txt" />
+    <Content Include="Resources\ObjectsText_Eng.txt">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
+    <Content Include="Resources\ObjectsText_Rus.txt">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
     <Content Include="Resources\template_48x48_unsymm_simple.txt">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>
@@ -126,9 +130,15 @@
     <Content Include="Resources\example_template_2_unsymm.txt">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>
-    <None Include="Resources\PlayableSubraces.txt" />
-    <Content Include="Resources\GenParametersDescription_Eng.txt" />
-    <Content Include="Resources\GenParametersDescription_Rus.txt" />
+    <Content Include="Resources\PlayableSubraces.txt">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
+    <Content Include="Resources\GenParametersDescription_Eng.txt">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
+    <Content Include="Resources\GenParametersDescription_Rus.txt">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
     <Content Include="Resources\PreservedItems.txt">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>
@@ -142,8 +152,12 @@
     </Content>
   </ItemGroup>
   <ItemGroup>
-    <Content Include="Resources\Capitals.txt" />
-    <Content Include="Resources\GenParametersRange.txt" />
+    <Content Include="Resources\Capitals.txt">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
+    <Content Include="Resources\GenParametersRange.txt">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
     <Content Include="Resources\UnitRace.txt">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>
@@ -179,7 +193,9 @@
     </Content>
   </ItemGroup>
   <ItemGroup>
-    <None Include="Resources\TestStackStats.txt" />
+    <Content Include="Resources\TestStackStats.txt">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
   </ItemGroup>
   <ItemGroup>
     <Content Include="Resources\LootItemChanceMultiplier.txt">
