@@ -1259,9 +1259,9 @@ Public Class RandStack
                     Tolerance = 0.02 * (DynStackStats.StackSize - 1)
                 Else
                     If PossibleLeaders.Count > 0 Then Exit Do
-                    Throw New Exception("Что-то не так в выборе возможных лидеров отряда" & vbNewLine & _
-                                        "Имя локации: " & StackStats.LocationName & vbNewLine & _
-                                        "Суша: " & GroundTile & vbNewLine & _
+                    Throw New Exception("Something is wrong with the choice of possible stack leaders" & vbNewLine & _
+                                        "Location name: " & StackStats.LocationName & vbNewLine & _
+                                        "Is ground: " & GroundTile & vbNewLine & _
                                         "StackStats:" & vbNewLine & AllDataStructues.DesiredStats.Print(StackStats, comm.defValues.RaceNumberToRaceChar) & vbNewLine & _
                                         "DynStackStats:" & vbNewLine & AllDataStructues.DesiredStats.Print(DynStackStats, comm.defValues.RaceNumberToRaceChar))
                 End If
@@ -1275,9 +1275,9 @@ Public Class RandStack
                                               multiplierUnitDesiredStats, SigmaMultiplier(DynStackStats), serialExecution)
 
         If SelectedLeader = -1 Then
-            Throw New Exception("Возможно, бесконечный цикл в случайном выборе из массива возможных лидеров" & vbNewLine & _
-                                "Имя локации: " & StackStats.LocationName & vbNewLine & _
-                                "Суша: " & GroundTile & vbNewLine & _
+            Throw New Exception("Possibly an endless loop in a random selection from an array of possible leaders" & vbNewLine & _
+                                "Location name: " & StackStats.LocationName & vbNewLine & _
+                                "Is ground: " & GroundTile & vbNewLine & _
                                 "StackStats:" & vbNewLine & AllDataStructues.DesiredStats.Print(StackStats, comm.defValues.RaceNumberToRaceChar) & vbNewLine & _
                                 "DynStackStats:" & vbNewLine & AllDataStructues.DesiredStats.Print(DynStackStats, comm.defValues.RaceNumberToRaceChar))
         End If
@@ -1345,9 +1345,9 @@ Public Class RandStack
                         Exit Do
                     End If
                 ElseIf fighter = -2 Then
-                    Throw New Exception("Возможно, бесконечный цикл в случайном выборе из массива возможных воинов" & vbNewLine & _
-                                        "Имя локации: " & StackStats.LocationName & vbNewLine & _
-                                        "Суша: " & GroundTile & vbNewLine & _
+                    Throw New Exception("Possibly an endless loop in a random selection from an array of possible fighters" & vbNewLine & _
+                                        "Location name: " & StackStats.LocationName & vbNewLine & _
+                                        "Is ground: " & GroundTile & vbNewLine & _
                                         "StackStats:" & vbNewLine & AllDataStructues.DesiredStats.Print(StackStats, comm.defValues.RaceNumberToRaceChar) & vbNewLine & _
                                         "DynStackStats:" & vbNewLine & AllDataStructues.DesiredStats.Print(DynStackStats, comm.defValues.RaceNumberToRaceChar))
                 Else
@@ -1426,8 +1426,8 @@ Public Class RandStack
             End If
         Next i
         For i As Integer = 0 To UBound(unitIsUsed) Step 1
-            If Not unitIsUsed(i) Then Throw New Exception("Что-то не так в размещателе юнитов" & vbNewLine & _
-                                                          "Имя локации: " & StackStats.LocationName & vbNewLine & _
+            If Not unitIsUsed(i) Then Throw New Exception("Something wrong in the units placer" & vbNewLine & _
+                                                          "Location name: " & StackStats.LocationName & vbNewLine & _
                                                           "StackStats:" & vbNewLine & AllDataStructues.DesiredStats.Print(StackStats, comm.defValues.RaceNumberToRaceChar) & vbNewLine & _
                                                           "DynStackStats:" & vbNewLine & AllDataStructues.DesiredStats.Print(DynStackStats, comm.defValues.RaceNumberToRaceChar))
         Next i
@@ -4217,7 +4217,7 @@ Public Class GenDefaultValues
                 Dim splited() As String = s.Split(CChar("_"))
                 For i As Integer = 0 To UBound(key) Step 1
                     If splited(0).ToUpper.StartsWith(key(i).ToUpper) Then
-                        If Not d(i).ContainsKey(key(i).ToUpper) Then d(i).Add(splited(0).ToUpper, New TxTList(splited(0).ToUpper, lang, genDefValues))
+                        If Not d(i).ContainsKey(splited(0).ToUpper) Then d(i).Add(splited(0).ToUpper, New TxTList(splited(0).ToUpper, lang, genDefValues))
                         Exit For
                     End If
                 Next i
@@ -4245,6 +4245,9 @@ Public Class GenDefaultValues
                                 Throw New Exception("Duplicated name: " & v)
                             End If
                         Else
+                            If Not v.Substring(0, 1) = v.Substring(0, 1).ToUpper Then
+                                Throw New Exception("Name must start with upper case: " & v)
+                            End If
                             allNames.Add(v.ToUpper)
                         End If
                     Next v
@@ -4257,6 +4260,9 @@ Public Class GenDefaultValues
                     ElseIf allDescriptions.Contains(v.ToUpper) Then
                         Throw New Exception("Duplicated description: " & v)
                     Else
+                        If Not v.Substring(0, 1) = v.Substring(0, 1).ToUpper Then
+                            Throw New Exception("Description must start with upper case: " & v)
+                        End If
                         allDescriptions.Add(v.ToUpper)
                     End If
                 Next v
