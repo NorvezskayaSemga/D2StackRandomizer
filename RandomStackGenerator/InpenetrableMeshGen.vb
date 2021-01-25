@@ -274,11 +274,20 @@ Public Class ImpenetrableMeshGen
             ''' Например: если что-то выбрано из possibleArrayValues(0), то нельзя брать из possibleArrayValues(1)</summary>
             Public possibleArrayValues()() As String
 
+            Public value As String
+            Public group As String
+            Public needReload As Boolean
+
             Enum ValueType
                 vStringArray = 1
                 vDouble = 2
                 vInteger = 3
                 vBoolean = 4
+            End Enum
+            Public Enum Status
+                Normal = 0
+                Hiden = 1
+                Disabled = 2
             End Enum
 
             Friend Const wArray As String = "[StringArray]"
@@ -422,6 +431,52 @@ Public Class ImpenetrableMeshGen
             r.template_settGenLoc = LocationGenSetting.Copy(v.template_settGenLoc)
             Return r
         End Function
+
+        Public Class OptionsStorage
+
+            Private options(-1) As Parameter
+
+            ''' <summary>Количество параметров</summary>
+            Public Function OptionsCount() As Integer
+                Return options.Length
+            End Function
+            ''' <summary>Установит значение параметра</summary>
+            ''' <param name="index">Индекс</param>
+            ''' <param name="value">Значение</param>
+            ''' <param name="needReload">???</param>
+            Public Sub SetOptionValue(ByVal index As Integer, ByVal value As String, ByRef needReload As Boolean)
+                options(index).value = value
+                options(index).needReload = needReload
+            End Sub
+            ''' <summary>Вернет параметр по индексу</summary>
+            ''' <param name="index">Индекс</param>
+            Public Function GetOptionAt(ByVal index As Integer) As Parameter
+                Return options(index)
+            End Function
+
+            ''' <summary>Добавит параметр в конец списка</summary>
+            ''' <param name="value">Параметр</param>
+            Public Sub AddOption(ByVal value As Parameter)
+                ReDim Preserve options(OptionsCount)
+                options(OptionsCount() - 1) = value
+                Call OnOptionsListChanged()
+            End Sub
+            ''' <summary>Удалит параметр из списка</summary>
+            ''' <param name="index">Удалит параметр из списка, сместив все параметры с индексом большим, чем удаленный</param>
+            Public Sub RemoveOptionAt(ByVal index As Integer)
+                For i As Integer = index + 1 To OptionsCount() - 1 Step 1
+                    options(i - 1) = options(i)
+                Next i
+                ReDim Preserve options(OptionsCount() - 2)
+                Call OnOptionsListChanged()
+            End Sub
+
+            Private Sub OnOptionsListChanged()
+                For i As Integer = 0 To OptionsCount() - 1 Step 1
+                    options(i).needReload = True
+                Next i
+            End Sub
+        End Class
 
     End Structure
 
@@ -4485,7 +4540,6 @@ Public Class shortMapFormat
     '        End If
     '    End If
     'End Sub
-
     ''' <summary>Конвертирует карту для более удобной записи в файл</summary>
     ''' <param name="m">Карта</param>
     ''' <param name="settGen">Настройки генерации карты</param>
@@ -4514,6 +4568,7 @@ Public Class shortMapFormat
                 allSpells(ns) = spell
             Next spell
         Next spellsList
+
         Dim raceMana As Dictionary(Of Integer, AllDataStructues.Cost()) = ImpenetrableObjects.RacesManaUsing(objContent.randStack.comm, allSpells)
         Dim raceT1mana As New Dictionary(Of Integer, AllDataStructues.Cost)
         For Each id As Integer In raceMana.Keys
@@ -4710,7 +4765,6 @@ Public Class shortMapFormat
                 End If
             Next x
         Next y
-
         Return res
     End Function
     Private Shared Sub AddObject(ByRef AddTo() As simpleObject, ByRef x As Integer, ByRef y As Integer, ByRef name As String, _
