@@ -82,11 +82,13 @@ Friend Class StartForm
         'Call StackLocationsGen.PassageGuardPlacer.speedBanchmark()
         'Call ImpenetrableMeshGen.ActiveObjectsPlacer.speedBanchmark()
 
+        Dim tf As New TemplateForge(RandomStackGenerator.GenDefaultValues.TextLanguage.Rus)
+
         For Each lang As GenDefaultValues.TextLanguage In System.Enum.GetValues(GetType(GenDefaultValues.TextLanguage))
-            Call ImpenetrableMeshGen.GenSettings.GetPermissibleParametersRange(lang)
+            Call TemplateForge.GetPermissibleParametersRange(lang)
         Next lang
 
-        Dim param() As ImpenetrableMeshGen.GenSettings.Parameter = ImpenetrableMeshGen.GenSettings.GetPermissibleParametersRange(GenDefaultValues.TextLanguage.Rus)
+        Dim param() As TemplateForge.Parameter = TemplateForge.GetPermissibleParametersRange(GenDefaultValues.TextLanguage.Rus)
 
         Dim def() As String = {"%default%"}
 

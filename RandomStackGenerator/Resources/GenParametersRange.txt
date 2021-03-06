@@ -1,86 +1,86 @@
 ﻿
-genMode	[Integer]	1	2
+genMode	[Creation_settings:Nonhideable]	[Integer]	1	2
 
-nRaces	[Integer]	2	4
-
-#[Humans;Undead;Legions;Elves;Clans;Random]
-PlayersRaces	[StringArray]%;	[Nothing]%[H;U;L;E;C;R]
-
-StartGold	[Integer]	0	9999
-StartMana	[Integer]	0	9999
-
-SpellsMaxLevel	[Integer]	1	5
-
-ApplySymmetry	[Boolean]	False	True
-
-SymmetryClass	[Integer]	-1	4
-
-xSize	[Integer]	24	144
-ySize	[Integer]	24	144
-
-RaceLocsDistTolerance	[Double]	0.1	10.0
-
-PassageCreationChance	[Double]	0.0	1.0
-
-minPassWidth	[Double]	1.0	10000.0
-minPassDist		[Double]	2.0	10000.0
-
-AddGuardsBetweenLocations		[Boolean]	False	True
-PassGuardsPowerMultiplicator	[Double]	0.00001	10000.0
-ObjectGuardsPowerMultiplicator	[Double]	0.00001	10000.0
-
-LocExpRatio		[Double]	0.00001	10000.0
-
-Wealth			[Double]		0.0	10000.0
-
-WaterAmount			[Double]		0.0	1.0
-RoadsAmount			[Double]		0.0	1.0
-ForestAmount		[Double]		0.0	1.0
-DecorationsAmount	[Double]		0.0	1.0
+nRaces	[Common_map_settings]	[Integer]	2	4
 
 #[Humans;Undead;Legions;Elves;Clans;Random]
-RaceCities	[StringArray]%;	[Nothing]%[city_level(int0-5)#owner_location_number(int>=0)]
-posX				[Double]	0.0	1.0
-posY				[Double]	0.0	1.0
-AppearanceChance	[Double]	0.0	1.0
+PlayersRaces	[Common_map_settings]	[StringArray]%;	[Nothing]%[H;U;L;E;C;R]
 
-AverageRadius				[Double]	7.0	35.0
-maxEccentricityDispersion	[Double]	0.0	0.5
-maxRadiusDispersion			[Double]	0.0	0.99
+StartGold	[Common_map_settings]	[Integer]	0	9999
+StartMana	[Common_map_settings]	[Integer]	0	9999
 
-maxGoldMines			[Double]	0.0	20.0
-maxManaSources			[Double]	0.0	20.0
-maxCities				[Double]	0.0	5.0
-maxVendors				[Double]	0.0	5.0
-maxMercenaries			[Double]	0.0	5.0
-maxMages				[Double]	0.0	5.0
-maxTrainers				[Double]	0.0	5.0
-maxRuins				[Double]	0.0	5.0
+SpellsMaxLevel	[Common_map_settings]	[Integer]	1	5
 
-minStackToStackDist		[Double]	2.0	10.0
-expAmount				[Double]	1.0	1000000.0
+ApplySymmetry	[Common_map_settings]	[Boolean]	False	True
 
-mageSpellsMaxLevel		[Integer]	1	5
-mageSpellsMinLevel		[Integer]	1	5
-mageSpellsCount			[Integer]	1	1000
-mageGlobalSpellsEnabled	[Boolean]	False	True
+SymmetryClass	[Common_map_settings:Common_map_settings.ApplySymmetry=True]	[Integer]	-1	4
 
-mercenariesMaxExpBar	[Integer]	1	10000
-mercenariesMinExpBar	[Integer]	1	10000
-mercenariesCount		[Integer]	1	1000
+xSize	[Common_map_settings]	[Integer]	24	144
+ySize	[Common_map_settings]	[Integer]	24	144
 
-merchMaxConsumableItemCost		[Integer]	1	10000
-merchMinConsumableItemCost		[Integer]	1	10000
-merchMaxNonconsumableItemCost	[Integer]	1	10000
-merchMinNonconsumableItemCost	[Integer]	1	10000
-merchItemsCost					[Integer]	1	1000000
+RaceLocsDistTolerance	[Common_map_settings]	[Double]	0.1	10.0
 
-ruinsPowerMultiplicator		[Double]	0.01	10000
-ruinsWealthMultiplicator	[Double]	0.01	10000
-citiesPowerMultiplicator	[Double]	0.01	10000
-citiesWealthMultiplicator	[Double]	0.01	10000
+PassageCreationChance	[Common_map_settings]	[Double]	0.0	1.0
 
-scaleContent						[Boolean]	False	True
-possibleRaces						[StringArray]%;	[Nothing]%[N;S;H;U;L;E;C]
-ConnectWithAllNeighboringLocations	[Boolean]	False	True
+minPassWidth	[Common_map_settings]	[Double]	1.0	10000.0
+minPassDist		[Common_map_settings]	[Double]	2.0	10000.0
+
+AddGuardsBetweenLocations			[Common_map_settings]	[Boolean]	False	True
+PassGuardsPowerMultiplicator		[Common_map_settings]	[Double]	0.00001	10000.0
+ObjectGuardsPowerMultiplicator		[Common_map_settings]	[Double]	0.00001	10000.0
+
+LocExpRatio		[Common_map_settings]	[Double]	0.00001	10000.0
+
+Wealth			[Common_map_settings]	[Double]		0.0	10000.0
+
+WaterAmount			[Common_map_settings]	[Double]		0.0	1.0
+RoadsAmount			[Common_map_settings]	[Double]		0.0	1.0
+ForestAmount		[Common_map_settings]	[Double]		0.0	1.0
+DecorationsAmount	[Common_map_settings]	[Double]		0.0	1.0
+
+#[Humans;Undead;Legions;Elves;Clans;Random]
+RaceCities	[Location:Creation_settings.genMode=2]	[StringArray]%;	[Nothing]%[city_level(int0-5)#owner_location_number(int>=0)]
+posX				[Location:Creation_settings.genMode=2]	[Double]	0.0	1.0
+posY				[Location:Creation_settings.genMode=2]	[Double]	0.0	1.0
+AppearanceChance	[Location:Creation_settings.genMode=2]	[Double]	0.0	1.0
+
+AverageRadius				[Location]	[Double]	7.0	35.0
+maxEccentricityDispersion	[Location]	[Double]	0.0	0.5
+maxRadiusDispersion			[Location]	[Double]	0.0	0.99
+
+maxGoldMines			[Location]	[Double]	0.0	20.0
+maxManaSources			[Location]	[Double]	0.0	20.0
+maxCities				[Location]	[Double]	0.0	5.0
+maxVendors				[Location]	[Double]	0.0	5.0
+maxMercenaries			[Location]	[Double]	0.0	5.0
+maxMages				[Location]	[Double]	0.0	5.0
+maxTrainers				[Location]	[Double]	0.0	5.0
+maxRuins				[Location]	[Double]	0.0	5.0
+
+minStackToStackDist		[Location]	[Double]	2.0	10.0
+expAmount				[Location]	[Double]	1.0	1000000.0
+
+mageSpellsMaxLevel			[Location]	[Integer]	1	5
+mageSpellsMinLevel			[Location]	[Integer]	1	5
+mageSpellsCount				[Location]	[Integer]	1	1000
+mageGlobalSpellsEnabled		[Location]	[Boolean]	False	True
+
+mercenariesMaxExpBar	[Location]	[Integer]	1	10000
+mercenariesMinExpBar	[Location]	[Integer]	1	10000
+mercenariesCount		[Location]	[Integer]	1	1000
+
+merchMaxConsumableItemCost			[Location]	[Integer]	1	10000
+merchMinConsumableItemCost			[Location]	[Integer]	1	10000
+merchMaxNonconsumableItemCost		[Location]	[Integer]	1	10000
+merchMinNonconsumableItemCost		[Location]	[Integer]	1	10000
+merchItemsCost						[Location]	[Integer]	1	1000000
+
+ruinsPowerMultiplicator			[Location]	[Double]	0.01	10000
+ruinsWealthMultiplicator		[Location]	[Double]	0.01	10000
+citiesPowerMultiplicator		[Location]	[Double]	0.01	10000
+citiesWealthMultiplicator		[Location]	[Double]	0.01	10000
+
+scaleContent							[Location]	[Boolean]	False	True
+possibleRaces							[Location]	[StringArray]%;	[Nothing]%[N;S;H;U;L;E;C]
+ConnectWithAllNeighboringLocations		[Location]	[Boolean]	False	True
 

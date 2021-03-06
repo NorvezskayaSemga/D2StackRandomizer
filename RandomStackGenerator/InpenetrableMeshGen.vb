@@ -2,6 +2,530 @@
 Imports System.ComponentModel
 Imports System.Threading.Tasks
 
+Public Class TemplateForge
+
+    Private allParameters() As Parameter
+    Public blocks(-1) As OptionsStorage
+    Public allowToAddNewLocatons As Boolean = True
+
+    Private Const mainBlock As String = "Creation_settings"
+    Private Const commonBlock As String = "Common_map_settings"
+    Private Const locationBlock As String = "Location"
+    Private Const readCommand As String = "ReadFromFile"
+    Private Const isNonhideble As String = "Nonhideable"
+    Private Const SymmetryClass As String = "SymmetryClass"
+    'ReadFromFile example_template_2_unsymm.txt $cms
+
+    Public Sub New(ByRef descriptionLanguage As GenDefaultValues.TextLanguage)
+        allParameters = GetPermissibleParametersRange(descriptionLanguage)
+
+        Call AddToArray(AddMainBlock)
+        Call AddToArray(AddCommonBlock)
+        For i As Integer = 0 To 1 Step 1
+            Call AddLocation()
+        Next i
+        For j As Integer = 0 To UBound(blocks) Step 1
+            For i As Integer = 0 To blocks(j).OptionsCount - 1 Step 1
+                Call ValueChanged(blocks(j).name, blocks(j).GetOption(i).name)
+            Next i
+        Next j
+    End Sub
+
+    Private Function AddMainBlock() As OptionsStorage
+        Return CreateBlock(mainBlock, mainBlock, False, False)
+    End Function
+    Private Function AddCommonBlock() As OptionsStorage
+        Return CreateBlock(commonBlock, commonBlock, False, True)
+    End Function
+    ''' <summary>Добавит новую локацию. Вернет название локации</summary>
+    Public Function AddLocation() As String
+        If Not allowToAddNewLocatons Then
+            Throw New Exception("New locations adding isn't allowed")
+            Return ""
+        End If
+        Dim name As String = locationBlock & "_" & SingleToInt(Rnd)
+        Do While GetBlockIndex(name, False) > -1
+            name = locationBlock & "_" & SingleToInt(Rnd)
+        Loop
+        Call AddToArray(CreateBlock(locationBlock, name, True, True))
+        Call ValueChanged(mainBlock, "genMode")
+        Return name
+    End Function
+    Private Function SingleToInt(ByRef v As Single) As Integer
+        Return BitConverter.ToInt32(BitConverter.GetBytes(v), 0)
+    End Function
+    Private Function CreateBlock(ByRef baseName As String, ByRef fullNama As String, _
+                                 ByRef canBeDeleted As Boolean, ByRef AddReadCommand As Boolean) As OptionsStorage
+        Dim r As New OptionsStorage With {.canBeDeleted = canBeDeleted, .name = fullNama}
+        If AddReadCommand Then
+            Dim read As Parameter = Nothing
+            r.AddOption(read)
+        End If
+        For Each p As Parameter In allParameters
+            If p.blockName.ToUpper = baseName.ToUpper Then
+                r.AddOption(p)
+                r.SetOptionValue(p.name, p.minValue)
+            End If
+        Next p
+        Return r
+    End Function
+    Private Sub AddToArray(ByRef block As OptionsStorage)
+        ReDim Preserve blocks(blocks.Length)
+        blocks(UBound(blocks)) = block
+    End Sub
+    ''' <summary>Вернет индекс блока по его имени</summary>
+    ''' <param name="name">Имя блока. Регистр игнорируется</param>
+    ''' <param name="riseExceptionIfNotFound">Выдать ошибку, если такой локации нет</param>
+    Public Function GetBlockIndex(ByRef name As String, Optional ByRef riseExceptionIfNotFound As Boolean = True) As Integer
+        Dim n As String = name.ToUpper
+        For i As Integer = 0 To UBound(blocks) Step 1
+            If blocks(i).name.ToUpper = n Then Return i
+        Next i
+        If riseExceptionIfNotFound Then Throw New Exception("Could not find block with name: " & name)
+        Return -1
+    End Function
+
+    ''' <summary>Установит для параметра в заданном блоке новое значение</summary>
+    ''' <param name="blockName">Название блока</param>
+    ''' <param name="valueName">Название параметра</param>
+    ''' <param name="newValue">Новое значение</param>
+    Public Sub SetValue(ByRef blockName As String, ByRef valueName As String, ByRef newValue As String)
+        Call SetValue(GetBlockIndex(blockName), valueName, newValue)
+    End Sub
+    ''' <summary>Установит для параметра в заданном блоке новое значение</summary>
+    ''' <param name="blockIndex">Индекс блока</param>
+    ''' <param name="valueName">Название параметра</param>
+    ''' <param name="newValue">Новое значение</param>
+    Public Sub SetValue(ByRef blockIndex As Integer, ByRef valueName As String, ByRef newValue As String)
+        Call blocks(blockIndex).SetOptionValue(valueName, newValue)
+        Call ValueChanged(blocks(blockIndex).name, valueName)
+    End Sub
+    ''' <summary>Показать или скрыть параметр</summary>
+    ''' <param name="blockName">Название блока</param>
+    ''' <param name="valueName">Название параметра</param>
+    ''' <param name="newState">True, если скрыть</param>
+    ''' <param name="manual">True, если установлено вручную</param>
+    Public Sub SetHideValueState(ByRef blockName As String, ByRef valueName As String, _
+                                 ByRef newState As Boolean, ByRef manual As Boolean)
+        Call SetHideValueState(GetBlockIndex(blockName), valueName, newState, manual)
+    End Sub
+    ''' <summary>Показать или скрыть параметр</summary>
+    ''' <param name="blockIndex">Индекс блока</param>
+    ''' <param name="valueName">Название параметра</param>
+    ''' <param name="newState">True, если скрыть</param>
+    ''' <param name="manual">True, если установлено вручную</param>
+    Public Sub SetHideValueState(ByRef blockIndex As Integer, ByRef valueName As String, _
+                                 ByRef newState As Boolean, ByRef manual As Boolean)
+        Call blocks(blockIndex).SetOptionHideState(valueName, newState, manual)
+
+        Dim r As Integer
+        Dim show As Boolean
+        For i As Integer = 0 To UBound(blocks) Step 1
+            r = blocks(i).OptionIndex(readCommand)
+            If r > -1 Then
+                show = False
+                For j As Integer = 0 To blocks(i).OptionsCount - 1 Step 1
+                    If Not j = r Then
+                        If blocks(i).GetOption(j).hidden And Not blocks(i).GetOption(j).autoHidden Then
+                            show = True
+                            Exit For
+                        End If
+                    End If
+                Next j
+                If blocks(i).GetOption(r).hidden = show Then
+                    Call blocks(i).SetOptionHideState(readCommand, Not show, False)
+                    blocks(i).reloadMe = True
+                End If
+            End If
+        Next i
+    End Sub
+    Private Sub ValueChanged(ByRef blockName As String, ByRef valueName As String)
+        Dim bIndex As Integer = GetBlockIndex(blockName)
+        Dim v As String = blocks(bIndex).GetOption(valueName).value
+        If blockName.ToUpper = mainBlock.ToUpper Then
+            If valueName.ToUpper = "genMode".ToUpper Then
+                If CInt(v) = 1 Then
+                    Dim locCount As Integer = 0
+                    For i As Integer = 0 To UBound(blocks) Step 1
+                        If blocks(i).name.ToUpper.StartsWith(locationBlock.ToUpper) Then
+                            locCount += 1
+                            If locCount > 2 Then
+                                blocks(i).hidden = True
+                            Else
+                                blocks(i).hidden = False
+                            End If
+                        End If
+                    Next i
+                    If locCount < 2 Then
+                        allowToAddNewLocatons = True
+                    Else
+                        allowToAddNewLocatons = False
+                    End If
+                Else
+                    allowToAddNewLocatons = True
+                    For i As Integer = 0 To UBound(blocks) Step 1
+                        If blocks(i).name.ToUpper.StartsWith(locationBlock.ToUpper) Then
+                            blocks(i).hidden = False
+                        End If
+                    Next i
+                End If
+            ElseIf valueName.ToUpper = "ApplySymmetry".ToUpper Then
+                Dim hidden As String = blocks(bIndex).GetOption(SymmetryClass).hidden.ToString.ToUpper
+                If v.ToUpper = "True".ToUpper Then
+                    If hidden = "True".ToUpper Then
+                        Call SetHideValueState(blockName, SymmetryClass, False, False)
+                        blocks(bIndex).reloadMe = True
+                    End If
+                Else
+                    If hidden = "False".ToUpper Then
+                        Call SetHideValueState(blockName, SymmetryClass, True, False)
+                        blocks(bIndex).reloadMe = True
+                    End If
+                End If
+            End If
+        End If
+    End Sub
+
+    ''' <summary>Удалит локацию. Изменит названия локаций, которые находились ниже</summary>
+    ''' <param name="name">Название блона с локацией</param>
+    Public Sub RemoveBlock(ByRef name As String)
+        Call RemoveBlock(GetBlockIndex(name))
+    End Sub
+    ''' <summary>Удалит локацию. Изменит названия локаций, которые находились ниже</summary>
+    ''' <param name="index">Индекс блона с локацией</param>
+    Public Sub RemoveBlock(ByRef index As Integer)
+        If Not blocks(index).canBeDeleted Then
+            Throw New Exception("Deleting is not allowed")
+            Exit Sub
+        End If
+        For i As Integer = index + 1 To UBound(blocks) Step 1
+            blocks(i - 1) = blocks(i)
+            blocks(i - 1).reloadMe = True
+        Next i
+        ReDim Preserve blocks(UBound(blocks) - 1)
+        Call ValueChanged(mainBlock, "genMode")
+    End Sub
+    ''' <summary>Переместит блок выше по списку. Вернет False, если блок уже был наверху списка</summary>
+    ''' <param name="name">Имя блока</param>
+    Public Function MoveUpBlock(ByRef name As String) As Boolean
+        Dim n As Integer = GetBlockIndex(name)
+        Return MoveUpBlock(n)
+    End Function
+    ''' <summary>Переместит блок выше по списку. Вернет False, если блок уже был наверху списка</summary>
+    ''' <param name="index">Индекс блока</param>
+    Public Function MoveUpBlock(ByRef index As Integer) As Boolean
+        Dim exchangeWith As Integer = -1
+        For i As Integer = index - 1 To 0 Step -1
+            If Not blocks(i).hidden Then
+                exchangeWith = i
+                Exit For
+            End If
+        Next i
+        If exchangeWith > -1 Then
+            Call ExchangeBlockPosition(exchangeWith, index)
+            Return True
+        Else
+            Return False
+        End If
+    End Function
+    ''' <summary>Переместит блок ниже по списку. Вернет False, если блок уже был внизу списка</summary>
+    ''' <param name="name">Имя блока</param>
+    Public Function MoveDownBlock(ByRef name As String) As Boolean
+        Dim n As Integer = GetBlockIndex(name)
+        Return MoveDownBlock(n)
+    End Function
+    ''' <summary>Переместит блок ниже по списку. Вернет False, если блок уже был внизу списка</summary>
+    ''' <param name="index">Индекс блока</param>
+    Public Function MoveDownBlock(ByRef index As Integer) As Boolean
+        Dim exchangeWith As Integer = -1
+        For i As Integer = index + 1 To UBound(blocks) Step 1
+            If Not blocks(i).hidden Then
+                exchangeWith = i
+                Exit For
+            End If
+        Next i
+        If exchangeWith > -1 Then
+            Call ExchangeBlockPosition(exchangeWith, index)
+            Return True
+        Else
+            Return False
+        End If
+    End Function
+    Private Sub ExchangeBlockPosition(ByRef n1 As Integer, ByRef n2 As Integer)
+        Dim b1, b2 As OptionsStorage
+        b1 = blocks(n1)
+        b1.reloadMe = True
+        b2 = blocks(n2)
+        b2.reloadMe = True
+        blocks(n1) = b2
+        blocks(n2) = b1
+    End Sub
+
+    'создать группы параметров при вызове new:
+    'mode, карта
+    'по запросу создаль группу для локации или удалить
+    'по запросу записать в файл (tmp_(rnd while exist)) и вернуть путь к файлу
+    'при изменении мода изменять видимость полей
+    'при изменении симметрии изменять список доступных симметрий
+
+    Public Structure Parameter
+        ''' <summary>Название параметра</summary>
+        Public name As String
+        ''' <summary>Описание параметра</summary>
+        Public description As String
+        ''' <summary>Тип значения</summary>
+        Public type As ValueType
+
+        ''' <summary>Минимальное значение, если это не массив</summary>
+        Public minValue As String
+        ''' <summary>Максимальное значение, если это не массив</summary>
+        Public maxValue As String
+
+        ''' <summary>Возможные наборы параметров, если тип значения - массив. Можно выбирать только из одного наборы.
+        ''' Например: если что-то выбрано из possibleArrayValues(0), то нельзя брать из possibleArrayValues(1)</summary>
+        Public possibleArrayValues()() As String
+        ''' <summary>Разделитель значений в случае, если параметр является массивом</summary>
+        Public arrayDelimiter As String
+
+        ''' <summary>Значение параметра</summary>
+        Public value As String
+        ''' <summary>Скрывать параметр и не сохранять его в файл</summary>
+        Public hidden As Boolean
+        ''' <summary>Параметр скрыт автоматически</summary>
+        Public autoHidden As Boolean
+        ''' <summary>Можно ли скрыть параметр и не сохранять его в файл</summary>
+        Public hideable As Boolean
+
+        ''' <summary>Базовое название блока, в котором находится параметр</summary>
+        Public blockName As String
+        ''' <summary>Условие, при котором параметр должен быть виден</summary>
+        Public showCondition As String
+
+        Enum ValueType
+            vStringArray = 1
+            vDouble = 2
+            vInteger = 3
+            vBoolean = 4
+        End Enum
+        Public Enum Status
+            Normal = 0
+            Hiden = 1
+            Disabled = 2
+        End Enum
+
+        Friend Const wArray As String = "[StringArray]"
+        Friend Const wDouble As String = "[Double]"
+        Friend Const wInteger As String = "[Integer]"
+        Friend Const wBoolean As String = "[Boolean]"
+
+    End Structure
+    Public Shared Function GetPermissibleParametersRange(ByRef descriptionLanguage As GenDefaultValues.TextLanguage) As Parameter()
+        Dim r() As String = ValueConverter.TxtSplit(My.Resources.GenParametersRange)
+        Dim d() As String
+        If descriptionLanguage = GenDefaultValues.TextLanguage.Rus Then
+            d = ValueConverter.TxtSplit(My.Resources.GenParametersDescription_Rus)
+        ElseIf descriptionLanguage = GenDefaultValues.TextLanguage.Eng Then
+            d = ValueConverter.TxtSplit(My.Resources.GenParametersDescription_Eng)
+        Else
+            Throw New Exception("Unexpected language")
+        End If
+        Dim test() As String = ValueConverter.TxtSplit(My.Resources.example_template_1)
+
+        Dim res(UBound(r)) As Parameter
+        Dim nameField As Integer = 0
+        Dim blockField As Integer = 1
+        Dim typeField As Integer = 2
+        Dim minField As Integer = 3
+        Dim maxField As Integer = 4
+
+        Dim splR(UBound(r))(), splD(UBound(d))() As String
+        Dim testExampleNames, testParametersNames As New List(Of String)
+        Dim testParametersDescriptions As New Dictionary(Of String, String)
+        For i As Integer = 0 To UBound(r) Step 1
+            splR(i) = r(i).Split(CChar(" "))
+            Dim t As String = splR(i)(nameField).ToUpper
+            If Not testParametersNames.Contains(t) Then
+                testParametersNames.Add(t)
+            Else
+                Throw New Exception("Дублирование параметра " & splR(i)(nameField) & " в файле с допустимыми значениями (GenParametersRange.txt)")
+            End If
+        Next i
+        For i As Integer = 0 To UBound(d) Step 1
+            splD(i) = d(i).Split(CChar(" "))
+            Dim t As String = splD(i)(nameField).ToUpper
+            If Not testParametersDescriptions.ContainsKey(t) Then
+                Dim desc As String = ""
+                For k As Integer = 1 To UBound(splD(i)) Step 1
+                    If k > 1 Then desc &= " "
+                    desc &= splD(i)(k).Replace("/n", vbNewLine)
+                Next k
+                testParametersDescriptions.Add(t, desc)
+            Else
+                Throw New Exception("Дублирование параметра " & splD(i)(nameField) & " в файле с описаниями параметров (GenParametersDescriptions.txt)")
+            End If
+        Next i
+
+        For i As Integer = 1 To UBound(test) Step 1
+            Dim t As String = test(i).Split(CChar(" "))(nameField).ToUpper
+            If Not t.StartsWith(My.Resources.template_new_Block) Then
+                If Not testExampleNames.Contains(t) Then testExampleNames.Add(t)
+            End If
+        Next i
+        For Each t As String In testParametersNames
+            If Not testExampleNames.Contains(t) Then Throw New Exception("Не могу найти параметр " & t & " в тестовом шаблоне (example_template_1)")
+        Next t
+        For Each t As String In testExampleNames
+            If Not testParametersNames.Contains(t) Then Throw New Exception("Не могу найти параметр " & t & " в файле с доиустимыми значениями (GenParametersRange.txt)")
+        Next t
+        For Each t As String In testExampleNames
+            If Not testParametersDescriptions.ContainsKey(t) Then Throw New Exception("Не могу найти параметр " & t & " в файле с описаниями параметров (GenParametersDescriptions.txt)")
+        Next t
+
+        For i As Integer = 0 To UBound(r) Step 1
+            res(i).name = splR(i)(nameField)
+            res(i).blockName = splR(i)(blockField).Replace("[", "").Replace("]", "")
+            res(i).hideable = True
+            If res(i).blockName.Contains(":") Then
+                Dim s() As String = res(i).blockName.Split(CChar(":"))
+                For j As Integer = 0 To UBound(s) Step 1
+                    If s(j).ToUpper = TemplateForge.mainBlock.ToUpper _
+                     Or s(j).ToUpper = TemplateForge.commonBlock.ToUpper _
+                     Or s(j).ToUpper = TemplateForge.locationBlock.ToUpper Then
+                        res(i).blockName = s(j)
+                    ElseIf s(j).ToUpper = TemplateForge.isNonhideble.ToUpper Then
+                        res(i).hideable = False
+                    Else
+                        res(i).showCondition = s(j)
+                    End If
+                Next j
+            End If
+            If splR(i)(typeField).ToUpper.StartsWith(Parameter.wArray.ToUpper) Then
+                res(i).type = Parameter.ValueType.vStringArray
+            ElseIf splR(i)(typeField).ToUpper.StartsWith(Parameter.wDouble.ToUpper) Then
+                res(i).type = Parameter.ValueType.vDouble
+            ElseIf splR(i)(typeField).ToUpper.StartsWith(Parameter.wInteger.ToUpper) Then
+                res(i).type = Parameter.ValueType.vInteger
+            ElseIf splR(i)(typeField).ToUpper.StartsWith(Parameter.wBoolean.ToUpper) Then
+                res(i).type = Parameter.ValueType.vBoolean
+            Else
+                Throw New Exception("Неожиданный тип переменной: " & splR(i)(1) & " параметра " & splR(i)(0))
+            End If
+            res(i).description = testParametersDescriptions.Item(res(i).name.ToUpper)
+            If Not res(i).type = Parameter.ValueType.vStringArray Then
+                res(i).minValue = splR(i)(minField)
+                res(i).maxValue = splR(i)(maxField)
+            Else
+                Dim delimiters As String = splR(i)(typeField).Substring(Parameter.wArray.Length)
+                Dim d1 As Char = delimiters(0)
+                Dim d2 As Char = delimiters(1)
+                Dim arrays() As String = splR(i)(minField).Split(d1)
+                ReDim res(i).possibleArrayValues(UBound(arrays))
+                For j As Integer = 0 To UBound(arrays) Step 1
+                    res(i).possibleArrayValues(j) = arrays(j).Replace("[", "").Replace("]", "").Split(d2)
+                Next j
+                res(i).arrayDelimiter = d2
+            End If
+            Console.WriteLine(res(i).description)
+            Console.WriteLine("----------------")
+        Next i
+        Return res
+    End Function
+
+
+    Public Class OptionsStorage
+
+        Delegate Sub ValueChangedHandler(ByRef blockName As String, ByRef valueName As String)
+        Delegate Sub HideChangedHandler()
+
+        Private options(-1) As Parameter
+        ''' <summary>Скрывать блок и не сохранять его в файл</summary>
+        Public hidden As Boolean
+        ''' <summary>Можно ли удалить блок</summary>
+        Public canBeDeleted As Boolean
+        ''' <summary>Нуждаются ли данные блока в обновлении в интерфейсе</summary>
+        Public reloadMe As Boolean
+        ''' <summary>Название блока</summary>
+        Public name As String
+        ''' <summary>Кастомный идентификатор блока. Без пробелов и табов. Опционально</summary>
+        Private customBlockID As String
+
+        ''' <summary>Задать идентификатор блока. Опционально</summary>
+        ''' <param name="v">Идентификатр без пробелов и табов.</param>
+        Public Sub SetCustomBlockID(ByVal v As String)
+            Dim r As String = v.Trim(CChar(" ")).Trim(CChar(vbTab))
+            If r.Contains(" ") Or r.Contains(vbTab) Then
+                Throw New Exception("Remove spacews and tabs from ID")
+            Else
+                customBlockID = r
+            End If
+        End Sub
+        ''' <summary>Получить идентификатор блока</summary>
+        Public Function GetCustomBlockID() As String
+            Return customBlockID
+        End Function
+
+
+        ''' <summary>Показать или скрыть параметр</summary>
+        ''' <param name="vName">Имя параметра. Регистр игнорируется</param>  
+        ''' <param name="newState">True, если скрыть</param>
+        ''' <param name="manual">True, если установлено вручную</param>
+        Public Sub SetOptionHideState(ByVal vName As String, ByRef newState As Boolean, ByRef manual As Boolean, _
+                                      Optional ByRef h As HideChangedHandler = Nothing)
+            Dim index As Integer = OptionIndex(vName)
+            options(index).hidden = newState
+            options(index).autoHidden = Not manual
+            If newState And Not options(index).hideable Then
+                Throw New Exception("Hidden state for " & vName & " is not allowed")
+            End If
+            If Not IsNothing(h) Then Call h()
+        End Sub
+
+        ''' <summary>Вернет индекс параметра по его имени</summary>
+        ''' <param name="vName">Имя параметра. Регистр игнорируется</param>  
+        ''' <param name="riseExceptionIfNotFound">Выдать ошибку, если такой локации нет</param>
+        Public Function OptionIndex(ByVal vName As String, Optional ByRef riseExceptionIfNotFound As Boolean = True) As Integer
+            Dim n As String = vName.ToUpper
+            For i As Integer = 0 To UBound(options) Step 1
+                If options(i).name.ToUpper = n Then Return i
+            Next i
+            If riseExceptionIfNotFound Then Throw New Exception("Could not find parameter with name: " & vName)
+            Return -1
+        End Function
+        ''' <summary>Количество параметров</summary>
+        Public Function OptionsCount() As Integer
+            Return options.Length
+        End Function
+        ''' <summary>Установит значение параметра</summary>
+        ''' <param name="vName">Имя параметра. Регистр игнорируется</param>
+        ''' <param name="value">Значение</param>
+        ''' <param name="h">Вызовет эту процедуру после изменения значния</param>
+        Public Sub SetOptionValue(ByVal vName As String, ByVal value As String, _
+                                  Optional ByRef h As ValueChangedHandler = Nothing)
+            Dim index As Integer = OptionIndex(vName)
+            options(index).value = value
+            If Not IsNothing(h) Then Call h(name, vName)
+        End Sub
+        ''' <summary>Вернет параметр по индексу</summary>
+        ''' <param name="index">Индекс</param>
+        Public Function GetOption(ByVal index As Integer) As Parameter
+            Return options(index)
+        End Function
+        ''' <summary>Вернет параметр по имени</summary>
+        ''' <param name="vName">Имя параметра</param>
+        Public Function GetOption(ByVal vName As String) As Parameter
+            Return GetOption(OptionIndex(vName))
+        End Function
+
+        ''' <summary>Добавит параметр в конец списка</summary>
+        ''' <param name="value">Параметр</param>
+        Public Sub AddOption(ByVal value As Parameter)
+            ReDim Preserve options(OptionsCount)
+            options(OptionsCount() - 1) = value
+            'Call OnOptionsListChanged()
+        End Sub
+    End Class
+
+End Class
 
 Public Class DefMapObjects
 
@@ -257,139 +781,6 @@ Public Class ImpenetrableMeshGen
 
         End Structure
 
-        Public Structure Parameter
-            ''' <summary>Название параметра</summary>
-            Public name As String
-            ''' <summary>Описание параметра</summary>
-            Public description As String
-            ''' <summary>Тип значения</summary>
-            Public type As ValueType
-
-            ''' <summary>Минимальное значение, если это не массив</summary>
-            Public minValue As String
-            ''' <summary>Максимальное значение, если это не массив</summary>
-            Public maxValue As String
-
-            ''' <summary>Возможные наборы параметров, если тип значения - массив. Можно выбирать только из одного наборы.
-            ''' Например: если что-то выбрано из possibleArrayValues(0), то нельзя брать из possibleArrayValues(1)</summary>
-            Public possibleArrayValues()() As String
-
-            Public value As String
-            Public group As String
-            Public needReload As Boolean
-
-            Enum ValueType
-                vStringArray = 1
-                vDouble = 2
-                vInteger = 3
-                vBoolean = 4
-            End Enum
-            Public Enum Status
-                Normal = 0
-                Hiden = 1
-                Disabled = 2
-            End Enum
-
-            Friend Const wArray As String = "[StringArray]"
-            Friend Const wDouble As String = "[Double]"
-            Friend Const wInteger As String = "[Integer]"
-            Friend Const wBoolean As String = "[Boolean]"
-
-        End Structure
-        Public Shared Function GetPermissibleParametersRange(ByRef descriptionLanguage As GenDefaultValues.TextLanguage) As Parameter()
-            Dim r() As String = ValueConverter.TxtSplit(My.Resources.GenParametersRange)
-            Dim d() As String
-            If descriptionLanguage = GenDefaultValues.TextLanguage.Rus Then
-                d = ValueConverter.TxtSplit(My.Resources.GenParametersDescription_Rus)
-            ElseIf descriptionLanguage = GenDefaultValues.TextLanguage.Eng Then
-                d = ValueConverter.TxtSplit(My.Resources.GenParametersDescription_Eng)
-            Else
-                Throw New Exception("Unexpected language")
-            End If
-            Dim test() As String = ValueConverter.TxtSplit(My.Resources.example_template_1)
-
-            Dim res(UBound(r)) As Parameter
-            Dim nameField As Integer = 0
-            Dim typeField As Integer = 1
-            Dim minField As Integer = 2
-            Dim maxField As Integer = 3
-
-            Dim splR(UBound(r))(), splD(UBound(d))() As String
-            Dim testExampleNames, testParametersNames As New List(Of String)
-            Dim testParametersDescriptions As New Dictionary(Of String, String)
-            For i As Integer = 0 To UBound(r) Step 1
-                splR(i) = r(i).Split(CChar(" "))
-                Dim t As String = splR(i)(nameField).ToUpper
-                If Not testParametersNames.Contains(t) Then
-                    testParametersNames.Add(t)
-                Else
-                    Throw New Exception("Дублирование параметра " & splR(i)(nameField) & " в файле с допустимыми значениями (GenParametersRange.txt)")
-                End If
-            Next i
-            For i As Integer = 0 To UBound(d) Step 1
-                splD(i) = d(i).Split(CChar(" "))
-                Dim t As String = splD(i)(nameField).ToUpper
-                If Not testParametersDescriptions.ContainsKey(t) Then
-                    Dim desc As String = ""
-                    For k As Integer = 1 To UBound(splD(i)) Step 1
-                        If k > 1 Then desc &= " "
-                        desc &= splD(i)(k).Replace("/n", vbNewLine)
-                    Next k
-                    testParametersDescriptions.Add(t, desc)
-                Else
-                    Throw New Exception("Дублирование параметра " & splD(i)(nameField) & " в файле с описаниями параметров (GenParametersDescriptions.txt)")
-                End If
-            Next i
-
-            For i As Integer = 1 To UBound(test) Step 1
-                Dim t As String = test(i).Split(CChar(" "))(nameField).ToUpper
-                If Not t.StartsWith(My.Resources.template_new_Block) Then
-                    If Not testExampleNames.Contains(t) Then testExampleNames.Add(t)
-                End If
-            Next i
-            For Each t As String In testParametersNames
-                If Not testExampleNames.Contains(t) Then Throw New Exception("Не могу найти параметр " & t & " в тестовом шаблоне (example_template_1)")
-            Next t
-            For Each t As String In testExampleNames
-                If Not testParametersNames.Contains(t) Then Throw New Exception("Не могу найти параметр " & t & " в файле с доиустимыми значениями (GenParametersRange.txt)")
-            Next t
-            For Each t As String In testExampleNames
-                If Not testParametersDescriptions.ContainsKey(t) Then Throw New Exception("Не могу найти параметр " & t & " в файле с описаниями параметров (GenParametersDescriptions.txt)")
-            Next t
-
-            For i As Integer = 0 To UBound(r) Step 1
-                res(i).name = splR(i)(nameField)
-                If splR(i)(typeField).ToUpper.StartsWith(Parameter.wArray.ToUpper) Then
-                    res(i).type = Parameter.ValueType.vStringArray
-                ElseIf splR(i)(typeField).ToUpper.StartsWith(Parameter.wDouble.ToUpper) Then
-                    res(i).type = Parameter.ValueType.vDouble
-                ElseIf splR(i)(typeField).ToUpper.StartsWith(Parameter.wInteger.ToUpper) Then
-                    res(i).type = Parameter.ValueType.vInteger
-                ElseIf splR(i)(typeField).ToUpper.StartsWith(Parameter.wBoolean.ToUpper) Then
-                    res(i).type = Parameter.ValueType.vBoolean
-                Else
-                    Throw New Exception("Неожиданный тип переменной: " & splR(i)(1) & " параметра " & splR(i)(0))
-                End If
-                res(i).description = testParametersDescriptions.Item(res(i).name.ToUpper)
-                If Not res(i).type = Parameter.ValueType.vStringArray Then
-                    res(i).minValue = splR(i)(minField)
-                    res(i).maxValue = splR(i)(maxField)
-                Else
-                    Dim delimiters As String = splR(i)(typeField).Substring(Parameter.wArray.Length)
-                    Dim d1 As Char = delimiters(0)
-                    Dim d2 As Char = delimiters(1)
-                    Dim arrays() As String = splR(i)(minField).Split(d1)
-                    ReDim res(i).possibleArrayValues(UBound(arrays))
-                    For j As Integer = 0 To UBound(arrays) Step 1
-                        res(i).possibleArrayValues(j) = arrays(j).Replace("[", "").Replace("]", "").Split(d2)
-                    Next j
-                End If
-                Console.WriteLine(res(i).description)
-                Console.WriteLine("----------------")
-            Next i
-            Return res
-        End Function
-
         Public Shared Function Read(ByRef path As String) As GenSettings
             Dim res As New GenSettings
             Call res.ReadMode(path)
@@ -431,52 +822,6 @@ Public Class ImpenetrableMeshGen
             r.template_settGenLoc = LocationGenSetting.Copy(v.template_settGenLoc)
             Return r
         End Function
-
-        Public Class OptionsStorage
-
-            Private options(-1) As Parameter
-
-            ''' <summary>Количество параметров</summary>
-            Public Function OptionsCount() As Integer
-                Return options.Length
-            End Function
-            ''' <summary>Установит значение параметра</summary>
-            ''' <param name="index">Индекс</param>
-            ''' <param name="value">Значение</param>
-            ''' <param name="needReload">???</param>
-            Public Sub SetOptionValue(ByVal index As Integer, ByVal value As String, ByRef needReload As Boolean)
-                options(index).value = value
-                options(index).needReload = needReload
-            End Sub
-            ''' <summary>Вернет параметр по индексу</summary>
-            ''' <param name="index">Индекс</param>
-            Public Function GetOptionAt(ByVal index As Integer) As Parameter
-                Return options(index)
-            End Function
-
-            ''' <summary>Добавит параметр в конец списка</summary>
-            ''' <param name="value">Параметр</param>
-            Public Sub AddOption(ByVal value As Parameter)
-                ReDim Preserve options(OptionsCount)
-                options(OptionsCount() - 1) = value
-                Call OnOptionsListChanged()
-            End Sub
-            ''' <summary>Удалит параметр из списка</summary>
-            ''' <param name="index">Удалит параметр из списка, сместив все параметры с индексом большим, чем удаленный</param>
-            Public Sub RemoveOptionAt(ByVal index As Integer)
-                For i As Integer = index + 1 To OptionsCount() - 1 Step 1
-                    options(i - 1) = options(i)
-                Next i
-                ReDim Preserve options(OptionsCount() - 2)
-                Call OnOptionsListChanged()
-            End Sub
-
-            Private Sub OnOptionsListChanged()
-                For i As Integer = 0 To OptionsCount() - 1 Step 1
-                    options(i).needReload = True
-                Next i
-            End Sub
-        End Class
 
     End Structure
 
