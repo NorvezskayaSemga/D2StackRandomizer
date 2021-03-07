@@ -8054,6 +8054,12 @@ Public Class ImpenetrableObjects
         ''' <summary>Имя объекта</summary>
         Protected Friend name As String
     End Class
+    Class Landmark
+        Inherits MapObject
+        ''' <summary>Тэги для подзон</summary>
+        ''' <remarks></remarks>
+        Public tags As List(Of String)
+    End Class
     Class PlateauObject
         Inherits MapObject
         ''' <summary>Как скреплять объекты</summary>
@@ -8066,7 +8072,8 @@ Public Class ImpenetrableObjects
 
     Private symm As New SymmetryOperations
     Private comm As New Common
-    Private objects, mountains, ruins, mages, merchants, mercenaries, trainers As MapObject()
+    Private objects As Landmark()
+    Private mountains, ruins, mages, merchants, mercenaries, trainers As MapObject()
     Private plateau() As PlateauObject
     Private maxPlateauSize As Integer
     Private maxChainLen As Integer = 7
@@ -8201,8 +8208,20 @@ Public Class ImpenetrableObjects
                         maxPlateauSize = Math.Max(maxPlateauSize, Math.Max(g.xSize, g.ySize))
                     Else
                         For i As Integer = 0 To UBound(objType) Step 1
-                            If i = UBound(objType) _
-                            OrElse (k.ID.Length > objType(i).Length AndAlso k.ID.ToUpper.Substring(0, objType(i).Length) = objType(i).ToUpper) Then
+                            If i = UBound(objType) Then
+                                If IsNothing(objects) Then
+                                    ReDim objects(0)
+                                Else
+                                    ReDim Preserve objects(objects.Length)
+                                End If
+                                objects(UBound(objects)) = New Landmark With {.ground = g.ground, _
+                                                                              .name = g.name, _
+                                                                              .race = g.race, _
+                                                                              .water = g.water, _
+                                                                              .xSize = g.xSize, _
+                                                                              .ySize = g.ySize, _
+                                                                              .tags = comm.objectRace.Item(k.ID.ToUpper).tags}
+                            ElseIf k.ID.Length > objType(i).Length AndAlso k.ID.ToUpper.Substring(0, objType(i).Length) = objType(i).ToUpper Then
                                 If IsNothing(objList(i)) Then
                                     ReDim objList(i)(0)
                                 Else
@@ -8222,7 +8241,7 @@ Public Class ImpenetrableObjects
         mountains = objList(3)
         ruins = objList(4)
         trainers = objList(5)
-        objects = objList(6)
+        'objects = objList(6)
 
         Dim races() As String = comm.TxtSplit(comm.defValues.Races)
         For Each s As String In races
@@ -8343,6 +8362,10 @@ Public Class ImpenetrableObjects
         Return MayPlace(m, x, y, free, obj.xSize, obj.ySize, obj.ground, obj.water, obj.race)
     End Function
     Private Function MayPlace(ByRef m As Map, ByRef x As Integer, ByRef y As Integer, _
+                              ByRef free(,) As Boolean, ByRef obj As Landmark) As Boolean
+        Return MayPlace(m, x, y, free, obj.xSize, obj.ySize, obj.ground, obj.water, obj.race)
+    End Function
+    Private Function MayPlace(ByRef m As Map, ByRef x As Integer, ByRef y As Integer, _
                               ByRef free(,) As Boolean, ByRef obj As PlateauObject, ByRef Connector(,) As Integer) As Boolean
         If Not IsNothing(obj.border) Then
             If obj.border.X = 0 Then
@@ -8412,6 +8435,14 @@ Public Class ImpenetrableObjects
 
     Private Function ObjectWeight(ByRef m As Map, ByRef obj As MapObject, _
                                   ByRef x As Integer, ByRef y As Integer) As Double
+        Return ObjectWeight(m, obj.name, x, y)
+    End Function
+    Private Function ObjectWeight(ByRef m As Map, ByRef obj As Landmark, _
+                                  ByRef x As Integer, ByRef y As Integer) As Double
+        Return ObjectWeight(m, obj.name, x, y)
+    End Function
+    Private Function ObjectWeight(ByRef m As Map, ByRef objName As String, _
+                                  ByRef x As Integer, ByRef y As Integer) As Double
         Dim w As Double = 1
         Dim minW As Double = 0.025
         Dim maxW As Double = 0.5
@@ -8422,7 +8453,7 @@ Public Class ImpenetrableObjects
         For p As Integer = b.minY To b.maxY Step 1
             dy = p - y : dy = dy * dy + 1
             For q As Integer = b.minX To b.maxX Step 1
-                If obj.name = m.board(q, p).objectName Then
+                If objName = m.board(q, p).objectName Then
                     dx = q - x : dx = dx * dx + 1
                     w = w * (minW + dW * dx * dy)
                 End If
@@ -8847,6 +8878,9 @@ Public Class ImpenetrableObjects
     End Function
 
     Private Sub PlaceObject(ByRef free(,) As Boolean, ByRef x As Integer, ByRef y As Integer, ByRef obj As MapObject)
+        Call PlaceObject(free, x, y, obj.xSize, obj.ySize, False)
+    End Sub
+    Private Sub PlaceObject(ByRef free(,) As Boolean, ByRef x As Integer, ByRef y As Integer, ByRef obj As Landmark)
         Call PlaceObject(free, x, y, obj.xSize, obj.ySize, False)
     End Sub
     Private Sub PlaceObject(ByRef free(,) As Boolean, ByRef x As Integer, ByRef y As Integer, ByRef obj As PlateauObject, ByRef connectors(,) As Integer)

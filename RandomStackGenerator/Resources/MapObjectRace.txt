@@ -1,13 +1,14 @@
 #строка, начинающаяся с решетки, игнорируется
 #Первый столбец - идентификаторы объектов.
 #В остальных - допустимые места расстановки объектов и расы
+# в теге обязателен знак %
 
 #здания
-g000mg0001	G	H C E N S
-g000mg0002	G	C
-g000mg0003	G	H N S
-g000mg0004	G	L
-g000mg0005	G	L
+g000mg0001	G	H C E N S		%religious% %natural%
+g000mg0002	G	C				%building%
+g000mg0003	G	H N S			%building%
+g000mg0004	G	L				%building% %natural%
+g000mg0005	G	L				%building% %natural%
 
 #водопады
 #g000mg0006	G	H L C U E N S
@@ -34,39 +35,39 @@ g000mg0019	G	-
 #g000mg0021	G	H L C U E N S
 
 
-g000mg0022	G	L
-g000mg0023	G	L
-g000mg0024	G	L
-g000mg0025	G	U
-g000mg0026	G	U
-g000mg0027	G	U
-g000mg0028	G	E
-g000mg0029	G	E
-g000mg0030	G	E
-g000mg0031	G	U N S
-g000mg0032	G	H U N S
-g000mg0033	G	C
-g000mg0034	G	C
-g000mg0035	G	C
-g000mg0036	G	C
-g000mg0037	G	C
-g000mg0038	G	C
-g000mg0039	G	C
-g000mg0040	G	C
+g000mg0022	G	L				%building% %natural%
+g000mg0023	G	L				%building% %natural%
+g000mg0024	G	L				%natural%
+g000mg0025	G	H U N			%graveyard%
+g000mg0026	G	H U N			%graveyard%
+g000mg0027	G	H U N			%graveyard%
+g000mg0028	G	E				%building%
+g000mg0029	G	E				%building%
+g000mg0030	G	E				%building%
+g000mg0031	G	U N S			%graveyard% %marshes%		
+g000mg0032	G	H U N S			%graveyard% %marshes%
+g000mg0033	G	C				%building%
+g000mg0034	G	C				%building%
+g000mg0035	G	C				%building%
+g000mg0036	G	C				%natural%
+g000mg0037	G	C				%natural%
+g000mg0038	G	C				%natural%
+g000mg0039	G	C				%natural%
+g000mg0040	G	C				%natural%
 g000mg0041	G	
-g000mg0042	G	H
-g000mg0043	G	H
-g000mg0044	G	H
-g000mg0045	G	C
+g000mg0042	G	H				%building% %religious%
+g000mg0043	G	H				%building% %religious%
+g000mg0044	G	H				%building% %religious%
+g000mg0045	G	C				%building% %religious%
 g000mg0046	G	
 g000mg0047	G	
 g000mg0048	G	
-g000mg0049	G	C
-g000mg0050	G	C
-g000mg0052	G	L
-g000mg0053	G	L
-g000mg0054	G	L
-g000mg0055	G	H L C U E N S
+g000mg0049	G	C				%building% %religious%
+g000mg0050	G	C				%building% %religious%
+g000mg0052	G	L				%building% %natural%
+g000mg0053	G	L				%building% %natural%
+g000mg0054	G	L				%natural%
+g000mg0055	G	H L C U E N S	%building%
 
 #плато
 #g000mg0056	G	H L C U E N S
@@ -80,11 +81,11 @@ g000mg0055	G	H L C U E N S
 #g000mg0064	G	H L C U E N S
 
 
-g000mg0065	G	U
-g000mg0070	G	H N E
-g000mg0073	W	H L C U E N S
-g000mg0077	G	H C N
-g000mg0078	G	L
+g000mg0065	G	U				%building%
+g000mg0070	G	H N E			%building% %religious%
+g000mg0073	W	H L C U E N S	%natural% %building% %religious% %marshes% %graveyard% %empbuilding% %undbuilding% %undelfbuilding%
+g000mg0077	G	H C N			%natural% %building%
+g000mg0078	G	L				%building% %natural%
 
 #водопады
 #g000mg0079	G	H L C U E N S
@@ -92,99 +93,99 @@ g000mg0078	G	L
 #g000mg0081	G	H L C U E N S
 #g000mg0082	G	H L C U E N S
 
-g000mg0083	G	H
-g000mg0084	G	H
-g000mg0085	G	L N S
-g000mg0086	G	L N S
-g000mg0087	G	L N S
-g000mg0088	G	L N S
-g000mg0089	G	L N S
-g000mg0090	G	L N S
-g000mg0091	G	H N
-g000mg0092	G	H N
-g000mg0093	G	H N
-g000mg0094	G	H N
-g000mg0095	G	H N
-g000mg0096	G	H N
-g000mg0097	G	H N
-g000mg0098	G	H N
-g000mg0099	G	H
-g000mg0100	G	H
-g000mg0101	G	H
-g000mg0102	G	H
-g000mg0103	G	C
-g000mg0104	G	C
-g000mg0105	G	C
-g000mg0106	G	C
-g000mg0107	G	L
-g000mg0108	G	L
-g000mg0109	G	L
-g000mg0110	G	L
-g000mg0111	G	U
-g000mg0112	G	U
-g000mg0113	G	U
-g000mg0114	G	U
-g000mg0115	G	H N
-g000mg0116	G	H N
-g000mg0117	G	H N
-g000mg0118	G	H N S
-g000mg0119	G	H N
-g000mg0120	G	U N S
-g000mg0121	G	U N S
-g000mg0122	G	L U N S
-g000mg0123	G	L U N S
-g000mg0124	G	L U N S
-g000mg0125	G	L U N S
-g000mg0126	G	L U N S
-g000mg0127	G	L U N S
-g000mg0128	G	L U N S
-g000mg0129	G	U N
-g000mg0130	G	E
-g000mg0131	G	E
-g000mg0132	G	U
-g000mg0133	G	U
-g000mg0134	G	E
-g000mg0135	W	H L C U E N S
-g000mg0136	W	H L C U E N S
-g000mg0137	W	H L C U E N S
-g000mg0138	G	H U E N S
-g000mg0139	G	H U E N S
-g000mg0140	G	H U E N S
-g000mg0141	G	H U E N S
-g000mg0142	G	H U E N S
-g000mg0143	G	H U E N S
-g000mg0144	G	H U E N S
-g000mg0145	G	E
-g000mg0146	G	E
-g000mg0147	G	E
-g000mg0148	G	E
-g000mg0149	G	H
-g000mg0150	G	N
-g000mg0151	G	N
-g000mg8001	G	L
-g000mg8002	G	H C E
-g000mg8003	G	L
-g000mg8004	G	L
-g000mg8005	G	E
-g000mg8006	G	E
-g000mg8007	G	E
-g000mg8008	G	E
-g000mg8009	G	E
-g000mg8010	G	L N S
-g000mg8011	G	E
-g000mg8012	G	E
-g000mg8013	G	E
-g000mg8014	G	E
-g000mg8015	G	E
-g000mg8019	G	N S
-g000mg8020	G	H
-g000mg8021	G	H
-g000mg8022	G	U
-g000mg8023	G	C
+g000mg0083	G	H				%building% %religious%
+g000mg0084	G	H				%building% %religious%
+g000mg0085	G	L N S			%marshes%
+g000mg0086	G	L N S			%natural%
+g000mg0087	G	L N S			%building%
+g000mg0088	G	L N S			%building% %marshes%
+g000mg0089	G	L N S			%building% %marshes%
+g000mg0090	G	L N S			%natural%
+g000mg0091	G	H N				%building%
+g000mg0092	G	H N				%building%
+g000mg0093	G	H N				%building%
+g000mg0094	G	H N				%building%
+g000mg0095	G	H N				%building%
+g000mg0096	G	H N				%building%
+g000mg0097	G	H N				%building%
+g000mg0098	G	H N				%building%
+g000mg0099	G	H				%empbuilding%
+g000mg0100	G	H				%empbuilding%
+g000mg0101	G	H				%empbuilding%
+g000mg0102	G	H				%empbuilding%
+g000mg0103	G	C				%building%
+g000mg0104	G	C				%building%
+g000mg0105	G	C				%building%
+g000mg0106	G	C				%building%
+g000mg0107	G	L				%building%
+g000mg0108	G	L				%building%
+g000mg0109	G	L				%building%
+g000mg0110	G	L				%building%
+g000mg0111	G	U				%undbuilding%
+g000mg0112	G	U				%undbuilding%
+g000mg0113	G	U				%undbuilding%
+g000mg0114	G	U				%undbuilding%
+g000mg0115	G	H N				%building%
+g000mg0116	G	H N				%building%
+g000mg0117	G	H N				%building%
+g000mg0118	G	H N S			%building%
+g000mg0119	G	H N				%building%
+g000mg0120	G	U N S			%natural%
+g000mg0121	G	U N S			%natural%
+g000mg0122	G	L U N S			%natural%
+g000mg0123	G	L U N S			%natural%
+g000mg0124	G	L U N S			%natural%
+g000mg0125	G	L U N S			%natural%
+g000mg0126	G	L U N S			%natural%
+g000mg0127	G	L U N S			%natural%
+g000mg0128	G	L U N S			%natural%
+g000mg0129	G	U N				%natural%
+g000mg0130	G	E				%building%
+g000mg0131	G	E				%building%
+g000mg0132	G	H U				%graveyard%
+g000mg0133	G	H U				%graveyard%
+g000mg0134	G	E				%building%
+g000mg0135	W	H L C U E N S	%natural% %building% %religious% %marshes% %graveyard% %empbuilding% %undbuilding% %undelfbuilding%
+g000mg0136	W	H L C U E N S	%natural% %building% %religious% %marshes% %graveyard% %empbuilding% %undbuilding% %undelfbuilding%
+g000mg0137	W	H L C U E N S	%natural% %building% %religious% %marshes% %graveyard% %empbuilding% %undbuilding% %undelfbuilding%
+g000mg0138	G	H U E N S		%natural% %building% %religious% %marshes% %graveyard% %empbuilding% %undbuilding% %undelfbuilding%
+g000mg0139	G	H U E N S		%natural% %building% %religious% %marshes% %graveyard% %empbuilding% %undbuilding% %undelfbuilding%
+g000mg0140	G	H U E N S		%natural% %building% %religious% %marshes% %graveyard% %empbuilding% %undbuilding% %undelfbuilding%
+g000mg0141	G	H U E N S		%natural% %building% %religious% %marshes% %graveyard% %empbuilding% %undbuilding% %undelfbuilding%
+g000mg0142	G	H U E N S		%natural% %building% %religious% %marshes% %graveyard% %empbuilding% %undbuilding% %undelfbuilding%
+g000mg0143	G	H U E N S		%natural% %building% %religious% %marshes% %graveyard% %empbuilding% %undbuilding% %undelfbuilding%
+g000mg0144	G	H U E N S		%natural% %building% %religious% %marshes% %graveyard% %empbuilding% %undbuilding% %undelfbuilding%
+g000mg0145	G	E				%building%
+g000mg0146	G	E				%building%
+g000mg0147	G	E				%building%
+g000mg0148	G	E				%building%
+g000mg0149	G	H				%natural% %building%
+g000mg0150	G	N				%natural% %building%
+g000mg0151	G	N				%natural% %building%
+g000mg8001	G	L				%natural%
+g000mg8002	G	H C E			%natural%
+g000mg8003	G	L				%natural%
+g000mg8004	G	L				%natural%
+g000mg8005	G	E				%building%
+g000mg8006	G	E				%building%
+g000mg8007	G	E				%building%
+g000mg8008	G	E				%building%
+g000mg8009	G	E				%building%
+g000mg8010	G	L N S			%natural% %marshes%
+g000mg8011	G	E				%building%
+g000mg8012	G	E				%building%
+g000mg8013	G	E				%building%
+g000mg8014	G	E				%building%
+g000mg8015	G	E				%building%
+g000mg8019	G	N S				%natural%
+g000mg8020	G	H				%building%
+g000mg8021	G	H				%building%
+g000mg8022	G	U				%natural% %building%
+g000mg8023	G	C				%natural% %building%
 g000mg8024	G	
 g000mg8025	G	
-g000mg8026	G	U
-g000mg8027	G	U N
+g000mg8026	G	U				%building%
+g000mg8027	G	U N				%building%
 g000mg8028	G	
 g000mg8029	G	
 g000mg8030	G	
@@ -197,132 +198,132 @@ g000mg8036	G
 g000mg8037	G	
 g000mg8038	G	
 g000mg8039	G	
-g000mg8040	G	H N
-g000mg8041	G	H N S
-g000mg8042	G	H N S
-g000mg8043	G	H N S
-g000mg8044	G	H N
-g000mg8045	G	H N
-g000mg8046	G	H N
-g000mg8047	G	H N S
-g000mg8048	G	H N
-g000mg8049	G	H N S
-g000mg8050	G	H N
-g000mg8051	G	H N
-g000mg8052	G	H N
-g000mg8053	G	H N
-g000mg8054	G W	N S
-g000mg8055	G W	N S
-g000mg8056	G W	N S
-g000mg8057	G W	N S
-g000mg8058	G W	N S
-g000mg8059	G	H N S
-g000mg8060	G	H L U
-g000mg8061	G	H N S
-g000mg8062	G	H N S
-g000mg8063	G	H N S
-g000mg8064	G	H
-g000mg8065	G	H N
-g000mg8066	G	H N
-g000mg8067	G	E
-g000mg8068	G	E
-g000mg8069	G	E
-g000mg8070	G	H N
-g000mg8071	G	H N
-g000mg8072	G	U
+g000mg8040	G	H N				%natural%
+g000mg8041	G	H N S			%natural% %marshes%
+g000mg8042	G	H N S			%natural% %marshes%
+g000mg8043	G	H N S			%natural% %marshes%
+g000mg8044	G	H N				%natural% %building%
+g000mg8045	G	H N				%natural% %building%
+g000mg8046	G	H N				%natural% %building%
+g000mg8047	G	H N S			%natural% %building%
+g000mg8048	G	H N				%natural% %building%
+g000mg8049	G	H N S			%natural% %building%
+g000mg8050	G	H N				%natural% %building%
+g000mg8051	G	H N				%natural% %building%
+g000mg8052	G	H N				%natural% %building%
+g000mg8053	G	H N				%natural% %building%
+g000mg8054	G W	N S				%marshes%
+g000mg8055	G W	N S				%marshes%
+g000mg8056	G W	N S				%marshes%
+g000mg8057	G W	N S				%marshes%
+g000mg8058	G W	N S				%marshes%
+g000mg8059	G	H N S			%natural% %building% %marshes%
+g000mg8060	G	H L U			%religious%
+g000mg8061	G	H N S			%natural% %building%
+g000mg8062	G	H N S			%natural% %building%
+g000mg8063	G	H N S			%natural% %building%
+g000mg8064	G	H				%empbuilding%
+g000mg8065	G	H N				%building%
+g000mg8066	G	H N				%building%
+g000mg8067	G	E				%building%
+g000mg8068	G	E				%building%
+g000mg8069	G	E				%building%
+g000mg8070	G	H N				%building%
+g000mg8071	G	H N				%building%
+g000mg8072	G	U				%natural% %building%
 g000mg8073	G	H N S
-g000mg8074	G	U
-g000mg8075	G	H L U
-g000mg8076	G	H N
-g000mg8077	G	H N S
-g000mg8078	G	L
-g000mg8079	G	H N
-g000mg8080	G	H
-g000mg8081	G	H N
-g000mg8082	G	N
-g000mg8083	G	N
-g000mg8084	G	U N
-g000mg8085	G	H
-g000mg8086	G	L
-g000mg8087	G	N
-g000mg8088	G	N
-g000mg8089	G	N
-g000mg8090	G	N
-g000mg8091	G	N
-g000mg8092	G	N
-g000mg8093	G	U
-g000mg8094	G	U
-g000mg8095	W	H L C U E N S
-g000mg8096	W	H L C U E N S
-g000mg8097	W	H L C U E N S
-g000mg8098	G W	N S
-g000mg8099	G W	N S
-g000mg8100	G W	N S
-g000mg8101	G	C
-g000mg8102	G	C
-g000mg8103	G	C
-g000mg8104	G	C
-g000mg8105	G	C
-g000mg8106	G	U
-g000mg8107	G	H E N S
-g000mg8108	G	H L C U E N S
-g000mg8109	G	H L C U E N S
-g000mg8110	G	H L C U E N S
-g000mg8111	G	H L C U E N S
-g000mg8112	G	H L C U E N S
-g000mg8113	G	H L C U E N S
-g000mg8114	G	H L C U E N S
-g000mg8115	G	H L C U E N S
-g000mg8116	G	H L C U E N S
-g000mg8117	G	H L C U E N S
-g000mg8118	G	H L C U E N S
-g000mg8119	G	H L C U E N S
-g000mg8120	G	H L C U E N S
-g000mg8121	G	H L C U E N S
-g000mg8122	G	C
-g000mg8123	G	H
-g000mg8124	G	H E N
-g000mg8125	G	U
-g000mg8126	G	U
-g000mg8127	G	U
-g000mg8128	G	U L
-g000mg8129	G	U L
-g000mg8130	G	U L
-g000mg8131	G	N S
-g000mg8132	G	N
-g000mg8133	G	S
-g000mg8134	G	-
-g000mg8135	G	-
-g000mg8136	G	-
-g000mg8137	G	L S
-g000mg8138	G	L S
-g000mg8139	G	L
-g000mg8140	G	L
-g000mg8141	G	U N S
-g000mg8142	G	U N S
-g000mg8143	G	U N S
-g000mg8144	G	U N S
-g000mg8145	G	U N S
-g000mg8146	G	U N S
-g000mg8147	G	U
-g000mg8148	G	U
-g000mg8149	G	U
-g000mg8150	G	U
-g000mg8151	G	U
-g000mg8152	G	U
-g000mg8153	G	U
-g000mg8154	G	U
-g000mg8155	G	U
-g000mg8156	G	U
-g000mg8157	G	U
-g000mg8158	G	U
-g000mg8159	G	U
-g000mg8160	G	U
-g000mg8161	G	U
-g000mg8162	G	U
-g000mg8163	G	S
-g000mg8164	G	H N S
-g000mg8165	G	H N
+g000mg8074	G	U				%building%
+g000mg8075	G	H L U E			%building% %religious%
+g000mg8076	G	H N				%building% %religious%
+g000mg8077	G	H N S			%building%
+g000mg8078	G	L				%natural%
+g000mg8079	G	H N				%building%
+g000mg8080	G	H				%empbuilding%
+g000mg8081	G	H N				%building%
+g000mg8082	G	N				%building%
+g000mg8083	G	N				%building%
+g000mg8084	G	U N				%building%
+g000mg8085	G	H				%building%
+g000mg8086	G	L				%building%
+g000mg8087	G	
+g000mg8088	G	
+g000mg8089	G	
+g000mg8090	G	
+g000mg8091	G	N				%building%
+g000mg8092	G	N				%building%
+g000mg8093	G	U				%building%
+g000mg8094	G	U				%building%
+g000mg8095	W	H L C U E N S	%natural% %building% %religious% %marshes% %graveyard% %empbuilding% %undbuilding% %undelfbuilding%
+g000mg8096	W	H L C U E N S	%natural% %building% %religious% %marshes% %graveyard% %empbuilding% %undbuilding% %undelfbuilding%
+g000mg8097	W	H L C U E N S	%natural% %building% %religious% %marshes% %graveyard% %empbuilding% %undbuilding% %undelfbuilding%
+g000mg8098	G W	N S				%marshes%
+g000mg8099	G W	N S				%marshes%
+g000mg8100	G W	N S				%marshes%
+g000mg8101	G	C				%natural%
+g000mg8102	G	C				%natural%
+g000mg8103	G	C				%building%
+g000mg8104	G	C				%building%
+g000mg8105	G	C				%building%
+g000mg8106	G	U				%building%
+g000mg8107	G	H E N S			%natural%
+g000mg8108	G	H L C U E N S	%natural%
+g000mg8109	G	H L C U E N S	%natural%
+g000mg8110	G	H L C U E N S	%natural%
+g000mg8111	G	H L C U E N S	%natural%
+g000mg8112	G	H L C U E N S	%natural%
+g000mg8113	G	H L C U E N S	%natural%
+g000mg8114	G	H L C U E N S	%natural%
+g000mg8115	G	H L C U E N S	%natural%
+g000mg8116	G	H L C U E N S	%natural%
+g000mg8117	G	H L C U E N S	%natural%
+g000mg8118	G	H L C U E N S	%natural%
+g000mg8119	G	H L C U E N S	%natural%
+g000mg8120	G	H L C U E N S	%natural%
+g000mg8121	G	H L C U E N S	%natural%
+g000mg8122	G	C				%natural%
+g000mg8123	G	H				%building%
+g000mg8124	G	H E N			%natural% %building%
+g000mg8125	G	U				%building%
+g000mg8126	G	U				%building%
+g000mg8127	G	U				%building%
+g000mg8128	G	U L				%building%
+g000mg8129	G	U L				%building%
+g000mg8130	G	U L				%building%
+g000mg8131	G	N S				%natural% %building%
+g000mg8132	G	N				%natural% %building%
+g000mg8133	G	S				%natural% %building%
+g000mg8134	G	
+g000mg8135	G	
+g000mg8136	G	
+g000mg8137	G	L S				%natural% %building%
+g000mg8138	G	L S				%natural% %building%
+g000mg8139	G	L				%building%
+g000mg8140	G	L				%natural%
+g000mg8141	G	U N S			%natural%
+g000mg8142	G	U N S			%natural%
+g000mg8143	G	U N S			%natural% %building%
+g000mg8144	G	U N S			%natural% %building%
+g000mg8145	G	U N S			%natural% %building%
+g000mg8146	G	U N S			%natural%
+g000mg8147	G	U				%building%
+g000mg8148	G	H U				%graveyard%
+g000mg8149	G	H U				%graveyard%
+g000mg8150	G	U				%undelfbuilding%
+g000mg8151	G	U				%undelfbuilding%
+g000mg8152	G	U				%undelfbuilding%
+g000mg8153	G	U				%undelfbuilding%
+g000mg8154	G	U				%undelfbuilding%
+g000mg8155	G	U				%undelfbuilding%
+g000mg8156	G	U				%undelfbuilding%
+g000mg8157	G	U				%undelfbuilding%
+g000mg8158	G	U				%undelfbuilding%
+g000mg8159	G	U				%undelfbuilding%
+g000mg8160	G	U				%undelfbuilding%
+g000mg8161	G	U				%undelfbuilding%
+g000mg8162	G	U				%undelfbuilding%
+g000mg8163	G	S				%religious% %marshes%
+g000mg8164	G	H N S			%building% %marshes%
+g000mg8165	G	H N				%building%
 
 #руины
 G000RU0000000	G	H   C U   N S

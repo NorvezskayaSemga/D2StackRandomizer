@@ -2815,6 +2815,8 @@ End Class
 Public Class DecorationPlacingProperties
     Inherits DecorationPlacingPropertiesFields
 
+    Public tags As New List(Of String)
+
     Public Sub New()
     End Sub
     ''' <param name="racesRow">Первый столбец - идентификаторы объектов. В остальных - допустимые места расстановки объектов и расы</param>
@@ -2831,12 +2833,18 @@ Public Class DecorationPlacingProperties
             ElseIf racesRow(i).ToUpper = "W" Then
                 water = True
             Else
-                Try
-                    id = comm.RaceIdentifierToSubrace(racesRow(i))
-                    If Not race.Contains(id) Then race.Add(id)
-                Catch ex As Exception
-                    Console.WriteLine(ex.Message)
-                End Try
+                If racesRow(i).Contains("%") Then
+                    If Not tags.Contains(racesRow(i).ToUpper) Then
+                        tags.Add(racesRow(i).ToUpper)
+                    End If
+                Else
+                    Try
+                        id = comm.RaceIdentifierToSubrace(racesRow(i))
+                        If Not race.Contains(id) Then race.Add(id)
+                    Catch ex As Exception
+                        Console.WriteLine(ex.Message)
+                    End Try
+                End If
             End If
         Next i
     End Sub

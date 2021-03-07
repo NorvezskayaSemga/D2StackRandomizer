@@ -115,6 +115,7 @@
     <Content Include="Resources\ObjectsText_Rus.txt">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>
+    <Content Include="Resources\RaceSublocations.txt" />
     <Content Include="Resources\template_48x48_unsymm_simple.txt">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>

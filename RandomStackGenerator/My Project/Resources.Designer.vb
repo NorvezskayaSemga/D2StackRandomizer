@@ -453,31 +453,21 @@ Namespace My.Resources
         
         '''<summary>
         '''  Looks up a localized string similar to 
-        '''genMode	[Integer]	1	2
+        '''ReadFromFile	[Common_map_settings:Location:Nonhideable]	[String] &quot;&quot; &quot;&quot;
         '''
-        '''nRaces	[Integer]	2	4
+        '''genMode	[Creation_settings:Nonhideable]	[Integer]	1	2
+        '''
+        '''nRaces	[Common_map_settings]	[Integer]	2	4
         '''
         '''#[Humans;Undead;Legions;Elves;Clans;Random]
-        '''PlayersRaces	[StringArray]%;	[Nothing]%[H;U;L;E;C;R]
+        '''PlayersRaces	[Common_map_settings]	[StringArray]%;	[Nothing]%[H;U;L;E;C;R]
         '''
-        '''StartGold	[Integer]	0	9999
-        '''StartMana	[Integer]	0	9999
+        '''StartGold	[Common_map_settings]	[Integer]	0	9999
+        '''StartMana	[Common_map_settings]	[Integer]	0	9999
         '''
-        '''SpellsMaxLevel	[Integer]	1	5
+        '''SpellsMaxLevel	[Common_map_settings]	[Integer]	1	5
         '''
-        '''ApplySymmetry	[Boolean]	False	True
-        '''
-        '''SymmetryClass	[Integer]	-1	4
-        '''
-        '''xSize	[Integer]	24	144
-        '''ySize	[Integer]	24	144
-        '''
-        '''RaceLocsDistTolerance	[Double]	0.1	10.0
-        '''
-        '''PassageCreationChance	[Double]	0.0	1.0
-        '''
-        '''minPassWidth	[Double]	1.0	10000.0
-        '''minPassDist		[Double]	2.0	1000 [rest of string was truncated]&quot;;.
+        '''ApplySymmetry	[Common_map_settings]	[Boolean]	False	Tr [rest of string was truncated]&quot;;.
         '''</summary>
         Friend ReadOnly Property GenParametersRange() As String
             Get
@@ -571,11 +561,11 @@ Namespace My.Resources
         '''#В остальных - допустимые места расстановки объектов и расы
         '''
         '''#здания
-        '''g000mg0001	G	H C E N S
-        '''g000mg0002	G	C
-        '''g000mg0003	G	H N S
-        '''g000mg0004	G	L
-        '''g000mg0005	G	L
+        '''g000mg0001	G	H C E N S		%religious% %natural%
+        '''g000mg0002	G	C				%building%
+        '''g000mg0003	G	H N S			%building%
+        '''g000mg0004	G	L				%building% %natural%
+        '''g000mg0005	G	L				%building% %natural%
         '''
         '''#водопады
         '''#g000mg0006	G	H L C U E N S
@@ -584,11 +574,7 @@ Namespace My.Resources
         '''#плато
         '''#g000mg0008	G	H L C U E N S
         '''#g000mg0009	G	H L C U E N S
-        '''#g000mg0010	G	H L C U E N S
-        '''#g000mg0011	G	H L C U E N S
-        '''#g000mg0012	G	H L C U E N S
-        '''#g000mg0013	G	H L C U E N S
-        '''#g [rest of string was truncated]&quot;;.
+        '''#g000mg0010	G	H L C  [rest of string was truncated]&quot;;.
         '''</summary>
         Friend ReadOnly Property MapObjectRace() As String
             Get
@@ -831,6 +817,24 @@ Namespace My.Resources
         Friend ReadOnly Property Races() As String
             Get
                 Return ResourceManager.GetString("Races", resourceCulture)
+            End Get
+        End Property
+        
+        '''<summary>
+        '''  Looks up a localized string similar to #строка, начинающаяся с решетки, игнорируется
+        '''#Идентификаторы рас. список возможных тэгов, через : - радиус подзоны
+        '''
+        '''H %natural%:4 %building%:4 %religious%:3 %marshes%:3 %graveyard%:2 %empbuilding%:4
+        '''L %natural%:4 %building%:4 
+        '''C %natural%:4 %building%:4 %religious%:2
+        '''U %natural%:4 %building%:4							 %graveyard%:4					%undbuilding%:4 %undelfbuilding%:4
+        '''E %natural%:4 %building%:4
+        '''N %natural%:4 %building%:4 %religious%:3 %marshes%:4 %graveyard%:3
+        '''S %natural%:4 %building%:3 %religious%:3 %marshes%:5        ''' [rest of string was truncated]&quot;;.
+        '''</summary>
+        Friend ReadOnly Property RaceSublocations() As String
+            Get
+                Return ResourceManager.GetString("RaceSublocations", resourceCulture)
             End Get
         End Property
         
