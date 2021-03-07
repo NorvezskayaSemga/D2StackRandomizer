@@ -29,6 +29,7 @@ Public Class TemplateForge
                 Call ValueChanged(blocks(j).name, blocks(j).GetOption(i).name)
             Next i
         Next j
+        Call HideStateChanged()
     End Sub
 
     Private Function AddMainBlock() As OptionsStorage
@@ -57,12 +58,16 @@ Public Class TemplateForge
     Private Function CreateBlock(ByRef baseName As String, ByRef fullNama As String, _
                                  ByRef canBeDeleted As Boolean, ByRef AddReadCommand As Boolean) As OptionsStorage
         Dim r As New OptionsStorage With {.canBeDeleted = canBeDeleted, .name = fullNama}
-        If AddReadCommand Then
-            Dim read As Parameter = Nothing
-            r.AddOption(read)
-        End If
+        Dim add As Boolean
         For Each p As Parameter In allParameters
-            If p.blockName.ToUpper = baseName.ToUpper Then
+            add = False
+            For Each n As String In p.blockName
+                If n.ToUpper = baseName.ToUpper Then
+                    add = True
+                    Exit For
+                End If
+            Next n
+            If add Then
                 r.AddOption(p)
                 r.SetOptionValue(p.name, p.minValue)
             End If
@@ -117,11 +122,13 @@ Public Class TemplateForge
     Public Sub SetHideValueState(ByRef blockIndex As Integer, ByRef valueName As String, _
                                  ByRef newState As Boolean, ByRef manual As Boolean)
         Call blocks(blockIndex).SetOptionHideState(valueName, newState, manual)
-
+        Call HideStateChanged()
+    End Sub
+    Private Sub HideStateChanged()
         Dim r As Integer
         Dim show As Boolean
         For i As Integer = 0 To UBound(blocks) Step 1
-            r = blocks(i).OptionIndex(readCommand)
+            r = blocks(i).OptionIndex(readCommand, False)
             If r > -1 Then
                 show = False
                 For j As Integer = 0 To blocks(i).OptionsCount - 1 Step 1
@@ -296,8 +303,8 @@ Public Class TemplateForge
         ''' <summary>Можно ли скрыть параметр и не сохранять его в файл</summary>
         Public hideable As Boolean
 
-        ''' <summary>Базовое название блока, в котором находится параметр</summary>
-        Public blockName As String
+        ''' <summary>Базовые названия блоков, в которых может находиться параметр</summary>
+        Public blockName() As String
         ''' <summary>Условие, при котором параметр должен быть виден</summary>
         Public showCondition As String
 
@@ -306,17 +313,14 @@ Public Class TemplateForge
             vDouble = 2
             vInteger = 3
             vBoolean = 4
-        End Enum
-        Public Enum Status
-            Normal = 0
-            Hiden = 1
-            Disabled = 2
+            vString = 5
         End Enum
 
         Friend Const wArray As String = "[StringArray]"
         Friend Const wDouble As String = "[Double]"
         Friend Const wInteger As String = "[Integer]"
         Friend Const wBoolean As String = "[Boolean]"
+        Friend Const wString As String = "[String]"
 
     End Structure
     Public Shared Function GetPermissibleParametersRange(ByRef descriptionLanguage As GenDefaultValues.TextLanguage) As Parameter()
@@ -375,29 +379,33 @@ Public Class TemplateForge
             If Not testExampleNames.Contains(t) Then Throw New Exception("Не могу найти параметр " & t & " в тестовом шаблоне (example_template_1)")
         Next t
         For Each t As String In testExampleNames
-            If Not testParametersNames.Contains(t) Then Throw New Exception("Не могу найти параметр " & t & " в файле с доиустимыми значениями (GenParametersRange.txt)")
+            If Not testParametersNames.Contains(t) Then Throw New Exception("Не могу найти параметр " & t & " в файле с допустимыми значениями (GenParametersRange.txt)")
         Next t
         For Each t As String In testExampleNames
             If Not testParametersDescriptions.ContainsKey(t) Then Throw New Exception("Не могу найти параметр " & t & " в файле с описаниями параметров (GenParametersDescriptions.txt)")
         Next t
 
         For i As Integer = 0 To UBound(r) Step 1
+            Dim blockSettings As String = splR(i)(blockField).Replace("[", "").Replace("]", "")
+            ReDim res(i).blockName(-1)
             res(i).name = splR(i)(nameField)
-            res(i).blockName = splR(i)(blockField).Replace("[", "").Replace("]", "")
             res(i).hideable = True
-            If res(i).blockName.Contains(":") Then
-                Dim s() As String = res(i).blockName.Split(CChar(":"))
+            If blockSettings.Contains(":") Then
+                Dim s() As String = blockSettings.Split(CChar(":"))
                 For j As Integer = 0 To UBound(s) Step 1
                     If s(j).ToUpper = TemplateForge.mainBlock.ToUpper _
                      Or s(j).ToUpper = TemplateForge.commonBlock.ToUpper _
                      Or s(j).ToUpper = TemplateForge.locationBlock.ToUpper Then
-                        res(i).blockName = s(j)
+                        ReDim Preserve res(i).blockName(res(i).blockName.Length)
+                        res(i).blockName(UBound(res(i).blockName)) = s(j)
                     ElseIf s(j).ToUpper = TemplateForge.isNonhideble.ToUpper Then
                         res(i).hideable = False
                     Else
                         res(i).showCondition = s(j)
                     End If
                 Next j
+            Else
+                res(i).blockName = New String() {blockSettings}
             End If
             If splR(i)(typeField).ToUpper.StartsWith(Parameter.wArray.ToUpper) Then
                 res(i).type = Parameter.ValueType.vStringArray
@@ -407,6 +415,8 @@ Public Class TemplateForge
                 res(i).type = Parameter.ValueType.vInteger
             ElseIf splR(i)(typeField).ToUpper.StartsWith(Parameter.wBoolean.ToUpper) Then
                 res(i).type = Parameter.ValueType.vBoolean
+            ElseIf splR(i)(typeField).ToUpper.StartsWith(Parameter.wString.ToUpper) Then
+                res(i).type = Parameter.ValueType.vString
             Else
                 Throw New Exception("Неожиданный тип переменной: " & splR(i)(1) & " параметра " & splR(i)(0))
             End If
@@ -475,14 +485,16 @@ Public Class TemplateForge
             options(index).hidden = newState
             options(index).autoHidden = Not manual
             If newState And Not options(index).hideable Then
-                Throw New Exception("Hidden state for " & vName & " is not allowed")
+                If Not vName.ToUpper = readCommand.ToUpper Or (vName.ToUpper = readCommand.ToUpper And manual) Then
+                    Throw New Exception("Hidden state for " & vName & " is not allowed")
+                End If
             End If
             If Not IsNothing(h) Then Call h()
         End Sub
 
         ''' <summary>Вернет индекс параметра по его имени</summary>
         ''' <param name="vName">Имя параметра. Регистр игнорируется</param>  
-        ''' <param name="riseExceptionIfNotFound">Выдать ошибку, если такой локации нет</param>
+        ''' <param name="riseExceptionIfNotFound">Выдать ошибку, если такого параметра нет</param>
         Public Function OptionIndex(ByVal vName As String, Optional ByRef riseExceptionIfNotFound As Boolean = True) As Integer
             Dim n As String = vName.ToUpper
             For i As Integer = 0 To UBound(options) Step 1

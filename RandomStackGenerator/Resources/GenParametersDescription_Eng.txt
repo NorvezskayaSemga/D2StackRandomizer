@@ -96,3 +96,4 @@ possibleRaces List of possible base races for the location. Delimiter - ; (N;S;H
 
 ConnectWithAllNeighboringLocations True if the location should be connected to neighboring locations regardless of global settings
 
+ReadFromFile Read the settings for the block with the given label from the given file. The file label and name must not contain spaces or tabs; the label is not case sensitive. The desired parameters can be changed by placing them after reading the file). Example: ReadFromFile example_template_2_unsymm.txt $cms

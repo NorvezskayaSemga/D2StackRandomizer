@@ -214,6 +214,11 @@ ConnectWithAllNeighboringLocations	False
 
 //Location					$cloc
 
+#прочитать настройки для блока с меткой $cms из файла example_template_2.txt
+#метка и имя файла не должны содержать пробелов и табов; метка не чувствительна к регистру
+#желаемые параметры можно изменить, разместив их после чтения файла)
+ReadFromFile example_template_1.txt $rloc
+
 AverageRadius			17
 
 maxEccentricityDispersion	0.4

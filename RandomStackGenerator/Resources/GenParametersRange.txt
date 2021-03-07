@@ -1,4 +1,6 @@
 ﻿
+ReadFromFile	[Common_map_settings:Location:Nonhideable]	[String] "" ""
+
 genMode	[Creation_settings:Nonhideable]	[Integer]	1	2
 
 nRaces	[Common_map_settings]	[Integer]	2	4
