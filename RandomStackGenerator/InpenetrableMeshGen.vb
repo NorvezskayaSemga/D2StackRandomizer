@@ -16,6 +16,12 @@ Public Class TemplateForge
     Private Const SymmetryClass As String = "SymmetryClass"
     'ReadFromFile example_template_2_unsymm.txt $cms
 
+    Private Enum BlockType
+        Main = 1
+        Common = 2
+        Location = 3
+    End Enum
+
     Public Sub New(ByRef descriptionLanguage As GenDefaultValues.TextLanguage)
         allParameters = GetPermissibleParametersRange(descriptionLanguage)
 
@@ -33,10 +39,17 @@ Public Class TemplateForge
     End Sub
 
     Private Function AddMainBlock() As OptionsStorage
-        Return CreateBlock(mainBlock, mainBlock, False, False)
+        Return CreateBlock(mainBlock, mainBlock, False, False, False)
     End Function
     Private Function AddCommonBlock() As OptionsStorage
-        Return CreateBlock(commonBlock, commonBlock, False, True)
+        Return CreateBlock(commonBlock, commonBlock, False, True, False)
+    End Function
+    Private Function AddLocationBlock() As OptionsStorage
+        Dim name As String = locationBlock & "_" & SingleToInt(Rnd)
+        Do While GetBlockIndex(name, False) > -1
+            name = locationBlock & "_" & SingleToInt(Rnd)
+        Loop
+        Return CreateBlock(locationBlock, name, True, True, True)
     End Function
     ''' <summary>Добавит новую локацию. Вернет название локации</summary>
     Public Function AddLocation() As String
@@ -44,19 +57,16 @@ Public Class TemplateForge
             Throw New Exception("New locations adding isn't allowed")
             Return ""
         End If
-        Dim name As String = locationBlock & "_" & SingleToInt(Rnd)
-        Do While GetBlockIndex(name, False) > -1
-            name = locationBlock & "_" & SingleToInt(Rnd)
-        Loop
-        Call AddToArray(CreateBlock(locationBlock, name, True, True))
+        Call AddToArray(AddLocationBlock)
         Call ValueChanged(mainBlock, "genMode")
-        Return name
+        Return blocks(UBound(blocks)).name
     End Function
     Private Function SingleToInt(ByRef v As Single) As Integer
         Return BitConverter.ToInt32(BitConverter.GetBytes(v), 0)
     End Function
     Private Function CreateBlock(ByRef baseName As String, ByRef fullNama As String, _
-                                 ByRef canBeDeleted As Boolean, ByRef AddReadCommand As Boolean) As OptionsStorage
+                                 ByRef canBeDeleted As Boolean, ByRef AddReadCommand As Boolean, _
+                                 ByRef vRandomization As Boolean) As OptionsStorage
         Dim r As New OptionsStorage With {.canBeDeleted = canBeDeleted, .name = fullNama}
         Dim add As Boolean
         For Each p As Parameter In allParameters
@@ -68,8 +78,13 @@ Public Class TemplateForge
                 End If
             Next n
             If add Then
+                p.valueRandomization = vRandomization
                 r.AddOption(p)
-                r.SetOptionValue(p.name, p.minValue)
+                If vRandomization Then
+                    r.SetOptionValue(p.name, p.minValue, p.maxValue)
+                Else
+                    r.SetOptionValue(p.name, p.minValue)
+                End If
             End If
         Next p
         Return r
@@ -109,46 +124,42 @@ Public Class TemplateForge
     ''' <param name="blockName">Название блока</param>
     ''' <param name="valueName">Название параметра</param>
     ''' <param name="newState">True, если скрыть</param>
-    ''' <param name="manual">True, если установлено вручную</param>
-    Public Sub SetHideValueState(ByRef blockName As String, ByRef valueName As String, _
-                                 ByRef newState As Boolean, ByRef manual As Boolean)
-        Call SetHideValueState(GetBlockIndex(blockName), valueName, newState, manual)
+    Public Sub SetHideValueState(ByRef blockName As String, ByRef valueName As String, ByRef newState As Boolean)
+        Call SetHideValueState(GetBlockIndex(blockName), valueName, newState)
     End Sub
     ''' <summary>Показать или скрыть параметр</summary>
     ''' <param name="blockIndex">Индекс блока</param>
     ''' <param name="valueName">Название параметра</param>
     ''' <param name="newState">True, если скрыть</param>
-    ''' <param name="manual">True, если установлено вручную</param>
-    Public Sub SetHideValueState(ByRef blockIndex As Integer, ByRef valueName As String, _
-                                 ByRef newState As Boolean, ByRef manual As Boolean)
-        Call blocks(blockIndex).SetOptionHideState(valueName, newState, manual)
+    Public Sub SetHideValueState(ByRef blockIndex As Integer, ByRef valueName As String, ByRef newState As Boolean)
+        Call blocks(blockIndex).SetOptionHideState(valueName, newState)
         Call HideStateChanged()
     End Sub
     Private Sub HideStateChanged()
-        Dim r As Integer
-        Dim show As Boolean
-        For i As Integer = 0 To UBound(blocks) Step 1
-            r = blocks(i).OptionIndex(readCommand, False)
-            If r > -1 Then
-                show = False
-                For j As Integer = 0 To blocks(i).OptionsCount - 1 Step 1
-                    If Not j = r Then
-                        If blocks(i).GetOption(j).hidden And Not blocks(i).GetOption(j).autoHidden Then
-                            show = True
-                            Exit For
-                        End If
-                    End If
-                Next j
-                If blocks(i).GetOption(r).hidden = show Then
-                    Call blocks(i).SetOptionHideState(readCommand, Not show, False)
-                    blocks(i).reloadMe = True
-                End If
-            End If
-        Next i
+        'Dim r As Integer
+        'Dim show As Boolean
+        'For i As Integer = 0 To UBound(blocks) Step 1
+        '    r = blocks(i).OptionIndex(readCommand, False)
+        '    If r > -1 Then
+        '        show = False
+        '        For j As Integer = 0 To blocks(i).OptionsCount - 1 Step 1
+        '            If Not j = r Then
+        '                If blocks(i).GetOption(j).hidden Then
+        '                    show = True
+        '                    Exit For
+        '                End If
+        '            End If
+        '        Next j
+        '        If blocks(i).GetOption(r).hidden = show Then
+        '            Call blocks(i).SetOptionHideState(readCommand, Not show)
+        '            'blocks(i).reloadMe = True
+        '        End If
+        '    End If
+        'Next i
     End Sub
     Private Sub ValueChanged(ByRef blockName As String, ByRef valueName As String)
         Dim bIndex As Integer = GetBlockIndex(blockName)
-        Dim v As String = blocks(bIndex).GetOption(valueName).value
+        Dim v As String = blocks(bIndex).GetOption(valueName).valueLowerBound
         If blockName.ToUpper = mainBlock.ToUpper Then
             If valueName.ToUpper = "genMode".ToUpper Then
                 If CInt(v) = 1 Then
@@ -180,13 +191,13 @@ Public Class TemplateForge
                 Dim hidden As String = blocks(bIndex).GetOption(SymmetryClass).hidden.ToString.ToUpper
                 If v.ToUpper = "True".ToUpper Then
                     If hidden = "True".ToUpper Then
-                        Call SetHideValueState(blockName, SymmetryClass, False, False)
-                        blocks(bIndex).reloadMe = True
+                        Call SetHideValueState(blockName, SymmetryClass, False)
+                        'blocks(bIndex).reloadMe = True
                     End If
                 Else
                     If hidden = "False".ToUpper Then
-                        Call SetHideValueState(blockName, SymmetryClass, True, False)
-                        blocks(bIndex).reloadMe = True
+                        Call SetHideValueState(blockName, SymmetryClass, True)
+                        'blocks(bIndex).reloadMe = True
                     End If
                 End If
             End If
@@ -207,7 +218,7 @@ Public Class TemplateForge
         End If
         For i As Integer = index + 1 To UBound(blocks) Step 1
             blocks(i - 1) = blocks(i)
-            blocks(i - 1).reloadMe = True
+            'blocks(i - 1).reloadMe = True
         Next i
         ReDim Preserve blocks(UBound(blocks) - 1)
         Call ValueChanged(mainBlock, "genMode")
@@ -261,12 +272,117 @@ Public Class TemplateForge
     Private Sub ExchangeBlockPosition(ByRef n1 As Integer, ByRef n2 As Integer)
         Dim b1, b2 As OptionsStorage
         b1 = blocks(n1)
-        b1.reloadMe = True
+        'b1.reloadMe = True
         b2 = blocks(n2)
-        b2.reloadMe = True
+        'b2.reloadMe = True
         blocks(n1) = b2
         blocks(n2) = b1
     End Sub
+
+    ''' <summary>Прочитает шаблон из файла</summary>
+    ''' <param name="templatesFolder">Папка с шаблонами</param>
+    ''' <param name="fileName">Имя файла</param>
+    Public Function ReadTemplateFile(ByRef templatesFolder As String, ByRef fileName As String) As OptionsStorage()
+        Dim main As OptionsStorage = ReadCreationSettingsFromFile(templatesFolder, fileName)
+        Dim common As OptionsStorage = ReadCommonMapSettingsFromFile(templatesFolder, fileName)
+        Dim locations() As OptionsStorage = ReadAllLocationFromFile(templatesFolder, fileName)
+
+        Dim res(UBound(locations) + 2) As OptionsStorage
+        res(0) = main
+        res(1) = common
+        For i As Integer = 0 To UBound(locations) Step 1
+            res(i + 2) = locations(i)
+        Next i
+        Return res
+    End Function
+
+    ''' <summary>Прочитает блок Creation_settings из файла</summary>
+    ''' <param name="templatesFolder">Папка с шаблонами</param>
+    ''' <param name="fileName">Имя файла</param>
+    Public Function ReadCreationSettingsFromFile(ByRef templatesFolder As String, ByRef fileName As String) As OptionsStorage
+        Dim fileSettings As Dictionary(Of String, String) = ImpenetrableMeshGen.GenSettings.ReadRawData(templatesFolder & "\" & fileName)
+        Return ToOptions(fileSettings, Nothing, BlockType.Main)
+    End Function
+    ''' <summary>Прочитает блок Common_map_settings карты из файла</summary>
+    ''' <param name="templatesFolder">Папка с шаблонами</param>
+    ''' <param name="fileName">Имя файла</param>
+    Public Function ReadCommonMapSettingsFromFile(ByRef templatesFolder As String, ByRef fileName As String) As OptionsStorage
+        Dim fileSettings As Dictionary(Of String, String) = Map.SettingsMap.ReadRawData(templatesFolder & "\" & fileName)
+        Return ToOptions(fileSettings, Nothing, BlockType.Common)
+    End Function
+    ''' <summary>Прочитает блок Location из файла. Вернет Nothing, если не найдет блок</summary>
+    ''' <param name="templatesFolder">Папка с шаблонами</param>
+    ''' <param name="fileName">Метка блока</param>
+    Public Function ReadLocationFromFile(ByRef templatesFolder As String, ByRef fileName As String, ByRef locationLabel As String) As OptionsStorage
+        Dim MinFileSettings() As Map.SettingsLoc.ExtendedBlockData = Map.SettingsLoc.ReadRawData(templatesFolder & "\" & fileName, 1)
+        Dim MaxFileSettings() As Map.SettingsLoc.ExtendedBlockData = Map.SettingsLoc.ReadRawData(templatesFolder & "\" & fileName, 2)
+        For i As Integer = 0 To UBound(MinFileSettings) Step 1
+            If MinFileSettings(i).label.ToUpper = locationLabel.ToUpper Then
+                Return ToOptions(MinFileSettings(i).data, MaxFileSettings(i).data, BlockType.Location)
+            End If
+        Next i
+        Return Nothing
+    End Function
+    ''' <summary>Прочитает все блоки Location из файла</summary>
+    ''' <param name="templatesFolder">Папка с шаблонами</param>
+    Public Function ReadAllLocationFromFile(ByRef templatesFolder As String, ByRef fileName As String) As OptionsStorage()
+        Dim MinFileSettings() As Map.SettingsLoc.ExtendedBlockData = Map.SettingsLoc.ReadRawData(templatesFolder & "\" & fileName, 1)
+        Dim MaxFileSettings() As Map.SettingsLoc.ExtendedBlockData = Map.SettingsLoc.ReadRawData(templatesFolder & "\" & fileName, 2)
+        Dim locations(UBound(MinFileSettings)) As OptionsStorage
+        For i As Integer = 0 To UBound(MinFileSettings) Step 1
+            locations(i) = ToOptions(MinFileSettings(i).data, MaxFileSettings(i).data, BlockType.Location)
+        Next i
+        Return locations
+    End Function
+
+    Private Function ToOptions(ByRef dataLower() As Dictionary(Of String, String), _
+                               ByRef dataUpper() As Dictionary(Of String, String), _
+                               ByRef blockID As BlockType) As OptionsStorage()
+        Dim r(UBound(dataLower)) As OptionsStorage
+        For i As Integer = 0 To UBound(dataLower) Step 1
+            If IsNothing(dataUpper) Then
+                r(i) = ToOptions(dataLower(i), Nothing, blockID)
+            Else
+                r(i) = ToOptions(dataLower(i), dataUpper(i), blockID)
+            End If
+        Next i
+        Return r
+    End Function
+    Private Function ToOptions(ByRef dataLower() As Map.SettingsLoc.ExtendedBlockData, _
+                               ByRef dataUpper() As Map.SettingsLoc.ExtendedBlockData, _
+                               ByRef blockID As BlockType) As OptionsStorage()
+        Dim r(UBound(dataLower)) As OptionsStorage
+        For i As Integer = 0 To UBound(dataLower) Step 1
+            If IsNothing(dataUpper) Then
+                r(i) = ToOptions(dataLower(i).data, Nothing, blockID)
+            Else
+                r(i) = ToOptions(dataLower(i).data, dataUpper(i).data, blockID)
+            End If
+        Next i
+        Return r
+    End Function
+    Private Function ToOptions(ByRef dataLower As Dictionary(Of String, String), _
+                               ByRef dataUpper As Dictionary(Of String, String), _
+                               ByRef blockID As BlockType) As OptionsStorage
+        Dim res As OptionsStorage
+        If blockID = BlockType.Main Then
+            res = AddMainBlock()
+        ElseIf blockID = BlockType.Common Then
+            res = AddCommonBlock()
+        ElseIf blockID = BlockType.Location Then
+            res = AddLocationBlock()
+        Else
+            Throw New Exception("Unknown block id")
+        End If
+        For Each k As String In dataLower.Keys
+            If IsNothing(dataUpper) Then
+                res.SetOptionValue(k, dataLower.Item(k))
+            Else
+                res.SetOptionValue(k, dataLower.Item(k), dataUpper.Item(k))
+            End If
+        Next k
+        Return res
+    End Function
 
     'создать группы параметров при вызове new:
     'mode, карта
@@ -294,12 +410,15 @@ Public Class TemplateForge
         ''' <summary>Разделитель значений в случае, если параметр является массивом</summary>
         Public arrayDelimiter As String
 
-        ''' <summary>Значение параметра</summary>
-        Public value As String
+        ''' <summary>При создании карты генератор может рандомить параметры локаций. Это минимальное значение при рандомизации</summary>
+        Public valueLowerBound As String
+        ''' <summary>При создании карты генератор может рандомить параметры локаций. Это максимальное значение при рандомизации</summary>
+        Public valueUpperBound As String
+        ''' <summary>True, если при создании карты генератор будет рандомить этот параметр от valueLowerBound до valueUpperBound</summary>
+        Public valueRandomization As Boolean
+
         ''' <summary>Скрывать параметр и не сохранять его в файл</summary>
         Public hidden As Boolean
-        ''' <summary>Параметр скрыт автоматически</summary>
-        Public autoHidden As Boolean
         ''' <summary>Можно ли скрыть параметр и не сохранять его в файл</summary>
         Public hideable As Boolean
 
@@ -452,8 +571,8 @@ Public Class TemplateForge
         Public hidden As Boolean
         ''' <summary>Можно ли удалить блок</summary>
         Public canBeDeleted As Boolean
-        ''' <summary>Нуждаются ли данные блока в обновлении в интерфейсе</summary>
-        Public reloadMe As Boolean
+        ' ''' <summary>Нуждаются ли данные блока в обновлении в интерфейсе</summary>
+        ' Public reloadMe As Boolean
         ''' <summary>Название блока</summary>
         Public name As String
         ''' <summary>Кастомный идентификатор блока. Без пробелов и табов. Опционально</summary>
@@ -478,16 +597,12 @@ Public Class TemplateForge
         ''' <summary>Показать или скрыть параметр</summary>
         ''' <param name="vName">Имя параметра. Регистр игнорируется</param>  
         ''' <param name="newState">True, если скрыть</param>
-        ''' <param name="manual">True, если установлено вручную</param>
-        Public Sub SetOptionHideState(ByVal vName As String, ByRef newState As Boolean, ByRef manual As Boolean, _
+        Public Sub SetOptionHideState(ByVal vName As String, ByRef newState As Boolean, _
                                       Optional ByRef h As HideChangedHandler = Nothing)
             Dim index As Integer = OptionIndex(vName)
             options(index).hidden = newState
-            options(index).autoHidden = Not manual
             If newState And Not options(index).hideable Then
-                If Not vName.ToUpper = readCommand.ToUpper Or (vName.ToUpper = readCommand.ToUpper And manual) Then
-                    Throw New Exception("Hidden state for " & vName & " is not allowed")
-                End If
+                Throw New Exception("Hidden state for " & vName & " is not allowed")
             End If
             If Not IsNothing(h) Then Call h()
         End Sub
@@ -507,6 +622,7 @@ Public Class TemplateForge
         Public Function OptionsCount() As Integer
             Return options.Length
         End Function
+
         ''' <summary>Установит значение параметра</summary>
         ''' <param name="vName">Имя параметра. Регистр игнорируется</param>
         ''' <param name="value">Значение</param>
@@ -514,9 +630,25 @@ Public Class TemplateForge
         Public Sub SetOptionValue(ByVal vName As String, ByVal value As String, _
                                   Optional ByRef h As ValueChangedHandler = Nothing)
             Dim index As Integer = OptionIndex(vName)
-            options(index).value = value
+            If options(index).valueRandomization Then Throw New Exception("Use SetOptionValue with ""valueLowerBound"" and ""valueUpperBound""")
+            options(index).valueLowerBound = value
+            options(index).valueUpperBound = value
             If Not IsNothing(h) Then Call h(name, vName)
         End Sub
+        ''' <summary>Установит значение параметра</summary>
+        ''' <param name="vName">Имя параметра. Регистр игнорируется</param>
+        ''' <param name="valueLowerBound">При создании карты генератор может рандомить параметры локаций. Это минимальное значение при рандомизации</param>>
+        ''' <param name="valueUpperBound">При создании карты генератор может рандомить параметры локаций. Это максимальное значение при рандомизации</param>
+        ''' <param name="h">Вызовет эту процедуру после изменения значния</param>
+        Public Sub SetOptionValue(ByVal vName As String, ByVal valueLowerBound As String, ByVal valueUpperBound As String, _
+                                  Optional ByRef h As ValueChangedHandler = Nothing)
+            Dim index As Integer = OptionIndex(vName)
+            If Not options(index).valueRandomization Then Throw New Exception("Use SetOptionValue with ""value""")
+            options(index).valueLowerBound = valueLowerBound
+            options(index).valueUpperBound = valueUpperBound
+            If Not IsNothing(h) Then Call h(name, vName)
+        End Sub
+
         ''' <summary>Вернет параметр по индексу</summary>
         ''' <param name="index">Индекс</param>
         Public Function GetOption(ByVal index As Integer) As Parameter
@@ -755,9 +887,9 @@ Public Class ImpenetrableMeshGen
             End Sub
             Private Sub Read(ByRef txt() As String, ByRef blockNumber As Integer, ByRef baseFilePath As String)
                 Dim minData As Dictionary(Of String, String) = Map.ReadBlock(txt, GenDefaultValues.wTemplate_LocationKeyword, _
-                                                                             blockNumber, 1, True, baseFilePath)
+                                                                             blockNumber, 1, True, baseFilePath, True)
                 Dim maxData As Dictionary(Of String, String) = Map.ReadBlock(txt, GenDefaultValues.wTemplate_LocationKeyword, _
-                                                                             blockNumber, 2, True, baseFilePath)
+                                                                             blockNumber, 2, True, baseFilePath, True)
 
                 posX = New ValueRange
                 posY = New ValueRange
@@ -819,10 +951,14 @@ Public Class ImpenetrableMeshGen
             Return res
         End Function
         Private Sub ReadMode(ByRef path As String)
-            Dim txt() As String = ValueConverter.TxtSplit(IO.File.ReadAllText(path))
-            Dim data As Dictionary(Of String, String) = Map.ReadBlock(txt, GenDefaultValues.wTemplate_CreationKeyword, 1, 1, True, path)
+            Dim data As Dictionary(Of String, String) = ReadRawData(path)
             Call Map.ReadValue("genMode", genMode, data, GenDefaultValues.wTemplate_LocationKeyword)
         End Sub
+        Public Shared Function ReadRawData(ByRef baseFilePath As String, Optional ByRef txt() As String = Nothing) As Dictionary(Of String, String)
+            If IsNothing(txt) Then txt = ValueConverter.TxtSplit(IO.File.ReadAllText(baseFilePath))
+            Return Map.ReadBlock(txt, GenDefaultValues.wTemplate_CreationKeyword, 1, 1, True, baseFilePath, True)
+        End Function
+
 
         Public Shared Function Copy(ByRef v As GenSettings) As GenSettings
             Dim r As New GenSettings
@@ -5577,6 +5713,11 @@ Public Class Map
         '        Return Checked
         '    End Function
 
+        Public Structure ExtendedBlockData
+            Public data As Dictionary(Of String, String)
+            Public label As String
+        End Structure
+
         ''' <summary>Сменить владельцев в RaceCities, если номер локации расы-владельца больше 0.
         ''' Если полученный номер станет больше nRaces, то уменьшится на nRaces</summary>
         ''' <param name="i">Добавить к номеру владельца это число</param>
@@ -5652,28 +5793,20 @@ Public Class Map
         End Function
 
         Public Shared Function Read(ByRef path As String, ByRef dataColumn As Integer) As SettingsLoc()
-            Dim txt() As String = ValueConverter.TxtSplit(IO.File.ReadAllText(path))
-            Dim blockNumber As Integer = 0
-            Dim res(-1) As SettingsLoc
-            Dim nextLoop As Boolean = True
-            Do While nextLoop
-                blockNumber += 1
-                ReDim Preserve res(blockNumber - 1)
-                res(blockNumber - 1) = New SettingsLoc
-                Call res(blockNumber - 1).Read(txt, blockNumber, dataColumn, nextLoop, path)
-            Loop
-            ReDim Preserve res(UBound(res) - 1)
+            Dim data() As ExtendedBlockData = ReadRawData(path, dataColumn)
+            Dim res(UBound(data)) As SettingsLoc
+            For i As Integer = 0 To UBound(data) Step 1
+                Call res(i).Read(data(i).data)
+            Next i
             Return res
         End Function
         Private Sub Read(ByRef txt() As String, ByRef blockNumber As Integer, ByRef dataColumn As Integer, _
                          ByRef nextLoop As Boolean, ByRef baseFilePath As String)
             Dim data As Dictionary(Of String, String) = ReadBlock(txt, GenDefaultValues.wTemplate_LocationKeyword, _
-                                                                  blockNumber, dataColumn, False, baseFilePath)
-            If IsNothing(data) Then
-                nextLoop = False
-                Exit Sub
-            End If
-
+                                                                  blockNumber, dataColumn, False, baseFilePath, True)
+            Call Read(data)
+        End Sub
+        Private Sub Read(ByRef data As Dictionary(Of String, String))
             Call Map.ReadValue("AverageRadius", AverageRadius, data, GenDefaultValues.wTemplate_LocationKeyword)
             Call Map.ReadValue("maxEccentricityDispersion", maxEccentricityDispersion, data, GenDefaultValues.wTemplate_LocationKeyword)
             Call Map.ReadValue("maxRadiusDispersion", maxRadiusDispersion, data, GenDefaultValues.wTemplate_LocationKeyword)
@@ -5708,6 +5841,22 @@ Public Class Map
             Call Map.ReadValue("citiesPowerMultiplicator", citiesPowerMultiplicator, data, GenDefaultValues.wTemplate_LocationKeyword)
             Call Map.ReadValue("citiesWealthMultiplicator", citiesWealthMultiplicator, data, GenDefaultValues.wTemplate_LocationKeyword)
         End Sub
+        Public Shared Function ReadRawData(ByRef baseFilePath As String, ByRef dataColumn As Integer, Optional ByRef txt() As String = Nothing) As ExtendedBlockData()
+            If IsNothing(txt) Then txt = ValueConverter.TxtSplit(IO.File.ReadAllText(baseFilePath))
+            Dim blockNumber As Integer = 0
+            Dim res(-1) As ExtendedBlockData
+            Dim nextLoop As Boolean = True
+            Do While nextLoop
+                blockNumber += 1
+                ReDim Preserve res(blockNumber - 1)
+                res(blockNumber - 1) = New ExtendedBlockData
+                res(blockNumber - 1).data = ReadBlock(txt, GenDefaultValues.wTemplate_LocationKeyword, blockNumber, dataColumn, _
+                                                      False, baseFilePath, True, res(blockNumber - 1).label)
+                If IsNothing(res(blockNumber - 1).data) Then nextLoop = False
+            Loop
+            If UBound(res) > -1 Then ReDim Preserve res(UBound(res) - 1)
+            Return res
+        End Function
 
         Public Structure SettingsRaceCity
             ''' <summary>Уровень города</summary>
@@ -5920,13 +6069,12 @@ Public Class Map
         End Function
 
         Public Shared Function Read(ByRef path As String) As SettingsMap
-            Dim txt() As String = ValueConverter.TxtSplit(IO.File.ReadAllText(path))
             Dim res As New SettingsMap
-            Call res.Read(txt, path)
+            Call res.Read(Nothing, path)
             Return res
         End Function
         Private Sub Read(ByRef txt() As String, ByRef baseFilePath As String)
-            Dim data As Dictionary(Of String, String) = ReadBlock(txt, GenDefaultValues.wTemplate_MapKeyword, 1, 1, True, baseFilePath)
+            Dim data As Dictionary(Of String, String) = ReadRawData(baseFilePath, txt)
 
             Call Map.ReadValue("xSize", xSize, data, GenDefaultValues.wTemplate_MapKeyword)
             Call Map.ReadValue("ySize", ySize, data, GenDefaultValues.wTemplate_MapKeyword)
@@ -5950,6 +6098,10 @@ Public Class Map
             Call Map.ReadValue("StartGold", StartGold, data, GenDefaultValues.wTemplate_MapKeyword)
             Call Map.ReadValue("StartMana", StartMana, data, GenDefaultValues.wTemplate_MapKeyword)
         End Sub
+        Public Shared Function ReadRawData(ByRef baseFilePath As String, Optional ByRef txt() As String = Nothing) As Dictionary(Of String, String)
+            If IsNothing(txt) Then txt = ValueConverter.TxtSplit(IO.File.ReadAllText(baseFilePath))
+            Return ReadBlock(txt, GenDefaultValues.wTemplate_MapKeyword, 1, 1, True, baseFilePath, True)
+        End Function
 
         Public Shared Function Copy(ByRef v As SettingsMap) As SettingsMap
             Dim r() As String = Nothing
@@ -6007,27 +6159,31 @@ Public Class Map
     End Structure
 
     ''' <param name="fileContent">Содержимое файла после ValueConverter.TxtSplit</param>
-    ''' <param name="blockName">Имя блока</param>
+    ''' <param name="blockType">Тип блока</param>
     ''' <param name="blockNumber">Номер блока > 0</param>
     Protected Friend Shared Function ReadBlock(ByRef fileContent() As String, _
-                                               ByRef blockName As String, _
+                                               ByRef blockType As String, _
                                                ByRef blockNumber As Integer, _
                                                ByRef readColumn As Integer, _
                                                ByRef throwExceptionIfNoBlock As Boolean, _
-                                               ByRef baseFilePath As String) As Dictionary(Of String, String)
+                                               ByRef baseFilePath As String, _
+                                               ByRef AddReadFromFileIfExists As Boolean, _
+                                               Optional ByRef blockLabel As String = "") As Dictionary(Of String, String)
         Dim startLine As Integer = -1
         Dim n As Integer = 0
         For i As Integer = 0 To UBound(fileContent) Step 1
-            If fileContent(i).ToUpper.StartsWith((GenDefaultValues.wTemplate_NewBlockKeyword & blockName).ToUpper) Then
+            If fileContent(i).ToUpper.StartsWith((GenDefaultValues.wTemplate_NewBlockKeyword & blockType).ToUpper) Then
                 n += 1
                 If n = blockNumber Then
+                    Dim s() As String = fileContent(i).Split(CChar(" "))
+                    If s.Length > 1 Then blockLabel = s(1)
                     startLine = i
                     Exit For
                 End If
             End If
         Next i
         If startLine = -1 Then
-            If throwExceptionIfNoBlock Then Throw New Exception("Could not find line " & GenDefaultValues.wTemplate_NewBlockKeyword & blockName)
+            If throwExceptionIfNoBlock Then Throw New Exception("Could not find line " & GenDefaultValues.wTemplate_NewBlockKeyword & blockType)
             Return Nothing
         End If
 
@@ -6036,31 +6192,44 @@ Public Class Map
             If fileContent(i).ToUpper.StartsWith(GenDefaultValues.wTemplate_NewBlockKeyword.ToUpper) Then Exit For
             Dim s() As String = fileContent(i).Split(CChar(" "))
             If fileContent(i).ToUpper.StartsWith(GenDefaultValues.wTemplate_ReadFromFileKeyword.ToUpper) Then
-                Dim fileName As String = s(1)
-                Dim searchBlockName As String = s(2)
-                Call ReadFromOtherFile(baseFilePath, fileName, searchBlockName, readColumn, fields)
-            Else
-                If fields.ContainsKey(s(0).ToUpper) Then fields.Remove(s(0).ToUpper)
-                If s.Length > 1 Then
-                    fields.Add(s(0).ToUpper, s(Math.Min(UBound(s), readColumn)))
-                Else
-                    Throw New Exception("Пустой параметр " & s(0) & " в блоке " & blockName & " #" & blockNumber & ". Файл: " & baseFilePath)
+                If AddReadFromFileIfExists Then
+                    Call AddParameter(fields, s, blockType, blockNumber, readColumn, baseFilePath)
                 End If
+                Dim fileName As String = s(1)
+                Dim searchBlockLabel As String
+                If blockType.ToUpper = GenDefaultValues.wTemplate_MapKeyword.ToUpper Then
+                    searchBlockLabel = ""
+                Else
+                    searchBlockLabel = s(2)
+                End If
+                Call ReadFromOtherFile(baseFilePath, fileName, blockType, searchBlockLabel, readColumn, fields)
+            Else
+                Call AddParameter(fields, s, blockType, blockNumber, readColumn, baseFilePath)
             End If
         Next i
         Return fields
     End Function
+    Private Shared Sub AddParameter(ByRef fields As Dictionary(Of String, String), ByRef s() As String, _
+                                    ByRef blockType As String, ByRef blockNumber As Integer, _
+                                    ByRef readColumn As Integer, ByRef baseFilePath As String)
+        If fields.ContainsKey(s(0).ToUpper) Then fields.Remove(s(0).ToUpper)
+        If s.Length > 1 Then
+            fields.Add(s(0).ToUpper, s(Math.Min(UBound(s), readColumn)))
+        Else
+            Throw New Exception("Пустой параметр " & s(0) & " в блоке " & blockType & " #" & blockNumber & ". Файл: " & baseFilePath)
+        End If
+    End Sub
     Protected Friend Shared Sub ReadFromOtherFile(ByRef baseFile As String, ByRef readFromFile As String, _
-                                                  ByRef searchField As String, ByRef readColumn As Integer, _
-                                                  ByRef readTo As Dictionary(Of String, String))
+                                                  ByRef blockType As String, ByRef searchField As String, _
+                                                  ByRef readColumn As Integer, ByRef readTo As Dictionary(Of String, String))
         Dim f As String = IO.Path.GetDirectoryName(baseFile) & "\" & readFromFile
         Dim fileContent() As String = ValueConverter.TxtSplit(IO.File.ReadAllText(f))
         Dim blockN As Integer = 0
         Dim blockName As String = ""
         For i As Integer = 0 To UBound(fileContent) Step 1
-            If fileContent(i).ToUpper.StartsWith(GenDefaultValues.wTemplate_NewBlockKeyword.ToUpper) Then
+            If fileContent(i).ToUpper.StartsWith((GenDefaultValues.wTemplate_NewBlockKeyword & blockType).ToUpper) Then
                 Dim s() As String = fileContent(i).Split(CChar(" "))
-                If s.Length > 1 AndAlso s(1).ToUpper = searchField.ToUpper Then
+                If StopBlockSearch(blockType, searchField, s) Then
                     blockName = s(0)
                     Exit For
                 End If
@@ -6072,18 +6241,25 @@ Public Class Map
             If fileContent(i).ToUpper.StartsWith(blockName.ToUpper) Then
                 blockN += 1
                 Dim s() As String = fileContent(i).Split(CChar(" "))
-                If s.Length > 1 AndAlso s(1).ToUpper = searchField.ToUpper Then Exit For
+                If StopBlockSearch(blockType, searchField, s) Then Exit For
             End If
         Next i
 
         Dim data As Dictionary(Of String, String) = ReadBlock(fileContent, _
-            blockName.Replace(GenDefaultValues.wTemplate_NewBlockKeyword, ""), blockN, readColumn, True, f)
+            blockName.Replace(GenDefaultValues.wTemplate_NewBlockKeyword, ""), blockN, readColumn, True, f, False)
         For Each k As String In data.Keys
             If readTo.ContainsKey(k.ToUpper) Then readTo.Remove(k.ToUpper)
             readTo.Add(k.ToUpper, data.Item(k))
         Next k
-
     End Sub
+    Private Shared Function StopBlockSearch(ByRef searchBlockType As String, ByRef searchLabel As String, ByRef s() As String) As Boolean
+        Dim u As String = searchBlockType.ToUpper
+        If u = GenDefaultValues.wTemplate_MapKeyword.ToUpper Then Return True
+        If u = GenDefaultValues.wTemplate_CreationKeyword.ToUpper Then Return True
+        If u = GenDefaultValues.wTemplate_LocationKeyword.ToUpper _
+          AndAlso s.Length > 1 AndAlso s(1).ToUpper = searchLabel.ToUpper Then Return True
+        Return False
+    End Function
     Protected Friend Shared Sub ReadValue(ByRef name As String, ByRef value As String, _
                                           ByRef data As Dictionary(Of String, String), ByRef blockName As String)
         If data.ContainsKey(name.ToUpper) Then

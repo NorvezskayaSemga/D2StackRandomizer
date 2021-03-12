@@ -83,6 +83,7 @@ Friend Class StartForm
         'Call ImpenetrableMeshGen.ActiveObjectsPlacer.speedBanchmark()
 
         Dim tf As New TemplateForge(RandomStackGenerator.GenDefaultValues.TextLanguage.Rus)
+        tf.ReadCommonMapSettingsFromFile(".\Resources", "example_template_2_unsymm.txt")
 
         For Each lang As GenDefaultValues.TextLanguage In System.Enum.GetValues(GetType(GenDefaultValues.TextLanguage))
             Call TemplateForge.GetPermissibleParametersRange(lang)
