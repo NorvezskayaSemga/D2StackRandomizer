@@ -6,7 +6,7 @@ genMode	[Creation_settings:Nonhideable]	[Integer]	1	2
 nRaces	[Common_map_settings]	[Integer]	2	4
 
 #[Humans;Undead;Legions;Elves;Clans;Random]
-PlayersRaces	[Common_map_settings]	[StringArray]%;	[Nothing]%[H;U;L;E;C;R]
+PlayersRaces	[Common_map_settings]	[StringArray]%;	[Nothing]%[H;U;L;E;C]
 
 StartGold	[Common_map_settings]	[Integer]	0	9999
 StartMana	[Common_map_settings]	[Integer]	0	9999
