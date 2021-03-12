@@ -120,6 +120,21 @@ Public Class TemplateForge
         Call blocks(blockIndex).SetOptionValue(valueName, newValue)
         Call ValueChanged(blocks(blockIndex).name, valueName)
     End Sub
+    ''' <summary>Установит для параметра в заданном блоке новое значение</summary>
+    ''' <param name="blockName">Название блока</param>
+    ''' <param name="newvalueLowerBound">При создании карты генератор может рандомить параметры локаций. Это минимальное значение при рандомизации</param>>
+    ''' <param name="newvalueUpperBound">При создании карты генератор может рандомить параметры локаций. Это максимальное значение при рандомизации</param>
+    Public Sub SetValue(ByRef blockName As String, ByRef valueName As String, ByRef newValueLowerBound As String, ByRef newValueUpperBound As String)
+        Call SetValue(GetBlockIndex(blockName), valueName, newValueLowerBound, newValueUpperBound)
+    End Sub
+    ''' <summary>Установит для параметра в заданном блоке новое значение</summary>
+    ''' <param name="blockIndex">Индекс блока</param>
+    ''' <param name="newvalueLowerBound">При создании карты генератор может рандомить параметры локаций. Это минимальное значение при рандомизации</param>>
+    ''' <param name="newvalueUpperBound">При создании карты генератор может рандомить параметры локаций. Это максимальное значение при рандомизации</param>
+    Public Sub SetValue(ByRef blockIndex As Integer, ByRef valueName As String, ByRef newValueLowerBound As String, ByRef newValueUpperBound As String)
+        Call blocks(blockIndex).SetOptionValue(valueName, newValueLowerBound, newValueUpperBound)
+        Call ValueChanged(blocks(blockIndex).name, valueName)
+    End Sub
     ''' <summary>Показать или скрыть параметр</summary>
     ''' <param name="blockName">Название блока</param>
     ''' <param name="valueName">Название параметра</param>
