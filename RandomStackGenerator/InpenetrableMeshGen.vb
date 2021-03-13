@@ -86,7 +86,7 @@ Public Class TemplateForge
                     p.valueRandomization = False
                 End If
                 r.AddOption(p)
-                If vRandomization Then
+                If p.valueRandomization Then
                     r.SetOptionValue(p.name, p.minValue, p.maxValue)
                 Else
                     r.SetOptionValue(p.name, p.minValue)
