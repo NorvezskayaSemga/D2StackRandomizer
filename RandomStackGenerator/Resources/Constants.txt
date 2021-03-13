@@ -201,3 +201,41 @@ LootCostExcessLimit				1.25
 #При создании лута в руинах задается максимальная стоимость предмета в качестве награды (MaxLootCost)
 #С помощью этого множителя можно задать минимальную стоимость предмета MinLootCost = MinRuinsLootCostMultiplier*MaxLootCost
 MinRuinsLootCostMultiplier		0.8
+
+#Для каждого типа предметов задан порог количества предметов того же типа в награде
+#Например "sphere=2" означает, что если в награде уже есть две любых сферы, то шанс появления третьей сферы будет снижен
+#множителем из ThisBag_SameItemsType_ChanceMultiplier
+SameItemsTypeAmountRestriction nonattack_artifact=1;/
+                               attack_artifact=1;/
+                               relic=1;/
+                               banner=1;/
+                               boots=1;/
+                               elixir=3;/
+                               healing_elixir=3;/
+                               ressurection_elixir=2;/
+                               permanent_elixir=1;/
+                               scroll=2;/
+                               stuff=1;/
+                               jewel=2;/
+                               sphere=2;/
+                               talisman=1;/
+                               special=1
+						   
+#Для каждого типа предметов задан порог количества одинаковых предметов в награде (SameItemsTypeAmountRestriction)
+#Если награда уже содежит количество предметов данного типа (n), равное или больше, чем SameItemsTypeAmountRestriction (например, три сферы),
+#то шанс появления предмета (сферы) умножается на ThisBag_SameItemsType_ChanceMultiplier^(n-SameItemsTypeAmountRestriction+1)
+ThisBag_SameItemsType_ChanceMultiplier nonattack_artifact=0.001;/
+                                       attack_artifact=0.001;/
+                                       relic=0.001;/
+                                       banner=0.001;/
+                                       boots=0.001;/
+                                       elixir=0.05;/
+                                       healing_elixir=0.075;/
+                                       ressurection_elixir=0.05;/
+                                       permanent_elixir=0.001;/
+                                       scroll=0.05;/
+                                       stuff=0.001;/
+                                       jewel=0.1;/
+                                       sphere=0.05;/
+                                       talisman=0.001;/
+                                       special=1

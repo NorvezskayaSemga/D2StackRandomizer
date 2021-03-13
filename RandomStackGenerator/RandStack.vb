@@ -511,6 +511,7 @@ Public Class RandStack
         Dim IDs As New List(Of Integer)
         Dim result As New List(Of String)
         Dim sameAddedCount(UBound(AllItems)) As Integer
+        Dim sameTypeAddedCount(UBound(comm.defValues.ThisBag_SameItemsType_ChanceMultiplier)) As Integer
 
         Dim Local_SameItemCount() As Integer = SameItemsCounter(pos)
         Dim DynSameItemWeightMultiplier() As Double = SameItemDynWeight(pos, Local_SameItemCount)
@@ -531,6 +532,10 @@ Public Class RandStack
                     If result.Contains(AllItems(i).itemID) Then
                         Dim d As Integer = 1 + sameAddedCount(i) - comm.defValues.SameItemsAmountRestriction(AllItems(i).type)
                         If d > 0 Then weight(i) *= comm.defValues.ThisBag_SameItems_ChanceMultiplier(AllItems(i).type) ^ d
+                    End If
+                    If sameTypeAddedCount(AllItems(i).type) >= comm.defValues.SameItemsTypeAmountRestriction(AllItems(i).type) Then
+                        Dim d As Integer = 1 + sameTypeAddedCount(AllItems(i).type) - comm.defValues.SameItemsTypeAmountRestriction(AllItems(i).type)
+                        If d > 0 Then weight(i) *= comm.defValues.ThisBag_SameItemsType_ChanceMultiplier(AllItems(i).type) ^ d
                     End If
                 Else
                     weight(i) = 0
@@ -556,6 +561,7 @@ Public Class RandStack
             Call GenItemIGenChange(DynIGen, AllItems(selected), DynCost)
             DynCost = CInt(DynCost - ItemCostSum(selected))
             sameAddedCount(selected) += 1
+            sameTypeAddedCount(AllItems(selected).type) += 1
 
             Local_SameItemCount(selected) += 1
             If Local_SameItemCount(selected) >= comm.defValues.SameItemsAmountRestriction(AllItems(selected).type) Then
@@ -755,12 +761,18 @@ Public Class RandStack
                 Else
                     n = settings(i).amount
                 End If
+                Dim div As Double
+                If n > 0 Then
+                    div = Math.Max(CDbl(n) - 0.1 * CDbl(n - 1) ^ 1.5, 0.8 * CDbl(n))
+                Else
+                    div = 1
+                End If
                 If settings(i).amount > 0 And settings(i).dynCostPart > 0 Then
-                    max = CInt(Math.Max(minItemGoldCost, (settings(i).dynCostPart + upCost) / n))
-                    min = minItemGoldCost + CInt(0.75 * (max - minItemGoldCost))
+                    max = CInt(Math.Max(minItemGoldCost, (settings(i).dynCostPart + upCost) / div))
+                    min = minItemGoldCost + CInt(0.8 * (max - minItemGoldCost))
                 ElseIf settings(i).amount > 0 Then
-                    max = CInt(Math.Max(minItemGoldCost, (MaxCost(i) + upCost) / n))
-                    min = minItemGoldCost + CInt(0.75 * (max - minItemGoldCost))
+                    max = CInt(Math.Max(minItemGoldCost, (MaxCost(i) + upCost) / div))
+                    min = minItemGoldCost + CInt(0.8 * (max - minItemGoldCost))
                 Else
                     max = Math.Max(minItemGoldCost, MaxCost(i) + upCost)
                     min = minItemGoldCost
@@ -3558,7 +3570,9 @@ Public Class GenDefaultValues
         Call SetProperty(Global_AddedItem_ChanceMultiplier, "Global_AddedItem_ChanceMultiplier", RConstants, DConstants)
         Call SetProperty(Local_AddedItemType_ChanceMultiplier, "Local_AddedItemType_ChanceMultiplier", RConstants, DConstants, itemTypeID, False)
         Call SetProperty(SameItemsAmountRestriction, "SameItemsAmountRestriction", RConstants, DConstants, itemTypeID, False)
+        Call SetProperty(SameItemsTypeAmountRestriction, "SameItemsTypeAmountRestriction", RConstants, DConstants, itemTypeID, False)
         Call SetProperty(ThisBag_SameItems_ChanceMultiplier, "ThisBag_SameItems_ChanceMultiplier", RConstants, DConstants, itemTypeID, False)
+        Call SetProperty(ThisBag_SameItemsType_ChanceMultiplier, "ThisBag_SameItemsType_ChanceMultiplier", RConstants, DConstants, itemTypeID, False)
         Call SetProperty(Local_SameItem_ChanceMultiplier, "Local_SameItem_ChanceMultiplier", RConstants, DConstants, itemTypeID, False)
         Call SetProperty(AddedItemTypeSearchRadius, "AddedItemTypeSearchRadius", RConstants, DConstants)
         Call SetProperty(CostBarExcessLimit, "CostBarExcessLimit", RConstants, DConstants)
@@ -3605,8 +3619,10 @@ Public Class GenDefaultValues
             log.Add("NonJewelItemsCostDevider = " & NonJewelItemsCostDevider)
             log.Add("LootCostDispersion = " & LootCostDispersion)
             log.Add("SameItemsAmountRestriction = " & PrintItemsSettings(SameItemsAmountRestriction, itemTypeName, spaces))
+            log.Add("SameItemsTypeAmountRestriction = " & PrintItemsSettings(SameItemsTypeAmountRestriction, itemTypeName, spaces))
             log.Add("Local_SameItem_ChanceMultiplier = " & PrintItemsSettings(Local_SameItem_ChanceMultiplier, itemTypeName, spaces))
             log.Add("ThisBag_SameItems_ChanceMultiplier = " & PrintItemsSettings(ThisBag_SameItems_ChanceMultiplier, itemTypeName, spaces))
+            log.Add("ThisBag_SameItemsType_ChanceMultiplier = " & PrintItemsSettings(ThisBag_SameItemsType_ChanceMultiplier, itemTypeName, spaces))
             log.Add("Global_AddedItem_ChanceMultiplier = " & Global_AddedItem_ChanceMultiplier)
             log.Add("AddedItemTypeChanceMultiplier = " & PrintItemsSettings(Local_AddedItemType_ChanceMultiplier, itemTypeName, spaces))
             log.Add("AddedItemTypeSearchRadius = " & AddedItemTypeSearchRadius)
@@ -3839,6 +3855,8 @@ Public Class GenDefaultValues
     Public Property AddedItemTypeSearchRadius As Double
     Public Property SameItemsAmountRestriction As Integer()
     Public Property ThisBag_SameItems_ChanceMultiplier As Double()
+    Public Property SameItemsTypeAmountRestriction As Integer()
+    Public Property ThisBag_SameItemsType_ChanceMultiplier As Double()
     Public Property Local_SameItem_ChanceMultiplier As Double()
     Public Property CostBarExcessLimit As Double
     Public Property LootCostExcessLimit As Double
