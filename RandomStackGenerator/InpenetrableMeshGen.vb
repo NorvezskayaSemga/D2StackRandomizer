@@ -78,7 +78,13 @@ Public Class TemplateForge
                 End If
             Next n
             If add Then
-                p.valueRandomization = vRandomization
+                If p.type = Parameter.ValueType.vBoolean _
+                Or p.type = Parameter.ValueType.vDouble _
+                Or p.type = Parameter.ValueType.vInteger Then
+                    p.valueRandomization = vRandomization
+                Else
+                    p.valueRandomization = False
+                End If
                 r.AddOption(p)
                 If vRandomization Then
                     r.SetOptionValue(p.name, p.minValue, p.maxValue)
