@@ -8,6 +8,9 @@ Public Class TemplateForge
     Public blocks(-1) As OptionsStorage
     Public allowToAddNewLocatons As Boolean = True
 
+    ''' <summary>Нжно ли обновить список блоков</summary>
+    Public reloadMe As Boolean
+
     Private Const mainBlock As String = "Creation_settings"
     Private Const commonBlock As String = "Common_map_settings"
     Private Const locationBlock As String = "Location"
@@ -189,8 +192,10 @@ Public Class TemplateForge
                         If blocks(i).name.ToUpper.StartsWith(locationBlock.ToUpper) Then
                             locCount += 1
                             If locCount > 2 Then
+                                If blocks(i).hidden = False Then reloadMe = True
                                 blocks(i).hidden = True
                             Else
+                                If blocks(i).hidden = True Then reloadMe = True
                                 blocks(i).hidden = False
                             End If
                         End If
@@ -204,6 +209,7 @@ Public Class TemplateForge
                     allowToAddNewLocatons = True
                     For i As Integer = 0 To UBound(blocks) Step 1
                         If blocks(i).name.ToUpper.StartsWith(locationBlock.ToUpper) Then
+                            If blocks(i).hidden = True Then reloadMe = True
                             blocks(i).hidden = False
                         End If
                     Next i
@@ -213,12 +219,12 @@ Public Class TemplateForge
                 If v.ToUpper = "True".ToUpper Then
                     If hidden = "True".ToUpper Then
                         Call SetHideValueState(blockName, SymmetryClass, False)
-                        'blocks(bIndex).reloadMe = True
+                        blocks(bIndex).reloadMe = True
                     End If
                 Else
                     If hidden = "False".ToUpper Then
                         Call SetHideValueState(blockName, SymmetryClass, True)
-                        'blocks(bIndex).reloadMe = True
+                        blocks(bIndex).reloadMe = True
                     End If
                 End If
             End If
@@ -592,8 +598,8 @@ Public Class TemplateForge
         Public hidden As Boolean
         ''' <summary>Можно ли удалить блок</summary>
         Public canBeDeleted As Boolean
-        ' ''' <summary>Нуждаются ли данные блока в обновлении в интерфейсе</summary>
-        ' Public reloadMe As Boolean
+        ''' <summary>Нуждаются ли данные блока в обновлении в интерфейсе</summary>
+        Public reloadMe As Boolean
         ''' <summary>Название блока</summary>
         Public name As String
         ''' <summary>Кастомный идентификатор блока. Без пробелов и табов. Опционально</summary>
