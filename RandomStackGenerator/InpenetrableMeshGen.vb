@@ -5514,6 +5514,7 @@ Public Class Map
         For x As Integer = 0 To xSize Step 1
             For y As Integer = 0 To ySize Step 1
                 board(x, y).ClearLocIDArray() 'New List(Of Integer)
+                board(x, y).NewTagsList()
             Next y
         Next x
         If Not IsNothing(comm) Then
@@ -5558,6 +5559,24 @@ Public Class Map
         Dim isForest As Boolean
         ''' <summary>Если 0, то город будет нейтральным, иначе - такая же раса, как и раса-владелец указанной локации</summary>
         Dim City As SettingsLoc.SettingsRaceCity
+        ''' <summary>Объекты с какими тэгами можно расположить в данном тайле</summary>
+        Private ObjectTags As List(Of String)
+
+        Public Function TagsList() As List(Of String)
+            Return ObjectTags
+        End Function
+        Public Function InTagsList(ByRef v As String) As Boolean
+            Return ObjectTags.Contains(v.ToUpper)
+        End Function
+        Public Sub NewTagsList()
+            ObjectTags = New List(Of String)
+        End Sub
+        Public Sub AddTag(ByRef v As String)
+            ObjectTags.Add(v.ToUpper)
+        End Sub
+        Public Sub RemoveTag(ByRef v As String)
+            ObjectTags.Remove(v.ToUpper)
+        End Sub
 
         Public Sub AddToLocIDArray(ByRef value As Integer)
             If locID.Count = 0 Then
@@ -8283,6 +8302,38 @@ Public Class ImpenetrableObjects
     Private raceSpells() As AllDataStructues.Spell
     Private raceIdToString As New Dictionary(Of Integer, String)
     Private constructorMsg As String = ""
+    Private racesSublocations(-1) As Dictionary(Of String, sublocationProperties)
+
+    Class sublocationProperties
+        Public objectsID() As Integer
+        Public tag As String
+        Public race As String
+        Public raceID As Integer
+        Public radius As Double
+
+        Public sizeAmount(-1) As Integer
+
+        Public Sub New(ByRef allObjects() As Landmark, ByRef lRace As String, ByRef lTag As String, _
+                       ByRef lRadius As Double, ByRef c As Common)
+            tag = lTag.ToUpper
+            race = lRace.ToUpper
+            raceID = c.RaceIdentifierToSubrace(race)
+            radius = lRadius
+            Dim n As Integer = -1
+            ReDim objectsID(UBound(allObjects))
+            For i As Integer = 0 To UBound(allObjects) Step 1
+                If allObjects(i).race.Contains(raceID) AndAlso allObjects(i).tags.Contains(tag) Then
+                    n += 1
+                    objectsID(n) = i
+                    If UBound(sizeAmount) < allObjects(i).xSize Then ReDim Preserve sizeAmount(allObjects(i).xSize)
+                    sizeAmount(allObjects(i).xSize) += 1
+                End If
+            Next i
+            ReDim Preserve objectsID(n)
+            If sizeAmount(1) = 0 Then Throw New Exception("There are no objects with size of 1 for race " & race & " and tag " & tag)
+        End Sub
+
+    End Class
 
     Private Structure PlateauPlacingResult
         Dim obj() As PlateauObject
@@ -8400,14 +8451,14 @@ Public Class ImpenetrableObjects
                             ReDim Preserve plateau(plateau.Length)
                         End If
                         plateau(UBound(plateau)) = New PlateauObject With {.xSize = g.xSize, _
-                                                                     .ySize = g.ySize, _
-                                                                     .ground = g.ground, _
-                                                                     .water = g.water, _
-                                                                     .race = g.race, _
-                                                                     .name = g.name, _
-                                                                     .isWaterfall = isWaterfall, _
-                                                                     .connectors = connectors, _
-                                                                     .border = boundary}
+                                                                           .ySize = g.ySize, _
+                                                                           .ground = g.ground, _
+                                                                           .water = g.water, _
+                                                                           .race = g.race, _
+                                                                           .name = g.name, _
+                                                                           .isWaterfall = isWaterfall, _
+                                                                           .connectors = connectors, _
+                                                                           .border = boundary}
                         maxPlateauSize = Math.Max(maxPlateauSize, Math.Max(g.xSize, g.ySize))
                     Else
                         For i As Integer = 0 To UBound(objType) Step 1
@@ -8452,6 +8503,20 @@ Public Class ImpenetrableObjects
             raceIdToString.Add(CInt(splited(UBound(splited))), splited(1).ToUpper)
         Next s
 
+        Dim rSublocations() As String = comm.TxtSplit(My.Resources.RaceSublocations)
+        For Each Str As String In rSublocations
+            Dim s() As String = Str.Split(CChar(" "))
+            Dim r As Integer = comm.RaceIdentifierToSubrace(s(0))
+            If UBound(racesSublocations) < r Then ReDim Preserve racesSublocations(r)
+            For j As Integer = 1 To UBound(s) Step 1
+                Dim tag As String = s(j).Split(CChar(":"))(0).ToUpper
+                Dim radius As Double = CDbl(s(j).Split(CChar(":"))(1))
+                If IsNothing(racesSublocations(r)) Then racesSublocations(r) = New Dictionary(Of String, sublocationProperties)
+                racesSublocations(r).Add(tag, New sublocationProperties(objects, _
+                                                                        comm.defValues.RaceNumberToRaceChar(r), _
+                                                                        tag, radius, comm))
+            Next j
+        Next Str
 
         constructorMsg = vbNewLine & "------------------" & vbNewLine & _
                          "Landscape content:" & vbNewLine &
@@ -8525,6 +8590,8 @@ Public Class ImpenetrableObjects
         Call PlaceMines(m, settMap, settLoc)
         Call PlacePlateau(m, free)
         Call PlaceMouintains(m, free)
+
+        Call SetObjectsTags(m, free)
         Call PlaceOtherObjects(m, free)
         'Call AddSpells(m, settMap, settLoc)
         'Call AddMercenaries(m, settMap, settLoc)
@@ -8535,6 +8602,88 @@ Public Class ImpenetrableObjects
         Call m.log.Add("Objects types definition: " & Environment.TickCount - t0 & " ms")
 
         m.complited.ImpenetrableObjectsPlacing_Done = True
+    End Sub
+
+    Private Sub SetObjectsTags(ByRef m As Map, ByVal free(,) As Boolean)
+        Dim tmpm As Map = m
+        Dim pointID(tmpm.xSize, tmpm.ySize) As Integer
+        Dim pointPos(pointID.Length - 1) As Point
+        Dim n As Integer = -1
+        For y As Integer = 0 To tmpm.ySize Step 1
+            For x As Integer = 0 To tmpm.xSize Step 1
+                n += 1
+                pointID(x, y) = n
+                pointPos(n) = New Point(x, y)
+                tmpm.board(x, y).NewTagsList()
+            Next x
+        Next y
+        Parallel.For(0, tmpm.Loc.Length, _
+         Sub(i As Integer)
+             Dim rndgen As New RndValueGen
+             Dim posPool, del As New List(Of Integer)
+             Dim minSublocationR As Double = Double.MaxValue
+             Dim locRace As Integer = tmpm.Loc(i).Race
+             For Each k As String In racesSublocations(locRace).Keys
+                 minSublocationR = Math.Min(minSublocationR, racesSublocations(locRace).Item(k).radius)
+             Next k
+             minSublocationR *= 0.75
+             For y As Integer = 0 To tmpm.ySize Step 1
+                 For x As Integer = 0 To tmpm.xSize Step 1
+                     If tmpm.board(x, y).isBorder And free(x, y) And tmpm.board(x, y).locID(0) = tmpm.Loc(i).ID Then
+                         posPool.Add(pointID(x, y))
+                     End If
+                 Next x
+             Next y
+             While posPool.Count > 0
+                 Dim selectedPointID As Integer = posPool(rndgen.RndIntFast(0, posPool.Count - 1))
+                 Dim selectedTag As String = racesSublocations(locRace).Keys(rndgen.RndIntFast(0, racesSublocations(locRace).Count - 1))
+                 Dim r2Set As Double = racesSublocations(locRace).Item(selectedTag).radius ^ 2
+                 Dim r2Rem As Double = (racesSublocations(locRace).Item(selectedTag).radius + minSublocationR) ^ 2
+                 del.Clear()
+                 For Each pid As Integer In posPool
+                     If pointPos(pid).SqDist(pointPos(selectedPointID)) < r2Set Then
+                         tmpm.board(pointPos(selectedPointID).X, pointPos(selectedPointID).Y).AddTag(selectedTag)
+                     End If
+                     If pointPos(pid).SqDist(pointPos(selectedPointID)) < r2Rem Then del.Add(pid)
+                 Next pid
+                 For Each pid As Integer In del
+                     posPool.Remove(pid)
+                 Next pid
+             End While
+             posPool.Clear()
+             For y As Integer = 0 To tmpm.ySize Step 1
+                 For x As Integer = 0 To tmpm.xSize Step 1
+                     If tmpm.board(x, y).locID(0) = tmpm.Loc(i).ID Then
+                         If tmpm.board(x, y).TagsList.Count = 0 Then posPool.Add(pointID(x, y))
+                     End If
+                 Next x
+             Next y
+             If posPool.Count > 0 Then
+                 Do While posPool.Count > 0
+                     Dim tags As New List(Of String)
+                     Dim selectedPointID As Integer = posPool(rndgen.RndIntFast(0, posPool.Count - 1))
+                     Dim x As Integer = pointPos(selectedPointID).X
+                     Dim y As Integer = pointPos(selectedPointID).Y
+                     tags.Clear()
+                     Dim b As Location.Borders = ImpenetrableMeshGen.NearestXY(x, y, tmpm.xSize, tmpm.ySize, 1)
+                     For p As Integer = b.minY To b.maxY Step 1
+                         For q As Integer = b.minX To b.maxX Step 1
+                             If tmpm.board(q, p).TagsList.Count > 0 Then
+                                 For Each t As String In tmpm.board(q, p).TagsList
+                                     If Not tags.Contains(t) Then tags.Add(t)
+                                 Next t
+                             End If
+                         Next q
+                     Next p
+                     If tags.Count > 0 Then
+                         Dim t As String = tags(rndgen.RndIntFast(0, tags.Count - 1))
+                         tmpm.board(x, y).AddTag(t)
+                         posPool.Remove(selectedPointID)
+                     End If
+                 Loop
+             End If
+         End Sub)
+        m = tmpm
     End Sub
 
     Private Function makeIDs(ByRef a() As MapObject) As List(Of Integer)
@@ -8566,6 +8715,14 @@ Public Class ImpenetrableObjects
     End Function
     Private Function MayPlace(ByRef m As Map, ByRef x As Integer, ByRef y As Integer, _
                               ByRef free(,) As Boolean, ByRef obj As Landmark) As Boolean
+        Dim ok As Boolean = False
+        For Each t As String In obj.tags
+            If m.board(x, y).InTagsList(t) Then
+                ok = True
+                Exit For
+            End If
+        Next t
+        If Not ok Then Return False
         Return MayPlace(m, x, y, free, obj.xSize, obj.ySize, obj.ground, obj.water, obj.race)
     End Function
     Private Function MayPlace(ByRef m As Map, ByRef x As Integer, ByRef y As Integer, _
@@ -8638,15 +8795,16 @@ Public Class ImpenetrableObjects
 
     Private Function ObjectWeight(ByRef m As Map, ByRef obj As MapObject, _
                                   ByRef x As Integer, ByRef y As Integer) As Double
-        Return ObjectWeight(m, obj.name, x, y)
+        Return ObjectWeight(m, obj.name, x, y, obj.xSize * obj.ySize)
     End Function
     Private Function ObjectWeight(ByRef m As Map, ByRef obj As Landmark, _
                                   ByRef x As Integer, ByRef y As Integer) As Double
-        Return ObjectWeight(m, obj.name, x, y)
+        Return ObjectWeight(m, obj.name, x, y, obj.xSize * obj.ySize)
     End Function
     Private Function ObjectWeight(ByRef m As Map, ByRef objName As String, _
-                                  ByRef x As Integer, ByRef y As Integer) As Double
-        Dim w As Double = 1
+                                  ByRef x As Integer, ByRef y As Integer, _
+                                  ByRef sizeMultiplier As Double) As Double
+        Dim w As Double = sizeMultiplier
         Dim minW As Double = 0.025
         Dim maxW As Double = 0.5
         Dim L As Integer = 12
@@ -8658,7 +8816,7 @@ Public Class ImpenetrableObjects
             For q As Integer = b.minX To b.maxX Step 1
                 If objName = m.board(q, p).objectName Then
                     dx = q - x : dx = dx * dx + 1
-                    w = w * (minW + dW * dx * dy)
+                    w = w * (minW + dW * CDbl(dx * dy))
                 End If
             Next q
         Next p
@@ -9446,7 +9604,7 @@ Public Class ImpenetrableObjects
             For q As Integer = 0 To size - 1 Step 1
                 free(x + q, y + p) = False
                 m.board(x + q, y + p).isWater = False
-                ismountain(x + q, y + p) = True
+                If Not IsNothing(ismountain) Then ismountain(x + q, y + p) = True
             Next q
         Next p
         Dim IDs As New List(Of Integer)
@@ -9506,8 +9664,9 @@ Public Class ImpenetrableObjects
              For x As Integer = 0 To tmpm.xSize Step 1
                  If f(x, y) And tmpm.board(x, y).isBorder Then
                      If IDs.Count > 0 Then
-                         f(x, y) = False
-                         tmpm.board(x, y).objectName = "MOMNE0100"
+                         'f(x, y) = False
+                         'tmpm.board(x, y).objectName = "MOMNE0100"
+                         Call PlaceSingleMountain(tmpm, f, x, y, 1, Nothing)
                      End If
                  End If
              Next x
