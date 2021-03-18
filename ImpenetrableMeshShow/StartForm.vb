@@ -78,7 +78,7 @@ Friend Class StartForm
     End Function
 
     Private Sub GenButton_Click() Handles GenButton.Click
-
+        Call D2Scripts.SpeedTest()
         'Call StackLocationsGen.PassageGuardPlacer.speedBanchmark()
         'Call ImpenetrableMeshGen.ActiveObjectsPlacer.speedBanchmark()
 
@@ -340,6 +340,34 @@ End Class
 
 Public Class D2Scripts
 
+    Public Shared Sub SpeedTest()
+
+        For p As Integer = 0 To 1 Step 1
+            Dim t1 As Integer = Environment.TickCount
+            Dim n As Integer = 0
+            For baseLevel As Integer = 1 To 5 Step 1
+                For currentLevel As Integer = baseLevel To 80 Step 1
+                    For dynLevel As Integer = baseLevel + 5 To baseLevel + 7 Step 1
+                        For baseExp As Integer = 100 To 1000 Step 10
+                            For expNext1 As Integer = 0 To 250 Step 5
+                                For expNext2 As Integer = 0 To 250 Step 5
+                                    If p = 0 Then
+                                        Call LevelToExpFast(baseLevel, currentLevel, dynLevel, baseExp, expNext1, expNext2)
+                                    Else
+                                        Call LevelToExpSlow(baseLevel, currentLevel, dynLevel, baseExp, expNext1, expNext2)
+                                    End If
+                                    n += 1
+                                Next
+                            Next
+                        Next
+                    Next
+                Next
+            Next
+            Dim t2 As Integer = Environment.TickCount
+            Console.WriteLine(n & " " & t2 - t1)
+        Next p
+    End Sub
+
     Public Shared Function ExpToLevelSlow(ByRef expToConvertion As Integer, ByRef baseLevel As Integer, ByRef dynLevel As Integer, _
                                           ByRef baseExp As Integer, ByRef expNext1 As Integer, ByRef expNext2 As Integer) As Integer
         Dim e As Integer = expToConvertion
@@ -387,16 +415,38 @@ Public Class D2Scripts
     End Function
     Public Shared Function LevelToExpSlow(ByRef baseLevel As Integer, ByRef currentLevel As Integer, ByRef dynLevel As Integer, _
                                           ByRef baseExp As Integer, ByRef expNext1 As Integer, ByRef expNext2 As Integer) As Integer
+
+        'Dim e As Integer = 0
+        'Dim bar As Integer = baseExp
+        'For i As Integer = baseLevel To currentLevel - 1 Step 1
+        '    e += bar
+        '    If i < dynLevel Then
+        '        bar += expNext1
+        '    Else
+        '        bar += expNext2
+        '    End If
+        'Next i
+        'Return e
+
         Dim e As Integer = 0
         Dim bar As Integer = baseExp
-        For i As Integer = baseLevel To currentLevel - 1 Step 1
-            e += bar
-            If i < dynLevel Then
+        If currentLevel <= dynLevel Then
+            For i As Integer = baseLevel To currentLevel - 1 Step 1
+                e += bar
                 bar += expNext1
-            Else
+            Next i
+        Else
+            For i As Integer = baseLevel To dynLevel - 1 Step 1
+                e += bar
+                bar += expNext1
+            Next i
+        End If
+        If currentLevel > dynLevel Then
+            For i As Integer = dynLevel To currentLevel - 1 Step 1
+                e += bar
                 bar += expNext2
-            End If
-        Next i
+            Next i
+        End If
         Return e
     End Function
 
