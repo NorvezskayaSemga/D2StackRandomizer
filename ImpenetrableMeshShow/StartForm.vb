@@ -78,7 +78,6 @@ Friend Class StartForm
     End Function
 
     Private Sub GenButton_Click() Handles GenButton.Click
-        Call D2Scripts.SpeedTest()
         'Call StackLocationsGen.PassageGuardPlacer.speedBanchmark()
         'Call ImpenetrableMeshGen.ActiveObjectsPlacer.speedBanchmark()
 
