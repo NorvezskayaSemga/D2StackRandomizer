@@ -324,6 +324,18 @@ g000mg8162	G	U				%undelfbuilding%
 g000mg8163	G	S				%religious% %marshes%
 g000mg8164	G	H N S			%building% %marshes%
 g000mg8165	G	H N				%building%
+g000mg8166	G	H L U E N S		%natural% %building% %religious% %marshes%
+g000mg8167	G	H L U E N S		%natural% %building% %religious% %marshes%
+g000mg8168	G	H L U E N S		%natural% %building% %religious% %marshes%
+g000mg8169	G	H L U E N S		%natural% %building% %religious% %marshes%
+g000mg8170	G	H L U E N S		%natural% %building% %religious% %marshes%
+g000mg8171	G	H L U E N S		%natural% %building% %religious% %marshes%
+g000mg8172	G	C				%natural% %building% %religious%
+g000mg8173	G	C				%natural% %building% %religious%
+g000mg8174	G	C				%natural% %building% %religious%
+g000mg8175	G	C				%natural% %building% %religious%
+g000mg8176	G	C				%natural% %building% %religious%
+g000mg8177	G	H				%empbuilding%
 
 #руины
 G000RU0000000	G	H   C U   N S
