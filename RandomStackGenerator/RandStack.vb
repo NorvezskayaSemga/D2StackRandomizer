@@ -1787,7 +1787,8 @@ Public Class RndValueGen
             Call RndDbl()
         Next i
         If seed = -1 Then
-            fastModeSeed = Math.Min(Math.Abs(Environment.TickCount), seedMaxVal)
+            fastModeSeed = Math.Min(CLng(Math.Abs(Environment.TickCount)) + _
+                                    CLng((Threading.Thread.CurrentThread.ManagedThreadId + 17) ^ 3), seedMaxVal)
         Else
             fastModeSeed = Math.Min(Math.Abs(seed), seedMaxVal)
         End If
@@ -1916,10 +1917,12 @@ Public Class RndValueGen
         Dim m As Long
         Dim b As Long = CLng(max)
 
+        Dim tid As Long = Threading.Thread.CurrentThread.ManagedThreadId
+
         Dim c1 As Long = fastModeTicks + fastModeSeed + 11
-        Dim c2 As Long = fastModeTicks + b
+        Dim c2 As Long = fastModeTicks + b + tid
         Dim c3 As Long = fastModeTicks + 112
-        Dim c4 As Long = b + b + 1
+        Dim c4 As Long = b + b + 1 + tid * tid
         Dim c5 As Long = b + 1021
 
         Dim d1 As Long = fastModeSeed + b + 1
