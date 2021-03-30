@@ -305,8 +305,8 @@ Public Class RandStack
         Dim result As New AllDataStructues.LootGenSettings With { _
             .ConsumableItems = New AllDataStructues.ItemGenSettings With {.exclude = True}, _
             .NonconsumableItems = New AllDataStructues.ItemGenSettings With {.exclude = True}, _
-            .JewelItems = New AllDataStructues.ItemGenSettings With {.exclude = True}, _
-            .typesFilter = New AllDataStructues.LootGenSettings.StrictTypesFilter()}
+            .JewelItems = New AllDataStructues.ItemGenSettings With {.exclude = True}}
+        Call result.SetTypesAmountArray()
         Dim item As AllDataStructues.Item
         For Each id As String In items
             item = FindItemStats(id)
@@ -325,7 +325,7 @@ Public Class RandStack
                     result.JewelItems.amount += 1
                     result.JewelItems.costPart += AllDataStructues.Cost.Sum(LootCost(item))
                 End If
-                result.typesFilter.typesAmount(item.type) += 1
+                result.typesAmount(item.type) += 1
             Else
                 If IsNothing(result.PreserveItems) Then result.PreserveItems = New List(Of String)
                 result.PreserveItems.Add(item.itemID.ToUpper)
@@ -585,7 +585,7 @@ Public Class RandStack
                 DynSameItemWeightMultiplier(selected) *= comm.defValues.Local_SameItem_ChanceMultiplier(AllItems(selected).type)
             End If
 
-            Call IGen.typesFilter.Added(AllItems(selected))
+            Call IGen.Added(AllItems(selected))
         Loop
 
         If Not IsNothing(IGen.PreserveItems) AndAlso IGen.PreserveItems.Count > 0 Then
@@ -594,7 +594,7 @@ Public Class RandStack
                 Dim thing As AllDataStructues.Item = FindItemStats(item)
                 Call AddToLog(LogID, "Preserved item:" & thing.name & " id:" & item.ToUpper)
                 Call AddToAddedItemList(thing, pos)
-                Call IGen.typesFilter.Added(thing)
+                Call IGen.Added(thing)
             Next item
         End If
 
@@ -644,7 +644,7 @@ Public Class RandStack
         If IGen.lootCostMultiplier > 0 Then preservedItemsCost = CInt(preservedItemsCost * IGen.lootCostMultiplier)
         GoldCost -= preservedItemsCost
 
-        Call IGen.typesFilter.Initialize()
+        Call IGen.Initialize()
 
         If (IsNothing(IGen.PreserveItems) OrElse IGen.PreserveItems.Count = 0) _
          And IGen.addLootAnyway And GoldCost < minItemGoldCost Then
@@ -730,7 +730,7 @@ Public Class RandStack
             Call AddToLog(LogID, "Selected item:" & AllItems(selected).name & " id:" & AllItems(selected).itemID & " cost:" & ItemCostSum(selected))
             result = AllItems(selected).itemID
             Call AddToAddedItemList(AllItems(selected), pos)
-            Call IGen.typesFilter.Added(AllItems(selected))
+            Call IGen.Added(AllItems(selected))
         End If
 
         Call AddToLog(LogID, "----Single item creation ended----")
@@ -976,7 +976,7 @@ Public Class RandStack
                 End If
             End If
         Next i
-        If ApplyStrictTypesFilter AndAlso Not IGen.typesFilter.Filter(item) Then Return False
+        If ApplyStrictTypesFilter AndAlso Not IGen.Filter(item) Then Return False
         Return True
     End Function
     ''' <summary>Фильтр предметов по стоимости (стоимость не выше заданного значения)</summary>
@@ -3420,9 +3420,9 @@ Public Class AllDataStructues
                 p = "no"
             End If
             Dim f As String = ""
-            If Not IsNothing(v.PreserveItems) AndAlso Not IsNothing(v.typesFilter.typesAmount) Then
-                For i As Integer = 0 To UBound(v.typesFilter.typesAmount) Step 1
-                    f &= v.typesFilter.typesAmount(i) & " "
+            If Not IsNothing(v.typesAmount) Then
+                For i As Integer = 0 To UBound(v.typesAmount) Step 1
+                    f &= v.typesAmount(i) & " "
                 Next i
                 f = f.Remove(f.Length - 1)
             Else
@@ -3440,6 +3440,55 @@ Public Class AllDataStructues
         Public Shared Function ToArray(ByVal v As LootGenSettings) As ItemGenSettings()
             Return New ItemGenSettings() {v.ConsumableItems, v.NonconsumableItems, v.JewelItems}
         End Function
+
+
+        ''' <summary>Количество, которое можно добавить по типу</summary>
+        Public typesAmount() As Integer
+        ''' <summary>Количество добавленных по типу</summary>
+        Public typesAmountAdded() As Integer
+
+        Private tAmountAllInAll As Integer
+        Private tAmountAddedAllInAll As Integer
+
+        ''' <param name="tAmount">Количество предметов каждого типа</param>
+        Sub SetTypesAmountArray(Optional ByRef tAmount() As Integer = Nothing)
+            If Not IsNothing(tAmount) Then
+                typesAmount = CType(tAmount.Clone, Integer())
+            Else
+                ReDim typesAmount([Enum].GetValues(GetType(GenDefaultValues.ItemTypes)).Cast(Of Integer).Max)
+            End If
+            Call Initialize()
+        End Sub
+
+        ''' <summary>Перед использованием в создании предметов вызываем эту процедуру</summary>
+        Public Sub Initialize()
+            typesAmountAdded = Nothing
+            tAmountAllInAll = 0
+            If Not IsNothing(typesAmount) Then
+                ReDim typesAmountAdded(UBound(typesAmount))
+                For i As Integer = 0 To UBound(typesAmount) Step 1
+                    tAmountAllInAll += 1
+                Next i
+            End If
+            tAmountAddedAllInAll = 0
+        End Sub
+
+        ''' <summary>Вернет True, если предмет подходит</summary>
+        ''' <param name="item">Предмет</param>
+        Public Function Filter(ByRef item As Item) As Boolean
+            If IsNothing(typesAmount) Then Return True
+            If tAmountAddedAllInAll >= tAmountAllInAll Then Return True
+            If typesAmountAdded(item.type) >= typesAmount(item.type) Then Return False
+            Return True
+        End Function
+
+        ''' <summary>Вызываем, когда предмет добвавлен</summary>
+        ''' <param name="item">Предмет</param>
+        Public Sub Added(ByRef item As Item)
+            If Not IsNothing(typesAmountAdded) Then typesAmountAdded(item.type) += 1
+            tAmountAddedAllInAll += 1
+        End Sub
+
     End Structure
 
     Public Structure ItemGenSettings
@@ -3941,7 +3990,7 @@ Public Class GenDefaultValues
         Next line
     End Sub
 
-    Public Const myVersion As String = "30.03.2021.16.03"
+    Public Const myVersion As String = "30.03.2021.19.40"
     Public Shared Function PrintVersion() As String
         Return "Semga's DLL version: " & myVersion
     End Function
