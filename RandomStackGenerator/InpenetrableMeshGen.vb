@@ -4014,6 +4014,7 @@ exitfunction:
             Next x
         Next y
 
+        'делаем карту свободнее в целом
         For y As Integer = 0 To ySize Step 1
             For x As Integer = 0 To xSize Step 1
                 If isLifeField(x, y) And Not free(x, y) Then
@@ -4029,6 +4030,74 @@ exitfunction:
             Next x
         Next y
 
+        'собираем в кучи непроходмые пиксели
+        Dim lifeAlgoPoints As New List(Of String)
+        Dim isInLifeAlgoPointsList(xSize, ySize) As Boolean
+        For y As Integer = 0 To ySize Step 1
+            For x As Integer = 0 To xSize Step 1
+                If isLifeField(x, y) Then
+                    lifeAlgoPoints.Add(x & "_" & y)
+                    isInLifeAlgoPointsList(x, y) = True
+                End If
+            Next x
+        Next y
+        Dim MinR As Double = 2
+        Dim MaxR As Double = 4
+        Dim excludeR2 As Double = (1.5 * MaxR) ^ 2
+        Dim moveChance As Double = 0.2
+        Do While lifeAlgoPoints.Count > 0
+            Dim pstr() As String = lifeAlgoPoints.Item(rndgen.RndIntFast(0, lifeAlgoPoints.Count - 1)).Split(CChar("_"))
+            Dim p As Point = New Point(CInt(pstr(0)), CInt(pstr(1)))
+            Dim R2 As Double = rndgen.Rand(MinR, MaxR) ^ 2
+            Dim nTries As Integer = CInt(1.5*Math.Sqrt(R2) / Math.Min(moveChance, 1))
+            Dim movingPoints((xSize + 1) * (ySize + 1) - 1) As Point
+            Dim nMovingP As Integer = -1
+            For y As Integer = 0 To ySize Step 1
+                For x As Integer = 0 To xSize Step 1
+                    If isInLifeAlgoPointsList(x, y) Then
+                        If p.SqDist(x, y) < excludeR2 Then
+                            isInLifeAlgoPointsList(x, y) = False
+                            lifeAlgoPoints.Remove(x & "_" & y)
+                        End If
+                        If Not free(x, y) AndAlso p.SqDist(x, y) <= R2 Then
+                            nMovingP += 1
+                            movingPoints(nMovingP) = New Point(x, y)
+                        End If
+                    End If
+                Next x
+            Next y
+            If nMovingP > -1 Then
+                Dim nearestList As New List(Of String)
+                ReDim Preserve movingPoints(nMovingP)
+                For t As Integer = 0 To nTries Step 1
+                    For n As Integer = 0 To nMovingP Step 1
+                        If rndgen.Rand(0, 1) < moveChance Then
+                            nearestList.Clear()
+                            Dim d As Double = p.SqDist(movingPoints(n))
+                            Dim b As Location.Borders = NearestXY(movingPoints(n).X, movingPoints(n).Y, xSize, ySize, 1)
+                            For j As Integer = b.minY To b.maxY Step 1
+                                For i As Integer = b.minX To b.maxX Step 1
+                                    If free(i, j) And isLifeField(i, j) AndAlso p.SqDist(i, j) < d Then
+                                        nearestList.Add(i & "_" & j)
+                                    End If
+                                Next i
+                            Next j
+                            If nearestList.Count > 0 Then
+                                Dim selected() As String = nearestList.Item(rndgen.RndIntFast(0, nearestList.Count - 1)).Split(CChar("_"))
+                                Dim xs As Integer = CInt(selected(0))
+                                Dim ys As Integer = CInt(selected(1))
+                                free(movingPoints(n).X, movingPoints(n).Y) = True
+                                free(xs, ys) = False
+                                movingPoints(n).X = xs
+                                movingPoints(n).Y = ys
+                            End If
+                        End If
+                    Next n
+                Next t
+            End If
+        Loop
+
+        'делаем карту рядом со стольней свободнее
         For j As Integer = 0 To ySize Step 1
             For i As Integer = 0 To xSize Step 1
                 If m.board(i + LPos.X, j + LPos.Y).objectID = DefMapObjects.Types.Capital Then
@@ -4049,6 +4118,7 @@ exitfunction:
             Next i
         Next j
 
+        'применяем результат к карте
         For y As Integer = 0 To ySize Step 1
             For x As Integer = 0 To xSize Step 1
                 If isLifeField(x, y) Then
