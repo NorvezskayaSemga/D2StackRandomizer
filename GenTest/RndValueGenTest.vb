@@ -67,7 +67,7 @@ Public Class RndValueGenTest
             For seed As Integer = 0 To 1 Step 1
                 ReDim generated(size)
                 Dim target As RndValueGen = New RndValueGen(-seed + (1 - seed) * Integer.MaxValue)
-                For i As Integer = 0 To 10 * size Step 1
+                For i As Integer = 0 To 20 * size Step 1
                     generated(target.RndIntFast(min, size + min) - min) = True
                 Next i
                 For i As Integer = 0 To size Step 1

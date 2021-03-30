@@ -2379,108 +2379,108 @@ Public Class Common
 
     End Sub
 
-    ''' <summary>Читает и парсит файл с параметрами генерируемых отрядов.
-    ''' Не важен порядок полей и регистр.
-    ''' Не проверяет корректность данных по типу</summary>
-    ''' <param name="path">Путь к файлу. Не проверяет, существует ли файл.
-    ''' Если path=%testfile%, то распарсит теастовый файл.
-    ''' Если path=%default%, то вернет значения, устанавливаемые для пропущенных полей.</param>
-    Public Function ParseDesiredStackStatsFile(ByRef path As String) As AllDataStructues.DesiredStats()
-        Dim txt(), s(), r(), fu As String
-        Dim defaultStats As New AllDataStructues.DesiredStats With {.ExpBarAverage = 200, .ExpStackKilled = 75, _
-                                                                    .MeleeCount = 2, .Race = New List(Of Integer), .StackSize = 2, _
-                                                                    .shopContent = Nothing}
-        defaultStats.Race.Add(1)
-        If Not path = My.Resources.testFileKeyword.ToLower Then
-            txt = TxtSplit(IO.File.ReadAllText(path).Replace("=", vbTab))
-        ElseIf path = My.Resources.readDefaultFileKeyword.ToLower Then
-            Return New AllDataStructues.DesiredStats() {defaultStats}
-        Else
-            txt = TxtSplit(My.Resources.TestStackStats.Replace("=", vbTab))
-        End If
-        Dim addedLabels As New List(Of String)
-        Dim result(UBound(txt)) As AllDataStructues.DesiredStats
-        For i As Integer = 0 To UBound(txt) Step 1
-            s = txt(i).Split(CChar(" "))
-            result(i) = AllDataStructues.DesiredStats.Copy(defaultStats)
-            For f As Integer = 0 To UBound(s) Step 2
-                fu = s(f).ToUpper
-                For k As Integer = 0 To UBound(StatFields) Step 1
-                    If fu = StatFields(k).name.ToUpper Then
-                        If k = 0 Then
-                            result(i).LocationName = s(f + 1) 'ID
-                            If Not addedLabels.Contains(result(i).LocationName) Then
-                                addedLabels.Add(result(i).LocationName)
-                            Else
-                                Throw New Exception("В файле с параметрами отрядов есть повторяющееся имя локации: " & result(i).LocationName)
-                            End If
-                        ElseIf k = 1 Then
-                            result(i).ExpBarAverage = Math.Max(ValueConverter.StrToInt(s(f + 1), txt(i), s(f)), 10) 'AverageExpBar
-                        ElseIf k = 2 Then
-                            result(i).ExpStackKilled = Math.Max(ValueConverter.StrToInt(s(f + 1), txt(i), s(f)), 5) 'ExpStackKilled
-                        ElseIf k = 3 Then
-                            Dim rid As Integer
-                            r = s(f + 1).Split(CChar("+")) 'Race
-                            result(i).Race.Clear()
-                            For n As Integer = 0 To UBound(r) Step 1
-                                rid = RaceIdentifierToSubrace(r(n))
-                                If Not result(i).Race.Contains(rid) Then result(i).Race.Add(rid)
-                            Next n
-                        ElseIf k = 4 Then
-                            result(i).StackSize = Math.Max(ValueConverter.StrToInt(s(f + 1), txt(i), s(f)), 1) 'StackSize
-                        ElseIf k = 5 Then
-                            result(i).MaxGiants = Math.Max(ValueConverter.StrToInt(s(f + 1), txt(i), s(f)), 0) 'MaxGiants
-                        ElseIf k = 6 Then
-                            result(i).MeleeCount = Math.Max(ValueConverter.StrToInt(s(f + 1), txt(i), s(f)), 0) 'MeleeSlots
-                        ElseIf k = 7 Then
-                            result(i).LootCost = Math.Max(ValueConverter.StrToInt(s(f + 1), txt(i), s(f)), 0) 'LootCost
-                        ElseIf k = 8 Then
-                            result(i).IGen.ConsumableItems = AllDataStructues.ItemGenSettings.Read(s(f + 1)) 'CItemsGen
-                        ElseIf k = 9 Then
-                            result(i).IGen.NonconsumableItems = AllDataStructues.ItemGenSettings.Read(s(f + 1)) 'NItemsGen
-                        ElseIf k = 10 Then
-                            result(i).IGen.JewelItems = AllDataStructues.ItemGenSettings.Read(s(f + 1)) 'JItemsGen
-                        ElseIf k = 11 Then
-                            If Not s(f + 1).ToUpper = "NO" Then
-                                result(i).IGen.PreserveItems = DelimitedStringToList(s(f + 1), CChar("+"))  'PreservedItems
-                            End If
-                        ElseIf k = 12 Then
-                            result(i).shopContent = DelimitedStringToList(s(f + 1), CChar("+")) 'ShopContent
-                        ElseIf k = 13 Then
-                            result(i).isInternalCityGuard = ValueConverter.StrToBool(s(f + 1)) 'IsInternalCityGuard
-                        End If
-                    End If
-                Next k
-            Next f
-        Next i
-        Return result
-    End Function
-    Private Function DelimitedStringToList(ByRef s As String, ByRef delimiter As Char) As List(Of String)
-        Dim r() As String = s.Split(delimiter)
-        Dim result As New List(Of String)
-        For n As Integer = 0 To UBound(r) Step 1
-            result.Add(r(n).ToUpper)
-        Next n
-        Return result
-    End Function
-
-    ''' <summary>Сохраняет в файл параметры генерируемых отрядов</summary>
-    ''' <param name="path">Путь к файлу</param>
-    ''' <param name="content">Параметры</param>
-    Public Sub WriteDesiredStackStats(ByRef path As String, ByRef content() As AllDataStructues.DesiredStats)
-        Dim s(UBound(content)) As String
-        For i As Integer = 0 To UBound(s) Step 1
-            s(i) = TxtSplit(AllDataStructues.DesiredStats.Print(content(i), defValues.RaceNumberToRaceChar).Replace(vbNewLine, vbTab))(0)
-        Next i
-        If Not path = My.Resources.testFileKeyword Then
-            IO.File.WriteAllLines(path, s)
-        Else
-            path = ""
-            For i As Integer = 0 To UBound(s) Step 1
-                path &= s(i) & vbNewLine
-            Next i
-        End If
-    End Sub
+    '  ''' <summary>Читает и парсит файл с параметрами генерируемых отрядов.
+    '  ''' Не важен порядок полей и регистр.
+    '  ''' Не проверяет корректность данных по типу</summary>
+    '  ''' <param name="path">Путь к файлу. Не проверяет, существует ли файл.
+    '  ''' Если path=%testfile%, то распарсит теастовый файл.
+    '  ''' Если path=%default%, то вернет значения, устанавливаемые для пропущенных полей.</param>
+    '  Public Function ParseDesiredStackStatsFile(ByRef path As String) As AllDataStructues.DesiredStats()
+    '      Dim txt(), s(), r(), fu As String
+    '      Dim defaultStats As New AllDataStructues.DesiredStats With {.ExpBarAverage = 200, .ExpStackKilled = 75, _
+    '                                                                  .MeleeCount = 2, .Race = New List(Of Integer), .StackSize = 2, _
+    '                                                                  .shopContent = Nothing}
+    '      defaultStats.Race.Add(1)
+    '      If Not path = My.Resources.testFileKeyword.ToLower Then
+    '          txt = TxtSplit(IO.File.ReadAllText(path).Replace("=", vbTab))
+    '      ElseIf path = My.Resources.readDefaultFileKeyword.ToLower Then
+    '          Return New AllDataStructues.DesiredStats() {defaultStats}
+    '      Else
+    '          txt = TxtSplit(My.Resources.TestStackStats.Replace("=", vbTab))
+    '      End If
+    '      Dim addedLabels As New List(Of String)
+    '      Dim result(UBound(txt)) As AllDataStructues.DesiredStats
+    '      For i As Integer = 0 To UBound(txt) Step 1
+    '          s = txt(i).Split(CChar(" "))
+    '          result(i) = AllDataStructues.DesiredStats.Copy(defaultStats)
+    '          For f As Integer = 0 To UBound(s) Step 2
+    '              fu = s(f).ToUpper
+    '              For k As Integer = 0 To UBound(StatFields) Step 1
+    '                  If fu = StatFields(k).name.ToUpper Then
+    '                      If k = 0 Then
+    '                          result(i).LocationName = s(f + 1) 'ID
+    '                          If Not addedLabels.Contains(result(i).LocationName) Then
+    '                              addedLabels.Add(result(i).LocationName)
+    '                          Else
+    '                              Throw New Exception("В файле с параметрами отрядов есть повторяющееся имя локации: " & result(i).LocationName)
+    '                          End If
+    '                      ElseIf k = 1 Then
+    '                          result(i).ExpBarAverage = Math.Max(ValueConverter.StrToInt(s(f + 1), txt(i), s(f)), 10) 'AverageExpBar
+    '                      ElseIf k = 2 Then
+    '                          result(i).ExpStackKilled = Math.Max(ValueConverter.StrToInt(s(f + 1), txt(i), s(f)), 5) 'ExpStackKilled
+    '                      ElseIf k = 3 Then
+    '                          Dim rid As Integer
+    '                          r = s(f + 1).Split(CChar("+")) 'Race
+    '                          result(i).Race.Clear()
+    '                          For n As Integer = 0 To UBound(r) Step 1
+    '                              rid = RaceIdentifierToSubrace(r(n))
+    '                              If Not result(i).Race.Contains(rid) Then result(i).Race.Add(rid)
+    '                          Next n
+    '                      ElseIf k = 4 Then
+    '                          result(i).StackSize = Math.Max(ValueConverter.StrToInt(s(f + 1), txt(i), s(f)), 1) 'StackSize
+    '                      ElseIf k = 5 Then
+    '                          result(i).MaxGiants = Math.Max(ValueConverter.StrToInt(s(f + 1), txt(i), s(f)), 0) 'MaxGiants
+    '                      ElseIf k = 6 Then
+    '                          result(i).MeleeCount = Math.Max(ValueConverter.StrToInt(s(f + 1), txt(i), s(f)), 0) 'MeleeSlots
+    '                      ElseIf k = 7 Then
+    '                          result(i).LootCost = Math.Max(ValueConverter.StrToInt(s(f + 1), txt(i), s(f)), 0) 'LootCost
+    '                      ElseIf k = 8 Then
+    '                          result(i).IGen.ConsumableItems = AllDataStructues.ItemGenSettings.Read(s(f + 1)) 'CItemsGen
+    '                      ElseIf k = 9 Then
+    '                          result(i).IGen.NonconsumableItems = AllDataStructues.ItemGenSettings.Read(s(f + 1)) 'NItemsGen
+    '                      ElseIf k = 10 Then
+    '                          result(i).IGen.JewelItems = AllDataStructues.ItemGenSettings.Read(s(f + 1)) 'JItemsGen
+    '                      ElseIf k = 11 Then
+    '                          If Not s(f + 1).ToUpper = "NO" Then
+    '                              result(i).IGen.PreserveItems = DelimitedStringToList(s(f + 1), CChar("+"))  'PreservedItems
+    '                          End If
+    '                      ElseIf k = 12 Then
+    '                          result(i).shopContent = DelimitedStringToList(s(f + 1), CChar("+")) 'ShopContent
+    '                      ElseIf k = 13 Then
+    '                          result(i).isInternalCityGuard = ValueConverter.StrToBool(s(f + 1)) 'IsInternalCityGuard
+    '                      End If
+    '                  End If
+    '              Next k
+    '          Next f
+    '      Next i
+    '      Return result
+    '  End Function
+    '  Private Function DelimitedStringToList(ByRef s As String, ByRef delimiter As Char) As List(Of String)
+    '      Dim r() As String = s.Split(delimiter)
+    '      Dim result As New List(Of String)
+    '      For n As Integer = 0 To UBound(r) Step 1
+    '          result.Add(r(n).ToUpper)
+    '      Next n
+    '      Return result
+    '  End Function
+    '
+    '  ''' <summary>Сохраняет в файл параметры генерируемых отрядов</summary>
+    '  ''' <param name="path">Путь к файлу</param>
+    '  ''' <param name="content">Параметры</param>
+    '  Public Sub WriteDesiredStackStats(ByRef path As String, ByRef content() As AllDataStructues.DesiredStats)
+    '      Dim s(UBound(content)) As String
+    '      For i As Integer = 0 To UBound(s) Step 1
+    '          s(i) = TxtSplit(AllDataStructues.DesiredStats.Print(content(i), defValues.RaceNumberToRaceChar).Replace(vbNewLine, vbTab))(0)
+    '      Next i
+    '      If Not path = My.Resources.testFileKeyword Then
+    '          IO.File.WriteAllLines(path, s)
+    '      Else
+    '          path = ""
+    '          For i As Integer = 0 To UBound(s) Step 1
+    '              path &= s(i) & vbNewLine
+    '          Next i
+    '      End If
+    '  End Sub
 
     ''' <summary>Возвращает ID расы, соответствующее файлам игры. Если не найдет, то вернет -1</summary>
     ''' <param name="ID">Идентификатор расы (файл races.txt)</param>

@@ -56,6 +56,9 @@ Public Class RandStackTest
 #End Region
 
     Friend Function CreateRandStack_Accessor() As RandStack_Accessor
+        If IsNothing(UnitsList) Then Call ReadTestUnits()
+        If IsNothing(ItemsList) Then Call ReadTestItems()
+        If IsNothing(AllSpells) Then Call ReadTestSpells()
         Return New RandStack_Accessor(UnitsList, ItemsList, AllSpells, excludeList, customLootChanceList, _
                                       customRaceList, soleUnitsList, bigStackUnitsList, preservedItemsList, 5)
     End Function
@@ -102,8 +105,6 @@ Public Class RandStackTest
     <TestMethod(), _
      DeploymentItem("RandomStackGenerator.dll")> _
     Public Sub RndPosTest()
-        If IsNothing(UnitsList) Then Call ReadTestUnits()
-        If IsNothing(ItemsList) Then Call ReadTestItems()
         Dim target As RandStack_Accessor = CreateRandStack_Accessor()
         Call target.ResetExclusions()
 
@@ -210,8 +211,6 @@ Public Class RandStackTest
     '''</summary>
     <TestMethod()> _
     Public Sub GenTest1()
-        If IsNothing(UnitsList) Then Call ReadTestUnits()
-        If IsNothing(ItemsList) Then Call ReadTestItems()
         Dim target As RandStack_Accessor = CreateRandStack_Accessor()
         Call target.ResetExclusions()
         target.log.Disable()
@@ -251,7 +250,7 @@ Public Class RandStackTest
                  Else
                      GroundTile = True
                  End If
-                 Dim stack As AllDataStructues.Stack = target.Gen(item, 0, GroundTile, False, New Point(1, 1), Nothing)
+                 Dim stack As AllDataStructues.Stack = target.Gen(item, 0, GroundTile, False, New Point(1, 1), Nothing, True)
                  locOk = TestStack(stack, target)
                  If Not locOk Then Exit For
              Next g
@@ -269,14 +268,14 @@ Public Class RandStackTest
         Dim secondrow() As Integer = New Integer() {1, 3, 5}
         Dim unit As AllDataStructues.Unit
         If stack.leaderPos < 0 Or IsNothing(stack.pos) Then Return False
-        If stack.pos(stack.leaderPos) = target.emptyItem Then Return False
+        If stack.pos(stack.leaderPos) = GenDefaultValues.emptyItem Then Return False
         For i As Integer = 0 To UBound(stack.pos) Step 1
             If stack.pos(i) = "" Then
                 Return False
-            ElseIf Not stack.pos(i) = target.emptyItem Then
+            ElseIf Not stack.pos(i) = GenDefaultValues.emptyItem Then
                 unit = target.FindUnitStats(stack.pos(i))
                 If (unit.unitBranch = GenDefaultValues.UnitClass.leader And Not i = stack.leaderPos) Or (Not unit.unitBranch = GenDefaultValues.UnitClass.leader And i = stack.leaderPos) Then Return False
-                If Not unit.small AndAlso (busytransfer(i) = -1 Or Not stack.pos(busytransfer(i)) = target.emptyItem) Then Return False
+                If Not unit.small AndAlso (busytransfer(i) = -1 Or Not stack.pos(busytransfer(i)) = GenDefaultValues.emptyItem) Then Return False
                 If unit.reach = GenDefaultValues.UnitAttackReach.melee Then
                     For j As Integer = 0 To UBound(secondrow) Step 1
                         If i = secondrow(j) Then Return False
@@ -303,8 +302,6 @@ Public Class RandStackTest
     '''</summary>
     <TestMethod()> _
     Public Sub StackStatsTest1()
-        If IsNothing(UnitsList) Then Call ReadTestUnits()
-        If IsNothing(ItemsList) Then Call ReadTestItems()
         Dim target As RandStack_Accessor = CreateRandStack_Accessor()
         Call target.ResetExclusions()
         target.log.Disable()
@@ -346,8 +343,6 @@ Public Class RandStackTest
     '''</summary>
     <TestMethod()> _
     Public Sub ItemsGenTest()
-        If IsNothing(UnitsList) Then Call ReadTestUnits()
-        If IsNothing(ItemsList) Then Call ReadTestItems()
         Dim target As RandStack_Accessor = CreateRandStack_Accessor()
         Call target.ResetExclusions()
         target.log.Disable()
@@ -357,7 +352,7 @@ Public Class RandStackTest
         Dim genitems As List(Of String)
         For i As Integer = 0 To 100 Step 1
             cost = target.minItemGoldCost + i * 125
-            genitems = target.ItemsGen(cost, New AllDataStructues.LootGenSettings, Nothing, New Point(1, 1))
+            genitems = target.ItemsGen(cost, New AllDataStructues.LootGenSettings, Nothing, New Point(1, 1), True)
             sum = target.LootCost(genitems).Gold
             'If sum > cost Then ok = False
             If Math.Abs(cost - sum) > cost Then ok = False
@@ -371,8 +366,6 @@ Public Class RandStackTest
     '''</summary>
     <TestMethod()> _
     Public Sub GenTest2()
-        If IsNothing(UnitsList) Then Call ReadTestUnits()
-        If IsNothing(ItemsList) Then Call ReadTestItems()
         Dim target As RandStack_Accessor =  CreateRandStack_Accessor()
         Call target.ResetExclusions()
         target.log.Disable()
@@ -386,7 +379,7 @@ Public Class RandStackTest
         stats.Race.AddRange(races)
 
         For i As Integer = 0 To 1000 Step 1
-            Dim stack As AllDataStructues.Stack = target.Gen(stats, 0, True, False, New Point(1, 1), Nothing)
+            Dim stack As AllDataStructues.Stack = target.Gen(stats, 0, True, False, New Point(1, 1), Nothing, True)
             ok = TestStack(stack, target, races, raceokL, raceokF)
             If Not ok Then Exit For
         Next i
@@ -402,9 +395,7 @@ Public Class RandStackTest
     '''</summary>
     <TestMethod()> _
     Public Sub GenGagTest()
-        If IsNothing(UnitsList) Then Call ReadTestUnits()
-        If IsNothing(ItemsList) Then Call ReadTestItems()
-        Dim target As RandStack_Accessor =  CreateRandStack_Accessor()
+        Dim target As RandStack_Accessor = CreateRandStack_Accessor()
         Call target.ResetExclusions()
         target.log.Disable()
 
@@ -445,9 +436,6 @@ Public Class RandStackTest
     '''</summary>
     <TestMethod()> _
     Public Sub StackStatsTest2()
-        If IsNothing(UnitsList) Then Call ReadTestUnits()
-        If IsNothing(ItemsList) Then Call ReadTestItems()
-
         Dim target As RandStack_Accessor =  CreateRandStack_Accessor()
         Call target.ResetExclusions()
         target.log.Disable()
@@ -472,8 +460,6 @@ Public Class RandStackTest
     '''</summary>
     <TestMethod()> _
     Public Sub GenTest3()
-        If IsNothing(UnitsList) Then Call ReadTestUnits()
-        If IsNothing(ItemsList) Then Call ReadTestItems()
         Dim target As RandStack_Accessor =  CreateRandStack_Accessor()
         Call target.ResetExclusions()
         target.log.Disable()
@@ -503,7 +489,7 @@ Public Class RandStackTest
             stats.Race.AddRange(races)
 
             For i As Integer = 0 To 1000 Step 1
-                Dim stack As AllDataStructues.Stack = target.Gen(stats, 0, True, False, New Point(1, 1), Nothing)
+                Dim stack As AllDataStructues.Stack = target.Gen(stats, 0, True, False, New Point(1, 1), Nothing, True)
                 ok = TestStack(stack, target, races, raceokL, raceokF)
                 If Not ok Then Exit For
             Next i
@@ -519,8 +505,6 @@ Public Class RandStackTest
     '''</summary>
     <TestMethod()> _
     Public Sub GenTest4()
-        If IsNothing(UnitsList) Then Call ReadTestUnits()
-        If IsNothing(ItemsList) Then Call ReadTestItems()
         Dim target As RandStack_Accessor =  CreateRandStack_Accessor()
         Call target.ResetExclusions()
         target.log.Disable()
@@ -535,10 +519,10 @@ Public Class RandStackTest
 
         Dim c As Integer
         For i As Integer = 0 To 1000 Step 1
-            Dim stack As AllDataStructues.Stack = target.Gen(stats, 0, True, False, New Point(1, 1), Nothing)
+            Dim stack As AllDataStructues.Stack = target.Gen(stats, 0, True, False, New Point(1, 1), Nothing, True)
             c = 0
             For Each item As String In stack.pos
-                If Not item = "G000000000" Then c += 1
+                If Not item = GenDefaultValues.emptyItem Then c += 1
             Next item
             If c > 1 Then ok = False
         Next i
@@ -551,8 +535,6 @@ Public Class RandStackTest
     '''</summary>
     <TestMethod()> _
     Public Sub GenTest5()
-        If IsNothing(UnitsList) Then Call ReadTestUnits()
-        If IsNothing(ItemsList) Then Call ReadTestItems()
         Dim target As RandStack_Accessor =  CreateRandStack_Accessor()
         Call target.ResetExclusions()
         target.log.Disable()
@@ -567,10 +549,10 @@ Public Class RandStackTest
 
         Dim c As Integer
         For i As Integer = 0 To 1000 Step 1
-            Dim stack As AllDataStructues.Stack = target.Gen(stats, 0, True, True, New Point(1, 1), Nothing)
+            Dim stack As AllDataStructues.Stack = target.Gen(stats, 0, True, True, New Point(1, 1), Nothing, True)
             c = 0
             For Each item As String In stack.pos
-                If Not item = "G000000000" Then
+                If Not item = GenDefaultValues.emptyItem Then
                     c += 1
                     If target.FindUnitStats(item).unitBranch = GenDefaultValues.UnitClass.leader Then ok = False
                 End If
@@ -654,9 +636,9 @@ Public Class RandStackTest
             For i As Integer = 0 To 1000 Step 1
                 Dim stack As AllDataStructues.Stack
                 If TestOverload1 Then
-                    stack = target.Gen(stats, 0, True, noLeader, New Point(1, 1), Nothing)
+                    stack = target.Gen(stats, 0, True, noLeader, New Point(1, 1), Nothing, True)
                 Else
-                    stack = target.Gen(stats.ExpStackKilled, stats.LootCost, stats.Race, stats.IGen, 0, True, False, New Point(1, 1), Nothing)
+                    stack = target.Gen(stats.ExpStackKilled, stats.LootCost, stats.Race, stats.IGen, 0, True, False, New Point(1, 1), Nothing, True)
                 End If
                 For Each item As String In stack.pos
                     If Not expected.Contains(item.ToLower) Then ok = False
@@ -674,8 +656,9 @@ Public Class RandStackTest
     '''</summary>
     <TestMethod()> _
     Public Sub StackStatsTest()
-        If IsNothing(ItemsList) Then Call ReadTestItems()
-        Dim AllUnitsList() As AllDataStructues.Unit = New AllDataStructues.Unit() { _
+
+        Dim target As RandStack_Accessor = CreateRandStack_Accessor()
+        target.AllUnits = New AllDataStructues.Unit() { _
             New AllDataStructues.Unit With {.dynUpgrade1 = New AllDataStructues.DynUpgrade With {.EXPkilled = 10, .EXPnext = 100}, _
                                             .dynUpgrade2 = New AllDataStructues.DynUpgrade With {.EXPkilled = 1, .EXPnext = 10}, _
                                             .dynUpgradeLevel = 10, _
@@ -695,8 +678,6 @@ Public Class RandStackTest
         Dim CustomUnitRace() As String = New String() {"%defailt%"}
         Dim CustomLootChance() As String = New String() {"%defailt%"}
 
-        Dim target As RandStack_Accessor = New RandStack_Accessor(AllUnitsList, ItemsList, AllSpells, ExcludeLists, CustomLootChance, _
-                                                                  CustomUnitRace, soleUnitsList, bigStackUnitsList, preservedItemsList, 5)
         Call target.ResetExclusions()
         Dim ok As Boolean = True
         Dim expectedEkill() As Integer = New Integer() {10, 20, 30, 40, 50, 60, 70, 80, 90, 100, 101, 102, 103, 104, 105, 106, 107, 108, 109, 110}
@@ -705,9 +686,9 @@ Public Class RandStackTest
         Dim s As New AllDataStructues.Stack With {.leaderPos = 0, .items = New List(Of String)}
         ReDim s.pos(5), s.level(5)
         For i As Integer = 1 To UBound(s.pos) Step 1
-            s.pos(i) = "G000000000"
+            s.pos(i) = GenDefaultValues.emptyItem
         Next i
-        s.pos(0) = AllUnitsList(0).unitID.ToUpper
+        s.pos(0) = target.AllUnits(0).unitID.ToUpper
         For unitBaseLevel As Integer = 1 To 5 Step 1
             target.AllUnits(0).level = unitBaseLevel
             For i As Integer = unitBaseLevel To expectedEkill.Length Step 1
@@ -732,9 +713,7 @@ Public Class RandStackTest
     <TestMethod()> _
     Public Sub GoldToManaTest()
 
-        If IsNothing(UnitsList) Then Call ReadTestUnits()
-        If IsNothing(ItemsList) Then Call ReadTestItems()
-        Dim target As RandStack_Accessor =  CreateRandStack_Accessor()
+        Dim target As RandStack_Accessor = CreateRandStack_Accessor()
         Call target.ResetExclusions()
         target.log.Disable()
 
@@ -789,8 +768,7 @@ Public Class RandStackTest
     <TestMethod()> _
     Public Sub LoggingTest()
 
-        If IsNothing(UnitsList) Then Call ReadTestUnits()
-        If IsNothing(ItemsList) Then Call ReadTestItems()
+        Call CreateRandStack_Accessor()
         Dim target As RandStack = New RandStack(UnitsList, ItemsList, AllSpells, excludeList, customLootChanceList, customRaceList, _
                                                 soleUnitsList, bigStackUnitsList, preservedItemsList, 5)
         target.comm.ReadExcludedObjectsList({RandomStackGenerator.My.Resources.readDefaultFileKeyword, _
@@ -813,7 +791,7 @@ Public Class RandStackTest
                                                                 .JewelItems = New AllDataStructues.ItemGenSettings With {.exclude = True, .costPart = 0.9}}
 
         For i As Integer = 1 To 20 Step 1
-            Call target.Gen(stats, 0, True, False, New Point(1, 1), Nothing)
+            Call target.Gen(stats, 0, True, False, New Point(1, 1), Nothing, True)
         Next i
         Dim log As String = target.log.PrintAll
         If log = "" Then ok = False
