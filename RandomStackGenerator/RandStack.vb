@@ -2,13 +2,11 @@
 
 Public Class RandStack
 
-    Private emptyItem As String = "G000000000"
-
     Private busytransfer() As Integer = New Integer() {1, -1, 3, -1, 5, -1}
     Private firstrow() As Integer = New Integer() {0, 2, 4}
     Private secondrow() As Integer = New Integer() {1, 3, 5}
-    Private itemGenSigma As Double = 0.5
-    Private multiItemGenSigmaMultiplier As Double = 1.5
+    Private Const itemGenSigma As Double = 0.5
+    Private Const multiItemGenSigmaMultiplier As Double = 1.5
 
     Private UnitsArrayPos As New Dictionary(Of String, Integer)
     Friend AllUnits() As AllDataStructues.Unit
@@ -259,7 +257,7 @@ Public Class RandStack
         Dim result As New AllDataStructues.DesiredStats With {.Race = New List(Of Integer)}
         Dim unit As AllDataStructues.Unit
         For i As Integer = 0 To UBound(stack.pos) Step 1
-            If Not stack.pos(i).ToUpper = emptyItem Then
+            If Not stack.pos(i).ToUpper = GenDefaultValues.emptyItem Then
                 unit = FindUnitStats(stack.pos(i))
                 If unit.unitID = "" Then Throw New Exception("Неизвестный id юнита: " & stack.pos(i))
                 If Not result.Race.Contains(unit.race) Then result.Race.Add(unit.race)
@@ -3949,6 +3947,9 @@ Public Class GenDefaultValues
         Rus = 1
         Eng = 2
     End Enum
+
+    ''' <summary>Игра использует такую строку для неиспользуемых юнитов, предметов и т.д.</summary>
+    Public Const emptyItem As String = "G000000000"
 
     'common
     Public Property defaultSigma As Double
