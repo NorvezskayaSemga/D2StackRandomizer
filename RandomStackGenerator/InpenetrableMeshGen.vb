@@ -3737,7 +3737,7 @@ exitfunction:
         For i As Integer = 0 To UBound(tmpm.Loc) Step 1
             If Not ex(i) = "" Then Throw New Exception(ex(i))
             If Not IsNothing(TT(i)) Then Term.ExitFromLoops = Term.ExitFromLoops Or TT(i).ExitFromLoops
-        Next
+        Next i
         If Term.ExitFromLoops Then Exit Sub
         Term = New TerminationCondition(Term.maxTime)
         Dim sm As New Map.SettingsMap With {.ApplySymmetry = settMap.ApplySymmetry, _
@@ -4927,6 +4927,8 @@ End Class
 
 Public Class shortMapFormat
 
+    Public Const ApplyStrictTypesFilter As Boolean = True
+
     ''' <summary>Состояние тайлов</summary>
     Public landscape(-1, -1) As TileState
     ''' <summary>Объекты местности</summary>
@@ -4961,8 +4963,8 @@ Public Class shortMapFormat
         ''' <param name="genR">Обозначение расы в генераторе</param>
         ''' <param name="d">Инициализированный класс</param>
         Public Sub New(ByRef genR As String, ByRef d As GenDefaultValues)
-            byGenereator = genr
-            byGame = d.generatorRaceToGameRace(genr.ToUpper)
+            byGenereator = genR
+            byGame = d.generatorRaceToGameRace(genR.ToUpper)
         End Sub
     End Class
 
@@ -5269,11 +5271,11 @@ Public Class shortMapFormat
                     Dim stackInter As AllDataStructues.Stack = Nothing
                     If m.groupStats.ContainsKey(m.board(x, y).groupID) Then
                         desiredStatsExter = m.groupStats.Item(m.board(x, y).groupID)
-                        stackExter = objContent.randStack.Gen(desiredStatsExter, 0, True, False, pos, lordsList)
+                        stackExter = objContent.randStack.Gen(desiredStatsExter, 0, True, False, pos, lordsList, ApplyStrictTypesFilter)
                     End If
                     If m.groupStats.ContainsKey(-m.board(x, y).groupID) Then
                         desiredStatsInter = m.groupStats.Item(-m.board(x, y).groupID)
-                        stackInter = objContent.randStack.Gen(desiredStatsInter, 0, True, True, pos, lordsList)
+                        stackInter = objContent.randStack.Gen(desiredStatsInter, 0, True, True, pos, lordsList, ApplyStrictTypesFilter)
                     End If
                     Call AddObject(res.cities, x, y, name, desiredStatsExter, desiredStatsInter, stackExter, stackInter, owner, level, objContent, attObjects, landRace, sName)
                 ElseIf m.board(x, y).objectID = DefMapObjects.Types.Vendor Then
@@ -5293,9 +5295,9 @@ Public Class shortMapFormat
                 ElseIf m.board(x, y).objectID = DefMapObjects.Types.Ruins Then
                     Dim pos As New Point(x, y)
                     Dim desiredStats As AllDataStructues.DesiredStats = m.groupStats.Item(m.board(x, y).groupID)
-                    Dim stack As AllDataStructues.Stack = objContent.randStack.Gen(desiredStats, 0, Not m.board(x, y).isWater, True, pos, lordsList)
+                    Dim stack As AllDataStructues.Stack = objContent.randStack.Gen(desiredStats, 0, Not m.board(x, y).isWater, True, pos, lordsList, ApplyStrictTypesFilter)
                     Dim itemCost As Integer = objContent.randStack.rndgen.RndInt(CInt(0.25 * desiredStats.LootCost), desiredStats.LootCost, True)
-                    Dim loot As String = objContent.randStack.ThingGen(itemCost, RuinIGen, Nothing, pos)
+                    Dim loot As String = objContent.randStack.ThingGen(itemCost, RuinIGen, Nothing, pos, ApplyStrictTypesFilter)
                     Dim resources As AllDataStructues.Cost = New AllDataStructues.Cost With {.Gold = desiredStats.LootCost}
                     If Not loot = "" Then resources.Gold -= AllDataStructues.Cost.Sum(objContent.randStack.LootCost(loot))
                     stack.items.Clear()
@@ -5316,7 +5318,7 @@ Public Class shortMapFormat
                 Dim desiredStats As AllDataStructues.DesiredStats = m.groupStats.Item(m.board(x, y).groupID)
                 Dim isGround As Boolean = Not RaceGen.MayBeWater(m, x, y)
                 Dim stack As AllDataStructues.Stack = objContent.randStack.Gen(desiredStats, 0, isGround, _
-                                                                               False, New Point(x, y), lordsList)
+                                                                               False, New Point(x, y), lordsList, ApplyStrictTypesFilter)
                 If isGround Then
                     Dim leader As AllDataStructues.Unit = objContent.randStack.FindUnitStats(stack.pos(stack.leaderPos))
                     If leader.waterOnly Then
@@ -10238,6 +10240,7 @@ Public Class ObjectsContentSet
                                           Optional ByVal LogID As Integer = -1) As List(Of String)
 
         Call AddToLog(log, LogID, "----Alternative loot creation started----")
+        'Call d.IGen.typesFilter.Initialize() - в генераторе товаров торговца есть свой механизм строгого сохранения типов
         Dim txt As String = ""
         Dim res As New List(Of String)
         Dim selection As New List(Of Integer)
@@ -10256,7 +10259,7 @@ Public Class ObjectsContentSet
                 For u As Integer = 0 To UBound(randStack.AllItems) Step 1
                     If randStack.comm.IsAppropriateItem(randStack.AllItems(u)) Then
                         If randStack.AllItems(u).itemCost.Gold > 0 AndAlso randStack.LootCost(randStack.AllItems(u)).Gold = randStack.AllItems(u).itemCostSum Then
-                            If type = randStack.AllItems(u).type AndAlso randStack.ItemFilter(d.IGen, randStack.AllItems(u)) Then
+                            If type = randStack.AllItems(u).type AndAlso randStack.ItemFilter(d.IGen, randStack.AllItems(u), False) Then
                                 If randStack.ItemFilter(TypeCostRestriction, randStack.AllItems(u)) Then
                                     selection.Add(u)
                                 End If
@@ -10334,7 +10337,7 @@ Public Class ObjectsContentSet
                         If Math.Abs(randStack.LootCost(randStack.AllItems(u)).Gold - correctedBar) <= tolerance Then
                             If type < 0 Then
                                 add = Not excludedItemType.Contains(randStack.AllItems(u).type)
-                                If add Then add = randStack.ItemFilter(d.IGen, randStack.AllItems(u))
+                                If add Then add = randStack.ItemFilter(d.IGen, randStack.AllItems(u), False)
                             Else
                                 add = (type = randStack.AllItems(u).type)
                             End If
