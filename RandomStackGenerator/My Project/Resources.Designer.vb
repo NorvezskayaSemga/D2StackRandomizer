@@ -936,6 +936,15 @@ Namespace My.Resources
         End Property
         
         '''<summary>
+        '''  Looks up a localized string similar to header.
+        '''</summary>
+        Friend ReadOnly Property template_header_keyword() As String
+            Get
+                Return ResourceManager.GetString("template_header_keyword", resourceCulture)
+            End Get
+        End Property
+        
+        '''<summary>
         '''  Looks up a localized string similar to Location.
         '''</summary>
         Friend ReadOnly Property template_location() As String

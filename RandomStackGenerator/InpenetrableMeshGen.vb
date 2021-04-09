@@ -11,10 +11,6 @@ Public Class TemplateForge
     ''' <summary>Нжно ли обновить список блоков</summary>
     Public reloadMe As Boolean
 
-    Private Const mainBlock As String = "Creation_settings"
-    Private Const commonBlock As String = "Common_map_settings"
-    Private Const locationBlock As String = "Location"
-    Private Const readCommand As String = "ReadFromFile"
     Private Const isNonhideble As String = "Nonhideable"
     Private Const SymmetryClass As String = "SymmetryClass"
     'ReadFromFile example_template_2_unsymm.txt $cms
@@ -26,6 +22,7 @@ Public Class TemplateForge
     End Enum
 
     Public Sub New(ByRef descriptionLanguage As GenDefaultValues.TextLanguage)
+
         allParameters = GetPermissibleParametersRange(descriptionLanguage)
 
         Call AddToArray(AddMainBlock)
@@ -39,20 +36,21 @@ Public Class TemplateForge
             Next i
         Next j
         Call HideStateChanged()
+        Call ToTextArray()
     End Sub
 
     Private Function AddMainBlock() As OptionsStorage
-        Return CreateBlock(mainBlock, mainBlock, False, False, False)
+        Return CreateBlock(My.Resources.template_creation, My.Resources.template_creation, False, False, False)
     End Function
     Private Function AddCommonBlock() As OptionsStorage
-        Return CreateBlock(commonBlock, commonBlock, False, True, False)
+        Return CreateBlock(My.Resources.template_map, My.Resources.template_map, False, True, False)
     End Function
     Private Function AddLocationBlock() As OptionsStorage
-        Dim name As String = locationBlock & "_" & SingleToInt(Rnd)
+        Dim name As String = My.Resources.template_location & "_" & SingleToInt(Rnd)
         Do While GetBlockIndex(name, False) > -1
-            name = locationBlock & "_" & SingleToInt(Rnd)
+            name = My.Resources.template_location & "_" & SingleToInt(Rnd)
         Loop
-        Return CreateBlock(locationBlock, name, True, True, True)
+        Return CreateBlock(My.Resources.template_location, name, True, True, True)
     End Function
     ''' <summary>Добавит новую локацию. Вернет название локации</summary>
     Public Function AddLocation() As String
@@ -61,38 +59,47 @@ Public Class TemplateForge
             Return ""
         End If
         Call AddToArray(AddLocationBlock)
-        Call ValueChanged(mainBlock, "genMode")
+        Call ValueChanged(My.Resources.template_creation, "genMode")
         Return blocks(UBound(blocks)).name
     End Function
     Private Function SingleToInt(ByRef v As Single) As Integer
         Return BitConverter.ToInt32(BitConverter.GetBytes(v), 0)
     End Function
-    Private Function CreateBlock(ByRef baseName As String, ByRef fullNama As String, _
+    Private Function CreateBlock(ByRef baseName As String, ByRef fullName As String, _
                                  ByRef canBeDeleted As Boolean, ByRef AddReadCommand As Boolean, _
                                  ByRef vRandomization As Boolean) As OptionsStorage
-        Dim r As New OptionsStorage With {.canBeDeleted = canBeDeleted, .name = fullNama}
+        Dim r As New OptionsStorage With {.canBeDeleted = canBeDeleted, .name = fullName}
+        If fullName = My.Resources.template_creation Then
+            r.blockTypeID = OptionsStorage.BlockType.CreationSettings
+        ElseIf fullName = My.Resources.template_map Then
+            r.blockTypeID = OptionsStorage.BlockType.CommonSettings
+        Else
+            r.blockTypeID = OptionsStorage.BlockType.LocationSettings
+        End If
         Dim add As Boolean
         For Each p As Parameter In allParameters
-            add = False
-            For Each n As String In p.blockName
-                If n.ToUpper = baseName.ToUpper Then
-                    add = True
-                    Exit For
-                End If
-            Next n
-            If add Then
-                If p.type = Parameter.ValueType.vBoolean _
-                Or p.type = Parameter.ValueType.vDouble _
-                Or p.type = Parameter.ValueType.vInteger Then
-                    p.valueRandomization = vRandomization
-                Else
-                    p.valueRandomization = False
-                End If
-                r.AddOption(p)
-                If p.valueRandomization Then
-                    r.SetOptionValue(p.name, p.minValue, p.maxValue)
-                Else
-                    r.SetOptionValue(p.name, p.minValue)
+            If Not IsNothing(p.blockName) Then
+                add = False
+                For Each n As String In p.blockName
+                    If n.ToUpper = baseName.ToUpper Then
+                        add = True
+                        Exit For
+                    End If
+                Next n
+                If add Then
+                    If p.type = Parameter.ValueType.vBoolean _
+                    Or p.type = Parameter.ValueType.vDouble _
+                    Or p.type = Parameter.ValueType.vInteger Then
+                        p.valueRandomization = vRandomization
+                    Else
+                        p.valueRandomization = False
+                    End If
+                    r.AddOption(p)
+                    If p.valueRandomization Then
+                        r.SetOptionValue(p.name, p.minValue, p.maxValue)
+                    Else
+                        r.SetOptionValue(p.name, p.minValue)
+                    End If
                 End If
             End If
         Next p
@@ -184,12 +191,12 @@ Public Class TemplateForge
     Private Sub ValueChanged(ByRef blockName As String, ByRef valueName As String)
         Dim bIndex As Integer = GetBlockIndex(blockName)
         Dim v As String = blocks(bIndex).GetOption(valueName).valueLowerBound
-        If blockName.ToUpper = mainBlock.ToUpper Then
+        If blockName.ToUpper = My.Resources.template_creation.ToUpper Then
             If valueName.ToUpper = "genMode".ToUpper Then
                 If CInt(v) = 1 Then
                     Dim locCount As Integer = 0
                     For i As Integer = 0 To UBound(blocks) Step 1
-                        If blocks(i).name.ToUpper.StartsWith(locationBlock.ToUpper) Then
+                        If blocks(i).name.ToUpper.StartsWith(My.Resources.template_location.ToUpper) Then
                             locCount += 1
                             If locCount > 2 Then
                                 If blocks(i).hidden = False Then reloadMe = True
@@ -208,7 +215,7 @@ Public Class TemplateForge
                 Else
                     allowToAddNewLocatons = True
                     For i As Integer = 0 To UBound(blocks) Step 1
-                        If blocks(i).name.ToUpper.StartsWith(locationBlock.ToUpper) Then
+                        If blocks(i).name.ToUpper.StartsWith(My.Resources.template_location.ToUpper) Then
                             If blocks(i).hidden = True Then reloadMe = True
                             blocks(i).hidden = False
                         End If
@@ -248,7 +255,7 @@ Public Class TemplateForge
             'blocks(i - 1).reloadMe = True
         Next i
         ReDim Preserve blocks(UBound(blocks) - 1)
-        Call ValueChanged(mainBlock, "genMode")
+        Call ValueChanged(My.Resources.template_creation, "genMode")
     End Sub
     ''' <summary>Переместит блок выше по списку. Вернет False, если блок уже был наверху списка</summary>
     ''' <param name="name">Имя блока</param>
@@ -411,6 +418,36 @@ Public Class TemplateForge
         Return res
     End Function
 
+    Public Function ToTextArray() As String()
+        Dim header As String = ""
+        For Each p As Parameter In allParameters
+            If ("%" & My.Resources.template_new_Block & My.Resources.template_header_keyword).ToUpper = p.name.ToUpper Then
+                header = p.description
+                Exit For
+            End If
+        Next p
+        Dim textBlocks(UBound(blocks))() As String
+        Dim outLen As Integer
+        For i As Integer = 0 To UBound(blocks) Step 1
+            textBlocks(i) = blocks(i).ToTextArray(allParameters)
+            outLen += textBlocks(i).Length + 2
+        Next i
+        Dim out(outLen) As String
+        out(0) = header
+        Dim n As Integer = 0
+        For i As Integer = 0 To UBound(textBlocks) Step 1
+            For j As Integer = 0 To 1 Step 1
+                n += 1
+                out(n) = ""
+            Next j
+            For j As Integer = 0 To UBound(textBlocks(i)) Step 1
+                n += 1
+                out(n) = textBlocks(i)(j)
+            Next j
+        Next i
+        Return out
+    End Function
+
     'создать группы параметров при вызове new:
     'mode, карта
     'по запросу создаль группу для локации или удалить
@@ -453,6 +490,62 @@ Public Class TemplateForge
         Public blockName() As String
         ''' <summary>Условие, при котором параметр должен быть виден</summary>
         Public showCondition As String
+
+        Public Function ToTextArray(ByRef maxValueNameLen As Integer, _
+                                    ByRef maxValueLowerBoundLen As Integer) As String()
+            Dim s() As String = ValueConverter.TxtSplit(description)
+            Dim out(UBound(s) + 3) As String
+            out(0) = ""
+            For i As Integer = 0 To UBound(s) Step 1            
+                out(i + 1) = "#" & s(i)
+            Next i
+            Dim n As Integer = UBound(s)
+            n += 1
+
+            If type = ValueType.vStringArray Then
+                out(n) = "#" & wArray & " Permissible values are from arrays (don't use values from different arrays), delimiter is" & arrayDelimiter & ":"
+                For i As Integer = 0 To UBound(possibleArrayValues) Step 1
+                    ReDim Preserve out(out.Length)
+                    n += 1
+                    For j As Integer = 0 To UBound(possibleArrayValues(i)) Step 1
+                        If out(n) = "" Then
+                            out(n) = "#"
+                        Else
+                            out(n) &= arrayDelimiter
+                        End If
+                        out(n) &= possibleArrayValues(i)(j)
+                    Next j
+                Next i
+            ElseIf type = ValueType.vString Then
+                out(n) = "#" & wString
+            Else
+                out(n) = "#"
+                If type = ValueType.vBoolean Then
+                    out(n) &= wBoolean
+                ElseIf type = ValueType.vDouble Then
+                    out(n) &= wDouble
+                ElseIf type = ValueType.vInteger Then
+                    out(n) &= wInteger
+                Else
+                    Throw New Exception("Unexpected value type")
+                End If
+                out(n) &= " #Permissible values are from " & minValue & " to " & maxValue & " "
+            End If
+            n += 1
+            out(n) = name
+            Do While out(n).Length <= maxValueNameLen
+                out(n) &= " "
+            Loop
+            out(n) &= valueLowerBound
+            If valueRandomization And Not valueLowerBound = valueUpperBound And Not valueUpperBound = "" Then
+                Do While out(n).Length <= maxValueNameLen + maxValueLowerBoundLen + 1
+                    out(n) &= " "
+                Loop
+                out(n) &= valueUpperBound
+            End If
+            ReDim Preserve out(n)
+            Return out
+        End Function
 
         Enum ValueType
             vStringArray = 1
@@ -539,9 +632,9 @@ Public Class TemplateForge
             If blockSettings.Contains(":") Then
                 Dim s() As String = blockSettings.Split(CChar(":"))
                 For j As Integer = 0 To UBound(s) Step 1
-                    If s(j).ToUpper = TemplateForge.mainBlock.ToUpper _
-                     Or s(j).ToUpper = TemplateForge.commonBlock.ToUpper _
-                     Or s(j).ToUpper = TemplateForge.locationBlock.ToUpper Then
+                    If s(j).ToUpper = My.Resources.template_creation.ToUpper _
+                     Or s(j).ToUpper = My.Resources.template_map.ToUpper _
+                     Or s(j).ToUpper = My.Resources.template_location.ToUpper Then
                         ReDim Preserve res(i).blockName(res(i).blockName.Length)
                         res(i).blockName(UBound(res(i).blockName)) = s(j)
                     ElseIf s(j).ToUpper = TemplateForge.isNonhideble.ToUpper Then
@@ -584,6 +677,17 @@ Public Class TemplateForge
             Console.WriteLine(res(i).description)
             Console.WriteLine("----------------")
         Next i
+        Dim info() As String = {My.Resources.template_header_keyword, _
+                                My.Resources.template_creation, _
+                                My.Resources.template_map, _
+                                My.Resources.template_location}
+        ReDim Preserve res(UBound(res) + info.Length)
+
+        For i As Integer = 0 To UBound(info) Step 1
+            Dim n As Integer = UBound(res) - UBound(info) + i
+            res(n).name = "%" & My.Resources.template_new_Block & info(i)
+            res(n).description = testParametersDescriptions.Item(res(n).name.ToUpper)
+        Next i
         Return res
     End Function
 
@@ -604,6 +708,14 @@ Public Class TemplateForge
         Public name As String
         ''' <summary>Кастомный идентификатор блока. Без пробелов и табов. Опционально</summary>
         Private customBlockID As String
+
+        Public blockTypeID As BlockType
+
+        Public Enum BlockType
+            CreationSettings = 1
+            CommonSettings = 2
+            LocationSettings = 3
+        End Enum
 
         ''' <summary>Задать идентификатор блока. Опционально</summary>
         ''' <param name="v">Идентификатр без пробелов и табов.</param>
@@ -694,6 +806,45 @@ Public Class TemplateForge
             options(OptionsCount() - 1) = value
             'Call OnOptionsListChanged()
         End Sub
+
+        Public Function ToTextArray(ByRef allParameters() As Parameter) As String()
+            Dim header As String = ""
+            Dim baseName As String
+            If blockTypeID = BlockType.CreationSettings Then
+                baseName = My.Resources.template_creation
+            ElseIf blockTypeID = BlockType.CommonSettings Then
+                baseName = My.Resources.template_map
+            Else
+                baseName = My.Resources.template_location
+            End If
+            For Each p As Parameter In allParameters
+                If ("%" & My.Resources.template_new_Block & baseName).ToUpper = p.name.ToUpper Then
+                    header = p.description
+                    Exit For
+                End If
+            Next p
+
+            Dim out() As String = {header, My.Resources.template_new_Block & baseName}
+            Dim maxValueNameLen, maxValueLowerBoundLen As Integer
+            For i As Integer = 0 To OptionsCount() - 1 Step 1
+                If Not IsNothing(options(i).name) Then maxValueNameLen = Math.Max(maxValueNameLen, options(i).name.Length)
+                If Not IsNothing(options(i).valueLowerBound) Then maxValueLowerBoundLen = Math.Max(maxValueLowerBoundLen, options(i).valueLowerBound.Length)
+            Next i
+            Dim s() As String
+            Dim n As Integer = UBound(out)
+            For i As Integer = 0 To OptionsCount() - 1 Step 1
+                If Not options(i).hidden Then
+                    s = options(i).ToTextArray(maxValueNameLen, maxValueLowerBoundLen)
+                    ReDim Preserve out(n + s.Length)
+                    For j As Integer = 0 To UBound(s) Step 1
+                        n += 1
+                        out(n) = s(j)
+                    Next j
+                End If
+            Next i
+            Return out
+        End Function
+
     End Class
 
 End Class

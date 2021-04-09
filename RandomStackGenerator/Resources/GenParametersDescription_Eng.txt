@@ -1,4 +1,7 @@
-﻿
+﻿%//header Map generator by Norvezskaya Semga/n/n#line starting with hash, is ignored/n#parameters and their values ​​are not case sensitive/n#separator is space or tabulation (can be several consecutive)/n/n#inside blocks can go in any order/n#block order can also be any with one exception:/n#Location blocks for racial locations must be higher than blocks for normal locations (regardless of genMode)/n/n#if the parameter has two values ​​in the Location block, then a random one wil be selected from range/n#example: posX 0.1 0.9/n#random number will be selected from 0.1 to 0.9
+%//Creation_settings Generator mode settings
+%//Common_map_settings General settings for the map
+%//Location Settings block for location
 
 genMode genMode = 1 Common_map_settings block and two Location blocks will be used - for starting and all other locations, respectively/ngenMode = 2 Common_map_settings block and all Location blocks will be used - individual settings for each location
 
