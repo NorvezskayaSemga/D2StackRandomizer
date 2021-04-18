@@ -332,7 +332,12 @@ Friend Class StartForm
 
         Dim lcost As AllDataStructues.Cost = r.LootCost(items)
         Dim igen As AllDataStructues.LootGenSettings = r.GetItemsGenSettings(items, False)
-        Dim result As List(Of String) = r.ItemsGen(AllDataStructues.Cost.Sum(lcost), igen, Nothing, New Point(0, 0), True)
+        Dim sett As New AllDataStructues.CommonLootCreationSettings With {.GoldCost = AllDataStructues.Cost.Sum(lcost), _
+                                                                          .IGen = igen, _
+                                                                          .pos = New Point(0, 0), _
+                                                                          .TypeCostRestriction = Nothing, _
+                                                                          .ApplyStrictTypesFilter = True}
+        Dim result As List(Of String) = r.ItemsGen(sett)
     End Sub
 
 End Class

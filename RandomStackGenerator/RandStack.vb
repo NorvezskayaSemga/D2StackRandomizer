@@ -488,35 +488,27 @@ Public Class RandStack
     End Sub
 
     ''' <summary>Генерирует набор предметов. В принципе может вернуть пустой список</summary>
-    ''' <param name="GoldCost">Максимальная стоимость набора в золоте. Драгоценности считаются дешевле в два раза</param>
-    ''' <param name="IGen">Настройки генерации предметов</param>
-    ''' <param name="TypeCostRestriction">Ключ - тип предмета, Значение - ограничение стоимости. Игнорируется, если массив неинициализирован</param>
-    ''' <param name="pos">Точка на карте, в которую добавляются предметы</param>
-    ''' <param name="ApplyStrictTypesFilter">Генератор предметов постарается создать предметы заданного типа</param>
+    ''' <param name="GenSettings">Общие настройки</param>
     ''' <param name="LogID">Номер задачи. От 0 до Size-1. Если меньше 0, запись будет сделана в общий лог</param>
-    Public Function ItemsGen(ByVal GoldCost As Integer, _
-                             ByRef IGen As AllDataStructues.LootGenSettings, _
-                             ByRef TypeCostRestriction As Dictionary(Of Integer, AllDataStructues.Restriction), _
-                             ByRef pos As Point, _
-                             ByVal ApplyStrictTypesFilter As Boolean, _
+    Public Function ItemsGen(ByVal GenSettings As AllDataStructues.CommonLootCreationSettings, _
                              Optional ByVal LogID As Integer = -1) As List(Of String)
 
-        Call LootGenPrepare(GoldCost, IGen, pos, LogID, True)
+        Call LootGenPrepare(GenSettings.GoldCost, GenSettings.IGen, GenSettings.pos, LogID, True)
 
-        Dim DynTypeWeightMultiplier() As Double = ItemTypeDynWeight(pos)
+        Dim DynTypeWeightMultiplier() As Double = ItemTypeDynWeight(GenSettings.pos)
 
-        Dim DynIGen As AllDataStructues.LootGenSettings = GenItemSetDynIGen(IGen, GoldCost)
+        Dim DynIGen As AllDataStructues.LootGenSettings = GenItemSetDynIGen(GenSettings.IGen, GenSettings.GoldCost)
         Dim serialExecution As Boolean = (LogID < 0)
         Dim costBar(), maxCost(), selected As Integer
         Dim weight(UBound(AllItems)) As Double
-        Dim DynCost As Integer = GoldCost
+        Dim DynCost As Integer = GenSettings.GoldCost
         Dim IDs As New List(Of Integer)
         Dim result As New List(Of String)
         Dim sameAddedCount(UBound(AllItems)) As Integer
         Dim sameTypeAddedCount(UBound(comm.defValues.ThisBag_SameItemsType_ChanceMultiplier)) As Integer
 
-        Dim Local_SameItemCount() As Integer = SameItemsCounter(pos)
-        Dim DynSameItemWeightMultiplier() As Double = SameItemDynWeight(pos, Local_SameItemCount)
+        Dim Local_SameItemCount() As Integer = SameItemsCounter(GenSettings.pos)
+        Dim DynSameItemWeightMultiplier() As Double = SameItemDynWeight(GenSettings.pos, Local_SameItemCount)
 
         Dim dynAppStrictF, again As Boolean
 
@@ -528,11 +520,11 @@ Public Class RandStack
                                  " max item cost:" & maxCost(0) & "|" & maxCost(1) & "|" & maxCost(2))
             IDs.Clear()
             again = True
-            dynAppStrictF = ApplyStrictTypesFilter
+            dynAppStrictF = GenSettings.ApplyStrictTypesFilter
             Do While again
                 For i As Integer = 0 To UBound(AllItems) Step 1
                     'new filter
-                    If ItemFilter(IGen, AllItems(i), dynAppStrictF) AndAlso ItemFilter(TypeCostRestriction, AllItems(i)) AndAlso ItemFilter(DynIGen, AllItems(i), DynCost) Then
+                    If ItemFilter(GenSettings.IGen, AllItems(i), dynAppStrictF) AndAlso ItemFilter(GenSettings.TypeCostRestriction, AllItems(i)) AndAlso ItemFilter(DynIGen, AllItems(i), DynCost) Then
                         IDs.Add(i)
                         weight(i) = GenItemWeight(AllItems(i), costBar) * multiplierItemsWeight(i) * DynTypeWeightMultiplier(AllItems(i).type) * DynSameItemWeightMultiplier(i)
                         If Not ItemFilter(DynIGen, AllItems(i), costBar) Then weight(i) *= 0.001
@@ -574,7 +566,7 @@ Public Class RandStack
 
             Call AddToLog(LogID, "Selected item:" & AllItems(selected).name & " id:" & AllItems(selected).itemID & " cost:" & ItemCostSum(selected))
             result.Add(AllItems(selected).itemID)
-            Call AddToAddedItemList(AllItems(selected), pos)
+            Call AddToAddedItemList(AllItems(selected), GenSettings.pos)
             Call GenItemIGenChange(DynIGen, AllItems(selected), DynCost)
             DynCost = CInt(DynCost - ItemCostSum(selected))
             sameAddedCount(selected) += 1
@@ -585,16 +577,16 @@ Public Class RandStack
                 DynSameItemWeightMultiplier(selected) *= comm.defValues.Local_SameItem_ChanceMultiplier(AllItems(selected).type)
             End If
 
-            Call IGen.Added(AllItems(selected))
+            Call GenSettings.IGen.Added(AllItems(selected))
         Loop
 
-        If Not IsNothing(IGen.PreserveItems) AndAlso IGen.PreserveItems.Count > 0 Then
-            For Each item As String In IGen.PreserveItems
+        If Not IsNothing(GenSettings.IGen.PreserveItems) AndAlso GenSettings.IGen.PreserveItems.Count > 0 Then
+            For Each item As String In GenSettings.IGen.PreserveItems
                 result.Add(item.ToUpper)
                 Dim thing As AllDataStructues.Item = FindItemStats(item)
                 Call AddToLog(LogID, "Preserved item:" & thing.name & " id:" & item.ToUpper)
-                Call AddToAddedItemList(thing, pos)
-                Call IGen.Added(thing)
+                Call AddToAddedItemList(thing, GenSettings.pos)
+                Call GenSettings.IGen.Added(thing)
             Next item
         End If
 
@@ -603,24 +595,18 @@ Public Class RandStack
         Return result
     End Function
     ''' <summary>Генерирует набор предметов. В принципе может вернуть пустой список</summary>
-    ''' <param name="GoldCost">Максимальная стоимость набора в золоте. Драгоценности считаются дешевле в два раза</param>
-    ''' <param name="IGen">Настройки генерации предметов</param>
-    ''' <param name="TypeCostRestriction">Ключ - тип предмета, Значение - ограничение стоимости. Игнорируется, если массив неинициализирован</param>
-    ''' <param name="pos">Точка на карте, в которую добавляются предметы</param>
+    ''' <param name="GenSettings">Общие настройки</param>
     ''' <param name="CapPos">Положение столиц (угол с наименьшей координатой по X и Y)</param>
     ''' <param name="LootCostMultiplier">Множитель стоимости предметов</param>
-    ''' <param name="ApplyStrictTypesFilter">Генератор предметов постарается создать предметы заданного типа</param>
     ''' <param name="LogID">Номер задачи. От 0 до Size-1. Если меньше 0, запись будет сделана в общий лог</param>
-    Public Function ItemsGen(ByVal GoldCost As Integer, _
-                             ByRef IGen As AllDataStructues.LootGenSettings, _
-                             ByRef TypeCostRestriction As Dictionary(Of Integer, AllDataStructues.Restriction), _
-                             ByRef pos As Point, ByRef CapPos() As Point, _
-                             ByVal LootCostMultiplier As Double, _
-                             ByVal ApplyStrictTypesFilter As Boolean, _
+    Public Function ItemsGen(ByVal GenSettings As AllDataStructues.CommonLootCreationSettings, _
+                             ByRef CapPos() As Point, ByVal LootCostMultiplier As Double, _
                              Optional ByVal LogID As Integer = -1) As List(Of String)
-        Dim lcm As Double = RecalculateMultiplier(pos, CapPos, LootCostMultiplier)
-        IGen.lootCostMultiplier = lcm
-        Return ItemsGen(CInt(GoldCost * lcm), IGen, TypeCostRestriction, pos, ApplyStrictTypesFilter, LogID)
+        Dim s As AllDataStructues.CommonLootCreationSettings = AllDataStructues.CommonLootCreationSettings.Copy(GenSettings)
+        Dim lcm As Double = RecalculateMultiplier(GenSettings.pos, CapPos, LootCostMultiplier)
+        s.IGen.lootCostMultiplier = lcm
+        s.GoldCost = CInt(s.GoldCost * lcm)
+        Return ItemsGen(s, LogID)
     End Function
     Private Function CostBarGen(ByRef minBar As Integer, ByRef maxBar As Integer, ByRef serialExecution As Boolean) As Integer
         'Return CInt(rndgen.Rand(CDbl(minBar), CDbl(maxBar), serialExecution))
@@ -669,41 +655,33 @@ Public Class RandStack
     End Sub
 
     ''' <summary>Генерирует один предмет. Если не получится выбрать подходящий предмет, вернет пустую строку</summary>
-    ''' <param name="GoldCost">Максимальная стоимость предмета в золоте. Драгоценности считаются дешевле в два раза</param>
-    ''' <param name="IGen">Настройки генерации предметов</param>
-    ''' <param name="TypeCostRestriction">Ключ - тип предмета, Значение - ограничение стоимости. Игнорируется, если массив неинициализирован</param>
-    ''' <param name="pos">Точка на карте, в которую добавляются предметы</param>
-    ''' <param name="ApplyStrictTypesFilter">Генератор предметов постарается создать предметы заданного типа</param>
+       ''' <param name="GenSettings">Общие настройки</param>
     ''' <param name="LogID">Номер задачи. От 0 до Size-1. Если меньше 0, запись будет сделана в общий лог</param>
-    Public Function ThingGen(ByVal GoldCost As Integer, _
-                             ByRef IGen As AllDataStructues.LootGenSettings, _
-                             ByRef TypeCostRestriction As Dictionary(Of Integer, AllDataStructues.Restriction), _
-                             ByRef pos As Point, _
-                             ByVal ApplyStrictTypesFilter As Boolean, _
+    Public Function ThingGen(ByVal GenSettings As AllDataStructues.CommonLootCreationSettings, _
                              Optional ByVal LogID As Integer = -1) As String
 
-        Call LootGenPrepare(GoldCost, IGen, pos, LogID, False)
+        Call LootGenPrepare(GenSettings.GoldCost, GenSettings.IGen, GenSettings.pos, LogID, False)
 
-        If Not IsNothing(IGen.PreserveItems) AndAlso IGen.PreserveItems.Count > 0 Then
-            Dim thing As AllDataStructues.Item = FindItemStats(IGen.PreserveItems.Item(0))
-            Call AddToLog(LogID, "Preserved item:" & thing.name & " id:" & IGen.PreserveItems.Item(0).ToUpper)
+        If Not IsNothing(GenSettings.IGen.PreserveItems) AndAlso GenSettings.IGen.PreserveItems.Count > 0 Then
+            Dim thing As AllDataStructues.Item = FindItemStats(GenSettings.IGen.PreserveItems.Item(0))
+            Call AddToLog(LogID, "Preserved item:" & thing.name & " id:" & GenSettings.IGen.PreserveItems.Item(0).ToUpper)
             Call AddToLog(LogID, "----Single item creation ended----")
-            Call AddToAddedItemList(thing, pos)
-            Return IGen.PreserveItems.Item(0).ToUpper
+            Call AddToAddedItemList(thing, GenSettings.pos)
+            Return GenSettings.IGen.PreserveItems.Item(0).ToUpper
         End If
 
         Dim serialExecution As Boolean = (LogID < 0)
         Dim selected As Integer
         Dim IDs As New List(Of Integer)
         Dim result As String = ""
-        Dim minGoldCost As Integer = CInt(Math.Max(Math.Min(comm.defValues.MinRuinsLootCostMultiplier, 1), 0) * GoldCost)
+        Dim minGoldCost As Integer = CInt(Math.Max(Math.Min(comm.defValues.MinRuinsLootCostMultiplier, 1), 0) * GenSettings.GoldCost)
 
         Dim DynTypeWeightMultiplier(), DynItemWeightMultiplier(UBound(AllItems)), DynSameItemWeightMultiplier() As Double
 
-        DynTypeWeightMultiplier = ItemTypeDynWeight(pos)
-        DynSameItemWeightMultiplier = SameItemDynWeight(pos, SameItemsCounter(pos))
+        DynTypeWeightMultiplier = ItemTypeDynWeight(GenSettings.pos)
+        DynSameItemWeightMultiplier = SameItemDynWeight(GenSettings.pos, SameItemsCounter(GenSettings.pos))
 
-        Dim dynAppStrictF As Boolean = ApplyStrictTypesFilter
+        Dim dynAppStrictF As Boolean = GenSettings.ApplyStrictTypesFilter
         Dim again As Boolean = True
 
         IDs.Clear()
@@ -711,8 +689,8 @@ Public Class RandStack
         Do While again
             For i As Integer = 0 To UBound(AllItems) Step 1
                 DynItemWeightMultiplier(i) = multiplierItemsWeight(i) * DynTypeWeightMultiplier(AllItems(i).type) * DynSameItemWeightMultiplier(i)
-                If ItemCostSum(i) <= GoldCost AndAlso ItemCostSum(i) >= minGoldCost AndAlso ItemFilter(IGen, AllItems(i), dynAppStrictF) _
-                AndAlso ItemFilter(TypeCostRestriction, AllItems(i)) Then IDs.Add(i)
+                If ItemCostSum(i) <= GenSettings.GoldCost AndAlso ItemCostSum(i) >= minGoldCost AndAlso ItemFilter(GenSettings.IGen, AllItems(i), dynAppStrictF) _
+                AndAlso ItemFilter(GenSettings.TypeCostRestriction, AllItems(i)) Then IDs.Add(i)
             Next i
             If IDs.Count > 0 Then
                 again = False
@@ -725,12 +703,12 @@ Public Class RandStack
             End If
         Loop
         If IDs.Count > 0 Then
-            selected = comm.RandomSelection(IDs, New Double()() {ItemCostSum}, New Double() {GoldCost}, DynItemWeightMultiplier, itemGenSigma, serialExecution)
+            selected = comm.RandomSelection(IDs, New Double()() {ItemCostSum}, New Double() {GenSettings.GoldCost}, DynItemWeightMultiplier, itemGenSigma, serialExecution)
             multiplierItemsWeight(selected) *= comm.defValues.Global_AddedItem_ChanceMultiplier
             Call AddToLog(LogID, "Selected item:" & AllItems(selected).name & " id:" & AllItems(selected).itemID & " cost:" & ItemCostSum(selected))
             result = AllItems(selected).itemID
-            Call AddToAddedItemList(AllItems(selected), pos)
-            Call IGen.Added(AllItems(selected))
+            Call AddToAddedItemList(AllItems(selected), GenSettings.pos)
+            Call GenSettings.IGen.Added(AllItems(selected))
         End If
 
         Call AddToLog(LogID, "----Single item creation ended----")
@@ -738,24 +716,18 @@ Public Class RandStack
         Return result
     End Function
     ''' <summary>Генерирует один предмет. Если не получится выбрать подходящий предмет, вернет пустую строку</summary>
-    ''' <param name="GoldCost">Максимальная стоимость предмета в золоте. Драгоценности считаются дешевле в два раза</param>
-    ''' <param name="IGen">Настройки генерации предметов</param>
-    ''' <param name="TypeCostRestriction">Ключ - тип предмета, Значение - ограничение стоимости. Игнорируется, если массив неинициализирован</param>
-    ''' <param name="pos">Точка на карте, в которую добавляются предметы</param>
+    ''' <param name="GenSettings">Общие настройки</param>
     ''' <param name="CapPos">Положение столиц (угол с наименьшей координатой по X и Y)</param>
     ''' <param name="LootCostMultiplier">Множитель стоимости предметов</param>
-    ''' <param name="ApplyStrictTypesFilter">Генератор предметов постарается создать предметы заданного типа</param>
     ''' <param name="LogID">Номер задачи. От 0 до Size-1. Если меньше 0, запись будет сделана в общий лог</param>
-    Public Function ThingGen(ByVal GoldCost As Integer, _
-                             ByRef IGen As AllDataStructues.LootGenSettings, _
-                             ByRef TypeCostRestriction As Dictionary(Of Integer, AllDataStructues.Restriction), _
-                             ByRef pos As Point, ByRef CapPos() As Point, _
-                             ByVal ApplyStrictTypesFilter As Boolean, _
-                             ByVal LootCostMultiplier As Double, _
+    Public Function ThingGen(ByVal GenSettings As AllDataStructues.CommonLootCreationSettings, _
+                             ByRef CapPos() As Point, ByVal LootCostMultiplier As Double, _
                              Optional ByVal LogID As Integer = -1) As String
-        Dim lcm As Double = RecalculateMultiplier(pos, CapPos, LootCostMultiplier)
-        IGen.lootCostMultiplier = lcm
-        Return ThingGen(CInt(GoldCost * lcm), IGen, TypeCostRestriction, pos, ApplyStrictTypesFilter, LogID)
+        Dim lcm As Double = RecalculateMultiplier(GenSettings.pos, CapPos, LootCostMultiplier)
+        Dim gs As AllDataStructues.CommonLootCreationSettings = AllDataStructues.CommonLootCreationSettings.Copy(GenSettings)
+        gs.IGen.lootCostMultiplier = lcm
+        gs.GoldCost = CInt(gs.GoldCost * lcm)
+        Return ThingGen(gs, LogID)
     End Function
 
     Private Function GenItemSetDynIGen(ByRef IGen As AllDataStructues.LootGenSettings, ByRef GoldCost As Integer) As AllDataStructues.LootGenSettings
@@ -1051,40 +1023,32 @@ Public Class RandStack
     End Function
 
     ''' <summary>Создаст отряд  в соответствие с желаемыми параметрами. Не нужно пытаться создать отряд водных жителей на земле</summary>
-    ''' <param name="StackStats">Желаемые параметры стэка</param>
-    ''' <param name="deltaLeadership">Изменение лидерства за счет модификаторов</param>
-    ''' <param name="GroundTile">True, если на клетку нельзя ставить водных лидеров. Водной считается клетка с водой, окруженная со всех сторон клетками с водой</param>
-    ''' <param name="NoLeader">True, если стэк находится внутри руин или города</param>
-    ''' <param name="pos">Точка на карте, в которую добавляются предметы</param>
-    ''' <param name="MapLords">Список лордов на карте. Юниты из веток развития соответствующих рас добавляться в отряды не будут. Передавай Nothing для игнорирования этого фильтра</param>
-    ''' <param name="ApplyStrictTypesFilter">Генератор предметов постарается создать предметы заданного типа</param>
-    Public Function Gen(ByRef StackStats As AllDataStructues.DesiredStats, _
-                        ByVal deltaLeadership As Integer, ByVal GroundTile As Boolean, _
-                        ByVal NoLeader As Boolean, ByRef pos As Point, ByRef MapLords() As String, _
-                        ByVal ApplyStrictTypesFilter As Boolean) As AllDataStructues.Stack
+    ''' <param name="GenSettings">Общие настройки</param>
+    Public Function Gen(ByRef GenSettings As AllDataStructues.CommonStackCreationSettings) As AllDataStructues.Stack
         'IO.File.WriteAllText("./stats.txt", pos.X & " " & pos.Y & vbNewLine & _
         '                     AllDataStructues.DesiredStats.Print(StackStats, comm.defValues.RaceNumberToRaceChar))
-        If Not IsNothing(StackStats.shopContent) Then Return Nothing
+        If Not IsNothing(GenSettings.StackStats.shopContent) Then Return Nothing
 
         Dim result As New AllDataStructues.Stack
-        Dim DynStackStats As AllDataStructues.DesiredStats = AllDataStructues.DesiredStats.Copy(StackStats)
+        Dim DynStackStats As AllDataStructues.DesiredStats = AllDataStructues.DesiredStats.Copy(GenSettings.StackStats)
         DynStackStats.Race.Clear()
-        For Each i As Integer In StackStats.Race
+        For Each i As Integer In GenSettings.StackStats.Race
             Dim s As Integer = comm.RaceIdentifierToSubrace(i)
             If Not DynStackStats.Race.Contains(s) Then DynStackStats.Race.Add(s)
         Next i
 
         Call log.Add(vbNewLine & "----Stack creation started----")
-        Call log.Add("DeltaLeadership: " & deltaLeadership & " GroundTile: " & GroundTile & " NoLeader: " & NoLeader)
-        If Not IsNothing(pos) Then
-            Call log.Add("Position: " & pos.X & " " & pos.Y)
+        Call log.Add("DeltaLeadership: " & GenSettings.deltaLeadership & " GroundTile: " & GenSettings.GroundTile & " NoLeader: " & GenSettings.NoLeader)
+        If Not IsNothing(GenSettings.pos) Then
+            Call log.Add("Position: " & GenSettings.pos.X & " " & GenSettings.pos.Y)
         Else
             Call log.Add("Position: unknown")
         End If
         Call log.Add(DynStackStats, False)
 
-        If StackStats.StackSize > 0 Then
-            result = GenStackMultithread(StackStats, DynStackStats, deltaLeadership, GroundTile, NoLeader, MapLords)
+        If GenSettings.StackStats.StackSize > 0 Then
+            result = GenStackMultithread(GenSettings.StackStats, DynStackStats, GenSettings.deltaLeadership, _
+                                         GenSettings.GroundTile, GenSettings.NoLeader, GenSettings.MapLords)
         Else
             result.leaderPos = -1
             ReDim result.pos(UBound(busytransfer)), result.level(UBound(busytransfer))
@@ -1093,86 +1057,34 @@ Public Class RandStack
             Next i
         End If
 
-        result.items = ItemsGen(DynStackStats.LootCost, DynStackStats.IGen, Nothing, pos, ApplyStrictTypesFilter)
+        result.items = ItemsGen(New AllDataStructues.CommonLootCreationSettings With {.GoldCost = DynStackStats.LootCost, _
+                                                                                     .IGen = DynStackStats.IGen, _
+                                                                                     .TypeCostRestriction = Nothing, _
+                                                                                     .pos = GenSettings.pos, _
+                                                                                     .ApplyStrictTypesFilter = GenSettings.ApplyStrictTypesFilter})
 
         Call log.Add("----Stack creation ended----")
 
         Return result
     End Function
     ''' <summary>Создаст отряд  в соответствие с желаемыми параметрами. Не нужно пытаться создать отряд водных жителей на земле</summary>
-    ''' <param name="ExpStackKilled">Примерный опыт за убийство стэка</param>
-    ''' <param name="LootCost">Стоимость лута (предметы со стоимостью в золоте, равной нулю, не добавляются). При расчете стоимость драгоценностей уменьшается в два раза</param>
-    ''' <param name="Races">Допустимые расы юнитов в отряде</param>
-    ''' <param name="IGen">Настройки генерации предметов</param>
-    ''' <param name="deltaLeadership">Изменение лидерства за счет модификаторов</param>
-    ''' <param name="GroundTile">True, если на клетку нельзя ставить водных лидеров. Водной считается клетка с водой, окруженная со всех сторон клетками с водой</param>
-    ''' <param name="NoLeader">True, если стэк находится внутри руин или города</param>
-    ''' <param name="pos">Точка на карте, в которую добавляются предметы</param>
-    ''' <param name="MapLords">Список лордов на карте. Юниты из веток развития соответствующих рас добавляться в отряды не будут. Передавай Nothing для игнорирования этого фильтра</param>
-    ''' <param name="ApplyStrictTypesFilter">Генератор предметов постарается создать предметы заданного типа</param>
-    Public Function Gen(ByVal ExpStackKilled As Integer, ByVal LootCost As Double, ByRef Races As List(Of Integer), _
-                        ByRef IGen As AllDataStructues.LootGenSettings, ByVal deltaLeadership As Integer, _
-                        ByVal GroundTile As Boolean, ByVal NoLeader As Boolean, ByRef pos As Point, ByRef MapLords() As String, _
-                        ByVal ApplyStrictTypesFilter As Boolean) As AllDataStructues.Stack
-        Dim StackStat As AllDataStructues.DesiredStats = StackStatsGen.GenDesiredStats _
-                            (CDbl(ExpStackKilled), LootCost, rndgen, comm.valConv, comm.defValues)
-        StackStat.Race = Races
-        StackStat.IGen = IGen
-        Return Gen(StackStat, deltaLeadership, GroundTile, NoLeader, pos, MapLords, ApplyStrictTypesFilter)
-    End Function
-    ''' <summary>Создаст отряд  в соответствие с желаемыми параметрами. Не нужно пытаться создать отряд водных жителей на земле</summary>
-    ''' <param name="StackStats">Желаемые параметры стэка</param>
-    ''' <param name="deltaLeadership">Изменение лидерства за счет модификаторов</param>
-    ''' <param name="GroundTile">True, если на клетку нельзя ставить водных лидеров. Водной считается клетка с водой, окруженная со всех сторон клетками с водой</param>
-    ''' <param name="NoLeader">True, если стэк находится внутри руин или города</param>
-    ''' <param name="pos">Точка на карте, в которую добавляются предметы</param>
+    ''' <param name="GenSettings">Общие настройки</param>
     ''' <param name="CapPos">Положение столиц (угол с наименьшей координатой по X и Y)</param>
     ''' <param name="StackStrengthMultiplier">Множитель силы отряда: изменяем опыт за убийство и среднюю планку опыта</param>
     ''' <param name="LootCostMultiplier">Множитель стоимости предметов</param>
-    ''' <param name="MapLords">Список лордов на карте. Юниты из веток развития соответствующих рас добавляться в отряды не будут. Передавай Nothing для игнорирования этого фильтра</param>
-    ''' <param name="ApplyStrictTypesFilter">Генератор предметов постарается создать предметы заданного типа</param>
-    Public Function Gen(ByRef StackStats As AllDataStructues.DesiredStats, ByVal deltaLeadership As Integer, _
-                        ByVal GroundTile As Boolean, ByVal NoLeader As Boolean, ByRef pos As Point, _
-                        ByRef CapPos() As Point, ByRef MapLords() As String, _
-                        ByVal ApplyStrictTypesFilter As Boolean, _
+    Public Function Gen(ByRef GenSettings As AllDataStructues.CommonStackCreationSettings, _
+                        ByRef CapPos() As Point, _
                         ByVal StackStrengthMultiplier As Double, ByVal LootCostMultiplier As Double) As AllDataStructues.Stack
-        Dim ssm As Double = RecalculateMultiplier(pos, CapPos, StackStrengthMultiplier)
-        Dim lcm As Double = RecalculateMultiplier(pos, CapPos, LootCostMultiplier)
+        Dim ssm As Double = RecalculateMultiplier(GenSettings.pos, CapPos, StackStrengthMultiplier)
+        Dim lcm As Double = RecalculateMultiplier(GenSettings.pos, CapPos, LootCostMultiplier)
 
-        Dim s As AllDataStructues.DesiredStats = AllDataStructues.DesiredStats.Copy(StackStats)
-        s.ExpStackKilled = Math.Max(CInt(s.ExpStackKilled * ssm), 5)
-        s.ExpBarAverage = Math.Max(CInt(s.ExpBarAverage * ssm), 25)
-        s.LootCost = CInt(s.LootCost * lcm)
-        s.IGen.lootCostMultiplier = lcm
-        Return Gen(s, deltaLeadership, GroundTile, NoLeader, pos, MapLords, ApplyStrictTypesFilter)
-    End Function
-    ''' <summary>Создаст отряд  в соответствие с желаемыми параметрами. Не нужно пытаться создать отряд водных жителей на земле</summary>
-    ''' <param name="ExpStackKilled">Примерный опыт за убийство стэка</param>
-    ''' <param name="LootCost">Стоимость лута (предметы со стоимостью в золоте, равной нулю, не добавляются). При расчете стоимость драгоценностей уменьшается в два раза</param>
-    ''' <param name="Races">Допустимые расы юнитов в отряде</param>
-    ''' <param name="IGen">Настройки генерации предметов</param>
-    ''' <param name="deltaLeadership">Изменение лидерства за счет модификаторов</param>
-    ''' <param name="GroundTile">True, если на клетку нельзя ставить водных лидеров. Водной считается клетка с водой, окруженная со всех сторон клетками с водой</param>
-    ''' <param name="NoLeader">True, если стэк находится внутри руин или города</param>
-    ''' <param name="pos">Точка на карте, в которую добавляются предметы</param>
-    ''' <param name="CapPos">Положение столиц (угол с наименьшей координатой по X и Y)</param>
-    ''' <param name="StackStrengthMultiplier">Множитель силы отряда: изменяем опыт за убийство и среднюю планку опыта</param>
-    ''' <param name="LootCostMultiplier">Множитель стоимости предметов</param>
-    ''' <param name="MapLords">Список лордов на карте. Юниты из веток развития соответствующих рас добавляться в отряды не будут. Передавай Nothing для игнорирования этого фильтра</param>
-    ''' <param name="ApplyStrictTypesFilter">Генератор предметов постарается создать предметы заданного типа</param>
-    Public Function Gen(ByVal ExpStackKilled As Integer, ByVal LootCost As Double, ByRef Races As List(Of Integer), _
-                        ByRef IGen As AllDataStructues.LootGenSettings, ByVal deltaLeadership As Integer, _
-                        ByVal GroundTile As Boolean, ByVal NoLeader As Boolean, ByRef pos As Point, _
-                        ByRef CapPos() As Point, ByRef MapLords() As String, _
-                        ByVal ApplyStrictTypesFilter As Boolean, _
-                        ByVal StackStrengthMultiplier As Double, ByVal LootCostMultiplier As Double) As AllDataStructues.Stack
-        Dim ssm As Double = RecalculateMultiplier(pos, CapPos, StackStrengthMultiplier)
-        Dim lcm As Double = RecalculateMultiplier(pos, CapPos, LootCostMultiplier)
+        Dim g As AllDataStructues.CommonStackCreationSettings = AllDataStructues.CommonStackCreationSettings.Copy(GenSettings)
+        g.StackStats.ExpStackKilled = Math.Max(CInt(g.StackStats.ExpStackKilled * ssm), 5)
+        g.StackStats.ExpBarAverage = Math.Max(CInt(g.StackStats.ExpBarAverage * ssm), 25)
+        g.StackStats.LootCost = CInt(g.StackStats.LootCost * lcm)
+        g.StackStats.IGen.lootCostMultiplier = lcm
 
-        Dim esk As Integer = Math.Max(CInt(ExpStackKilled * ssm), 5)
-        Dim lc As Double = LootCost * lcm
-        IGen.lootCostMultiplier = lcm
-        Return Gen(esk, lc, Races, IGen, deltaLeadership, GroundTile, NoLeader, pos, MapLords, ApplyStrictTypesFilter)
+        Return Gen(g)
     End Function
     Private Function SelectPossibleLeader(ByRef leaderID As Integer, ByRef Tolerance As Double, _
                                           ByRef StackStats As AllDataStructues.DesiredStats, ByRef GroundTile As Boolean, _
@@ -3536,6 +3448,63 @@ Public Class AllDataStructues
             End If
         End Function
 
+        Public Shared Function Copy(ByVal v As Restriction) As Restriction
+            Return New Restriction With {.maximum = v.maximum, .minimum = v.minimum}
+        End Function
+    End Structure
+
+    Public Structure CommonStackCreationSettings
+        '''<summary>Желаемые параметры стэка</summary>
+        Dim StackStats As AllDataStructues.DesiredStats
+        '''<summary>Изменение лидерства за счет модификаторов</summary>
+        Dim deltaLeadership As Integer
+        '''<summary>True, если на клетку нельзя ставить водных лидеров. Водной считается клетка с водой, окруженная со всех сторон клетками с водой</summary>
+        Dim GroundTile As Boolean
+        '''<summary>True, если стэк находится внутри руин или города</summary>
+        Dim NoLeader As Boolean
+        '''<summary>Точка на карте, в которую добавляются предметы</summary>
+        Dim pos As Point
+        '''<summary>Список лордов на карте. Юниты из веток развития соответствующих рас добавляться в отряды не будут. Передавай Nothing для игнорирования этого фильтра</summary>
+        Dim MapLords() As String
+        '''<summary>Генератор предметов постарается создать предметы заданного типа</summary>
+        Dim ApplyStrictTypesFilter As Boolean
+
+        Public Shared Function Copy(ByVal v As CommonStackCreationSettings) As CommonStackCreationSettings
+            Return New CommonStackCreationSettings With {.StackStats = DesiredStats.Copy(v.StackStats), _
+                                                         .deltaLeadership = v.deltaLeadership, _
+                                                         .GroundTile = v.GroundTile, _
+                                                         .NoLeader = v.NoLeader, _
+                                                         .pos = New Point(v.pos.X, v.pos.Y), _
+                                                         .MapLords = CType(v.MapLords.Clone, String()), _
+                                                         .ApplyStrictTypesFilter = v.ApplyStrictTypesFilter}
+        End Function
+    End Structure
+    Public Structure CommonLootCreationSettings
+        '''<summary>Максимальная стоимость набора в золоте. Драгоценности считаются дешевле в два раза</summary>
+        Dim GoldCost As Integer
+        '''<summary>Настройки генерации предметов</summary>
+        Dim IGen As AllDataStructues.LootGenSettings
+        '''<summary>Ключ - тип предмета, Значение - ограничение стоимости. Игнорируется, если массив неинициализирован</summary>
+        Dim TypeCostRestriction As Dictionary(Of Integer, AllDataStructues.Restriction)
+        '''<summary>Точка на карте, в которую добавляются предметы</summary>
+        Dim pos As Point
+        '''<summary>Генератор предметов постарается создать предметы заданного типа</summary>
+        Dim ApplyStrictTypesFilter As Boolean
+
+        Public Shared Function Copy(ByVal v As CommonLootCreationSettings) As CommonLootCreationSettings
+            Dim t As Dictionary(Of Integer, AllDataStructues.Restriction) = Nothing
+            If Not IsNothing(v.TypeCostRestriction) Then
+                t = New Dictionary(Of Integer, AllDataStructues.Restriction)
+                For Each k As Integer In v.TypeCostRestriction.Keys
+                    t.Add(k, Restriction.Copy(v.TypeCostRestriction.Item(k)))
+                Next k
+            End If
+            Return New CommonLootCreationSettings With {.ApplyStrictTypesFilter = v.ApplyStrictTypesFilter, _
+                                                        .GoldCost = v.GoldCost, _
+                                                        .IGen = LootGenSettings.Copy(v.IGen), _
+                                                        .pos = New Point(v.pos.X, v.pos.Y), _
+                                                        .TypeCostRestriction = t}
+        End Function
     End Structure
 
 End Class

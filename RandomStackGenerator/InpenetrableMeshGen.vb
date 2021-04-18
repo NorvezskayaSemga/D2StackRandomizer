@@ -496,7 +496,7 @@ Public Class TemplateForge
             Dim s() As String = ValueConverter.TxtSplit(description)
             Dim out(UBound(s) + 3) As String
             out(0) = ""
-            For i As Integer = 0 To UBound(s) Step 1            
+            For i As Integer = 0 To UBound(s) Step 1
                 out(i + 1) = "#" & s(i)
             Next i
             Dim n As Integer = UBound(s)
@@ -5422,11 +5422,25 @@ Public Class shortMapFormat
                     Dim stackInter As AllDataStructues.Stack = Nothing
                     If m.groupStats.ContainsKey(m.board(x, y).groupID) Then
                         desiredStatsExter = m.groupStats.Item(m.board(x, y).groupID)
-                        stackExter = objContent.randStack.Gen(desiredStatsExter, 0, True, False, pos, lordsList, ApplyStrictTypesFilter)
+                        Dim gs As New AllDataStructues.CommonStackCreationSettings With {.StackStats = desiredStatsExter, _
+                                                                                         .deltaLeadership = 0, _
+                                                                                         .GroundTile = True, _
+                                                                                         .NoLeader = False, _
+                                                                                         .pos = pos, _
+                                                                                         .MapLords = lordsList, _
+                                                                                         .ApplyStrictTypesFilter = ApplyStrictTypesFilter}
+                        stackExter = objContent.randStack.Gen(gs)
                     End If
                     If m.groupStats.ContainsKey(-m.board(x, y).groupID) Then
                         desiredStatsInter = m.groupStats.Item(-m.board(x, y).groupID)
-                        stackInter = objContent.randStack.Gen(desiredStatsInter, 0, True, True, pos, lordsList, ApplyStrictTypesFilter)
+                        Dim gs As New AllDataStructues.CommonStackCreationSettings With {.StackStats = desiredStatsInter, _
+                                                                                         .deltaLeadership = 0, _
+                                                                                         .GroundTile = True, _
+                                                                                         .NoLeader = True, _
+                                                                                         .pos = pos, _
+                                                                                         .MapLords = lordsList, _
+                                                                                         .ApplyStrictTypesFilter = ApplyStrictTypesFilter}
+                        stackInter = objContent.randStack.Gen(gs)
                     End If
                     Call AddObject(res.cities, x, y, name, desiredStatsExter, desiredStatsInter, stackExter, stackInter, owner, level, objContent, attObjects, landRace, sName)
                 ElseIf m.board(x, y).objectID = DefMapObjects.Types.Vendor Then
@@ -5446,9 +5460,19 @@ Public Class shortMapFormat
                 ElseIf m.board(x, y).objectID = DefMapObjects.Types.Ruins Then
                     Dim pos As New Point(x, y)
                     Dim desiredStats As AllDataStructues.DesiredStats = m.groupStats.Item(m.board(x, y).groupID)
-                    Dim stack As AllDataStructues.Stack = objContent.randStack.Gen(desiredStats, 0, Not m.board(x, y).isWater, True, pos, lordsList, ApplyStrictTypesFilter)
+                    Dim gs As New AllDataStructues.CommonStackCreationSettings With {.StackStats = desiredStats, _
+                                                                                     .deltaLeadership = 0, _
+                                                                                     .GroundTile = Not m.board(x, y).isWater, _
+                                                                                     .NoLeader = True, _
+                                                                                     .pos = pos, _
+                                                                                     .MapLords = lordsList, _
+                                                                                     .ApplyStrictTypesFilter = ApplyStrictTypesFilter}
+                    Dim stack As AllDataStructues.Stack = objContent.randStack.Gen(gs)
                     Dim itemCost As Integer = objContent.randStack.rndgen.RndInt(CInt(0.25 * desiredStats.LootCost), desiredStats.LootCost, True)
-                    Dim loot As String = objContent.randStack.ThingGen(itemCost, RuinIGen, Nothing, pos, ApplyStrictTypesFilter)
+
+                    Dim gi As New AllDataStructues.CommonLootCreationSettings With {.GoldCost = itemCost, .IGen = RuinIGen, .TypeCostRestriction = Nothing, _
+                                                                                    .pos = pos, .ApplyStrictTypesFilter = True}
+                    Dim loot As String = objContent.randStack.ThingGen(gi)
                     Dim resources As AllDataStructues.Cost = New AllDataStructues.Cost With {.Gold = desiredStats.LootCost}
                     If Not loot = "" Then resources.Gold -= AllDataStructues.Cost.Sum(objContent.randStack.LootCost(loot))
                     stack.items.Clear()
@@ -5468,8 +5492,14 @@ Public Class shortMapFormat
             ElseIf m.board(x, y).GuardLoc Or m.board(x, y).PassGuardLoc Or m.board(x, y).isObjectGuard Then
                 Dim desiredStats As AllDataStructues.DesiredStats = m.groupStats.Item(m.board(x, y).groupID)
                 Dim isGround As Boolean = Not RaceGen.MayBeWater(m, x, y)
-                Dim stack As AllDataStructues.Stack = objContent.randStack.Gen(desiredStats, 0, isGround, _
-                                                                               False, New Point(x, y), lordsList, ApplyStrictTypesFilter)
+                Dim gs As New AllDataStructues.CommonStackCreationSettings With {.StackStats = desiredStats, _
+                                                                                 .deltaLeadership = 0, _
+                                                                                 .GroundTile = isGround, _
+                                                                                 .NoLeader = False, _
+                                                                                 .pos = New Point(x, y), _
+                                                                                 .MapLords = lordsList, _
+                                                                                 .ApplyStrictTypesFilter = ApplyStrictTypesFilter}
+                Dim stack As AllDataStructues.Stack = objContent.randStack.Gen(gs)
                 If isGround Then
                     Dim leader As AllDataStructues.Unit = objContent.randStack.FindUnitStats(stack.pos(stack.leaderPos))
                     If leader.waterOnly Then
