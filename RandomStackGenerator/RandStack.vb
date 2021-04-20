@@ -4673,3 +4673,45 @@ Public Class Log
     End Sub
 
 End Class
+
+Public Structure ClassFieldsHandler
+
+    Private Const searchFieldsSettings As Reflection.BindingFlags = Reflection.BindingFlags.Public Or Reflection.BindingFlags.Instance
+
+    Public Structure GetFieldResult
+        Dim searchResultField As Reflection.FieldInfo
+        Dim searchResult As Object
+        Dim parent As Object
+    End Structure
+    Public Shared Sub SetFieldValue(ByRef parent As Object, ByRef fieldValue As Object, ByVal fieldName As String)
+        Dim info As GetFieldResult = GetField(parent, fieldName)
+        info.searchResultField.SetValue(info.parent, fieldValue)
+    End Sub
+    Public Shared Function GetFieldValue(ByRef parent As Object, ByVal fieldName As String) As Object
+        Dim info As GetFieldResult = GetField(parent, fieldName)
+        Return info.searchResultField.GetValue(info.parent)
+    End Function
+    Public Shared Function GetField(ByRef parent As Object, ByVal fieldName As String) As GetFieldResult
+        Dim res As New GetFieldResult
+        Dim s() As String = fieldName.Split(CChar("."))
+        Dim objects(UBound(s)) As Object
+        Dim fields(UBound(s)) As Reflection.FieldInfo
+        For i As Integer = 0 To UBound(s) Step 1
+            If i = 0 Then
+                fields(i) = parent.GetType().GetField(s(i), searchFieldsSettings)
+                objects(i) = fields(i).GetValue(parent)
+            Else
+                fields(i) = objects(i - 1).GetType().GetField(s(i), searchFieldsSettings)
+                objects(i) = fields(i).GetValue(objects(i - 1))
+            End If
+        Next i
+        If UBound(s) = 0 Then
+            res.parent = parent
+        Else
+            res.parent = objects(UBound(objects) - 1)
+        End If
+        res.searchResult = objects(UBound(objects))
+        res.searchResultField = fields(UBound(fields))
+        Return res
+    End Function
+End Structure
