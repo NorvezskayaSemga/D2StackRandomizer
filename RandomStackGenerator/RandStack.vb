@@ -4679,39 +4679,77 @@ Public Structure ClassFieldsHandler
     Private Const searchFieldsSettings As Reflection.BindingFlags = Reflection.BindingFlags.Public Or Reflection.BindingFlags.Instance
 
     Public Structure GetFieldResult
+        ''' <summary>Найденная информация о поле</summary>
         Dim searchResultField As Reflection.FieldInfo
+        ''' <summary>Экземпляр объекта поля</summary>
         Dim searchResult As Object
-        Dim parent As Object
+        ''' <summary>Экземпляры цепочки объектов, в последнем из которых содержится искомое поле</summary>
+        Dim parents() As Object
+        ''' <summary>Если возникла ошибка, то она будет доступна здесь</summary>
+        Dim throwedExcetion As Exception
     End Structure
+
+    ''' <summary>Попытается найти поле в объекте и задать ему значение.</summary>
+    ''' <param name="parent">Обеъкт, в котором ищем поле</param>
+    ''' <param name="fieldValue">Задаваемое значение</param>
+    ''' <param name="fieldName">
+    ''' Имя поля.
+    ''' Через точку можно получить доступ к вложенным объектами.
+    ''' Пример:
+    ''' parent.childA.childB.childC.fieldName</param>
     Public Shared Sub SetFieldValue(ByRef parent As Object, ByRef fieldValue As Object, ByVal fieldName As String)
         Dim info As GetFieldResult = GetField(parent, fieldName)
-        info.searchResultField.SetValue(info.parent, fieldValue)
+        If Not IsNothing(info.searchResult) Then
+            info.searchResultField.SetValue(info.parents(UBound(info.parents)), fieldValue)
+        End If
     End Sub
+    ''' <summary>Попытается найти поле в объекте и получить его значение.</summary>
+    ''' <param name="parent">Обеъкт, в котором ищем поле</param>
+    ''' <param name="fieldName">
+    ''' Имя поля.
+    ''' Через точку можно получить доступ к вложенным объектами.
+    ''' Пример:
+    ''' parent.childA.childB.childC.fieldName</param>
     Public Shared Function GetFieldValue(ByRef parent As Object, ByVal fieldName As String) As Object
         Dim info As GetFieldResult = GetField(parent, fieldName)
-        Return info.searchResultField.GetValue(info.parent)
-    End Function
-    Public Shared Function GetField(ByRef parent As Object, ByVal fieldName As String) As GetFieldResult
-        Dim res As New GetFieldResult
-        Dim s() As String = fieldName.Split(CChar("."))
-        Dim objects(UBound(s)) As Object
-        Dim fields(UBound(s)) As Reflection.FieldInfo
-        For i As Integer = 0 To UBound(s) Step 1
-            If i = 0 Then
-                fields(i) = parent.GetType().GetField(s(i), searchFieldsSettings)
-                objects(i) = fields(i).GetValue(parent)
-            Else
-                fields(i) = objects(i - 1).GetType().GetField(s(i), searchFieldsSettings)
-                objects(i) = fields(i).GetValue(objects(i - 1))
-            End If
-        Next i
-        If UBound(s) = 0 Then
-            res.parent = parent
+        If Not IsNothing(info.searchResult) Then
+            Return info.searchResultField.GetValue(info.parents(UBound(info.parents)))
         Else
-            res.parent = objects(UBound(objects) - 1)
+            Return Nothing
         End If
-        res.searchResult = objects(UBound(objects))
-        res.searchResultField = fields(UBound(fields))
-        Return res
+    End Function
+    ''' <summary>Попытается найти поле в объекте и получить его значение.</summary>
+    ''' <param name="parent">Обеъкт, в котором ищем поле</param>
+    ''' <param name="fieldName">
+    ''' Имя поля.
+    ''' Через точку можно получить доступ к вложенным объектами.
+    ''' Пример:
+    ''' parent.childA.childB.childC.fieldName</param>
+    Public Shared Function GetField(ByRef parent As Object, ByVal fieldName As String) As GetFieldResult
+        Try
+            Dim s() As String = fieldName.Split(CChar("."))
+            Dim res As New GetFieldResult
+            ReDim res.parents(UBound(s))
+            Dim fields(UBound(s)) As Reflection.FieldInfo
+            For i As Integer = 0 To UBound(s) Step 1
+                If i = 0 Then
+                    fields(i) = parent.GetType().GetField(s(i), searchFieldsSettings)
+                    res.parents(i) = parent
+                    If i < UBound(s) Then
+                        res.parents(i + 1) = fields(i).GetValue(parent)
+                    End If
+                Else
+                    fields(i) = res.parents(i).GetType().GetField(s(i), searchFieldsSettings)
+                    If i < UBound(s) Then
+                        res.parents(i + 1) = fields(i).GetValue(res.parents(i))
+                    End If
+                End If
+            Next i
+            res.searchResultField = fields(UBound(fields))
+            res.searchResult = fields(UBound(s)).GetValue(res.parents(UBound(s)))
+            Return res
+        Catch ex As Exception
+            Return New GetFieldResult With {.parents = Nothing, .searchResult = Nothing, .searchResultField = Nothing, .throwedExcetion = ex}
+        End Try
     End Function
 End Structure
