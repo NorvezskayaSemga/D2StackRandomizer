@@ -3687,46 +3687,68 @@ Public Class GenDefaultValues
         Dim itemTypeName As New Dictionary(Of Integer, String)
         Call ParseItemTypes(itemTypeID, itemTypeName)
         Call ParseRaces(linked_Races, RaceNumberToRaceChar)
-        Call DefineRaces()
+
+        '#####################
+        Dim allRaces() As String = ValueConverter.TxtSplit(Races)
+        Dim allLords() As String = ValueConverter.TxtSplit(Lords)
+
+        Dim lordsRaceID As New List(Of Integer)
+        For Each line As String In allLords
+            Dim s As Integer = linked_Races.Item(line.Split(CChar(" "))(1))
+            If Not lordsRaceID.Contains(s) Then lordsRaceID.Add(s)
+        Next line
+        ReDim playableRaces(-1), neutralRaces(-1)
+        For Each line As String In allRaces
+            Dim s As String = line.Split(CChar(" "))(0)
+            If lordsRaceID.Contains(linked_Races.Item(s.ToUpper)) Then
+                ReDim Preserve playableRaces(playableRaces.Length)
+                playableRaces(UBound(playableRaces)) = s.ToUpper
+            Else
+                ReDim Preserve neutralRaces(neutralRaces.Length)
+                neutralRaces(UBound(neutralRaces)) = s.ToUpper
+            End If
+        Next line
+
+        Dim capitalRace() As String = ValueConverter.TxtSplit(Capitals)
+        generatorRaceToGameRace = New Dictionary(Of String, String)
+        generatorRaceToCapitalID = New Dictionary(Of String, String)
+        capitalToGeneratorRace = New Dictionary(Of String, String)
+        gameRaceToGeneratorRace = New Dictionary(Of String, String)
+        For Each line As String In capitalRace
+            Dim s() As String = line.Split(CChar(" "))
+            Dim cap As String = s(0).ToUpper
+            Dim genR As String = RaceNumberToRaceChar.Item(linked_Races.Item(s(1).ToUpper))
+            Dim gameR As String = s(2).ToUpper
+            generatorRaceToGameRace.Add(genR, gameR)
+            generatorRaceToCapitalID.Add(genR, cap)
+            capitalToGeneratorRace.Add(cap, genR)
+            gameRaceToGeneratorRace.Add(gameR, genR)
+        Next line
+        '#####################
 
         Dim RConstants As Dictionary(Of String, String) = PropertiesArrayToDictionary(ValueConverter.TxtSplit(Constants(), "/"))
         Dim DConstants As Dictionary(Of String, String) = PropertiesArrayToDictionary(ValueConverter.TxtSplit(My.Resources.Constants, "/"))
 
-        'common
-        Call SetProperty(defaultSigma, "defaultSigma", RConstants, DConstants)
+        Dim HasSynonyms, sendLinkedRaces As New List(Of String)
+        HasSynonyms.AddRange({"StackRaceChance".ToUpper})
+        sendLinkedRaces.AddRange({"StackRaceChance".ToUpper})
 
-        'units
-        Call SetProperty(expBarDispersion, "expBarDispersion", RConstants, DConstants)
-        Call SetProperty(giantUnitsExpMultiplier, "giantUnitsExpMultiplier", RConstants, DConstants)
-        Call SetProperty(smallUnitsExpMultiplier, "smallUnitsExpMultiplier", RConstants, DConstants)
-        Call SetProperty(weakerUnitsRadius, "weakerUnitsRadius", RConstants, DConstants)
 
-        'loot
-        Call SetProperty(Global_ItemType_ChanceMultiplier, "Global_ItemType_ChanceMultiplier", RConstants, DConstants)
-        Call SetProperty(JewelItemsCostDevider, "JewelItemsCostDevider", RConstants, DConstants)
-        Call SetProperty(NonJewelItemsCostDevider, "NonJewelItemsCostDevider", RConstants, DConstants)
-        Call SetProperty(LootCostDispersion, "LootCostDispersion", RConstants, DConstants)
-        Call SetProperty(Global_AddedItem_ChanceMultiplier, "Global_AddedItem_ChanceMultiplier", RConstants, DConstants)
-        Call SetProperty(Local_AddedItemType_ChanceMultiplier, "Local_AddedItemType_ChanceMultiplier", RConstants, DConstants, itemTypeID, False)
-        Call SetProperty(SameItemsAmountRestriction, "SameItemsAmountRestriction", RConstants, DConstants, itemTypeID, False)
-        Call SetProperty(SameItemsTypeAmountRestriction, "SameItemsTypeAmountRestriction", RConstants, DConstants, itemTypeID, False)
-        Call SetProperty(ThisBag_SameItems_ChanceMultiplier, "ThisBag_SameItems_ChanceMultiplier", RConstants, DConstants, itemTypeID, False)
-        Call SetProperty(ThisBag_SameItemsType_ChanceMultiplier, "ThisBag_SameItemsType_ChanceMultiplier", RConstants, DConstants, itemTypeID, False)
-        Call SetProperty(Local_SameItem_ChanceMultiplier, "Local_SameItem_ChanceMultiplier", RConstants, DConstants, itemTypeID, False)
-        Call SetProperty(AddedItemTypeSearchRadius, "AddedItemTypeSearchRadius", RConstants, DConstants)
-        Call SetProperty(CostBarExcessLimit, "CostBarExcessLimit", RConstants, DConstants)
-        Call SetProperty(LootCostExcessLimit, "LootCostExcessLimit", RConstants, DConstants)
-        Call SetProperty(MinRuinsLootCostMultiplier, "MinRuinsLootCostMultiplier", RConstants, DConstants)
+        Dim fields() As String = ClassFieldsHandler.GetFieldsList(Me, {"myLog", "linked_Races", "RaceNumberToRaceChar", "playableRaces", "neutralRaces", _
+                                                                       "generatorRaceToGameRace", "generatorRaceToCapitalID", "capitalToGeneratorRace", _
+                                                                       "gameRaceToGeneratorRace"})
 
-        'map
-        Call SetProperty(minLocationRadiusAtAll, "minLocationRadiusAtAll", RConstants, DConstants)
-        Call SetProperty(smallLocationRadius, "smallLocationRadius", RConstants, DConstants)
+        For Each f As String In fields
+            If sendLinkedRaces.Contains(f.ToUpper) Then
+                Call SetProperty(ClassFieldsHandler.GetField(Me, f), RConstants, DConstants, linked_Races, HasSynonyms.Contains(f.ToUpper))
+            Else
+                Call SetProperty(ClassFieldsHandler.GetField(Me, f), RConstants, DConstants, itemTypeID, HasSynonyms.Contains(f.ToUpper))
+            End If
+        Next f
 
         Dim commonRacesBlock As String = ""
         Call SetProperty(commonRacesBlock, "commonRacesBlock", RConstants, DConstants)
-        Call SetProperty(LocRacesBlocks, "LocRacesBlocks", RConstants, DConstants)
-        Call SetProperty(StackRaceChance, "StackRaceChance", RConstants, DConstants, linked_Races, True)
-
+        
         For i As Integer = 0 To UBound(LocRacesBlocks) Step 1
             If Not LocRacesBlocks(i).EndsWith(":") Then LocRacesBlocks(i) &= ","
             LocRacesBlocks(i) = (LocRacesBlocks(i) & commonRacesBlock).Replace("*", ",")
@@ -3735,63 +3757,81 @@ Public Class GenDefaultValues
         If Not IsNothing(log) AndAlso log.IsEnabled Then
 
             Dim spaces As String = "       "
+            Dim splitValue As New List(Of String)
+            Dim delimiter As Char
+            splitValue.AddRange({"Global_ItemType_ChanceMultiplier".ToUpper})
 
-            Dim AddedItemTypeChanceMultiplierStr As String = ""
             Dim StackRaceChanceStr As String = ""
             For Each i As Integer In RaceNumberToRaceChar.Keys
                 StackRaceChanceStr &= vbNewLine & spaces & _
                   RaceNumberToRaceChar.Item(i) & " (" & i & ") = " & StackRaceChance(i)
             Next i
 
-            'common
-            log.Add("defaultSigma = " & defaultSigma)
-
-            'units
-            log.Add("expBarDispersion = " & expBarDispersion)
-            log.Add("giantUnitsExpMultiplier = " & giantUnitsExpMultiplier)
-            log.Add("smallUnitsExpMultiplier = " & smallUnitsExpMultiplier)
-            log.Add("weakerUnitsRadius = " & weakerUnitsRadius)
-
-            'loot
-            log.Add("Global_ItemTypeChanceMultiplier = " & vbNewLine & String.Join(vbNewLine & spaces, Global_ItemType_ChanceMultiplier.Split(CChar(";"))))
-            log.Add("JewelItemsCostDevider = " & JewelItemsCostDevider)
-            log.Add("NonJewelItemsCostDevider = " & NonJewelItemsCostDevider)
-            log.Add("LootCostDispersion = " & LootCostDispersion)
-            log.Add("SameItemsAmountRestriction = " & PrintItemsSettings(SameItemsAmountRestriction, itemTypeName, spaces))
-            log.Add("SameItemsTypeAmountRestriction = " & PrintItemsSettings(SameItemsTypeAmountRestriction, itemTypeName, spaces))
-            log.Add("Local_SameItem_ChanceMultiplier = " & PrintItemsSettings(Local_SameItem_ChanceMultiplier, itemTypeName, spaces))
-            log.Add("ThisBag_SameItems_ChanceMultiplier = " & PrintItemsSettings(ThisBag_SameItems_ChanceMultiplier, itemTypeName, spaces))
-            log.Add("ThisBag_SameItemsType_ChanceMultiplier = " & PrintItemsSettings(ThisBag_SameItemsType_ChanceMultiplier, itemTypeName, spaces))
-            log.Add("Global_AddedItem_ChanceMultiplier = " & Global_AddedItem_ChanceMultiplier)
-            log.Add("AddedItemTypeChanceMultiplier = " & PrintItemsSettings(Local_AddedItemType_ChanceMultiplier, itemTypeName, spaces))
-            log.Add("AddedItemTypeSearchRadius = " & AddedItemTypeSearchRadius)
-            log.Add("CostBarExcessLimit = " & CostBarExcessLimit)
-            log.Add("LootCostExcessLimit = " & LootCostExcessLimit)
-            log.Add("MinRuinsLootCostMultiplier = " & MinRuinsLootCostMultiplier)
-
-            'map
-            log.Add("minLocationRadiusAtAll = " & minLocationRadiusAtAll)
-            log.Add("smallLocationRadius = " & smallLocationRadius)
-            log.Add("LocRacesBlocks = " & vbNewLine & spaces & String.Join(vbNewLine & spaces, LocRacesBlocks))
-            log.Add("StackRaceChance = " & StackRaceChanceStr)
+            For Each f As String In fields
+                If splitValue.Contains(f.ToUpper) Then
+                    delimiter = CChar(";")
+                Else
+                    delimiter = CChar("")
+                End If
+                log.Add(PrintItemsSettings(ClassFieldsHandler.GetField(Me, f), itemTypeName, spaces, delimiter))
+            Next f
         End If
 
     End Sub
-    Private Function PrintItemsSettings(ByRef settings() As Double, ByRef itemTypeName As Dictionary(Of Integer, String), ByRef spaces As String) As String
-        Dim result As String = ""
-        For Each i As Integer In itemTypeName.Keys
-            result &= vbNewLine & spaces & _
-              itemTypeName.Item(i) & " = " & settings(i)
+
+    Private Function PrintItemsSettings(ByRef name As String, ByRef settings() As String, ByRef spaces As String) As String
+        Dim result As String = name & " ="
+        For Each i As String In settings
+            result &= vbNewLine & spaces & i
         Next i
         Return result
     End Function
-    Private Function PrintItemsSettings(ByRef settings() As Integer, ByRef itemTypeName As Dictionary(Of Integer, String), ByRef spaces As String) As String
-        Dim result As String = ""
-        For Each i As Integer In itemTypeName.Keys
-            result &= vbNewLine & spaces & _
-              itemTypeName.Item(i) & " = " & settings(i)
+    Private Function PrintItemsSettings(ByRef name As String, ByRef settings() As Integer, ByRef itemTypeName As Dictionary(Of Integer, String), ByRef spaces As String) As String
+        Dim result As String = name & " ="
+        Dim keys(itemTypeName.Count - 1) As Integer
+        itemTypeName.Keys.CopyTo(keys, 0)
+        For Each i As Integer In keys
+            result &= vbNewLine & spaces & PrintItemsSettings(itemTypeName.Item(i), settings(i))
         Next i
         Return result
+    End Function
+    Private Function PrintItemsSettings(ByRef name As String, ByRef settings() As Double, ByRef itemTypeName As Dictionary(Of Integer, String), ByRef spaces As String) As String
+        Dim result As String = name & " ="
+        Dim keys(itemTypeName.Count - 1) As Integer
+        itemTypeName.Keys.CopyTo(keys, 0)
+        For Each i As Integer In keys
+            result &= vbNewLine & spaces & PrintItemsSettings(itemTypeName.Item(i), settings(i))
+        Next i
+        Return result
+    End Function
+    Private Function PrintItemsSettings(ByRef name As String, ByRef value As String) As String
+        Return name & " = " & value
+    End Function
+    Private Function PrintItemsSettings(ByRef name As String, ByRef value As Integer) As String
+        Return PrintItemsSettings(name, value.ToString)
+    End Function
+    Private Function PrintItemsSettings(ByRef name As String, ByRef value As Double) As String
+        Return PrintItemsSettings(name, value.ToString)
+    End Function
+    Private Function PrintItemsSettings(ByRef valueField As ClassFieldsHandler.GetFieldResult, ByRef itemTypeName As Dictionary(Of Integer, String), ByRef spaces As String, Optional ByRef splitBy As Char = CChar("")) As String
+        If valueField.searchResultField.FieldType.FullName = GetType(String).FullName Then
+            Dim val As String = CType(valueField.searchResultField.GetValue(valueField.LastParent), String)
+            If splitBy = CChar("") Then
+                Return PrintItemsSettings(valueField.searchResultField.Name, val)
+            Else
+                Return PrintItemsSettings(valueField.searchResultField.Name, val.Split(splitBy), spaces)
+            End If
+        ElseIf valueField.searchResultField.FieldType.FullName = GetType(String()).FullName Then
+            Return PrintItemsSettings(valueField.searchResultField.Name, CType(valueField.searchResultField.GetValue(valueField.LastParent), String()), spaces)
+        ElseIf valueField.searchResultField.FieldType.FullName = GetType(Double).FullName Then
+            Return PrintItemsSettings(valueField.searchResultField.Name, CType(valueField.searchResultField.GetValue(valueField.LastParent), Double))
+        ElseIf valueField.searchResultField.FieldType.FullName = GetType(Double()).FullName Then
+            Return PrintItemsSettings(valueField.searchResultField.Name, CType(valueField.searchResultField.GetValue(valueField.LastParent), Double()), itemTypeName, spaces)
+        ElseIf valueField.searchResultField.FieldType.FullName = GetType(Integer()).FullName Then
+            Return PrintItemsSettings(valueField.searchResultField.Name, CType(valueField.searchResultField.GetValue(valueField.LastParent), Integer()), itemTypeName, spaces)
+        Else
+            Throw New Exception("Unexpected variable type")
+        End If
     End Function
     Private Function ChangeToSynonymicNames(ByRef input As Dictionary(Of String, String), _
                                             ByRef synonyms As Dictionary(Of String, Integer)) As Dictionary(Of String, String)
@@ -3822,13 +3862,13 @@ Public Class GenDefaultValues
             Throw New Exception("Unexpected property name " & name)
         End If
     End Function
-    Private Sub SetProperty(ByRef output As Double, ByRef name As String, ByRef readValues As Dictionary(Of String, String), ByRef defaultValues As Dictionary(Of String, String))
+    Private Function SetProperty(ByRef output As Double, ByRef name As String, ByRef readValues As Dictionary(Of String, String), ByRef defaultValues As Dictionary(Of String, String)) As Double
         output = ValueConverter.StrToDbl(GetProperty(name, readValues, defaultValues))
-    End Sub
-    Private Sub SetProperty(ByRef output() As Double, ByRef name As String, ByRef readValues As Dictionary(Of String, String), _
-                            ByRef defaultValues As Dictionary(Of String, String), ByRef nameToID As Dictionary(Of String, Integer), _
-                            ByRef HasSynonyms As Boolean)
-
+        Return output
+    End Function
+    Private Function SetProperty(ByRef output() As Double, ByRef name As String, ByRef readValues As Dictionary(Of String, String), _
+                                 ByRef defaultValues As Dictionary(Of String, String), ByRef nameToID As Dictionary(Of String, Integer), _
+                                 ByRef HasSynonyms As Boolean) As Double()
         Dim r, d As Dictionary(Of String, String)
         r = Nothing : d = Nothing
         Dim nonsynomical As Dictionary(Of String, Integer) = Nothing
@@ -3848,10 +3888,11 @@ Public Class GenDefaultValues
                 End If
             Next i
         End If
-    End Sub
-    Private Sub SetProperty(ByRef output() As Integer, ByRef name As String, ByRef readValues As Dictionary(Of String, String), _
-                            ByRef defaultValues As Dictionary(Of String, String), ByRef nameToID As Dictionary(Of String, Integer), _
-                            ByRef HasSynonyms As Boolean)
+        Return output
+    End Function
+    Private Function SetProperty(ByRef output() As Integer, ByRef name As String, ByRef readValues As Dictionary(Of String, String), _
+                                 ByRef defaultValues As Dictionary(Of String, String), ByRef nameToID As Dictionary(Of String, Integer), _
+                                 ByRef HasSynonyms As Boolean) As Integer()
 
         Dim r, d As Dictionary(Of String, String)
         r = Nothing : d = Nothing
@@ -3872,7 +3913,8 @@ Public Class GenDefaultValues
                 End If
             Next i
         End If
-    End Sub
+        Return output
+    End Function
     Private Sub SetPropertyMakeIn(ByRef nonsynomical As Dictionary(Of String, Integer), ByRef r As Dictionary(Of String, String), ByRef d As Dictionary(Of String, String), _
                                   ByRef name As String, ByRef readValues As Dictionary(Of String, String), _
                                   ByRef defaultValues As Dictionary(Of String, String), ByRef nameToID As Dictionary(Of String, Integer), _
@@ -3891,11 +3933,41 @@ Public Class GenDefaultValues
             nonsynomical = nameToID
         End If
     End Sub
-    Private Sub SetProperty(ByRef output As String, ByRef name As String, ByRef readValues As Dictionary(Of String, String), ByRef defaultValues As Dictionary(Of String, String))
+    Private Function SetProperty(ByRef output As String, ByRef name As String, ByRef readValues As Dictionary(Of String, String), ByRef defaultValues As Dictionary(Of String, String)) As String
         output = ValueConverter.StrToDblStr(GetProperty(name, readValues, defaultValues))
-    End Sub
-    Private Sub SetProperty(ByRef output() As String, ByRef name As String, ByRef readValues As Dictionary(Of String, String), ByRef defaultValues As Dictionary(Of String, String))
+        Return output
+    End Function
+    Private Function SetProperty(ByRef output() As String, ByRef name As String, ByRef readValues As Dictionary(Of String, String), ByRef defaultValues As Dictionary(Of String, String)) As String()
         output = GetProperty(name, readValues, defaultValues).ToUpper.Split(CChar(";"))
+        Return output
+    End Function
+    Private Sub SetProperty(ByRef valueField As ClassFieldsHandler.GetFieldResult, _
+                            ByRef readValues As Dictionary(Of String, String), ByRef defaultValues As Dictionary(Of String, String), _
+                            ByRef nameToID As Dictionary(Of String, Integer), ByRef HasSynonyms As Boolean)
+
+        If valueField.searchResultField.FieldType.FullName = GetType(String).FullName Then
+            valueField.searchResultField.SetValue(valueField.LastParent, SetProperty(CType(valueField.searchResult, String), _
+                                                                                     valueField.searchResultField.Name, _
+                                                                                     readValues, defaultValues))
+        ElseIf valueField.searchResultField.FieldType.FullName = GetType(String()).FullName Then
+            valueField.searchResultField.SetValue(valueField.LastParent, SetProperty(CType(valueField.searchResult, String()), _
+                                                                                     valueField.searchResultField.Name, _
+                                                                                     readValues, defaultValues))
+        ElseIf valueField.searchResultField.FieldType.FullName = GetType(Double).FullName Then
+            valueField.searchResultField.SetValue(valueField.LastParent, SetProperty(CType(valueField.searchResult, Double), _
+                                                                                     valueField.searchResultField.Name, _
+                                                                                     readValues, defaultValues))
+        ElseIf valueField.searchResultField.FieldType.FullName = GetType(Double()).FullName Then
+            valueField.searchResultField.SetValue(valueField.LastParent, SetProperty(CType(valueField.searchResult, Double()), _
+                                                                                     valueField.searchResultField.Name, _
+                                                                                     readValues, defaultValues, nameToID, HasSynonyms))
+        ElseIf valueField.searchResultField.FieldType.FullName = GetType(Integer()).FullName Then
+            valueField.searchResultField.SetValue(valueField.LastParent, SetProperty(CType(valueField.searchResult, Integer()), _
+                                                                                     valueField.searchResultField.Name, _
+                                                                                     readValues, defaultValues, nameToID, HasSynonyms))
+        Else
+            Throw New Exception("Unexpected variable type")
+        End If
     End Sub
 
     Protected Friend Sub ParseRaces(ByRef outRaces As Dictionary(Of String, Integer), _
@@ -3921,45 +3993,8 @@ Public Class GenDefaultValues
         Next i
     End Sub
 
-    Protected Friend Sub DefineRaces()
-        Dim allRaces() As String = ValueConverter.TxtSplit(Races)
-        Dim allLords() As String = ValueConverter.TxtSplit(Lords)
-
-        Dim lordsRaceID As New List(Of Integer)
-        For Each line As String In allLords
-            Dim s As Integer = linked_Races.Item(line.Split(CChar(" "))(1))
-            If Not lordsRaceID.Contains(s) Then lordsRaceID.Add(s)
-        Next line
-        ReDim playableRaces(-1), neutralRaces(-1)
-        For Each line As String In allRaces
-            Dim s As String = line.Split(CChar(" "))(0)
-            If lordsRaceID.Contains(linked_Races.Item(s.ToUpper)) Then
-                ReDim Preserve PlayableRaces(PlayableRaces.Length)
-                PlayableRaces(UBound(PlayableRaces)) = s.ToUpper
-            Else
-                ReDim Preserve NeutralRaces(NeutralRaces.Length)
-                NeutralRaces(UBound(NeutralRaces)) = s.ToUpper
-            End If
-        Next line
-
-        Dim capitalRace() As String = ValueConverter.TxtSplit(Capitals)
-        generatorRaceToGameRace = New Dictionary(Of String, String)
-        generatorRaceToCapitalID = New Dictionary(Of String, String)
-        capitalToGeneratorRace = New Dictionary(Of String, String)
-        gameRaceToGeneratorRace = New Dictionary(Of String, String)
-        For Each line As String In capitalRace
-            Dim s() As String = line.Split(CChar(" "))
-            Dim cap As String = s(0).ToUpper
-            Dim genR As String = RaceNumberToRaceChar.Item(linked_Races.Item(s(1).ToUpper))
-            Dim gameR As String = s(2).ToUpper
-            generatorRaceToGameRace.Add(genR, gameR)
-            generatorRaceToCapitalID.Add(genR, cap)
-            capitalToGeneratorRace.Add(cap, genR)
-            gameRaceToGeneratorRace.Add(gameR, genR)
-        Next line
-    End Sub
-
     Public Const myVersion As String = "30.03.2021.19.40"
+
     Public Shared Function PrintVersion() As String
         Return "Semga's DLL version: " & myVersion
     End Function
@@ -3973,42 +4008,42 @@ Public Class GenDefaultValues
     Public Const emptyItem As String = "G000000000"
 
     'common
-    Public Property defaultSigma As Double
-    Public Property playableRaces As String()
-    Public Property neutralRaces As String()
-    Public Property generatorRaceToGameRace As Dictionary(Of String, String)
-    Public Property generatorRaceToCapitalID As Dictionary(Of String, String)
-    Public Property capitalToGeneratorRace As Dictionary(Of String, String)
-    Public Property gameRaceToGeneratorRace As Dictionary(Of String, String)
+    Public ReadOnly defaultSigma As Double
+    Public ReadOnly playableRaces As String()
+    Public ReadOnly neutralRaces As String()
+    Public ReadOnly generatorRaceToGameRace As Dictionary(Of String, String)
+    Public ReadOnly generatorRaceToCapitalID As Dictionary(Of String, String)
+    Public ReadOnly capitalToGeneratorRace As Dictionary(Of String, String)
+    Public ReadOnly gameRaceToGeneratorRace As Dictionary(Of String, String)
 
     'units
-    Public Property expBarDispersion As Double
-    Public Property giantUnitsExpMultiplier As Double
-    Public Property smallUnitsExpMultiplier As Double
-    Public Property weakerUnitsRadius As Double
+    Public ReadOnly expBarDispersion As Double
+    Public ReadOnly giantUnitsExpMultiplier As Double
+    Public ReadOnly smallUnitsExpMultiplier As Double
+    Public ReadOnly weakerUnitsRadius As Double
 
     'loot
-    Public Property JewelItemsCostDevider As Double
-    Public Property NonJewelItemsCostDevider As Double
-    Public Property LootCostDispersion As Double
-    Public Property Global_ItemType_ChanceMultiplier As String
-    Public Property Global_AddedItem_ChanceMultiplier As Double
-    Public Property Local_AddedItemType_ChanceMultiplier As Double()
-    Public Property AddedItemTypeSearchRadius As Double
-    Public Property SameItemsAmountRestriction As Integer()
-    Public Property ThisBag_SameItems_ChanceMultiplier As Double()
-    Public Property SameItemsTypeAmountRestriction As Integer()
-    Public Property ThisBag_SameItemsType_ChanceMultiplier As Double()
-    Public Property Local_SameItem_ChanceMultiplier As Double()
-    Public Property CostBarExcessLimit As Double
-    Public Property LootCostExcessLimit As Double
-    Public Property MinRuinsLootCostMultiplier As Double
+    Public ReadOnly JewelItemsCostDevider As Double
+    Public ReadOnly NonJewelItemsCostDevider As Double
+    Public ReadOnly LootCostDispersion As Double
+    Public ReadOnly Global_ItemType_ChanceMultiplier As String
+    Public ReadOnly Global_AddedItem_ChanceMultiplier As Double
+    Public ReadOnly Local_AddedItemType_ChanceMultiplier As Double()
+    Public ReadOnly AddedItemTypeSearchRadius As Double
+    Public ReadOnly SameItemsAmountRestriction As Integer()
+    Public ReadOnly ThisBag_SameItems_ChanceMultiplier As Double()
+    Public ReadOnly SameItemsTypeAmountRestriction As Integer()
+    Public ReadOnly ThisBag_SameItemsType_ChanceMultiplier As Double()
+    Public ReadOnly Local_SameItem_ChanceMultiplier As Double()
+    Public ReadOnly CostBarExcessLimit As Double
+    Public ReadOnly LootCostExcessLimit As Double
+    Public ReadOnly MinRuinsLootCostMultiplier As Double
 
     'map
-    Public Property minLocationRadiusAtAll As Double
-    Public Property smallLocationRadius As Double
-    Public Property LocRacesBlocks As String()
-    Public Property StackRaceChance As Double()
+    Public ReadOnly minLocationRadiusAtAll As Double
+    Public ReadOnly smallLocationRadius As Double
+    Public ReadOnly LocRacesBlocks As String()
+    Public ReadOnly StackRaceChance As Double()
     Public Const randomRaceID As Integer = -10001
 
     'ключевые слова
@@ -4676,18 +4711,26 @@ End Class
 
 Public Structure ClassFieldsHandler
 
-    Private Const searchFieldsSettings As Reflection.BindingFlags = Reflection.BindingFlags.Public Or Reflection.BindingFlags.Instance
+    Private Const defaultSearchFieldsSettings As Reflection.BindingFlags = Reflection.BindingFlags.Public Or Reflection.BindingFlags.Instance Or Reflection.BindingFlags.IgnoreCase
 
-    Public Structure GetFieldResult
+    Public Class GetFieldResult
         ''' <summary>Найденная информация о поле</summary>
-        Dim searchResultField As Reflection.FieldInfo
+        Public searchResultField As Reflection.FieldInfo
         ''' <summary>Экземпляр объекта поля</summary>
-        Dim searchResult As Object
-        ''' <summary>Экземпляры цепочки объектов, в последнем из которых содержится искомое поле</summary>
-        Dim parents() As Object
+        Public searchResult As Object
+        ''' <summary>Экземпляры цепочки объектов, в последнем из которых содержится искомый объект</summary>
+        Public parents() As Object
         ''' <summary>Если возникла ошибка, то она будет доступна здесь</summary>
-        Dim throwedExcetion As Exception
-    End Structure
+        Public throwedExcetion As Exception
+
+        Public Function LastParent() As Object
+            If Not IsNothing(parents) Then
+                Return parents(UBound(parents))
+            Else
+                Return Nothing
+            End If
+        End Function
+    End Class
 
     ''' <summary>Попытается найти поле в объекте и задать ему значение.</summary>
     ''' <param name="parent">Обеъкт, в котором ищем поле</param>
@@ -4697,7 +4740,7 @@ Public Structure ClassFieldsHandler
     ''' Через точку можно получить доступ к вложенным объектами.
     ''' Пример:
     ''' parent.childA.childB.childC.fieldName</param>
-    Public Shared Sub SetFieldValue(ByRef parent As Object, ByRef fieldValue As Object, ByVal fieldName As String)
+    Public Shared Sub SetFieldValue(parent As Object, ByRef fieldValue As Object, ByVal fieldName As String)
         Dim info As GetFieldResult = GetField(parent, fieldName)
         If Not IsNothing(info.searchResult) Then
             info.searchResultField.SetValue(info.parents(UBound(info.parents)), fieldValue)
@@ -4710,7 +4753,7 @@ Public Structure ClassFieldsHandler
     ''' Через точку можно получить доступ к вложенным объектами.
     ''' Пример:
     ''' parent.childA.childB.childC.fieldName</param>
-    Public Shared Function GetFieldValue(ByRef parent As Object, ByVal fieldName As String) As Object
+    Public Shared Function GetFieldValue(parent As Object, ByVal fieldName As String) As Object
         Dim info As GetFieldResult = GetField(parent, fieldName)
         If Not IsNothing(info.searchResult) Then
             Return info.searchResultField.GetValue(info.parents(UBound(info.parents)))
@@ -4725,7 +4768,8 @@ Public Structure ClassFieldsHandler
     ''' Через точку можно получить доступ к вложенным объектами.
     ''' Пример:
     ''' parent.childA.childB.childC.fieldName</param>
-    Public Shared Function GetField(ByRef parent As Object, ByVal fieldName As String) As GetFieldResult
+    ''' <param name="searchSettings">Настройки поиска</param>
+    Public Shared Function GetField(parent As Object, ByVal fieldName As String, Optional ByVal searchSettings As Reflection.BindingFlags = defaultSearchFieldsSettings) As GetFieldResult
         Try
             Dim s() As String = fieldName.Split(CChar("."))
             Dim res As New GetFieldResult
@@ -4733,13 +4777,13 @@ Public Structure ClassFieldsHandler
             Dim fields(UBound(s)) As Reflection.FieldInfo
             For i As Integer = 0 To UBound(s) Step 1
                 If i = 0 Then
-                    fields(i) = parent.GetType().GetField(s(i), searchFieldsSettings)
+                    fields(i) = parent.GetType().GetField(s(i), searchSettings)
                     res.parents(i) = parent
                     If i < UBound(s) Then
                         res.parents(i + 1) = fields(i).GetValue(parent)
                     End If
                 Else
-                    fields(i) = res.parents(i).GetType().GetField(s(i), searchFieldsSettings)
+                    fields(i) = res.parents(i).GetType().GetField(s(i), searchSettings)
                     If i < UBound(s) Then
                         res.parents(i + 1) = fields(i).GetValue(res.parents(i))
                     End If
@@ -4752,4 +4796,34 @@ Public Structure ClassFieldsHandler
             Return New GetFieldResult With {.parents = Nothing, .searchResult = Nothing, .searchResultField = Nothing, .throwedExcetion = ex}
         End Try
     End Function
+
+    ''' <summary>Вернет имена полей в объекте.</summary>
+    ''' <param name="parent">Обеъкт, в котором ищем поля</param>
+    ''' <param name="Ignore">Имена полей, которые не попадут в список. Регистр игнорируется</param>
+    ''' <param name="searchSettings">Настройки поиска</param>
+    Public Shared Function GetFieldsList(parent As Object, Optional ByRef Ignore() As String = Nothing, Optional ByVal searchSettings As Reflection.BindingFlags = defaultSearchFieldsSettings) As String()
+        If IsNothing(parent) Then Return Nothing
+        Dim all() As Reflection.FieldInfo = parent.GetType.GetFields(searchSettings)
+        Dim result(UBound(all)) As String
+        Dim n As Integer = -1
+        Dim IList As List(Of String) = Nothing
+        If Not IsNothing(Ignore) Then IList = ToUpperedList(Ignore)
+        For Each item As Reflection.FieldInfo In all
+            If IsNothing(IList) OrElse Not IList.Contains(item.Name.ToUpper) Then
+                n += 1
+                result(n) = item.Name
+            End If
+        Next item
+        If n < UBound(result) Then ReDim Preserve result(n)
+        Return result
+    End Function
+
+    Private Shared Function ToUpperedList(ByRef a() As String) As List(Of String)
+        Dim IList As New List(Of String)
+        For Each item As String In a
+            IList.Add(item.ToUpper)
+        Next item
+        Return IList
+    End Function
 End Structure
+

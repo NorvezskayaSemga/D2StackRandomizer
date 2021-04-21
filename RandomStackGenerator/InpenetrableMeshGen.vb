@@ -983,11 +983,11 @@ Public Class ImpenetrableMeshGen
                 Return res
             End Function
 
-            Public Structure ValueRange
+            Public Class ValueRange
                 ''' <summary>Минимальное значение</summary>
-                Dim min As Double
+                Public min As Double
                 ''' <summary>Максимальное значение</summary>
-                Dim max As Double
+                Public max As Double
 
                 Public Function RandomValue(ByRef randomizer As RndValueGen) As Double
                     Return GenSettings.LocationGenSetting.RandomValue(min, max, randomizer)
@@ -997,7 +997,7 @@ Public Class ImpenetrableMeshGen
                     Return New ValueRange With {.min = v.min, _
                                                 .max = v.max}
                 End Function
-            End Structure
+            End Class
 
             Public Shared Function RandomValue(ByRef min As Double, ByRef max As Double, ByRef randomizer As RndValueGen) As Double
                 If min > max Then Throw New Exception("Один из параметров в шаблоне задан неверно. Минимальное значение (" & min & ") больше максимального (" & max & ")")
@@ -1069,19 +1069,20 @@ Public Class ImpenetrableMeshGen
                 Dim maxData As Dictionary(Of String, String) = Map.ReadBlock(txt, GenDefaultValues.wTemplate_LocationKeyword, _
                                                                              blockNumber, 2, True, baseFilePath, True)
 
+                Dim d() As Dictionary(Of String, String) = {minData, maxData}
+                Dim m() As String = {"min", "max"}
+                Dim v() As Map.SettingsLoc = {minValues, maxValues}
+
                 posX = New ValueRange
                 posY = New ValueRange
                 AppearanceChance = New ValueRange
 
-                Call Map.ReadValue("AppearanceChance", AppearanceChance.min, minData, GenDefaultValues.wTemplate_LocationKeyword)
-                Call Map.ReadValue("posX", posX.min, minData, GenDefaultValues.wTemplate_LocationKeyword)
-                Call Map.ReadValue("posY", posY.min, minData, GenDefaultValues.wTemplate_LocationKeyword)
-                Call Map.ReadValue("RaceCities", minValues.RaceCities, minData, GenDefaultValues.wTemplate_LocationKeyword, CChar(";"))
-
-                Call Map.ReadValue("AppearanceChance", AppearanceChance.max, maxData, GenDefaultValues.wTemplate_LocationKeyword)
-                Call Map.ReadValue("posX", posX.max, maxData, GenDefaultValues.wTemplate_LocationKeyword)
-                Call Map.ReadValue("posY", posY.max, maxData, GenDefaultValues.wTemplate_LocationKeyword)
-                Call Map.ReadValue("RaceCities", maxValues.RaceCities, maxData, GenDefaultValues.wTemplate_LocationKeyword, CChar(";"))
+                For b As Integer = 0 To UBound(m) Step 1
+                    For Each c As String In {"AppearanceChance", "posX", "posY"}
+                        Call Map.ReadValue(ClassFieldsHandler.GetField(Me, c & "." & m(b)), d(b), GenDefaultValues.wTemplate_LocationKeyword, CChar(";"), c)
+                    Next c
+                    Call Map.ReadValue(ClassFieldsHandler.GetField(v(b), "RaceCities"), d(b), GenDefaultValues.wTemplate_LocationKeyword, CChar(";"))
+                Next b
 
             End Sub
 
@@ -1137,7 +1138,6 @@ Public Class ImpenetrableMeshGen
             Return Map.ReadBlock(txt, GenDefaultValues.wTemplate_CreationKeyword, 1, 1, True, baseFilePath, True)
         End Function
 
-
         Public Shared Function Copy(ByRef v As GenSettings) As GenSettings
             Dim r As New GenSettings
             r.genMode = v.genMode
@@ -1147,6 +1147,63 @@ Public Class ImpenetrableMeshGen
             r.template_settLoc = Map.SettingsLoc.Copy(v.template_settLoc)
             r.template_settGenLoc = LocationGenSetting.Copy(v.template_settGenLoc)
             Return r
+        End Function
+
+        Friend Shared Function Print(ByRef name As String, ByRef v As String) As String
+            Return name & vbTab & v
+        End Function
+        Friend Shared Function Print(ByRef name As String, ByRef v As Integer) As String
+            Return Print(name, v.ToString)
+        End Function
+        Friend Shared Function Print(ByRef name As String, ByRef v As Double) As String
+            Return Print(name, v.ToString)
+        End Function
+        Friend Shared Function Print(ByRef name As String, ByRef v As Boolean) As String
+            Return Print(name, v.ToString)
+        End Function
+        Friend Shared Function Print(ByRef name As String, ByRef v() As String, ByRef delimiter As Char) As String
+            Dim r As String = ""
+            If IsNothing(v) Then
+                r = "Nothing"
+            Else
+                r = v(0)
+                For i As Integer = 1 To UBound(v) Step 1
+                    r &= delimiter & v(i)
+                Next i
+            End If
+            Return Print(name, r)
+        End Function
+        Friend Shared Function Print(ByRef name As String, ByRef value() As Map.SettingsLoc.SettingsRaceCity, _
+                                     ByRef delimiter As Char) As String
+            If IsNothing(value) Then
+                Return "Nothing"
+            Else
+                Dim res As String = ""
+                For i As Integer = 0 To UBound(value) Step 1
+                    res &= Map.SettingsLoc.SettingsRaceCity.Print(value(i))
+                    If i < UBound(value) Then res &= delimiter
+                Next i
+                Return res
+            End If
+        End Function
+        Friend Shared Function Print(ByRef valueField As ClassFieldsHandler.GetFieldResult, _
+                                     ByRef delimiter As Char) As String
+            If valueField.searchResultField.FieldType.FullName = GetType(String).FullName Then
+                Return Print(valueField.searchResultField.Name, CType(valueField.searchResult, String))
+            ElseIf valueField.searchResultField.FieldType.FullName = GetType(String()).FullName Then
+                Return Print(valueField.searchResultField.Name, CType(valueField.searchResult, String()), delimiter)
+            ElseIf valueField.searchResultField.FieldType.FullName = GetType(Double).FullName Then
+                Return Print(valueField.searchResultField.Name, CType(valueField.searchResult, Double))
+            ElseIf valueField.searchResultField.FieldType.FullName = GetType(Integer).FullName Then
+                Return Print(valueField.searchResultField.Name, CType(valueField.searchResult, Integer))
+            ElseIf valueField.searchResultField.FieldType.FullName = GetType(Boolean).FullName Then
+                Return Print(valueField.searchResultField.Name, CType(valueField.searchResult, Boolean))
+            ElseIf valueField.searchResultField.FieldType.FullName = GetType(Map.SettingsLoc.SettingsRaceCity()).FullName Then
+                Return Print(valueField.searchResultField.Name, CType(valueField.searchResult, Map.SettingsLoc.SettingsRaceCity()), delimiter)
+            Else
+                Throw New Exception("Unexpected variable type")
+                Return ""
+            End If
         End Function
 
     End Structure
@@ -4200,7 +4257,7 @@ exitfunction:
             Dim pstr() As String = lifeAlgoPoints.Item(rndgen.RndIntFast(0, lifeAlgoPoints.Count - 1)).Split(CChar("_"))
             Dim p As Point = New Point(CInt(pstr(0)), CInt(pstr(1)))
             Dim R2 As Double = rndgen.Rand(MinR, MaxR) ^ 2
-            Dim nTries As Integer = CInt(1.5*Math.Sqrt(R2) / Math.Min(moveChance, 1))
+            Dim nTries As Integer = CInt(1.5 * Math.Sqrt(R2) / Math.Min(moveChance, 1))
             Dim movingPoints((xSize + 1) * (ySize + 1) - 1) As Point
             Dim nMovingP As Integer = -1
             For y As Integer = 0 To ySize Step 1
@@ -5856,91 +5913,91 @@ Public Class Map
         Dim PenetrableObjectsPlacing_Done As Boolean
     End Structure
 
-    Public Structure SettingsLoc
+    Public Class SettingsLoc
         ''' <summary>Средний радиус локаций</summary>
-        Dim AverageRadius As Integer
+        Public AverageRadius As Integer
         ''' <summary>Локации будут в форме эллипсов со случайным эксцентриситетом от (1-D)/(1+D) до (1+D)/(1-D)</summary>
-        Dim maxEccentricityDispersion As Double
+        Public maxEccentricityDispersion As Double
         ''' <summary>При достаточном количестве места будут создаваться локации размером от (1-D)*R до (1+D)*R.
         ''' Когда свободного места станет недостаточно R начнет постепенно уменьшаться до половины от начального значения</summary>
-        Dim maxRadiusDispersion As Double
+        Public maxRadiusDispersion As Double
 
         ''' <summary>Плотность непроходимых объектов внутри локации (0 - нет, 1 - максимальное количество)</summary>
-        Dim DecorationsAmount As Double
+        Public DecorationsAmount As Double
 
         '''<summary>Количество золотых шахт на локацию</summary>
-        Dim maxGoldMines As Double
+        Public maxGoldMines As Double
         '''<summary>Количество источников маны на локацию</summary>
-        Dim maxManaSources As Double
+        Public maxManaSources As Double
         '''<summary>Количество нейтральных городов на локацию</summary>
-        Dim maxCities As Double
+        Public maxCities As Double
         '''<summary>Количество торговцев на локацию</summary>
-        Dim maxVendors As Double
+        Public maxVendors As Double
         '''<summary>Количество лагерей наемников на локацию</summary>
-        Dim maxMercenaries As Double
+        Public maxMercenaries As Double
         '''<summary>Количество башен мага на локацию</summary>
-        Dim maxMages As Double
+        Public maxMages As Double
         '''<summary>Количество тренеров на локацию</summary>
-        Dim maxTrainers As Double
+        Public maxTrainers As Double
         '''<summary>Количество руин на локацию</summary>
-        Dim maxRuins As Double
+        Public maxRuins As Double
 
         '''<summary>Минимальное расстояние между отрядами</summary>
-        Dim minStackToStackDist As Double
+        Public minStackToStackDist As Double
 
         '''<summary>Примерное количество опыта за убийство всех отрядов в локации</summary>
-        Dim expAmount As Double
+        Public expAmount As Double
 
         '''<summary>Минимальный уровень заклинаний в лавке мага</summary>
-        Dim mageSpellsMaxLevel As Integer
+        Public mageSpellsMaxLevel As Integer
         '''<summary>Максимальный уровень заклинаний в лавке мага</summary>
-        Dim mageSpellsMinLevel As Integer
+        Public mageSpellsMinLevel As Integer
         '''<summary>Количество заклинаний в лавке мага</summary>
-        Dim mageSpellsCount As Integer
+        Public mageSpellsCount As Integer
         '''<summary>Могут ли встречаться в лавке мага заклинания, действующие на всю карту</summary>
-        Dim mageGlobalSpellsEnabled As Boolean
+        Public mageGlobalSpellsEnabled As Boolean
 
         '''<summary>Максимальная планка опыта у маленьких наемников (для больших в два раза выше)</summary>
-        Dim mercenariesMaxExpBar As Integer
+        Public mercenariesMaxExpBar As Integer
         '''<summary>Минимальная планка опыта у маленьких наемников (для больших в два раза выше)</summary>
-        Dim mercenariesMinExpBar As Integer
+        Public mercenariesMinExpBar As Integer
         '''<summary>Количество наемников в лагере</summary>
-        Dim mercenariesCount As Integer
+        Public mercenariesCount As Integer
 
         '''<summary>Максимальная стоимость расходного предмета у торговца</summary>
-        Dim merchMaxConsumableItemCost As Integer
+        Public merchMaxConsumableItemCost As Integer
         '''<summary>Минимальная стоимость расходного предмета у торговца</summary>
-        Dim merchMinConsumableItemCost As Integer
+        Public merchMinConsumableItemCost As Integer
         '''<summary>Максимальная стоимость нерасходного предмета у торговца</summary>
-        Dim merchMaxNonconsumableItemCost As Integer
+        Public merchMaxNonconsumableItemCost As Integer
         '''<summary>Минимальная стоимость нерасходного предмета у торговца</summary>
-        Dim merchMinNonconsumableItemCost As Integer
+        Public merchMinNonconsumableItemCost As Integer
         '''<summary>Полная стоимость лута у торговца</summary>
-        Dim merchItemsCost As Integer
+        Public merchItemsCost As Integer
 
         '''<summary>Множитель силы отряда в руинах</summary>
-        Dim ruinsPowerMultiplicator As Double
+        Public ruinsPowerMultiplicator As Double
         '''<summary>Множитель ценности лута в руинах</summary>
-        Dim ruinsWealthMultiplicator As Double
+        Public ruinsWealthMultiplicator As Double
         '''<summary>Множитель силы отрядов в городах</summary>
-        Dim citiesPowerMultiplicator As Double
+        Public citiesPowerMultiplicator As Double
         '''<summary>Множитель ценности лута в городах</summary>
-        Dim citiesWealthMultiplicator As Double
+        Public citiesWealthMultiplicator As Double
 
         '''<summary>Города, принадлежащие играбельным расам</summary>
-        Dim RaceCities() As SettingsRaceCity
+        Public RaceCities() As SettingsRaceCity
 
         ''' <summary>Масштабировать количество посещаемых объектов и опыт за убийство всех отрядовв в локации</summary>
-        Dim scaleContent As Boolean
+        Public scaleContent As Boolean
 
         ''' <summary>Список возможных базовых рас для локации.
         ''' В случае с локациями играбельных рас определяет расы нейтральных отрядов в локации. 
         ''' Список рас можно посмотреть в Resources\Constants.txt, параметр LocRacesBlocks.
         ''' Nothing, если нужен случайный выбор</summary>
-        Dim possibleRaces() As String
+        Public possibleRaces() As String
 
         ''' <summary>True, если локация должна быть соединена с соседними независимо от глобальных настроек</summary>
-        Dim ConnectWithAllNeighboringLocations As Boolean
+        Public ConnectWithAllNeighboringLocations As Boolean
 
         '    Private Checked As Boolean
         '    ''' <summary>Проверит корректность параметров. Вернет пустое сообщение, если все нормально</summary>
@@ -6044,6 +6101,7 @@ Public Class Map
         End Function
 
         Public Shared Function Copy(ByRef v As SettingsLoc) As SettingsLoc
+            If IsNothing(v) Then Return Nothing
             Dim r() As String = Nothing
             If Not IsNothing(v.possibleRaces) Then r = CType(v.possibleRaces.Clone, String())
             Return New SettingsLoc With { _
@@ -6095,6 +6153,7 @@ Public Class Map
             Dim data() As ExtendedBlockData = ReadRawData(path, dataColumn)
             Dim res(UBound(data)) As SettingsLoc
             For i As Integer = 0 To UBound(data) Step 1
+                res(i) = New SettingsLoc
                 Call res(i).Read(data(i).data)
             Next i
             Return res
@@ -6106,39 +6165,10 @@ Public Class Map
             Call Read(data)
         End Sub
         Private Sub Read(ByRef data As Dictionary(Of String, String))
-            Call Map.ReadValue("AverageRadius", AverageRadius, data, GenDefaultValues.wTemplate_LocationKeyword)
-            Call Map.ReadValue("maxEccentricityDispersion", maxEccentricityDispersion, data, GenDefaultValues.wTemplate_LocationKeyword)
-            Call Map.ReadValue("maxRadiusDispersion", maxRadiusDispersion, data, GenDefaultValues.wTemplate_LocationKeyword)
-            Call Map.ReadValue("DecorationsAmount", DecorationsAmount, data, GenDefaultValues.wTemplate_LocationKeyword)
-            Call Map.ReadValue("maxGoldMines", maxGoldMines, data, GenDefaultValues.wTemplate_LocationKeyword)
-            Call Map.ReadValue("maxManaSources", maxManaSources, data, GenDefaultValues.wTemplate_LocationKeyword)
-            Call Map.ReadValue("maxCities", maxCities, data, GenDefaultValues.wTemplate_LocationKeyword)
-            Call Map.ReadValue("maxVendors", maxVendors, data, GenDefaultValues.wTemplate_LocationKeyword)
-            Call Map.ReadValue("maxMercenaries", maxMercenaries, data, GenDefaultValues.wTemplate_LocationKeyword)
-            Call Map.ReadValue("maxMages", maxMages, data, GenDefaultValues.wTemplate_LocationKeyword)
-            Call Map.ReadValue("maxTrainers", maxTrainers, data, GenDefaultValues.wTemplate_LocationKeyword)
-            Call Map.ReadValue("maxRuins", maxRuins, data, GenDefaultValues.wTemplate_LocationKeyword)
-            Call Map.ReadValue("minStackToStackDist", minStackToStackDist, data, GenDefaultValues.wTemplate_LocationKeyword)
-            Call Map.ReadValue("expAmount", expAmount, data, GenDefaultValues.wTemplate_LocationKeyword)
-            Call Map.ReadValue("mageSpellsMaxLevel", mageSpellsMaxLevel, data, GenDefaultValues.wTemplate_LocationKeyword)
-            Call Map.ReadValue("mageSpellsMinLevel", mageSpellsMinLevel, data, GenDefaultValues.wTemplate_LocationKeyword)
-            Call Map.ReadValue("mageSpellsCount", mageSpellsCount, data, GenDefaultValues.wTemplate_LocationKeyword)
-            Call Map.ReadValue("mageGlobalSpellsEnabled", mageGlobalSpellsEnabled, data, GenDefaultValues.wTemplate_LocationKeyword)
-            Call Map.ReadValue("mercenariesMaxExpBar", mercenariesMaxExpBar, data, GenDefaultValues.wTemplate_LocationKeyword)
-            Call Map.ReadValue("mercenariesMinExpBar", mercenariesMinExpBar, data, GenDefaultValues.wTemplate_LocationKeyword)
-            Call Map.ReadValue("mercenariesCount", mercenariesCount, data, GenDefaultValues.wTemplate_LocationKeyword)
-            Call Map.ReadValue("merchMaxConsumableItemCost", merchMaxConsumableItemCost, data, GenDefaultValues.wTemplate_LocationKeyword)
-            Call Map.ReadValue("merchMinConsumableItemCost", merchMinConsumableItemCost, data, GenDefaultValues.wTemplate_LocationKeyword)
-            Call Map.ReadValue("merchMaxNonconsumableItemCost", merchMaxNonconsumableItemCost, data, GenDefaultValues.wTemplate_LocationKeyword)
-            Call Map.ReadValue("merchMinNonconsumableItemCost", merchMinNonconsumableItemCost, data, GenDefaultValues.wTemplate_LocationKeyword)
-            Call Map.ReadValue("merchItemsCost", merchItemsCost, data, GenDefaultValues.wTemplate_LocationKeyword)
-            Call Map.ReadValue("scaleContent", scaleContent, data, GenDefaultValues.wTemplate_LocationKeyword)
-            Call Map.ReadValue("possibleRaces", possibleRaces, data, GenDefaultValues.wTemplate_LocationKeyword, CChar(";"))
-            Call Map.ReadValue("ConnectWithAllNeighboringLocations", ConnectWithAllNeighboringLocations, data, GenDefaultValues.wTemplate_LocationKeyword)
-            Call Map.ReadValue("ruinsPowerMultiplicator", ruinsPowerMultiplicator, data, GenDefaultValues.wTemplate_LocationKeyword)
-            Call Map.ReadValue("ruinsWealthMultiplicator", ruinsWealthMultiplicator, data, GenDefaultValues.wTemplate_LocationKeyword)
-            Call Map.ReadValue("citiesPowerMultiplicator", citiesPowerMultiplicator, data, GenDefaultValues.wTemplate_LocationKeyword)
-            Call Map.ReadValue("citiesWealthMultiplicator", citiesWealthMultiplicator, data, GenDefaultValues.wTemplate_LocationKeyword)
+            Dim fields() As String = ClassFieldsHandler.GetFieldsList(Me, {"RaceCities"})
+            For Each f As String In fields
+                Call Map.ReadValue(ClassFieldsHandler.GetField(Me, f), data, GenDefaultValues.wTemplate_LocationKeyword, CChar(";"))
+            Next f
         End Sub
         Public Shared Function ReadRawData(ByRef baseFilePath As String, ByRef dataColumn As Integer, Optional ByRef txt() As String = Nothing) As ExtendedBlockData()
             If IsNothing(txt) Then txt = ValueConverter.TxtSplit(IO.File.ReadAllText(baseFilePath))
@@ -6193,6 +6223,9 @@ Public Class Map
                 Loop
             End Sub
 
+            Public Shared Function Print(ByRef v As SettingsRaceCity) As String
+                Return v.level & "#" & v.owner
+            End Function
             Public Shared Function Read(ByRef v As String) As SettingsRaceCity
                 Dim s() As String = v.Split(CChar("#"))
                 Return New SettingsRaceCity With {.level = ValueConverter.StrToInt(s(0), v, "RaceCities"), _
@@ -6204,119 +6237,65 @@ Public Class Map
 
         Public Shared Function Print(ByRef v As SettingsLoc) As String
             Dim res As String = ""
-            res &= vbNewLine & Print("AverageRadius", v.AverageRadius)
-            res &= vbNewLine & Print("maxEccentricityDispersion", v.maxEccentricityDispersion)
-            res &= vbNewLine & Print("maxRadiusDispersion", v.maxRadiusDispersion)
-            res &= vbNewLine & Print("DecorationsAmount", v.DecorationsAmount)
-            res &= vbNewLine & Print("maxGoldMines", v.maxGoldMines)
-            res &= vbNewLine & Print("maxManaSources", v.maxManaSources)
-            res &= vbNewLine & Print("maxCities", v.maxCities)
-            res &= vbNewLine & Print("maxVendors", v.maxVendors)
-            res &= vbNewLine & Print("maxMercenaries", v.maxMercenaries)
-            res &= vbNewLine & Print("maxMages", v.maxMages)
-            res &= vbNewLine & Print("maxTrainers", v.maxTrainers)
-            res &= vbNewLine & Print("maxRuins", v.maxRuins)
-            res &= vbNewLine & Print("minStackToStackDist", v.minStackToStackDist)
-            res &= vbNewLine & Print("expAmount", v.expAmount)
-            res &= vbNewLine & Print("mageSpellsMaxLevel", v.mageSpellsMaxLevel)
-            res &= vbNewLine & Print("mageSpellsMinLevel", v.mageSpellsMinLevel)
-            res &= vbNewLine & Print("mageSpellsCount", v.mageSpellsCount)
-            res &= vbNewLine & Print("mageGlobalSpellsEnabled", v.mageGlobalSpellsEnabled)
-            res &= vbNewLine & Print("mercenariesMaxExpBar", v.mercenariesMaxExpBar)
-            res &= vbNewLine & Print("mercenariesMinExpBar", v.mercenariesMinExpBar)
-            res &= vbNewLine & Print("mercenariesCount", v.mercenariesCount)
-            res &= vbNewLine & Print("merchMaxConsumableItemCost", v.merchMaxConsumableItemCost)
-            res &= vbNewLine & Print("merchMinConsumableItemCost", v.merchMinConsumableItemCost)
-            res &= vbNewLine & Print("merchMaxNonconsumableItemCost", v.merchMaxNonconsumableItemCost)
-            res &= vbNewLine & Print("merchMinNonconsumableItemCost", v.merchMinNonconsumableItemCost)
-            res &= vbNewLine & Print("merchItemsCost", v.merchItemsCost)
-            res &= vbNewLine & Print("scaleContent", v.scaleContent)
-            res &= vbNewLine & Print("possibleRaces", v.possibleRaces)
-            res &= vbNewLine & Print("ConnectWithAllNeighboringLocations", v.ConnectWithAllNeighboringLocations)
-            res &= vbNewLine & Print("ruinsPowerMultiplicator", v.ruinsPowerMultiplicator)
-            res &= vbNewLine & Print("ruinsWealthMultiplicator", v.ruinsWealthMultiplicator)
-            res &= vbNewLine & Print("citiesPowerMultiplicator", v.citiesPowerMultiplicator)
-            res &= vbNewLine & Print("citiesWealthMultiplicator", v.citiesWealthMultiplicator)
-
+            Dim fields() As String = ClassFieldsHandler.GetFieldsList(v, Nothing)
+            For Each f As String In fields
+                res &= vbNewLine & ImpenetrableMeshGen.GenSettings.Print(ClassFieldsHandler.GetField(v, f), CChar(";"))
+            Next f
             Return res.Substring(1)
         End Function
-        Friend Shared Function Print(ByRef name As String, ByRef v As String) As String
-            Return name & " = " & v
-        End Function
-        Friend Shared Function Print(ByRef name As String, ByRef v As Integer) As String
-            Return Print(name, v.ToString)
-        End Function
-        Friend Shared Function Print(ByRef name As String, ByRef v As Double) As String
-            Return Print(name, v.ToString)
-        End Function
-        Friend Shared Function Print(ByRef name As String, ByRef v As Boolean) As String
-            Return Print(name, v.ToString)
-        End Function
-        Friend Shared Function Print(ByRef name As String, ByRef v() As String) As String
-            Dim r As String = ""
-            If IsNothing(v) Then
-                r = "Nothing"
-            Else
-                r = v(0)
-                For i As Integer = 1 To UBound(v) Step 1
-                    r &= ";" & v(i)
-                Next i
-            End If
-            Return Print(name, r)
-        End Function
 
-    End Structure
-    Public Structure SettingsMap
+    End Class
+    Public Class SettingsMap
         ''' <summary>Правая граница карты (например, если генерируем карту 24x48, то сюда пишем 24)</summary>
-        Dim xSize As Integer
+        Public xSize As Integer
         ''' <summary>Верхняя граница карты (например, если генерируем карту 24x48, то сюда пишем 48)</summary>
-        Dim ySize As Integer
+        Public ySize As Integer
         ''' <summary>Минимальное расстояние между проходами</summary>
-        Dim minPassDist As Double
+        Public minPassDist As Double
         ''' <summary>Минимальная ширина проходов</summary>
-        Dim minPassWidth As Double
+        Public minPassWidth As Double
         ''' <summary>Количество рас</summary>
-        Dim nRaces As Integer
+        Public nRaces As Integer
         ''' <summary>Генератор будет располагать локации со столицами так, чтобы для каждой из локаций выполнялось следующиее условие:
         ''' R1*(1+T) >= R2, при этом R2 > R1, где R1 и R2 - расстояние до двух ближайших локаций со столицами</summary>
-        Dim RaceLocsDistTolerance As Double
+        Public RaceLocsDistTolerance As Double
         ''' <summary>Расставлять ли стражей проходов между локациями</summary>
-        Dim AddGuardsBetweenLocations As Boolean
+        Public AddGuardsBetweenLocations As Boolean
         ''' <summary>Множитель силы стражей проходов между локациями</summary>
-        Dim PassGuardsPowerMultiplicator As Double
+        Public PassGuardsPowerMultiplicator As Double
         ''' <summary>Множитель силы стражей посещаемых объектов</summary>
-        Dim ObjectGuardsPowerMultiplicator As Double
+        Public ObjectGuardsPowerMultiplicator As Double
         ''' <summary>Отношение максимального опыта, получаемого за зачистку локации среднего размера, к минимальному.
         ''' Чем дальше локация от ближайшей столицы и чем ближе к центру, тем больше опыта за ее зачистку</summary>
-        Dim LocExpRatio As Double
+        Public LocExpRatio As Double
         ''' <summary>Множитель стоимости лута нейтралов</summary>
-        Dim Wealth As Double
+        Public Wealth As Double
         ''' <summary>Количество воды на карте. 0 - без воды, 1 - очень много</summary>
-        Dim WaterAmount As Double
+        Public WaterAmount As Double
         '''<summary>Максимальный уровень заклинаний в столице</summary>
-        Dim SpellsMaxLevel As Integer
+        Public SpellsMaxLevel As Integer
         ''' <summary>Количество дорог на карте. 0 - без дорог, 1 - максимальное количество</summary>
-        Dim RoadsAmount As Double
+        Public RoadsAmount As Double
         ''' <summary>Количество леса на карте. 0 - без леса, 1 - максимальное количество</summary>
-        Dim ForestAmount As Double
+        Public ForestAmount As Double
 
         ''' <summary>Определяет свободу перемещения по карте. 0 - генератор не старается соединять локации, 1 - генератор соединит каждую локацию с каждой соседней (но расовые старается не соединять)</summary>
-        Dim PassageCreationChance As Double
+        Public PassageCreationChance As Double
 
         ''' <summary>Применять ли операции симметрии</summary>
-        Dim ApplySymmetry As Boolean
+        Public ApplySymmetry As Boolean
         '''<summary> -1 - случайная симметрия, если .ApplySymmetry=True, игнорируется, если .ApplySymmetry=False.
         ''' Для двух рас: 0 - L2, 1 - xM, 2 - yM, 3 - xy1M, 4 - xy2M.
         ''' Для четырех рас: 0 - L4, 1 - xM+yM, 2 - xy1M+xy2M.
         ''' Смотри SymmetryOperations </summary>
-        Dim SymmetryClass As Integer
+        Public SymmetryClass As Integer
 
         ''' <summary>Расы игроков. Nothing, если нужны случайные</summary>
-        Dim PlayersRaces() As String
+        Public PlayersRaces() As String
         '''<summary>Начальное количество золота</summary>
-        Dim StartGold As Integer
+        Public StartGold As Integer
         '''<summary>Начальное количество родной маны</summary>
-        Dim StartMana As Integer
+        Public StartMana As Integer
 
         Private Checked As Boolean
         ''' <summary>Проверит корректность параметров. Вернет пустое сообщение, если все нормально</summary>
@@ -6375,27 +6354,10 @@ Public Class Map
         Private Sub Read(ByRef txt() As String, ByRef baseFilePath As String)
             Dim data As Dictionary(Of String, String) = ReadRawData(baseFilePath, txt)
 
-            Call Map.ReadValue("xSize", xSize, data, GenDefaultValues.wTemplate_MapKeyword)
-            Call Map.ReadValue("ySize", ySize, data, GenDefaultValues.wTemplate_MapKeyword)
-            Call Map.ReadValue("minPassDist", minPassDist, data, GenDefaultValues.wTemplate_MapKeyword)
-            Call Map.ReadValue("minPassWidth", minPassWidth, data, GenDefaultValues.wTemplate_MapKeyword)
-            Call Map.ReadValue("nRaces", nRaces, data, GenDefaultValues.wTemplate_MapKeyword)
-            Call Map.ReadValue("RaceLocsDistTolerance", RaceLocsDistTolerance, data, GenDefaultValues.wTemplate_MapKeyword)
-            Call Map.ReadValue("AddGuardsBetweenLocations", AddGuardsBetweenLocations, data, GenDefaultValues.wTemplate_MapKeyword)
-            Call Map.ReadValue("PassGuardsPowerMultiplicator", PassGuardsPowerMultiplicator, data, GenDefaultValues.wTemplate_MapKeyword)
-            Call Map.ReadValue("ObjectGuardsPowerMultiplicator", ObjectGuardsPowerMultiplicator, data, GenDefaultValues.wTemplate_MapKeyword)
-            Call Map.ReadValue("LocExpRatio", LocExpRatio, data, GenDefaultValues.wTemplate_MapKeyword)
-            Call Map.ReadValue("Wealth", Wealth, data, GenDefaultValues.wTemplate_MapKeyword)
-            Call Map.ReadValue("WaterAmount", WaterAmount, data, GenDefaultValues.wTemplate_MapKeyword)
-            Call Map.ReadValue("SpellsMaxLevel", SpellsMaxLevel, data, GenDefaultValues.wTemplate_MapKeyword)
-            Call Map.ReadValue("RoadsAmount", RoadsAmount, data, GenDefaultValues.wTemplate_MapKeyword)
-            Call Map.ReadValue("ForestAmount", ForestAmount, data, GenDefaultValues.wTemplate_MapKeyword)
-            Call Map.ReadValue("PassageCreationChance", PassageCreationChance, data, GenDefaultValues.wTemplate_MapKeyword)
-            Call Map.ReadValue("ApplySymmetry", ApplySymmetry, data, GenDefaultValues.wTemplate_MapKeyword)
-            Call Map.ReadValue("SymmetryClass", SymmetryClass, data, GenDefaultValues.wTemplate_MapKeyword)
-            Call Map.ReadValue("PlayersRaces", PlayersRaces, data, GenDefaultValues.wTemplate_MapKeyword, CChar(";"))
-            Call Map.ReadValue("StartGold", StartGold, data, GenDefaultValues.wTemplate_MapKeyword)
-            Call Map.ReadValue("StartMana", StartMana, data, GenDefaultValues.wTemplate_MapKeyword)
+            Dim fields() As String = ClassFieldsHandler.GetFieldsList(Me, {"Checked"})
+            For Each f As String In fields
+                Call Map.ReadValue(ClassFieldsHandler.GetField(Me, f), data, GenDefaultValues.wTemplate_MapKeyword, CChar(";"))
+            Next f
         End Sub
         Public Shared Function ReadRawData(ByRef baseFilePath As String, Optional ByRef txt() As String = Nothing) As Dictionary(Of String, String)
             If IsNothing(txt) Then txt = ValueConverter.TxtSplit(IO.File.ReadAllText(baseFilePath))
@@ -6403,6 +6365,7 @@ Public Class Map
         End Function
 
         Public Shared Function Copy(ByRef v As SettingsMap) As SettingsMap
+            If IsNothing(v) Then Return Nothing
             Dim r() As String = Nothing
             If Not IsNothing(v.PlayersRaces) Then r = CType(v.PlayersRaces.Clone, String())
             Return New SettingsMap With {.xSize = v.xSize, _
@@ -6431,31 +6394,14 @@ Public Class Map
 
         Public Shared Function Print(ByRef v As SettingsMap) As String
             Dim res As String = ""
-            res &= vbNewLine & SettingsLoc.Print("xSize", v.xSize)
-            res &= vbNewLine & SettingsLoc.Print("ySize", v.ySize)
-            res &= vbNewLine & SettingsLoc.Print("minPassDist", v.minPassDist)
-            res &= vbNewLine & SettingsLoc.Print("minPassWidth", v.minPassWidth)
-            res &= vbNewLine & SettingsLoc.Print("nRaces", v.nRaces)
-            res &= vbNewLine & SettingsLoc.Print("RaceLocsDistTolerance", v.RaceLocsDistTolerance)
-            res &= vbNewLine & SettingsLoc.Print("AddGuardsBetweenLocations", v.AddGuardsBetweenLocations)
-            res &= vbNewLine & SettingsLoc.Print("PassGuardsPowerMultiplicator", v.PassGuardsPowerMultiplicator)
-            res &= vbNewLine & SettingsLoc.Print("ObjectGuardsPowerMultiplicator", v.ObjectGuardsPowerMultiplicator)
-            res &= vbNewLine & SettingsLoc.Print("LocExpRatio", v.LocExpRatio)
-            res &= vbNewLine & SettingsLoc.Print("Wealth", v.Wealth)
-            res &= vbNewLine & SettingsLoc.Print("WaterAmount", v.WaterAmount)
-            res &= vbNewLine & SettingsLoc.Print("SpellsMaxLevel", v.SpellsMaxLevel)
-            res &= vbNewLine & SettingsLoc.Print("RoadsAmount", v.RoadsAmount)
-            res &= vbNewLine & SettingsLoc.Print("ForestAmount", v.ForestAmount)
-            res &= vbNewLine & SettingsLoc.Print("PassageCreationChance", v.PassageCreationChance)
-            res &= vbNewLine & SettingsLoc.Print("ApplySymmetry", v.ApplySymmetry)
-            res &= vbNewLine & SettingsLoc.Print("SymmetryClass", v.SymmetryClass)
-            res &= vbNewLine & SettingsLoc.Print("PlayersRaces", v.PlayersRaces)
-            res &= vbNewLine & SettingsLoc.Print("StartGold", v.StartGold)
-            res &= vbNewLine & SettingsLoc.Print("StartMana", v.StartMana)
+            Dim fields() As String = ClassFieldsHandler.GetFieldsList(v, {"Checked"})
+            For Each f As String In fields
+                res &= vbNewLine & ImpenetrableMeshGen.GenSettings.Print(ClassFieldsHandler.GetField(v, f), CChar(";"))
+            Next f
             Return res.Substring(1)
         End Function
 
-    End Structure
+    End Class
 
     ''' <param name="fileContent">Содержимое файла после ValueConverter.TxtSplit</param>
     ''' <param name="blockType">Тип блока</param>
@@ -6559,35 +6505,39 @@ Public Class Map
           AndAlso s.Length > 1 AndAlso s(1).ToUpper = searchLabel.ToUpper Then Return True
         Return False
     End Function
-    Protected Friend Shared Sub ReadValue(ByRef name As String, ByRef value As String, _
-                                          ByRef data As Dictionary(Of String, String), ByRef blockName As String)
+    Protected Friend Shared Function ReadValue(ByRef name As String, ByRef value As String, _
+                                               ByRef data As Dictionary(Of String, String), ByRef blockName As String) As String
         If data.ContainsKey(name.ToUpper) Then
             value = data.Item(name.ToUpper)
         Else
             Throw New Exception("Could not find value for " & name & " in " & blockName)
         End If
-    End Sub
-    Protected Friend Shared Sub ReadValue(ByRef name As String, ByRef value As Double, _
-                                          ByRef data As Dictionary(Of String, String), ByRef blockName As String)
+        Return value
+    End Function
+    Protected Friend Shared Function ReadValue(ByRef name As String, ByRef value As Double, _
+                                               ByRef data As Dictionary(Of String, String), ByRef blockName As String) As Double
         Dim txt As String = ""
         Call ReadValue(name, txt, data, blockName)
-        value = ValueConverter.StrToDbl(txt, PrintValue(name, txt), "")
-    End Sub
-    Protected Friend Shared Sub ReadValue(ByRef name As String, ByRef value As Integer, _
-                                          ByRef data As Dictionary(Of String, String), ByRef blockName As String)
+        value = ValueConverter.StrToDbl(txt, ImpenetrableMeshGen.GenSettings.Print(name, txt), "")
+        Return value
+    End Function
+    Protected Friend Shared Function ReadValue(ByRef name As String, ByRef value As Integer, _
+                                               ByRef data As Dictionary(Of String, String), ByRef blockName As String) As Integer
         Dim txt As String = ""
         Call ReadValue(name, txt, data, blockName)
-        value = ValueConverter.StrToInt(txt, PrintValue(name, txt), "")
-    End Sub
-    Protected Friend Shared Sub ReadValue(ByRef name As String, ByRef value As Boolean, _
-                                          ByRef data As Dictionary(Of String, String), ByRef blockName As String)
+        value = ValueConverter.StrToInt(txt, ImpenetrableMeshGen.GenSettings.Print(name, txt), "")
+        Return value
+    End Function
+    Protected Friend Shared Function ReadValue(ByRef name As String, ByRef value As Boolean, _
+                                               ByRef data As Dictionary(Of String, String), ByRef blockName As String) As Boolean
         Dim txt As String = ""
         Call ReadValue(name, txt, data, blockName)
         value = ValueConverter.StrToBool(txt)
-    End Sub
-    Protected Friend Shared Sub ReadValue(ByRef name As String, ByRef value() As String, _
-                                          ByRef data As Dictionary(Of String, String), ByRef blockName As String, _
-                                          ByRef delimiter As Char)
+        Return value
+    End Function
+    Protected Friend Shared Function ReadValue(ByRef name As String, ByRef value() As String, _
+                                               ByRef data As Dictionary(Of String, String), ByRef blockName As String, _
+                                               ByRef delimiter As Char) As String()
         Dim txt As String = ""
         Call ReadValue(name, txt, data, blockName)
         If txt.ToUpper = "Nothing".ToUpper Then
@@ -6595,10 +6545,11 @@ Public Class Map
         Else
             value = txt.Split(delimiter)
         End If
-    End Sub
-    Protected Friend Shared Sub ReadValue(ByRef name As String, ByRef value() As SettingsLoc.SettingsRaceCity, _
-                                          ByRef data As Dictionary(Of String, String), ByRef blockName As String, _
-                                          ByRef delimiter As Char)
+        Return value
+    End Function
+    Protected Friend Shared Function ReadValue(ByRef name As String, ByRef value() As SettingsLoc.SettingsRaceCity, _
+                                               ByRef data As Dictionary(Of String, String), ByRef blockName As String, _
+                                               ByRef delimiter As Char) As SettingsLoc.SettingsRaceCity()
         Dim txt As String = ""
         Call ReadValue(name, txt, data, blockName)
         If txt.ToUpper = "Nothing".ToUpper Then
@@ -6610,19 +6561,39 @@ Public Class Map
                 value(i) = SettingsLoc.SettingsRaceCity.Read(s(i))
             Next i
         End If
+        Return value
+    End Function
+    Protected Friend Shared Sub ReadValue(ByRef valueField As ClassFieldsHandler.GetFieldResult, _
+                                          ByRef data As Dictionary(Of String, String), ByRef blockName As String, _
+                                          ByRef delimiter As Char, Optional ByVal searchValueByName As String = "")
+        Dim name As String
+        If searchValueByName = "" Then
+            name = valueField.searchResultField.Name
+        Else
+            name = searchValueByName
+        End If
+        If valueField.searchResultField.FieldType.FullName = GetType(String).FullName Then
+            valueField.searchResultField.SetValue(valueField.LastParent, _
+                                                  ReadValue(name, CType(valueField.searchResult, String), data, blockName))
+        ElseIf valueField.searchResultField.FieldType.FullName = GetType(String()).FullName Then
+            valueField.searchResultField.SetValue(valueField.LastParent, _
+                                                  ReadValue(name, CType(valueField.searchResult, String()), data, blockName, delimiter))
+        ElseIf valueField.searchResultField.FieldType.FullName = GetType(Double).FullName Then
+            valueField.searchResultField.SetValue(valueField.LastParent, _
+                                                  ReadValue(name, CType(valueField.searchResult, Double), data, blockName))
+        ElseIf valueField.searchResultField.FieldType.FullName = GetType(Integer).FullName Then
+            valueField.searchResultField.SetValue(valueField.LastParent, _
+                                                  ReadValue(name, CType(valueField.searchResult, Integer), data, blockName))
+        ElseIf valueField.searchResultField.FieldType.FullName = GetType(Boolean).FullName Then
+            valueField.searchResultField.SetValue(valueField.parents(UBound(valueField.parents)), _
+                                                  ReadValue(name, CType(valueField.searchResult, Boolean), data, blockName))
+        ElseIf valueField.searchResultField.FieldType.FullName = GetType(SettingsLoc.SettingsRaceCity()).FullName Then
+            valueField.searchResultField.SetValue(valueField.parents(UBound(valueField.parents)), _
+                                                  ReadValue(name, CType(valueField.searchResult, SettingsLoc.SettingsRaceCity()), data, blockName, delimiter))
+        Else
+            Throw New Exception("Unexpected variable type")
+        End If
     End Sub
-    Protected Friend Shared Function PrintValue(ByRef name As String, ByRef value As String) As String
-        Return name & vbTab & value
-    End Function
-    Protected Friend Shared Function PrintValue(ByRef name As String, ByRef value As Double) As String
-        Return PrintValue(name, value.ToString)
-    End Function
-    Protected Friend Shared Function PrintValue(ByRef name As String, ByRef value As Integer) As String
-        Return PrintValue(name, value.ToString)
-    End Function
-    Protected Friend Shared Function PrintValue(ByRef name As String, ByRef value As Boolean) As String
-        Return PrintValue(name, value.ToString)
-    End Function
 
     Private Shared Function CheckGenParameters(ByRef fields As Dictionary(Of String, String), ByRef less0 As List(Of String), ByRef equal0 As List(Of String), _
                                                ByRef less1 As List(Of String), ByRef equal1 As List(Of String), ByRef greater1 As List(Of String)) As String
