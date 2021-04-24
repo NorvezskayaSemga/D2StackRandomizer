@@ -6165,7 +6165,7 @@ Public Class Map
             Call Read(data)
         End Sub
         Private Sub Read(ByRef data As Dictionary(Of String, String))
-            Dim fields() As String = ClassFieldsHandler.GetFieldsList(Me, {"RaceCities"})
+            Dim fields() As String = ClassFieldsHandler.GetFieldsNamesList(Me, {"RaceCities"})
             For Each f As String In fields
                 Call Map.ReadValue(ClassFieldsHandler.GetField(Me, f), data, GenDefaultValues.wTemplate_LocationKeyword, CChar(";"))
             Next f
@@ -6237,7 +6237,7 @@ Public Class Map
 
         Public Shared Function Print(ByRef v As SettingsLoc) As String
             Dim res As String = ""
-            Dim fields() As String = ClassFieldsHandler.GetFieldsList(v, Nothing)
+            Dim fields() As String = ClassFieldsHandler.GetFieldsNamesList(v, Nothing)
             For Each f As String In fields
                 res &= vbNewLine & ImpenetrableMeshGen.GenSettings.Print(ClassFieldsHandler.GetField(v, f), CChar(";"))
             Next f
@@ -6354,7 +6354,7 @@ Public Class Map
         Private Sub Read(ByRef txt() As String, ByRef baseFilePath As String)
             Dim data As Dictionary(Of String, String) = ReadRawData(baseFilePath, txt)
 
-            Dim fields() As String = ClassFieldsHandler.GetFieldsList(Me, {"Checked"})
+            Dim fields() As String = ClassFieldsHandler.GetFieldsNamesList(Me, {"Checked"})
             For Each f As String In fields
                 Call Map.ReadValue(ClassFieldsHandler.GetField(Me, f), data, GenDefaultValues.wTemplate_MapKeyword, CChar(";"))
             Next f
@@ -6394,7 +6394,7 @@ Public Class Map
 
         Public Shared Function Print(ByRef v As SettingsMap) As String
             Dim res As String = ""
-            Dim fields() As String = ClassFieldsHandler.GetFieldsList(v, {"Checked"})
+            Dim fields() As String = ClassFieldsHandler.GetFieldsNamesList(v, {"Checked"})
             For Each f As String In fields
                 res &= vbNewLine & ImpenetrableMeshGen.GenSettings.Print(ClassFieldsHandler.GetField(v, f), CChar(";"))
             Next f

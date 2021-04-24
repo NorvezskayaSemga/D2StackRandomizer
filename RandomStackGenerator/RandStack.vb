@@ -3734,7 +3734,7 @@ Public Class GenDefaultValues
         sendLinkedRaces.AddRange({"StackRaceChance".ToUpper})
 
 
-        Dim fields() As String = ClassFieldsHandler.GetFieldsList(Me, {"myLog", "linked_Races", "RaceNumberToRaceChar", "playableRaces", "neutralRaces", _
+        Dim fields() As String = ClassFieldsHandler.GetFieldsNamesList(Me, {"myLog", "linked_Races", "RaceNumberToRaceChar", "playableRaces", "neutralRaces", _
                                                                        "generatorRaceToGameRace", "generatorRaceToCapitalID", "capitalToGeneratorRace", _
                                                                        "gameRaceToGeneratorRace"})
 
@@ -3748,7 +3748,7 @@ Public Class GenDefaultValues
 
         Dim commonRacesBlock As String = ""
         Call SetProperty(commonRacesBlock, "commonRacesBlock", RConstants, DConstants)
-        
+
         For i As Integer = 0 To UBound(LocRacesBlocks) Step 1
             If Not LocRacesBlocks(i).EndsWith(":") Then LocRacesBlocks(i) &= ","
             LocRacesBlocks(i) = (LocRacesBlocks(i) & commonRacesBlock).Replace("*", ",")
@@ -4712,6 +4712,7 @@ End Class
 Public Structure ClassFieldsHandler
 
     Private Const defaultSearchFieldsSettings As Reflection.BindingFlags = Reflection.BindingFlags.Public Or Reflection.BindingFlags.Instance Or Reflection.BindingFlags.IgnoreCase
+    Public Const subfieldsDelimiter As Char = CChar(".")
 
     Public Class GetFieldResult
         ''' <summary>Найденная информация о поле</summary>
@@ -4771,7 +4772,7 @@ Public Structure ClassFieldsHandler
     ''' <param name="searchSettings">Настройки поиска</param>
     Public Shared Function GetField(parent As Object, ByVal fieldName As String, Optional ByVal searchSettings As Reflection.BindingFlags = defaultSearchFieldsSettings) As GetFieldResult
         Try
-            Dim s() As String = fieldName.Split(CChar("."))
+            Dim s() As String = fieldName.Split(subfieldsDelimiter)
             Dim res As New GetFieldResult
             ReDim res.parents(UBound(s))
             Dim fields(UBound(s)) As Reflection.FieldInfo
@@ -4801,22 +4802,58 @@ Public Structure ClassFieldsHandler
     ''' <param name="parent">Обеъкт, в котором ищем поля</param>
     ''' <param name="Ignore">Имена полей, которые не попадут в список. Регистр игнорируется</param>
     ''' <param name="searchSettings">Настройки поиска</param>
-    Public Shared Function GetFieldsList(parent As Object, Optional ByRef Ignore() As String = Nothing, Optional ByVal searchSettings As Reflection.BindingFlags = defaultSearchFieldsSettings) As String()
+    Public Shared Function GetFieldsNamesList(parent As Object, Optional ByRef Ignore() As String = Nothing, Optional ByVal searchSettings As Reflection.BindingFlags = defaultSearchFieldsSettings) As String()
+        If IsNothing(parent) Then Return Nothing
+        Dim all() As Reflection.FieldInfo = GetFieldsList(parent, Ignore, searchSettings)
+        Dim result(UBound(all)) As String
+        For i As Integer = 0 To UBound(all) Step 1
+            result(i) = all(i).Name
+        Next i
+        Return result
+    End Function
+    ''' <summary>Вернет поля в объекте.</summary>
+    ''' <param name="parent">Обеъкт, в котором ищем поля</param>
+    ''' <param name="Ignore">Имена полей, которые не попадут в список. Регистр игнорируется</param>
+    ''' <param name="searchSettings">Настройки поиска</param>
+    Public Shared Function GetFieldsList(parent As Object, Optional ByRef Ignore() As String = Nothing, Optional ByVal searchSettings As Reflection.BindingFlags = defaultSearchFieldsSettings) As Reflection.FieldInfo()
         If IsNothing(parent) Then Return Nothing
         Dim all() As Reflection.FieldInfo = parent.GetType.GetFields(searchSettings)
-        Dim result(UBound(all)) As String
+        Dim result(UBound(all)) As Reflection.FieldInfo
         Dim n As Integer = -1
         Dim IList As List(Of String) = Nothing
         If Not IsNothing(Ignore) Then IList = ToUpperedList(Ignore)
         For Each item As Reflection.FieldInfo In all
             If IsNothing(IList) OrElse Not IList.Contains(item.Name.ToUpper) Then
                 n += 1
-                result(n) = item.Name
+                result(n) = item
             End If
         Next item
         If n < UBound(result) Then ReDim Preserve result(n)
         Return result
     End Function
+
+    Public Shared Function GetObjectSubfields(ByRef obj As Object) As String()
+        Dim fields() As String = GetFieldsNamesList(obj)
+        Dim fullList As New List(Of String)
+        For Each f As String In fields
+            Call GetObjectSubfields(fullList, GetField(obj, f), "")
+        Next f
+        Return fullList.ToArray()
+    End Function
+    Private Shared Sub GetObjectSubfields(ByRef output As List(Of String), _
+                                          ByRef obj As GetFieldResult, _
+                                          ByVal parentsChain As String)
+        Dim fields() As String = GetFieldsNamesList(obj.searchResult)
+        If IsNothing(fields) OrElse fields.Length = 0 OrElse TypeOf obj.searchResult Is [Enum] Then
+            output.Add(parentsChain & obj.searchResultField.Name)
+        Else
+            Dim f As GetFieldResult
+            For Each fname As String In fields
+                f = GetField(obj.searchResult, fname)
+                Call GetObjectSubfields(output, f, parentsChain & obj.searchResultField.Name & subfieldsDelimiter)
+            Next fname
+        End If
+    End Sub
 
     Private Shared Function ToUpperedList(ByRef a() As String) As List(Of String)
         Dim IList As New List(Of String)
