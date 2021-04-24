@@ -4711,7 +4711,7 @@ End Class
 
 Public Structure ClassFieldsHandler
 
-    Private Const defaultSearchFieldsSettings As Reflection.BindingFlags = Reflection.BindingFlags.Public Or Reflection.BindingFlags.Instance Or Reflection.BindingFlags.IgnoreCase
+    Public Const defaultSearchFieldsSettings As Reflection.BindingFlags = Reflection.BindingFlags.Public Or Reflection.BindingFlags.Instance Or Reflection.BindingFlags.IgnoreCase
     Public Const subfieldsDelimiter As Char = CChar(".")
 
     Public Class GetFieldResult
@@ -4832,25 +4832,27 @@ Public Structure ClassFieldsHandler
         Return result
     End Function
 
-    Public Shared Function GetObjectSubfields(ByRef obj As Object) As String()
+    Public Shared Function GetObjectSubfields(ByRef obj As Object, _
+                                              Optional ByVal searchSettings As Reflection.BindingFlags = defaultSearchFieldsSettings) As String()
         Dim fields() As String = GetFieldsNamesList(obj)
         Dim fullList As New List(Of String)
         For Each f As String In fields
-            Call GetObjectSubfields(fullList, GetField(obj, f), "")
+            Call GetObjectSubfields(fullList, GetField(obj, f), "", searchSettings)
         Next f
         Return fullList.ToArray()
     End Function
     Private Shared Sub GetObjectSubfields(ByRef output As List(Of String), _
                                           ByRef obj As GetFieldResult, _
-                                          ByVal parentsChain As String)
-        Dim fields() As String = GetFieldsNamesList(obj.searchResult)
+                                          ByVal parentsChain As String, _
+                                          Optional ByVal searchSettings As Reflection.BindingFlags = defaultSearchFieldsSettings)
+        Dim fields() As String = GetFieldsNamesList(obj.searchResult, Nothing, searchSettings)
         If IsNothing(fields) OrElse fields.Length = 0 OrElse TypeOf obj.searchResult Is [Enum] Then
             output.Add(parentsChain & obj.searchResultField.Name)
         Else
             Dim f As GetFieldResult
             For Each fname As String In fields
-                f = GetField(obj.searchResult, fname)
-                Call GetObjectSubfields(output, f, parentsChain & obj.searchResultField.Name & subfieldsDelimiter)
+                f = GetField(obj.searchResult, fname, searchSettings)
+                Call GetObjectSubfields(output, f, parentsChain & obj.searchResultField.Name & subfieldsDelimiter, searchSettings)
             Next fname
         End If
     End Sub
