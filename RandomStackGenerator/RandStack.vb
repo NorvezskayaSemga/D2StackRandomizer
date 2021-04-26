@@ -2056,6 +2056,21 @@ Public Class RndValueGen
         If SelectedItem = -1 Then SelectedItem = IDs.Item(IDs.Count - 1)
         Return SelectedItem
     End Function
+
+    ''' <summary>Перемешает массив</summary>
+    ''' <param name="v">Массив</param>
+    Public Sub Shuffle(ByRef v() As Integer)
+        'Dim rnd As New RndValueGen(seed)
+        Dim t, m As Integer
+        Dim u As Integer = UBound(v)
+        For i As Integer = 0 To 3 * UBound(v) Step 1
+            m = RndIntFast(0, u - 1)
+            t = v(m)
+            v(m) = v(u)
+            v(u) = t
+        Next i
+    End Sub
+
 End Class
 
 Public Class Common

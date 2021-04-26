@@ -179,10 +179,7 @@ Namespace My.Resources
         '''mageGlobalSpellsEnabled	False
         '''
         '''mercenariesMaxExpBar		1900
-        '''mercenariesMinExpBar		1000
-        '''mercenariesCount		4
-        '''
-        '''merc [rest of string was truncated]&quot;;.
+        '''mercenariesMinExpB [rest of string was truncated]&quot;;.
         '''</summary>
         Friend ReadOnly Property emptyloc() As String
             Get
@@ -420,14 +417,7 @@ Namespace My.Resources
         End Property
         
         '''<summary>
-        '''  Looks up a localized string similar to 
-        '''
-        '''genMode genMode = 1 Common_map_settings block and two Location blocks will be used - for starting and all other locations, respectively/ngenMode = 2 Common_map_settings block and all Location blocks will be used - individual settings for each location
-        '''
-        '''
-        '''nRaces Number of races
-        '''
-        '''PlayersRaces Player races. Different and playable. Delimiter - ; (H;U;L;E;C;R or Humans;Undead;Legions;Elves;Clans;Random)/nIn this case, the first race in the list will be on the first location, the second on the second, etc [rest of string was truncated]&quot;;.
+        '''  Looks up a localized string similar to %//header Map generator by Norvezskaya Semga/n/n#line starting with hash, is ignored/n#parameters and their values ​​are not case sensitive/n#separator is space or tabulation (can be several consecutive)/n/n#inside blocks can go in any order/n#block order can also be any with one exception:/n#Location blocks for racial locations must be higher than blocks for normal locations (regardless of genMode)/n/n#if the parameter has two values ​​in the Location block, then a random one wil be selected from range/n#e [rest of string was truncated]&quot;;.
         '''</summary>
         Friend ReadOnly Property GenParametersDescription_Eng() As String
             Get
@@ -436,14 +426,7 @@ Namespace My.Resources
         End Property
         
         '''<summary>
-        '''  Looks up a localized string similar to 
-        '''
-        '''genMode			genMode=1 Будет использован блок Common_map_settings и два блока Location - для стартовых и всех остальных локаций, соответственно/ngenMode=2 Будет использован блок Common_map_settings и все блоки Location - для каждой локации индивидуальные настройки
-        '''
-        '''
-        '''nRaces			Количество рас
-        '''
-        '''PlayersRaces	Расы игроков. Разные и играбельные. Разделитель - ; (H;U;L;E;C;R или Humans;Undead;Legions;Elves;Clans;Random)/nПри этом первая раса в списке будет на первой локации, вторая - на второй, и т.д./nЕсли р [rest of string was truncated]&quot;;.
+        '''  Looks up a localized string similar to %//header				 Map generator by Norvezskaya Semga/n/n#строка, начинающаяся с решетки, игнорируется/n#параметры и их значения не чувствительны к регистру/n#разделитель - пробел или табуляция (может идти несколько подряд)/n/n#внутри блоков настройки могут идти в любом порядке/n#порядок блоков тоже может быть любым с одним исключением:/n#блоки Location для расовых локаций должны стоять выше, чем блоки для обычных локаций (независимо от genMode)/n/n#если в блоке Location параметр имеет два значения, то при генер [rest of string was truncated]&quot;;.
         '''</summary>
         Friend ReadOnly Property GenParametersDescription_Rus() As String
             Get
@@ -460,14 +443,14 @@ Namespace My.Resources
         '''nRaces	[Common_map_settings]	[Integer]	2	4
         '''
         '''#[Humans;Undead;Legions;Elves;Clans;Random]
-        '''PlayersRaces	[Common_map_settings]	[StringArray]%;	[Nothing]%[H;U;L;E;C;R]
+        '''PlayersRaces	[Common_map_settings]	[StringArray]%;	[Nothing]%[H;U;L;E;C]
         '''
         '''StartGold	[Common_map_settings]	[Integer]	0	9999
         '''StartMana	[Common_map_settings]	[Integer]	0	9999
         '''
         '''SpellsMaxLevel	[Common_map_settings]	[Integer]	1	5
         '''
-        '''ApplySymmetry	[Common_map_settings]	[Boolean]	False	Tr [rest of string was truncated]&quot;;.
+        '''ApplySymmetry	[Common_map_settings]	[Boolean]	False	True [rest of string was truncated]&quot;;.
         '''</summary>
         Friend ReadOnly Property GenParametersRange() As String
             Get
@@ -559,6 +542,7 @@ Namespace My.Resources
         '''  Looks up a localized string similar to #строка, начинающаяся с решетки, игнорируется
         '''#Первый столбец - идентификаторы объектов.
         '''#В остальных - допустимые места расстановки объектов и расы
+        '''# в теге обязателен знак %
         '''
         '''#здания
         '''g000mg0001	G	H C E N S		%religious% %natural%
@@ -573,8 +557,7 @@ Namespace My.Resources
         '''
         '''#плато
         '''#g000mg0008	G	H L C U E N S
-        '''#g000mg0009	G	H L C U E N S
-        '''#g000mg0010	G	H L C  [rest of string was truncated]&quot;;.
+        '''#g000mg0009	G	H L C U [rest of string was truncated]&quot;;.
         '''</summary>
         Friend ReadOnly Property MapObjectRace() As String
             Get
@@ -622,7 +605,14 @@ Namespace My.Resources
         '''  Looks up a localized string similar to #строка, начинающаяся с решетки, игнорируется
         '''#ID объекта, в остальных столбцах возможные названия
         '''#разделитель - _
-        '''.
+        '''
+        '''#лорды Humans Clans Legions Undead Elvens (имена доллжны походить как девочкам, так и мальчикам. За исключением Кланов)
+        '''g000LR0001_Алексис_Лотай_Келли_Моар_Дориа
+        '''g000LR0002_Алексис_Лотай_Келли_Моар_Дориа
+        '''g000LR0003_Алексис_Лотай_Келли_Моар_Дориа
+        '''g000LR0004_Орхтар_Дархорд_Фуррт_Бордольт_Неромт
+        '''g000LR0005_Орхтар_Дархорд_Фуррт_Бордольт_Неромт
+        '''g000LR0006_Орхтар_Дархорд_Фуррт_Бордольт_Не [rest of string was truncated]&quot;;.
         '''</summary>
         Friend ReadOnly Property ObjectsText_Eng() As String
             Get
@@ -823,6 +813,7 @@ Namespace My.Resources
         '''<summary>
         '''  Looks up a localized string similar to #строка, начинающаяся с решетки, игнорируется
         '''#Идентификаторы рас. список возможных тэгов, через : - радиус подзоны
+        '''# в теге обязателен знак %
         '''
         '''H %natural%:4 %building%:4 %religious%:3 %marshes%:3 %graveyard%:2 %empbuilding%:4
         '''L %natural%:4 %building%:4 
@@ -830,7 +821,7 @@ Namespace My.Resources
         '''U %natural%:4 %building%:4							 %graveyard%:4					%undbuilding%:4 %undelfbuilding%:4
         '''E %natural%:4 %building%:4
         '''N %natural%:4 %building%:4 %religious%:3 %marshes%:4 %graveyard%:3
-        '''S %natural%:4 %building%:3 %religious%:3 %marshes%:5        ''' [rest of string was truncated]&quot;;.
+        '''S %natural%:4 %building%: [rest of string was truncated]&quot;;.
         '''</summary>
         Friend ReadOnly Property RaceSublocations() As String
             Get

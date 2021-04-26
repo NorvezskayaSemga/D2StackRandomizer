@@ -5595,6 +5595,15 @@ Public Class shortMapFormat
                 End If
             Next x
         Next y
+
+        Dim stackArray(UBound(res.stacks)) As AllDataStructues.Stack
+        For i As Integer = 0 To UBound(res.stacks) Step 1
+            stackArray(i) = res.stacks(i).stack
+        Next i
+        Call sName.GenName(stackArray, objContent.randStack, False)
+        For i As Integer = 0 To UBound(res.stacks) Step 1
+            res.stacks(i).stack = stackArray(i)
+        Next i
         Return res
     End Function
     Private Shared Sub AddObject(ByRef AddTo() As simpleObject, ByRef x As Integer, ByRef y As Integer, ByRef name As String, _
@@ -5613,7 +5622,7 @@ Public Class shortMapFormat
                                  ByRef objContent As ObjectsContentSet, ByRef sName As SetName)
         ReDim Preserve AddTo(AddTo.Length)
         Dim d As GenDefaultValues = objContent.randStack.comm.defValues
-        Call sName.GenName(stack, objContent.randStack, False)
+        'Call sName.GenName(stack, objContent.randStack, False)
         AddTo(UBound(AddTo)) = New StackObject With {.pos = New Point(x, y), _
                                                      .stack = stack, _
                                                      .stackSettings = settings, _
@@ -7683,12 +7692,7 @@ Public Class StackLocationsGen
 
             If IDs_UpperBound > 0 Then
                 Dim rnd As New RndValueGen(seed)
-                For i As Integer = 0 To 3 * IDs_UpperBound Step 1
-                    Dim m As Integer = rnd.RndIntFast(0, IDs_UpperBound - 1)
-                    Dim tmpV As Integer = currentIDs(m)
-                    currentIDs(m) = currentIDs(IDs_UpperBound)
-                    currentIDs(IDs_UpperBound) = tmpV
-                Next i
+                Call rnd.Shuffle(currentIDs)
             End If
 
             ReDim disableWhenSelected(path.Size.X, path.Size.Y), _
