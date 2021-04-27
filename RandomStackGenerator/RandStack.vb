@@ -4756,10 +4756,11 @@ Public Structure ClassFieldsHandler
     ''' Через точку можно получить доступ к вложенным объектами.
     ''' Пример:
     ''' parent.childA.childB.childC.fieldName</param>
-    Public Shared Sub SetFieldValue(parent As Object, ByRef fieldValue As Object, ByVal fieldName As String)
+    Public Shared Sub SetFieldValue(parent As Object, ByVal fieldValue As Object, ByVal fieldName As String)
         Dim info As GetFieldResult = GetField(parent, fieldName)
         If Not IsNothing(info.searchResult) Then
-            info.searchResultField.SetValue(info.parents(UBound(info.parents)), fieldValue)
+            Dim T As Type = info.searchResultField.FieldType
+            info.searchResultField.SetValue(info.parents(UBound(info.parents)), CTypeDynamic(fieldValue, T))
         End If
     End Sub
     ''' <summary>Попытается найти поле в объекте и получить его значение.</summary>
