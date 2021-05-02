@@ -4724,7 +4724,7 @@ Public Class Log
 
 End Class
 
-Public Structure ClassFieldsHandler
+Public Class ClassFieldsHandler
 
     Public Const defaultSearchFieldsSettings As Reflection.BindingFlags = Reflection.BindingFlags.Public Or Reflection.BindingFlags.Instance Or Reflection.BindingFlags.IgnoreCase
     Public Const subfieldsDelimiter As Char = CChar(".")
@@ -4758,9 +4758,13 @@ Public Structure ClassFieldsHandler
     ''' parent.childA.childB.childC.fieldName</param>
     Public Shared Sub SetFieldValue(parent As Object, ByVal fieldValue As Object, ByVal fieldName As String)
         Dim info As GetFieldResult = GetField(parent, fieldName)
-        If Not IsNothing(info.searchResult) Then
+        If IsNothing(fieldValue) Then
+            info.searchResultField.SetValue(info.LastParent, Nothing)
+        ElseIf Not IsNothing(info.searchResult) Then
             Dim T As Type = info.searchResultField.FieldType
-            info.searchResultField.SetValue(info.parents(UBound(info.parents)), CTypeDynamic(fieldValue, T))
+            info.searchResultField.SetValue(info.LastParent, CTypeDynamic(fieldValue, T))
+        Else
+            info.searchResultField.SetValue(info.LastParent, fieldValue)
         End If
     End Sub
     ''' <summary>Попытается найти поле в объекте и получить его значение.</summary>
@@ -4880,5 +4884,5 @@ Public Structure ClassFieldsHandler
         Next item
         Return IList
     End Function
-End Structure
+End Class
 
