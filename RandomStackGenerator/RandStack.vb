@@ -344,7 +344,7 @@ Public Class RandStack
     ''' <summary>Определяет суммарную ценность предметов</summary>
     ''' <param name="items">Список предметов</param>
     Public Function LootCost(ByRef items As List(Of AllDataStructues.Item)) As AllDataStructues.Cost
-        Dim result As AllDataStructues.Cost
+        Dim result As New AllDataStructues.Cost
         If IsNothing(items) Then Return result
         For Each Item As AllDataStructues.Item In items
             result += LootCost(Item)
@@ -354,7 +354,7 @@ Public Class RandStack
     ''' <summary>Определяет суммарную ценность предметов</summary>
     ''' <param name="items">Список предметов</param>
     Public Function LootCost(ByRef items() As AllDataStructues.Item) As AllDataStructues.Cost
-        Dim result As AllDataStructues.Cost
+        Dim result As New AllDataStructues.Cost
         If IsNothing(items) Then Return result
         For Each Item As AllDataStructues.Item In items
             result += LootCost(Item)
@@ -364,7 +364,7 @@ Public Class RandStack
     ''' <summary>Определяет суммарную ценность предметов</summary>
     ''' <param name="items">Список предметов</param>
     Public Function LootCost(ByRef items As List(Of String)) As AllDataStructues.Cost
-        Dim result As AllDataStructues.Cost
+        Dim result As New AllDataStructues.Cost
         If IsNothing(items) Then Return result
         For Each Item As String In items
             result += LootCost(Item)
@@ -374,7 +374,7 @@ Public Class RandStack
     ''' <summary>Определяет суммарную ценность предметов</summary>
     ''' <param name="items">Список предметов</param>
     Public Function LootCost(ByRef items() As String) As AllDataStructues.Cost
-        Dim result As AllDataStructues.Cost
+        Dim result As New AllDataStructues.Cost
         If IsNothing(items) Then Return result
         For Each Item As String In items
             result += LootCost(Item)
@@ -3040,27 +3040,31 @@ Public Class AllDataStructues
         End Function
     End Structure
 
-    Public Structure Cost
+    Public Class Cost
         ''' <summary>Золото</summary>
-        Dim Gold As Integer
+        Public Gold As Integer
         ''' <summary>Мана Жизни</summary>
-        Dim Blue As Integer
+        Public Blue As Integer
         ''' <summary>Мана Преисподней</summary>
-        Dim Red As Integer
+        Public Red As Integer
         ''' <summary>Мана Рун</summary>
-        Dim White As Integer
+        Public White As Integer
         ''' <summary>Мана Смерти</summary>
-        Dim Black As Integer
+        Public Black As Integer
         ''' <summary>Мана Лесного Эликсира</summary>
-        Dim Green As Integer
+        Public Green As Integer
 
         Public Shared Function Copy(ByVal v As Cost) As Cost
-            Return New Cost With {.gold = v.Gold, _
-                                  .Blue = v.Blue, _
-                                  .Red = v.Red, _
-                                  .White = v.White, _
-                                  .Black = v.Black, _
-                                  .Green = v.Green}
+            If Not IsNothing(v) Then
+                Return New Cost With {.Gold = v.Gold, _
+                                      .Blue = v.Blue, _
+                                      .Red = v.Red, _
+                                      .White = v.White, _
+                                      .Black = v.Black, _
+                                      .Green = v.Green}
+            Else
+                Return New Cost
+            End If
         End Function
         ''' <summary>Парсит строку стоимости в родном для D2 формате. Игнорирует регистр, пробелы и табы. Пропущенные поля интерпретирует как ноль</summary>
         ''' <param name="costString">g0000:r0000:y0000:e0000:w0000:b0000</param>
@@ -3100,37 +3104,45 @@ Public Class AllDataStructues
         ''' <summary>Печатает стоимость в понятном для игры формате</summary>
         ''' <param name="v">цена: золото и мана</param>
         Public Shared Function Print(ByVal v As Cost) As String
-            Dim ch() As String = New String() {"g", "r", "y", "e", "w", "b"}
-            Dim val() As Integer = New Integer() {v.Gold, v.Red, v.Blue, v.Black, v.White, v.Green}
-            Dim s As String = ""
-            For i As Integer = 0 To UBound(ch) Step 1
-                s &= ch(i)
-                If val(i) < 0 Then val(i) = 0
-                If val(i) > 9999 Then
-                    'Throw New Exception("Too great value of " & ch(i) & " : " & val(i))
-                    val(i) = 9999
-                ElseIf val(i) < 1000 Then
-                    If val(i) > 99 Then
-                        s &= "0"
-                    ElseIf val(i) > 9 Then
-                        s &= "00"
-                    Else
-                        s &= "000"
+            If Not IsNothing(v) Then
+                Dim ch() As String = New String() {"g", "r", "y", "e", "w", "b"}
+                Dim val() As Integer = New Integer() {v.Gold, v.Red, v.Blue, v.Black, v.White, v.Green}
+                Dim s As String = ""
+                For i As Integer = 0 To UBound(ch) Step 1
+                    s &= ch(i)
+                    If val(i) < 0 Then val(i) = 0
+                    If val(i) > 9999 Then
+                        'Throw New Exception("Too great value of " & ch(i) & " : " & val(i))
+                        val(i) = 9999
+                    ElseIf val(i) < 1000 Then
+                        If val(i) > 99 Then
+                            s &= "0"
+                        ElseIf val(i) > 9 Then
+                            s &= "00"
+                        Else
+                            s &= "000"
+                        End If
                     End If
-                End If
-                s &= val(i).ToString
-                If i < UBound(ch) Then s &= ":"
-            Next i
-            Return s
+                    s &= val(i).ToString
+                    If i < UBound(ch) Then s &= ":"
+                Next i
+                Return s
+            Else
+                Return Print(New Cost)
+            End If
         End Function
 
         Public Shared Function ToArray(ByVal v As Cost) As Integer()
-            Return New Integer() {v.Gold, _
-                                  v.Blue, _
-                                  v.Red, _
-                                  v.White, _
-                                  v.Black, _
-                                  v.Green}
+            If Not IsNothing(v) Then
+                Return New Integer() {v.Gold, _
+                                      v.Blue, _
+                                      v.Red, _
+                                      v.White, _
+                                      v.Black, _
+                                      v.Green}
+            Else
+                Return ToArray(New Cost)
+            End If
         End Function
         Public Shared Function ToCost(ByVal v() As Integer) As Cost
             Return New Cost With {.gold = v(0), _
@@ -3145,57 +3157,94 @@ Public Class AllDataStructues
         ''' <summary>Вернет суммарную стоимость в золоте и мане</summary>
         ''' <param name="v">цена: золото и мана</param>
         Public Shared Function Sum(ByVal v As Cost) As Integer
-            Return v.Gold + v.Black + v.Blue + v.Green + v.Red + v.White
+            If Not IsNothing(v) Then
+                Return v.Gold + v.Black + v.Blue + v.Green + v.Red + v.White
+            Else
+                Return 0
+            End If
         End Function
 
         Public Shared Operator *(ByVal v As Cost, ByVal n As Double) As Cost
-            Return New Cost With {.Black = CInt(v.Black * n), _
-                                  .Blue = CInt(v.Blue * n), _
-                                  .Gold = CInt(v.Gold * n), _
-                                  .Green = CInt(v.Green * n), _
-                                  .Red = CInt(v.Red * n), _
-                                  .White = CInt(v.White * n)}
+            If Not IsNothing(v) Then
+                Return New Cost With {.Black = CInt(v.Black * n), _
+                                      .Blue = CInt(v.Blue * n), _
+                                      .Gold = CInt(v.Gold * n), _
+                                      .Green = CInt(v.Green * n), _
+                                      .Red = CInt(v.Red * n), _
+                                      .White = CInt(v.White * n)}
+            Else
+                Return New Cost
+            End If
         End Operator
         Public Shared Operator *(ByVal n As Double, ByVal v As Cost) As Cost
             Return v * n
         End Operator
         Public Shared Operator *(ByVal v As Cost, ByVal n As Integer) As Cost
-            Return New Cost With {.Black = v.Black * n, _
-                                  .Blue = v.Blue * n, _
-                                  .Gold = v.Gold * n, _
-                                  .Green = v.Green * n, _
-                                  .Red = v.Red * n, _
-                                  .White = v.White * n}
+            If Not IsNothing(v) Then
+                Return New Cost With {.Black = v.Black * n, _
+                                      .Blue = v.Blue * n, _
+                                      .Gold = v.Gold * n, _
+                                      .Green = v.Green * n, _
+                                      .Red = v.Red * n, _
+                                      .White = v.White * n}
+            Else
+                Return New Cost
+            End If
         End Operator
         Public Shared Operator *(ByVal n As Integer, ByVal v As Cost) As Cost
             Return v * n
         End Operator
         Public Shared Operator /(ByVal v As Cost, ByVal n As Double) As Cost
-            Return New Cost With {.Black = CInt(v.Black / n), _
-                                  .Blue = CInt(v.Blue / n), _
-                                  .Gold = CInt(v.Gold / n), _
-                                  .Green = CInt(v.Green / n), _
-                                  .Red = CInt(v.Red / n), _
-                                  .White = CInt(v.White / n)}
+            If Not IsNothing(v) Then
+                Return New Cost With {.Black = CInt(v.Black / n), _
+                                      .Blue = CInt(v.Blue / n), _
+                                      .Gold = CInt(v.Gold / n), _
+                                      .Green = CInt(v.Green / n), _
+                                      .Red = CInt(v.Red / n), _
+                                      .White = CInt(v.White / n)}
+            Else
+                Return New Cost
+            End If
         End Operator
         Public Shared Operator +(ByVal v1 As Cost, ByVal v2 As Cost) As Cost
-            Return New Cost With {.Black = v1.Black + v2.Black, _
-                                  .Blue = v1.Blue + v2.Blue, _
-                                  .Gold = v1.Gold + v2.Gold, _
-                                  .Green = v1.Green + v2.Green, _
-                                  .Red = v1.Red + v2.Red, _
-                                  .White = v1.White + v2.White}
+            If Not IsNothing(v1) And Not IsNothing(v2) Then
+                Return New Cost With {.Black = v1.Black + v2.Black, _
+                                      .Blue = v1.Blue + v2.Blue, _
+                                      .Gold = v1.Gold + v2.Gold, _
+                                      .Green = v1.Green + v2.Green, _
+                                      .Red = v1.Red + v2.Red, _
+                                      .White = v1.White + v2.White}
+            ElseIf Not IsNothing(v1) Then
+                Return v1
+            ElseIf Not IsNothing(v2) Then
+                Return v2
+            Else
+                Return New Cost
+            End If
         End Operator
         Public Shared Operator -(ByVal v1 As Cost, ByVal v2 As Cost) As Cost
-            Return New Cost With {.Black = v1.Black - v2.Black, _
-                                  .Blue = v1.Blue - v2.Blue, _
-                                  .Gold = v1.Gold - v2.Gold, _
-                                  .Green = v1.Green - v2.Green, _
-                                  .Red = v1.Red - v2.Red, _
-                                  .White = v1.White - v2.White}
+            If Not IsNothing(v1) And Not IsNothing(v2) Then
+                Return New Cost With {.Black = v1.Black - v2.Black, _
+                                      .Blue = v1.Blue - v2.Blue, _
+                                      .Gold = v1.Gold - v2.Gold, _
+                                      .Green = v1.Green - v2.Green, _
+                                      .Red = v1.Red - v2.Red, _
+                                      .White = v1.White - v2.White}
+            ElseIf Not IsNothing(v1) Then
+                Return v1
+            ElseIf Not IsNothing(v2) Then
+                Return New Cost With {.Black = -v2.Black, _
+                                      .Blue = -v2.Blue, _
+                                      .Gold = -v2.Gold, _
+                                      .Green = -v2.Green, _
+                                      .Red = -v2.Red, _
+                                      .White = -v2.White}
+            Else
+                Return New Cost
+            End If
         End Operator
 
-    End Structure
+    End Class
 
     Public Structure Item
         ''' <summary>Название</summary>

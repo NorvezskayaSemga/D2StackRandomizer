@@ -741,7 +741,7 @@ Public Class RandStackTest
         target.log.Disable()
 
         Dim ok As Boolean = True
-        Dim input, result, mana As AllDataStructues.Cost
+        Dim input, result, mana As New AllDataStructues.Cost
         Dim s1, s2 As Integer
 
         For m1 As Integer = 0 To 2 Step 1
