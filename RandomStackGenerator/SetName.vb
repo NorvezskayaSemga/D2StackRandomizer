@@ -24,7 +24,7 @@
     Private Const chanceToAddNameToStack As Double = 0.15 ' (0,1]
 
     Private Const DesiredUnitWeightMultiplier As Double = 3
-    Private Const DesiredUnitMinWeightMultiplier As Double = 3
+    Private Const DesiredUnitMinWeightMultiplier As Double = 0.5
     Private ReadOnly NoneNameId As Integer = -1
 
     ''' <summary>Сюда генератор пишет лог</summary>
@@ -414,10 +414,10 @@
         For i As Integer = 0 To UBound(users) Step 1
             If Not i = NoneNameId AndAlso Not IsNothing(uCount) AndAlso uCount.ContainsKey(users(i).unit.ToUpper) Then
                 desiredUnitCount = uCount.Item(users(i).unit.ToUpper)(0)
-                minWeight = 0.5 * users(i).weight
+                minWeight = DesiredUnitMinWeightMultiplier * users(i).weight
                 users(i).unitsCount = desiredUnitCount
 
-                users(i).increasedWeight = 3 * users(i).weight
+                users(i).increasedWeight = DesiredUnitWeightMultiplier * users(i).weight
                 users(i).decreasedWeight = (users(i).weight * stacksCount - users(i).increasedWeight * desiredUnitCount) / Math.Max(1, stacksCount - desiredUnitCount)
                 If users(i).decreasedWeight < minWeight Then
                     users(i).decreasedWeight = minWeight
