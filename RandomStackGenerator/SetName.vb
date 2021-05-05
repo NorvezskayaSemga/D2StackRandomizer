@@ -21,7 +21,11 @@
     Private lordDonationThreshold As Double = 999
     Public customObjectsNames As GenDefaultValues.MapObjectsText
     Public preferedUnit As New Dictionary(Of String, String)
-    Private Const chanceToAddNameToStack As Double = 0.125 ' (0,1]
+    Private Const chanceToAddNameToStack As Double = 0.15 ' (0,1]
+
+    Private Const DesiredUnitWeightMultiplier As Double = 3
+    Private Const DesiredUnitMinWeightMultiplier As Double = 3
+    Private ReadOnly NoneNameId As Integer = -1
 
     ''' <summary>Сюда генератор пишет лог</summary>
     Public log As Log
@@ -30,7 +34,6 @@
         Dim name As String
         Dim unit As String
         Dim weight As Double
-        Dim isUser As Boolean
 
         Dim increasedWeight As Double
         Dim decreasedWeight As Double
@@ -67,15 +70,18 @@
         Call ReadExclusions()
 
         ReDim Preserve users(users.Length)
-        users(UBound(users)) = New Donater With {.name = "!!!NameBug!!!", .unit = "", .weight = 0, .isUser = False}
+        NoneNameId = UBound(users)
+        users(NoneNameId) = New Donater With {.name = "!!!NameBug!!!", .unit = "", .weight = 0}
         For i As Integer = 0 To UBound(users) - 1 Step 1
-            users(i).isUser = True
-            users(UBound(users)).weight += users(i).weight
+            users(NoneNameId).weight += users(i).weight
         Next i
-        users(UBound(users)).weight = users(UBound(users)).weight / chanceToAddNameToStack - users(UBound(users)).weight
+        users(NoneNameId).weight *= NoneWeightMultiplier()
 
         Call AddToLog(-1, "-----Names creator initialization ended-----")
     End Sub
+    Private Shared Function NoneWeightMultiplier() As Double
+        Return 1 / chanceToAddNameToStack - 1
+    End Function
 
     Private Sub DownloadList()
 
@@ -150,6 +156,7 @@
             Console.WriteLine(ex.Message)
             AddToLog(-1, "Names downloader: " & ex.Message)
         End Try
+        Dim printmsg As Boolean = True
         Try
             If Not IsNothing(Tn) And Not IsNothing(Tw) Then
                 Dim added As New Dictionary(Of String, Integer)
@@ -160,7 +167,11 @@
                         If Not added.ContainsKey(s) Then
                             users(added.Count).name = Tn(i)
 
-                            MsgBox("нужно обновить таблицу на сайте и переделать под нее парсер")
+                            If printmsg Then
+                                MsgBox("нужно обновить таблицу на сайте и переделать под нее парсер")
+                                printmsg = False
+                            End If
+
                             users(added.Count).unit = GenDefaultValues.emptyItem
                             added.Add(s, added.Count)
                         End If
@@ -185,7 +196,7 @@
             If IsNothing(users) Then Exit Sub
             Dim str As String = LordMinWeight.ToString
             For i As Integer = 0 To UBound(users) Step 1
-                If users(i).isUser Then
+                If Not i = NoneNameId Then
                     str &= vbNewLine & users(i).name & vbTab & users(i).weight & vbTab & users(i).unit
                 End If
             Next i
@@ -266,7 +277,7 @@
 
         Dim possibleNames As New List(Of String)
         Dim leaderID(UBound(stack)) As String
-        Dim skip(UBound(stack)) As Boolean
+        Dim skip(UBound(stack)), SkippedByUnitType(UBound(stack)) As Boolean
         Dim ids(UBound(stack)), i As Integer
         For k As Integer = 0 To UBound(stack) Step 1
             ids(k) = k
@@ -289,31 +300,54 @@
                 skip(i) = True
             End If
         Next k
-        Call calcUWeigt(uCount)
-
+        Dim totalNonskipped, totalNonskippedByUnitType As Integer
         For k As Integer = 0 To UBound(stack) Step 1
             i = ids(k)
             If Not skip(i) Then
-                stack(i).name = SetName(stack(i).pos(stack(i).leaderPos).ToUpper, R, LogID)
+                totalNonskipped += 1
+                Dim u As AllDataStructues.Unit = R.FindUnitStats(stack(i).pos(stack(i).leaderPos))
+                SkippedByUnitType(i) = True
+                For Each id As Integer In commonIDs
+                    If Not SkipUnit(id, u) Then
+                        SkippedByUnitType(i) = False
+                        totalNonskippedByUnitType += 1
+                        Exit For
+                    End If
+                Next id
+            End If
+        Next k
+        Call calcUWeigt(uCount)
+
+        Dim wMultiplier As Double = totalNonskipped / Math.Max(totalNonskippedByUnitType, 1)
+        For k As Integer = 0 To UBound(stack) Step 1
+            i = ids(k)
+            If Not skip(i) And Not SkippedByUnitType(i) Then
+                stack(i).name = SetName(stack(i).pos(stack(i).leaderPos).ToUpper, R, wMultiplier, LogID)
                 skip(i) = True
             End If
         Next k
     End Sub
-    Private Function SetName(ByRef leaderID As String, ByRef R As RandStack, ByRef LogID As Integer) As String
+    Private Function SetName(ByRef leaderID As String, ByRef R As RandStack, _
+                             ByVal UserWeightMultiplier As Double, ByRef LogID As Integer) As String
         Dim u As AllDataStructues.Unit = R.FindUnitStats(leaderID)
         Dim res As String = u.name
-        Dim i As Integer = comm.RandomSelection(commonIDs, WeightArray(u.unitID), True)
-        If Not users(i).isUser Then Return res
+        Dim i As Integer = comm.RandomSelection(commonIDs, WeightArray(UserWeightMultiplier, u.unitID), True)
+        If i = NoneNameId Then Return res
+
+        If SkipUnit(i, u) Then Return res
 
         commonIDs.Remove(i)
-        If Not u.unitID.ToUpper = users(i).unit.ToUpper Then
-            If excludeRace.Contains(u.race) Then Return res '& " race_excluded"
-            If exclude.Contains(u.unitID) Then Return res '& " unit_excluded"
-        End If
         res &= " " & users(i).name
         res = NameCut(res, StackNameMaxLen)
         AddToLog(LogID, "Using name: " & users(i).name)
         Return res
+    End Function
+    Private Function SkipUnit(ByRef userID As Integer, ByRef unit As AllDataStructues.Unit) As Boolean
+        If Not unit.unitID.ToUpper = users(userID).unit.ToUpper Then
+            If excludeRace.Contains(unit.race) Then Return True
+            If exclude.Contains(unit.unitID) Then Return True
+        End If
+        Return False
     End Function
     Private Function NameCut(ByRef input As String, ByRef maxLen As Integer) As String
         If input.Length > maxLen Then
@@ -346,7 +380,8 @@
         AddToLog(LogID, "Selected lord name for race " & comm.defValues.RaceNumberToRaceChar(RaceID) & ": " & LName)
         Return LName
     End Function
-    Private Function WeightArray(Optional ByRef unitID As String = "") As Double()
+    Private Function WeightArray(Optional ByVal UserWeightMultiplier As Double = 1, _
+                                 Optional ByRef unitID As String = "") As Double()
         Dim weight(UBound(users)) As Double
         For w As Integer = 0 To UBound(users) Step 1
             If unitID = "" Then
@@ -357,11 +392,19 @@
                 weight(w) = users(w).decreasedWeight
             End If
         Next w
+        For w As Integer = 0 To UBound(users) Step 1
+            If Not w = NoneNameId AndAlso Not commonIDs.Contains(w) Then
+                weight(NoneNameId) -= users(w).weight * NoneWeightMultiplier()
+            End If
+        Next w
+        For w As Integer = 0 To UBound(users) Step 1
+            If Not w = NoneNameId Then weight(w) *= UserWeightMultiplier
+        Next w
         Return weight
     End Function
     Private Sub calcUWeigt(ByRef uCount As Dictionary(Of String, Integer()))
         Dim stacksCount As Integer = 0
-        If Not IsNothing(uCount)
+        If Not IsNothing(uCount) Then
             For Each i As Integer() In uCount.Values
                 stacksCount += i(0)
             Next i
@@ -369,7 +412,7 @@
         Dim minWeight As Double
         Dim desiredUnitCount As Integer
         For i As Integer = 0 To UBound(users) Step 1
-            If users(i).isUser AndAlso Not IsNothing(uCount) AndAlso uCount.ContainsKey(users(i).unit.ToUpper) Then
+            If Not i = NoneNameId AndAlso Not IsNothing(uCount) AndAlso uCount.ContainsKey(users(i).unit.ToUpper) Then
                 desiredUnitCount = uCount.Item(users(i).unit.ToUpper)(0)
                 minWeight = 0.5 * users(i).weight
                 users(i).unitsCount = desiredUnitCount
@@ -437,7 +480,7 @@
         If Not IsNothing(users) Then
             lordIDs.Clear()
             For i As Integer = 0 To UBound(users) Step 1
-                If users(i).isUser And users(i).weight > LordMinWeight Then lordIDs.Add(i)
+                If Not i = NoneNameId And users(i).weight > LordMinWeight Then lordIDs.Add(i)
             Next i
         End If
 

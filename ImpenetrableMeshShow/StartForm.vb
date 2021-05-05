@@ -150,14 +150,13 @@ Friend Class StartForm
 
         grid = New MapGenWrapper(objplace).CommonGen(gsettings, genTimeLimit)
 
-        Console.WriteLine(grid.log.PrintAll)
-        LogTextBox.Text = grid.log.PrintAll
-
         If Not IsNothing(grid.board) Then
             Call ShowResult(grid)
             Call shortMapFormat.MapConversion(grid, gsettings, objSizeArray, objCont, True, True, treesAmount, GenDefaultValues.TextLanguage.Rus)
         End If
 
+        Console.WriteLine(grid.log.PrintAll)
+        LogTextBox.Text = grid.log.PrintAll
     End Sub
     Public Sub ShowResult(ByRef grid As Map)
         Dim t(grid.xSize, grid.ySize) As Integer

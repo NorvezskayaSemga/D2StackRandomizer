@@ -5359,7 +5359,7 @@ Public Class shortMapFormat
         Dim attObjects() As AttendedObject = (New ImpenetrableMeshGen).ActiveObjects
         Dim sName As New SetName(lang)
         Call sName.ResetNames(True, -1)
-
+        
         Dim allSpells(objContent.spells.Count + objContent.excludedSpells.Count - 1) As AllDataStructues.Spell
         Dim ns As Integer = -1
         For Each spellsList As Dictionary(Of String, AllDataStructues.Spell) In {objContent.spells, objContent.excludedSpells}
@@ -5604,6 +5604,8 @@ Public Class shortMapFormat
         For i As Integer = 0 To UBound(res.stacks) Step 1
             res.stacks(i).stack = stackArray(i)
         Next i
+        m.log.Add(sName.log.PrintAll)
+        m.log.Add("Total stacks count: " & stackArray.Length & vbNewLine)
         Return res
     End Function
     Private Shared Sub AddObject(ByRef AddTo() As simpleObject, ByRef x As Integer, ByRef y As Integer, ByRef name As String, _
