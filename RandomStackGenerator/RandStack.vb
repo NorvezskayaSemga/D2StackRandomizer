@@ -3517,21 +3517,21 @@ Public Class AllDataStructues
         End Function
     End Structure
 
-    Public Structure CommonStackCreationSettings
+    Public Class CommonStackCreationSettings
         '''<summary>Желаемые параметры стэка</summary>
-        Dim StackStats As AllDataStructues.DesiredStats
+        Public StackStats As AllDataStructues.DesiredStats
         '''<summary>Изменение лидерства за счет модификаторов</summary>
-        Dim deltaLeadership As Integer
+        Public deltaLeadership As Integer
         '''<summary>True, если на клетку нельзя ставить водных лидеров. Водной считается клетка с водой, окруженная со всех сторон клетками с водой</summary>
-        Dim GroundTile As Boolean
+        Public GroundTile As Boolean
         '''<summary>True, если стэк находится внутри руин или города</summary>
-        Dim NoLeader As Boolean
+        Public NoLeader As Boolean
         '''<summary>Точка на карте, в которую добавляются предметы</summary>
-        Dim pos As Point
+        Public pos As Point
         '''<summary>Список лордов на карте. Юниты из веток развития соответствующих рас добавляться в отряды не будут. Передавай Nothing для игнорирования этого фильтра</summary>
-        Dim MapLords() As String
+        Public MapLords() As String
         '''<summary>Генератор предметов постарается создать предметы заданного типа</summary>
-        Dim ApplyStrictTypesFilter As Boolean
+        Public ApplyStrictTypesFilter As Boolean
 
         Public Shared Function Copy(ByVal v As CommonStackCreationSettings) As CommonStackCreationSettings
             Return New CommonStackCreationSettings With {.StackStats = DesiredStats.Copy(v.StackStats), _
@@ -3542,18 +3542,18 @@ Public Class AllDataStructues
                                                          .MapLords = CType(v.MapLords.Clone, String()), _
                                                          .ApplyStrictTypesFilter = v.ApplyStrictTypesFilter}
         End Function
-    End Structure
-    Public Structure CommonLootCreationSettings
+    End Class
+    Public Class CommonLootCreationSettings
         '''<summary>Максимальная стоимость набора в золоте. Драгоценности считаются дешевле в два раза</summary>
-        Dim GoldCost As Integer
+        Public GoldCost As Integer
         '''<summary>Настройки генерации предметов</summary>
-        Dim IGen As AllDataStructues.LootGenSettings
+        Public IGen As AllDataStructues.LootGenSettings
         '''<summary>Ключ - тип предмета, Значение - ограничение стоимости. Игнорируется, если массив неинициализирован</summary>
-        Dim TypeCostRestriction As Dictionary(Of Integer, AllDataStructues.Restriction)
+        Public TypeCostRestriction As Dictionary(Of Integer, AllDataStructues.Restriction)
         '''<summary>Точка на карте, в которую добавляются предметы</summary>
-        Dim pos As Point
+        Public pos As Point
         '''<summary>Генератор предметов постарается создать предметы заданного типа</summary>
-        Dim ApplyStrictTypesFilter As Boolean
+        Public ApplyStrictTypesFilter As Boolean
 
         Public Shared Function Copy(ByVal v As CommonLootCreationSettings) As CommonLootCreationSettings
             Dim t As Dictionary(Of Integer, AllDataStructues.Restriction) = Nothing
@@ -3569,7 +3569,7 @@ Public Class AllDataStructues
                                                         .pos = New Point(v.pos.X, v.pos.Y), _
                                                         .TypeCostRestriction = t}
         End Function
-    End Structure
+    End Class
 
 End Class
 
