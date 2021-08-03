@@ -3005,8 +3005,10 @@ clearandexit:
                     For Each freeP As Point In free_initial_points
                         Dim x As Integer = freeP.X
                         Dim y As Integer = freeP.Y
+                        Dim sX As Integer = ShiftCoordinate(x, addedN + 1)
+                        Dim sY As Integer = ShiftCoordinate(y, addedN + 1)
 
-                        R = GetDist(oX, oY, x, y)
+                        R = GetDist(oX, oY, sX, sY)
                         For i As Integer = 0 To 1 Step 1
                             weightLayer(i)(addedN)(x, y) = weightLayer(i)(prevN)(x, y) * (1 + rWeightMultiplier(i) * R)
                         Next i
@@ -3015,8 +3017,10 @@ clearandexit:
                     For Each freeP As Point In free_initial_points
                         Dim x As Integer = freeP.X
                         Dim y As Integer = freeP.Y
+                        Dim sX As Integer = ShiftCoordinate(x, addedN + 1)
+                        Dim sY As Integer = ShiftCoordinate(y, addedN + 1)
 
-                        R = GetDist(oX, oY, x, y)
+                        R = GetDist(oX, oY, sX, sY)
                         For i As Integer = 0 To 1 Step 1
                             weightLayer(i)(addedN)(x, y) = 1 + rWeightMultiplier(i) * R
                         Next i
@@ -3053,10 +3057,10 @@ clearandexit:
                         End If
                         Weight(id) = Common.Gauss(R, placingObjects(n).prefferedDistance, placingObjects(n).sigma)
                         If placingObjects(n).applyUniformity Then
-                            Weight(id) *= weightLayer(0)(n - 1)(sX, sY)
+                            Weight(id) *= weightLayer(0)(n - 1)(x, y)
                         End If
                         Weight(id) = Math.Max(Weight(id), 0.000001)
-                        End If
+                    End If
                 Next freeP
             Else
                 For Each freeP As Point In free_initial_points
@@ -3079,7 +3083,7 @@ clearandexit:
                                 End If
                             Next i
                         End If
-                        If n > 0 Then Weight(id) = Math.Max(weightLayer(1)(n - 1)(sX, sY), 0.000001)
+                        If n > 0 Then Weight(id) = Math.Max(weightLayer(1)(n - 1)(x, y), 0.000001)
                     End If
                 Next freeP
             End If
