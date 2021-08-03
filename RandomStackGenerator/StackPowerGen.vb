@@ -270,7 +270,7 @@
         For Each id As Integer In guards.Keys
             If Not guards.Item(id).isPassGuard Then
                 If WLootSum(guards.Item(id).LocID - 1) > 0 Then
-                    LootCost.Add(id, 1.5 * WLoot.Item(id) * LocTotalExp(guards.Item(id).LocID - 1) / WLootSum(guards.Item(id).LocID - 1))
+                    LootCost.Add(id, settMap.Wealth * WLoot.Item(id) * LocTotalExp(guards.Item(id).LocID - 1) / WLootSum(guards.Item(id).LocID - 1))
                 Else
                     LootCost.Add(id, 0)
                 End If

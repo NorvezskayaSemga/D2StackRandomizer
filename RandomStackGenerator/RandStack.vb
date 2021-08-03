@@ -3517,7 +3517,15 @@ Public Class AllDataStructues
         End Function
     End Structure
 
+    Public MustInherit Class CommonCreationSettings
+        '''<summary>Точка на карте, в которую добавляются предметы</summary>
+        Public pos As Point
+        '''<summary>Генератор предметов постарается создать предметы заданного типа</summary>
+        Public ApplyStrictTypesFilter As Boolean
+    End Class
     Public Class CommonStackCreationSettings
+        Inherits CommonCreationSettings
+
         '''<summary>Желаемые параметры стэка</summary>
         Public StackStats As AllDataStructues.DesiredStats
         '''<summary>Изменение лидерства за счет модификаторов</summary>
@@ -3526,12 +3534,8 @@ Public Class AllDataStructues
         Public GroundTile As Boolean
         '''<summary>True, если стэк находится внутри руин или города</summary>
         Public NoLeader As Boolean
-        '''<summary>Точка на карте, в которую добавляются предметы</summary>
-        Public pos As Point
         '''<summary>Список лордов на карте. Юниты из веток развития соответствующих рас добавляться в отряды не будут. Передавай Nothing для игнорирования этого фильтра</summary>
         Public MapLords() As String
-        '''<summary>Генератор предметов постарается создать предметы заданного типа</summary>
-        Public ApplyStrictTypesFilter As Boolean
 
         Public Shared Function Copy(ByVal v As CommonStackCreationSettings) As CommonStackCreationSettings
             Return New CommonStackCreationSettings With {.StackStats = DesiredStats.Copy(v.StackStats), _
@@ -3544,16 +3548,14 @@ Public Class AllDataStructues
         End Function
     End Class
     Public Class CommonLootCreationSettings
+        Inherits CommonCreationSettings
+
         '''<summary>Максимальная стоимость набора в золоте. Драгоценности считаются дешевле в два раза</summary>
         Public GoldCost As Integer
         '''<summary>Настройки генерации предметов</summary>
         Public IGen As AllDataStructues.LootGenSettings
         '''<summary>Ключ - тип предмета, Значение - ограничение стоимости. Игнорируется, если массив неинициализирован</summary>
         Public TypeCostRestriction As Dictionary(Of Integer, AllDataStructues.Restriction)
-        '''<summary>Точка на карте, в которую добавляются предметы</summary>
-        Public pos As Point
-        '''<summary>Генератор предметов постарается создать предметы заданного типа</summary>
-        Public ApplyStrictTypesFilter As Boolean
 
         Public Shared Function Copy(ByVal v As CommonLootCreationSettings) As CommonLootCreationSettings
             Dim t As Dictionary(Of Integer, AllDataStructues.Restriction) = Nothing
