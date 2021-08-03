@@ -2882,7 +2882,7 @@ clearandexit:
                 New ObjectPlacingSettings With {.objectType = DefMapObjects.Types.Ruins, .placeNearWith = -1, .applyUniformity = False, .prefferedDistance = 4, .sigma = 0.2}, _
                 New ObjectPlacingSettings With {.objectType = DefMapObjects.Types.Trainer, .placeNearWith = -1, .applyUniformity = False, .prefferedDistance = 4, .sigma = 0.2}}
 
-            Dim aop As New ActiveObjectsPlacer(actObj, center, Nothing, po, New TerminationCondition(10000), free, 1234567)
+            Dim aop As New ActiveObjectsPlacer(actObj, center, center, po, New TerminationCondition(10000), free, 1234567)
 
             Dim t0 As Integer = Environment.TickCount
             Call aop.PlaceObjRow(0, free)
@@ -3049,11 +3049,11 @@ clearandexit:
                             Dim oY As Integer = ShiftCoordinate(free_initial_points(output(placingObjects(n).placeNearWith)).Y, placingObjects(n).placeNearWith)
                             R = GetDist(oX, oY, sX, sY)
                         Else
-                            'If Not placingObjects(n).objectType = DefMapObjects.Types.Capital Then
-                            R = GetDist(LocCenter, sX, sY)
-                            'Else
-                            '    R = GetDist(PreferedCapitalPosition, sX, sY)
-                            'End If
+                            If Not placingObjects(n).objectType = DefMapObjects.Types.Capital Then
+                                R = GetDist(LocCenter, sX, sY)
+                            Else
+                                R = GetDist(PreferedCapitalPosition, sX, sY)
+                            End If
                         End If
                         Weight(id) = Common.Gauss(R, placingObjects(n).prefferedDistance, placingObjects(n).sigma)
                         If placingObjects(n).applyUniformity Then
@@ -3220,8 +3220,107 @@ clearandexit:
             Return result
         End Function
 
-        Public Shared Function DefineCapitalPreferedPos(ByRef settMap As Map.SettingsMap, ByRef LocFreeCells()(,) As Boolean) As Point()
+        Public Shared Function DefineCapitalPreferedPos(ByVal settMap As Map.SettingsMap, ByVal LocFreeCells()(,) As Boolean, _
+                                                        ByVal ActiveObjects() As AttendedObject) As Point()
+            Dim result(UBound(LocFreeCells)) As Point
+            Dim freePoints(settMap.nRaces - 1)() As Point
+            Dim possiblePoints(settMap.nRaces - 1) As List(Of Point)
+            Dim dist(settMap.nRaces - 1)() As Double
+            Dim d(settMap.nRaces - 1) As GenSettings.LocationGenSetting.ValueRange
+            Dim m As New GenSettings.LocationGenSetting.ValueRange
 
+            Dim mapCenter As New Point(CInt(settMap.xSize / 2), CInt(settMap.ySize / 2))
+            Parallel.For(0, settMap.nRaces,
+             Sub(i As Integer)
+                 ReDim freePoints(i)(-1), dist(i)(-1)
+                 d(i) = New GenSettings.LocationGenSetting.ValueRange
+                 d(i).min = Double.MaxValue
+                 d(i).max = Double.MinValue
+                 Dim freeSizeX As Integer = UBound(LocFreeCells(i), 1)
+                 Dim freeSizeY As Integer = UBound(LocFreeCells(i), 2)
+                 For y As Integer = 0 To freeSizeY Step 1
+                     For x As Integer = 0 To freeSizeX Step 1
+                         If MayPlaceObject(LocFreeCells(i), DefMapObjects.Types.Capital, x, y, ActiveObjects) Then
+                             ReDim Preserve freePoints(i)(freePoints(i).Length), dist(i)(dist(i).Length)
+                             freePoints(i)(UBound(freePoints(i))) = New Point(x, y)
+                             dist(i)(UBound(dist(i))) = mapCenter.Dist(x, y)
+                             d(i).min = Math.Min(d(i).min, dist(i)(UBound(dist(i))))
+                             d(i).max = Math.Max(d(i).max, dist(i)(UBound(dist(i))))
+                         End If
+                     Next x
+                 Next y
+             End Sub)
+            m.min = d(0).min
+            m.max = d(0).max
+            For i As Integer = 1 To settMap.nRaces - 1 Step 1
+                m.min = Math.Max(m.min, d(i).min)
+                m.max = Math.Min(m.max, d(i).max)
+            Next i
+            If m.min > m.max Then
+                m.min = 0.5 * (m.min + m.max)
+                m.max = m.min
+            End If
+            Dim distDispersion As Double = 1.1
+            For i As Integer = 0 To settMap.nRaces - 1 Step 1
+                If d(i).min < m.min Then
+                    If d(i).max > m.min Then
+                        d(i).min = m.min
+                    Else
+                        d(i).min = d(i).max
+                    End If
+                End If
+                If d(i).max > m.max Then
+                    If d(i).min < m.max Then
+                        d(i).max = m.max
+                    Else
+                        d(i).max = d(i).min
+                    End If
+                End If
+            Next i
+
+            Parallel.For(0, settMap.nRaces,
+             Sub(i As Integer)
+                 possiblePoints(i) = New List(Of Point)
+                 Dim R As Double = m.min + settMap.CapitalRepulsion * (m.max - m.min)
+                 If R > d(i).max Then
+                     R = d(i).max
+                 ElseIf R < d(i).min Then
+                     R = d(i).min
+                 End If
+                 For j As Integer = 0 To UBound(freePoints(i)) Step 1
+                     If Math.Abs(dist(i)(j) - R) <= distDispersion Then
+                         possiblePoints(i).Add(freePoints(i)(j))
+                     End If
+                 Next j
+             End Sub)
+
+            Dim attempts As Integer
+            For i As Integer = 0 To settMap.nRaces - 1 Step 1
+                attempts += possiblePoints(i).Count
+            Next i
+            attempts *= 4
+            Dim rndgen As New RndValueGen
+            Dim t(settMap.nRaces - 1) As Point
+            Dim distSum, maxSum As Double
+            For p As Integer = 0 To attempts Step 1
+                For i As Integer = 0 To settMap.nRaces - 1 Step 1
+                    Dim n As Integer = rndgen.RndIntFast(0, possiblePoints(i).Count - 1)
+                    t(i) = possiblePoints(i).Item(n)
+                Next i
+                distSum = 0
+                For i2 As Integer = 0 To settMap.nRaces - 2 Step 1
+                    For i1 As Integer = i2 To settMap.nRaces - 1 Step 1
+                        distSum += t(i1).SqDist(t(i2))
+                    Next i1
+                Next i2
+                If maxSum < distSum OrElse (maxSum = distSum AndAlso rndgen.RndIntFast(0, 1) = 1) Then
+                    maxSum = distSum
+                    For i As Integer = 0 To settMap.nRaces - 1 Step 1
+                        result(i) = t(i)
+                    Next i
+                End If
+            Next p
+            Return result
         End Function
     End Class
 
@@ -3479,6 +3578,7 @@ clearandexit:
                                        ByRef m As Map, ByRef settMap As Map.SettingsMap, _
                                        ByRef LocsPlacing() As Location.Borders, _
                                        ByRef FreeCells(,) As Boolean, _
+                                       ByRef CapitalPrefferedPos As Point, _
                                        ByRef output() As Point, ByRef maxTime As Long)
 
         Dim Term As New TerminationCondition(maxTime)
@@ -3486,7 +3586,7 @@ clearandexit:
         Dim locCenter As New Point(m.Loc(locID - 1).pos.X - LocsPlacing(locID - 1).minX, _
                                    m.Loc(locID - 1).pos.Y - LocsPlacing(locID - 1).minY)
 
-        Dim objPlacer As New ActiveObjectsPlacer(ActiveObjects, locCenter, Nothing, placingObjects, Term, FreeCells)
+        Dim objPlacer As New ActiveObjectsPlacer(ActiveObjects, locCenter, CapitalPrefferedPos, placingObjects, Term, FreeCells)
         Call objPlacer.PlaceObjRow(0, FreeCells)
         output = objPlacer.bestOutput
         If objPlacer.maxN = 0 And IsNothing(output(0)) Then
@@ -3799,16 +3899,19 @@ clearandexit:
         Dim ok As Boolean = False
         Dim msg As String = ""
         Dim v()() As Point = Nothing
+        Dim CapitalPrefferedPositions() As Point = Nothing
         Do While Not ok
             Call TT.CheckTime()
             If TT.ExitFromLoops Then Exit Do
 
+            CapitalPrefferedPositions = ActiveObjectsPlacer.DefineCapitalPreferedPos(settMap, LocFreeCells, ActiveObjects)
             v = Nothing
             If symmId > -1 Or Not IsRaceLoc Then
                 ReDim v(0), places(0)
                 Call MakeLocObjectsList(places(0), m.Loc(LocId - 1), settLoc(LocId - 1), IsRaceLoc, LocArea(LocId - 1), LocSymmMult(LocId - 1), tmpm)
                 Call ObjectsPlacingVariants(places(0), LocId, tmpm, settMap, tmpLocsPlacing, _
-                                            tmpLocFreeCells(LocId - 1), v(0), CLng(Math.Max(1000, maxTime / 3)))
+                                            tmpLocFreeCells(LocId - 1), CapitalPrefferedPositions(LocId - 1), _
+                                            v(0), CLng(Math.Max(1000, maxTime / 3)))
             Else
                 ReDim v(settMap.nRaces - 1), places(settMap.nRaces - 1)
                 For i As Integer = 0 To settMap.nRaces - 1 Step 1
@@ -3817,7 +3920,8 @@ clearandexit:
                 Parallel.For(0, settMap.nRaces, _
                  Sub(i As Integer)
                      Call ObjectsPlacingVariants(places(i), i + 1, tmpm, settMap, tmpLocsPlacing, _
-                                                 tmpLocFreeCells(i), v(i), CLng(Math.Max(1000, maxTime / 3)))
+                                                 tmpLocFreeCells(i), CapitalPrefferedPositions(LocId - 1), _
+                                                 v(i), CLng(Math.Max(1000, maxTime / 3)))
                  End Sub)
             End If
             'If TT.ExitFromLoops Then

@@ -41,6 +41,8 @@ WaterAmount Amount of water on the map. 0 - no water, 1 - a lot
 RoadsAmount Amount of roads on the map. 0 - no roads, 1 - maximum number
 ForestAmount Amount of forest on the map. 0 - no forest, 1 - maximum amount
 
+CapitalRepulsion Customize the distance from capitals to the center of the map. 0 - Capitals have a higher chance of spawning near the center of the map. 1 - capitals will have a higher chance of spawning further from the center of the map
+
 # ------------------------------------------------- ---------------------------------
 
 # these settings are only used if genMode = 2

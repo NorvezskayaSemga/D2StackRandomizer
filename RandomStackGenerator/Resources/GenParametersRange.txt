@@ -40,6 +40,8 @@ RoadsAmount			[Common_map_settings]	[Double]		0.0	1.0
 ForestAmount		[Common_map_settings]	[Double]		0.0	1.0
 DecorationsAmount	[Common_map_settings]	[Double]		0.0	1.0
 
+CapitalRepulsion	[Common_map_settings]	[Double]		0.0	1.0
+
 #[Humans;Undead;Legions;Elves;Clans;Random]
 RaceCities	[Location:Creation_settings.genMode=2]	[StringArray]%;	[Nothing]%[city_level(int0-5)#owner_location_number(int>=0)]
 posX				[Location:Creation_settings.genMode=2]	[Double]	0.0	1.0
