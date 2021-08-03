@@ -2754,7 +2754,7 @@ clearandexit:
 
         Private ReadOnly ActiveObjects() As AttendedObject
         Private ReadOnly rndgen As RndValueGen
-        Private ReadOnly LocCenter As Point
+        Private ReadOnly LocCenter, PreferedCapitalPosition As Point
         Private ReadOnly placingObjects() As ObjectPlacingSettings
         Private Term As TerminationCondition
         Public bestOutput() As Point
@@ -2768,7 +2768,7 @@ clearandexit:
         Public debug_checked As Integer
         Public debug_discarded As Integer
 
-        Private distacnce(,) As Double
+        Private distance(,) As Double
         Private mayPlaceIfClean()(,) As Boolean
         Private weightLayer()()(,) As Double
 
@@ -2782,11 +2782,12 @@ clearandexit:
         'делаем битовый массив длиной кол-во свободных точек X кол-во вариантов площади
         ' по площади и номеру тайла ставим 1 в нужный слот массива, потом делаем из него строку, возвращаем в исходное положение
 
-        Public Sub New(ByRef ao() As AttendedObject, ByRef lc As Point, _
+        Public Sub New(ByRef ao() As AttendedObject, ByRef lc As Point, ByRef pcp As Point, _
                        ByRef po() As ObjectPlacingSettings, ByRef t As TerminationCondition, _
                        ByRef freeCells(,) As Boolean, Optional ByVal seed As Integer = -1)
             ActiveObjects = ao
             LocCenter = lc
+            PreferedCapitalPosition = pcp
             placingObjects = po
             Term = t
             rndgen = New RndValueGen(seed)
@@ -2795,7 +2796,7 @@ clearandexit:
             Dim freeSizeY As Integer = UBound(freeCells, 2)
 
             ReDim bestOutput(UBound(placingObjects)), output(UBound(placingObjects)), _
-                  distacnce(UBound(freeCells, 1), UBound(freeCells, 2)), mayPlaceIfClean(UBound(placingObjects)), _
+                  distance(UBound(freeCells, 1), UBound(freeCells, 2)), mayPlaceIfClean(UBound(placingObjects)), _
                   weightLayer(1)
             ReDim joinedOutput(UBound(output))
             For i As Integer = 0 To UBound(placingObjects) Step 1
@@ -2804,7 +2805,7 @@ clearandexit:
             Dim p As New Point(0, 0)
             For y As Integer = 0 To freeSizeY Step 1
                 For x As Integer = 0 To freeSizeX Step 1
-                    distacnce(x, y) = p.Dist(x, y)
+                    distance(x, y) = p.Dist(x, y)
                 Next x
             Next y
             For j As Integer = 0 To 1 Step 1
@@ -2881,7 +2882,7 @@ clearandexit:
                 New ObjectPlacingSettings With {.objectType = DefMapObjects.Types.Ruins, .placeNearWith = -1, .applyUniformity = False, .prefferedDistance = 4, .sigma = 0.2}, _
                 New ObjectPlacingSettings With {.objectType = DefMapObjects.Types.Trainer, .placeNearWith = -1, .applyUniformity = False, .prefferedDistance = 4, .sigma = 0.2}}
 
-            Dim aop As New ActiveObjectsPlacer(actObj, center, po, New TerminationCondition(10000), free, 1234567)
+            Dim aop As New ActiveObjectsPlacer(actObj, center, Nothing, po, New TerminationCondition(10000), free, 1234567)
 
             Dim t0 As Integer = Environment.TickCount
             Call aop.PlaceObjRow(0, free)
@@ -2995,6 +2996,9 @@ clearandexit:
 
         Private Sub CalcLayerWeight(ByRef addedN As Integer)
             If addedN > 0 Then
+                Dim oX As Integer = ShiftCoordinate(free_initial_points(output(addedN)).X, addedN)
+                Dim oY As Integer = ShiftCoordinate(free_initial_points(output(addedN)).Y, addedN)
+
                 Dim R As Double
                 If addedN > 1 Then
                     Dim prevN As Integer = addedN - 1
@@ -3002,7 +3006,7 @@ clearandexit:
                         Dim x As Integer = freeP.X
                         Dim y As Integer = freeP.Y
 
-                        R = GetDist(free_initial_points(output(addedN)), x, y)
+                        R = GetDist(oX, oY, x, y)
                         For i As Integer = 0 To 1 Step 1
                             weightLayer(i)(addedN)(x, y) = weightLayer(i)(prevN)(x, y) * (1 + rWeightMultiplier(i) * R)
                         Next i
@@ -3012,7 +3016,7 @@ clearandexit:
                         Dim x As Integer = freeP.X
                         Dim y As Integer = freeP.Y
 
-                        R = GetDist(free_initial_points(output(addedN)), x, y)
+                        R = GetDist(oX, oY, x, y)
                         For i As Integer = 0 To 1 Step 1
                             weightLayer(i)(addedN)(x, y) = 1 + rWeightMultiplier(i) * R
                         Next i
@@ -3030,50 +3034,66 @@ clearandexit:
                 For Each freeP As Point In free_initial_points
                     Dim x As Integer = freeP.X
                     Dim y As Integer = freeP.Y
+                    Dim sX As Integer = ShiftCoordinate(x, n)
+                    Dim sY As Integer = ShiftCoordinate(y, n)
+
                     If mayPlaceIfClean(n)(x, y) AndAlso MayPlaceObject(fc_bak, placingObjects(n).objectType, x, y, ActiveObjects) Then
                         Dim id As Integer = free_initial_point_id(x, y)
                         pID.Add(id)
                         If placingObjects(n).placeNearWith > -1 Then
-                            R = GetDist(free_initial_points(output(placingObjects(n).placeNearWith)), freeP)
+                            Dim oX As Integer = ShiftCoordinate(free_initial_points(output(placingObjects(n).placeNearWith)).X, placingObjects(n).placeNearWith)
+                            Dim oY As Integer = ShiftCoordinate(free_initial_points(output(placingObjects(n).placeNearWith)).Y, placingObjects(n).placeNearWith)
+                            R = GetDist(oX, oY, sX, sY)
                         Else
-                            R = GetDist(LocCenter, freeP)
+                            'If Not placingObjects(n).objectType = DefMapObjects.Types.Capital Then
+                            R = GetDist(LocCenter, sX, sY)
+                            'Else
+                            '    R = GetDist(PreferedCapitalPosition, sX, sY)
+                            'End If
                         End If
                         Weight(id) = Common.Gauss(R, placingObjects(n).prefferedDistance, placingObjects(n).sigma)
                         If placingObjects(n).applyUniformity Then
-                            Weight(id) *= weightLayer(0)(n - 1)(x, y)
+                            Weight(id) *= weightLayer(0)(n - 1)(sX, sY)
                         End If
                         Weight(id) = Math.Max(Weight(id), 0.000001)
-                    End If
+                        End If
                 Next freeP
             Else
                 For Each freeP As Point In free_initial_points
                     Dim x As Integer = freeP.X
                     Dim y As Integer = freeP.Y
+                    Dim sX As Integer = ShiftCoordinate(x, n)
+                    Dim sY As Integer = ShiftCoordinate(y, n)
+
                     If mayPlaceIfClean(n)(x, y) AndAlso MayPlaceObject(fc_bak, placingObjects(n).objectType, x, y, ActiveObjects) Then
                         Dim id As Integer = free_initial_point_id(x, y)
                         pID.Add(id)
                         If placingObjects(n).objectType = DefMapObjects.Types.Mine Then
                             For i As Integer = 0 To n - 1 Step 1
                                 If placingObjects(i).objectType = DefMapObjects.Types.Mine Then
-                                    R = GetDist(free_initial_points(output(i)), x, y)
+                                    Dim oX As Integer = ShiftCoordinate(free_initial_points(output(i)).X, i)
+                                    Dim oY As Integer = ShiftCoordinate(free_initial_points(output(i)).Y, i)
+
+                                    R = GetDist(oX, oY, sX, sY)
                                     Weight(id) *= (1 + 0.2 * R * R)
                                 End If
                             Next i
                         End If
-                        If n > 0 Then Weight(id) = Math.Max(weightLayer(1)(n - 1)(x, y), 0.000001)
+                        If n > 0 Then Weight(id) = Math.Max(weightLayer(1)(n - 1)(sX, sY), 0.000001)
                     End If
                 Next freeP
             End If
         End Sub
 
-        Private Function GetDist(ByRef p1 As Point, ByRef p2 As Point) As Double
-            Return GetDist(p1.X, p1.Y, p2.X, p2.Y)
+        Private Function ShiftCoordinate(ByRef v As Integer, ByRef objectN As Integer) As Integer
+            Return v + ActiveObjects(placingObjects(objectN).objectType).SizeHalf
         End Function
+
         Private Function GetDist(ByRef p1 As Point, ByRef x2 As Integer, ByRef y2 As Integer) As Double
             Return GetDist(p1.X, p1.Y, x2, y2)
         End Function
         Private Function GetDist(ByRef x1 As Integer, ByRef y1 As Integer, ByRef x2 As Integer, ByRef y2 As Integer) As Double
-            Return distacnce(Math.Abs(x1 - x2), Math.Abs(y1 - y2))
+            Return distance(Math.Abs(x1 - x2), Math.Abs(y1 - y2))
         End Function
 
         Friend Shared Function ObjectBorders(ByRef id As DefMapObjects.Types, ByRef x As Integer, ByRef y As Integer, _
@@ -3194,6 +3214,10 @@ clearandexit:
                 result &= ValueConverter.ToChrString(res(i))
             Next i
             Return result
+        End Function
+
+        Public Shared Function DefineCapitalPreferedPos(ByRef settMap As Map.SettingsMap, ByRef LocFreeCells()(,) As Boolean) As Point()
+
         End Function
     End Class
 
@@ -3458,7 +3482,7 @@ clearandexit:
         Dim locCenter As New Point(m.Loc(locID - 1).pos.X - LocsPlacing(locID - 1).minX, _
                                    m.Loc(locID - 1).pos.Y - LocsPlacing(locID - 1).minY)
 
-        Dim objPlacer As New ActiveObjectsPlacer(ActiveObjects, locCenter, placingObjects, Term, FreeCells)
+        Dim objPlacer As New ActiveObjectsPlacer(ActiveObjects, locCenter, Nothing, placingObjects, Term, FreeCells)
         Call objPlacer.PlaceObjRow(0, FreeCells)
         output = objPlacer.bestOutput
         If objPlacer.maxN = 0 And IsNothing(output(0)) Then
@@ -5107,6 +5131,8 @@ Public Class AttendedObject
     Public ReadOnly TypeID As DefMapObjects.Types
     ''' <summary>Длина стороны объекта</summary>
     Public ReadOnly Size As Integer
+    ''' <summary>Половина длины стороны объекта</summary>
+    Public ReadOnly SizeHalf As Integer
     '''' <summary>Название объекта</summary>
     'Public ReadOnly Name As String
     ''' <summary>Нужно ли размещать охраняющий отряд</summary>
@@ -5130,6 +5156,7 @@ Public Class AttendedObject
         If hasExternalGuard Then dxy += 1
         Area = CInt((Size + 2 * dxy) ^ 2)
         sArea = CShort(Area)
+        SizeHalf = CInt((Size - 1) / 2)
     End Sub
 End Class
 
@@ -6289,6 +6316,8 @@ Public Class Map
         Public RoadsAmount As Double
         ''' <summary>Количество леса на карте. 0 - без леса, 1 - максимальное количество</summary>
         Public ForestAmount As Double
+        ''' <summary>Размещение столиц. 0 - ближе к центру карты, 1 - ближе к краю карты</summary>
+        Public CapitalRepulsion As Double
 
         ''' <summary>Определяет свободу перемещения по карте. 0 - генератор не старается соединять локации, 1 - генератор соединит каждую локацию с каждой соседней (но расовые старается не соединять)</summary>
         Public PassageCreationChance As Double
@@ -6329,6 +6358,7 @@ Public Class Map
             fields.Add("SpellsMaxLevel", SpellsMaxLevel.ToString)
             fields.Add("RoadsAmount", RoadsAmount.ToString)
             fields.Add("ForestAmount", ForestAmount.ToString)
+            fields.Add("CapitalRepulsion", CapitalRepulsion.ToString)
             fields.Add("PassageCreationChance", PassageCreationChance.ToString)
 
             Dim msg As String = ""
@@ -6394,6 +6424,7 @@ Public Class Map
                                          .SpellsMaxLevel = v.SpellsMaxLevel, _
                                          .RoadsAmount = v.RoadsAmount, _
                                          .ForestAmount = v.ForestAmount, _
+                                         .CapitalRepulsion = v.CapitalRepulsion, _
                                          .PassageCreationChance = v.PassageCreationChance, _
                                          .ApplySymmetry = v.ApplySymmetry, _
                                          .SymmetryClass = v.SymmetryClass, _
