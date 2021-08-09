@@ -4369,7 +4369,7 @@ Public Class GenDefaultValues
                     Dim splited() As String = s.Split(CChar("_"))
                     If splited(0).ToUpper.StartsWith(key.ToUpper) Then
                         For j As Integer = 1 To UBound(splited) Step 1
-                            Call AddItem(splited(j))
+                            Call AddItem(splited(j).Trim(CChar(" "), CChar(vbTab)))
                         Next j
                     End If
                 Next s
