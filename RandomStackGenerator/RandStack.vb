@@ -4559,6 +4559,10 @@ Public Class GenDefaultValues
                 Next k
                 Console.WriteLine(delimiter)
             Next i
+            For Each k As String In Descriptions.Keys
+                Console.WriteLine(k & vbTab & Descriptions.Item(k).Count)
+            Next k
+            Console.WriteLine(delimiter)
         End Sub
         Public Sub Clear()
             Dim d() As Dictionary(Of String, TxTList) = ToArray()
