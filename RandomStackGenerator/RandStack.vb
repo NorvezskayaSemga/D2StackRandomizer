@@ -4336,9 +4336,12 @@ Public Class GenDefaultValues
             Dim key As String
             Dim lang As GenDefaultValues.TextLanguage
             Dim genDefValues As GenDefaultValues
+            Dim maxNameLength As Integer
+            Dim readRepeat As Integer = -1
 
-            Public Sub New(ByVal keyStr As String, ByVal langKey As GenDefaultValues.TextLanguage, ByRef g As GenDefaultValues)
+            Public Sub New(ByVal keyStr As String, ByVal maxNameL As Integer, ByVal langKey As GenDefaultValues.TextLanguage, ByRef g As GenDefaultValues)
                 key = keyStr
+                maxNameLength = maxNameL
                 lang = langKey
                 genDefValues = g
             End Sub
@@ -4346,6 +4349,14 @@ Public Class GenDefaultValues
                 If Count() = 0 Then Call Read()
                 Dim i As Integer = r.RndInt(0, Count() - 1, True)
                 Dim res As String = list.Item(i)
+                If maxNameLength > -1 And readRepeat > 1 Then
+                    Dim s As String = "_" & readRepeat
+                    If res.Length + s.Length <= maxNameLength Then
+                        res &= s
+                    Else
+                        res = res.Substring(0, readRepeat).ToUpper & res.Substring(readRepeat)
+                    End If
+                End If
                 list.RemoveAt(i)
                 Return res
             End Function
@@ -4362,6 +4373,7 @@ Public Class GenDefaultValues
                         Next j
                     End If
                 Next s
+                readRepeat += 1
             End Sub
             Public Sub Clear()
                 list.Clear()
@@ -4373,7 +4385,6 @@ Public Class GenDefaultValues
                 Return list.ToArray
             End Function
         End Class
-
 
         Private objectsWithDescriptions() As String = {"G000SI0000MAGE", "G000SI0000MERH", "G000SI0000MERC", "G000SI0000TRAI"}
         Private key() As String = {"G000LR", "G000FT0000NE@", "G000FT", "G000RU"}
@@ -4395,6 +4406,7 @@ Public Class GenDefaultValues
                 key(UBound(key) - UBound(objectsWithDescriptions) + i) = objectsWithDescriptions(i)
             Next i
             Call ReadFields(lang)
+            Call PrintValuesCount()
         End Sub
 
         Private Function GetValue(ByRef list As Dictionary(Of String, TxTList), ByRef id As String) As String
@@ -4486,7 +4498,7 @@ Public Class GenDefaultValues
                 Dim splited() As String = s.Split(CChar("_"))
                 For i As Integer = 0 To UBound(key) Step 1
                     If splited(0).ToUpper.StartsWith(key(i).ToUpper) Then
-                        If Not d(i).ContainsKey(splited(0).ToUpper) Then d(i).Add(splited(0).ToUpper, New TxTList(splited(0).ToUpper, lang, genDefValues))
+                        If Not d(i).ContainsKey(splited(0).ToUpper) Then d(i).Add(splited(0).ToUpper, New TxTList(splited(0).ToUpper, maxNameLen(i), lang, genDefValues))
                         Exit For
                     End If
                 Next i
@@ -4499,7 +4511,7 @@ Public Class GenDefaultValues
             Call ToFields(d)
             For i As Integer = 0 To UBound(objectsWithDescriptions) Step 1
                 Dim k As String = descriptionKey & objectsWithDescriptions(i).ToUpper
-                Descriptions.Add(k, New TxTList(k, lang, genDefValues))
+                Descriptions.Add(k, New TxTList(k, -1, lang, genDefValues))
                 Call Descriptions.Item(k).Read()
             Next i
 
@@ -4536,6 +4548,17 @@ Public Class GenDefaultValues
                     End If
                 Next v
             Next k
+        End Sub
+        Private Sub PrintValuesCount()
+            Dim d() As Dictionary(Of String, TxTList) = ToArray()
+            Dim delimiter As String = "-----------------------"
+            Console.WriteLine(delimiter)
+            For i As Integer = 0 To UBound(d) Step 1
+                For Each k As String In d(i).Keys
+                    Console.WriteLine(k & vbTab & d(i).Item(k).Count)
+                Next k
+                Console.WriteLine(delimiter)
+            Next i
         End Sub
         Public Sub Clear()
             Dim d() As Dictionary(Of String, TxTList) = ToArray()
