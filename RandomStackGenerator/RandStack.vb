@@ -253,9 +253,14 @@ Public Class RandStack
     ''' Для руин в любом случае генератор лута не будет обязан добавлять предмет в качестве награды (True).
     ''' Для остальных объектов (False) генератор будет обязан добавить хоть какой-то предмет, если
     ''' до перегенерации в награде были предметы, не входящие в список PreservedItems.txt</param>
-    Public Function StackStats(ByRef stack As AllDataStructues.Stack, ByVal isSettingsForRuins As Boolean) As AllDataStructues.DesiredStats
+    ''' <param name="preserveUnitsOverlevel">Если True, не будет учитывать оверлевелы 
+    ''' при расчете опыта за убийство и планок опыта. Вместо этого добавит оверлевелы новому отряду</param>
+    Public Function StackStats(ByRef stack As AllDataStructues.Stack, ByVal isSettingsForRuins As Boolean, _
+                               ByVal preserveUnitsOverlevel As Boolean) As AllDataStructues.DesiredStats
         Dim result As New AllDataStructues.DesiredStats With {.Race = New List(Of Integer)}
         Dim unit As AllDataStructues.Unit
+        Dim expKilledSum As Double
+        Dim currentUnitLevel As Integer
         For i As Integer = 0 To UBound(stack.pos) Step 1
             If Not stack.pos(i).ToUpper = GenDefaultValues.emptyItem Then
                 unit = FindUnitStats(stack.pos(i))
@@ -270,19 +275,14 @@ Public Class RandStack
                     result.MaxGiants += 1
                 End If
                 If Not unit.small Or unit.reach = GenDefaultValues.UnitAttackReach.melee Then result.MeleeCount += 1
-                If unit.level < stack.level(i) Then
-                    Dim d1 As Integer = stack.level(i) - unit.level
-                    If stack.level(i) < unit.dynUpgradeLevel Then
-                        result.ExpStackKilled += unit.dynUpgrade1.EXPkilled * d1
-                        result.ExpBarAverage += unit.dynUpgrade1.EXPnext * d1
-                    Else
-                        Dim d2 As Integer = unit.dynUpgradeLevel - unit.level
-                        result.ExpStackKilled += unit.dynUpgrade1.EXPkilled * d2
-                        result.ExpBarAverage += unit.dynUpgrade1.EXPnext * d2
-                        d1 -= d2
-                        result.ExpStackKilled += unit.dynUpgrade2.EXPkilled * d1
-                        result.ExpBarAverage += unit.dynUpgrade2.EXPnext * d1
-                    End If
+                currentUnitLevel = Math.Max(stack.level(i), unit.level)
+                If Not preserveUnitsOverlevel Then
+                    result.ExpStackKilled += unit.GetExpKilledOverlevel(currentUnitLevel)
+                    result.ExpBarAverage += unit.GetExpNextOverlevel(currentUnitLevel)
+                Else
+                    Dim m As Double = (unit.EXPnext + unit.GetExpNextOverlevel(currentUnitLevel)) / unit.EXPnext
+                    result.WeightedOverlevel += (currentUnitLevel - unit.level) * unit.EXPkilled * m
+                    expKilledSum += unit.EXPkilled
                 End If
             End If
         Next i
@@ -291,6 +291,7 @@ Public Class RandStack
         Dim LCost As AllDataStructues.Cost = LootCost(stack.items)
         result.LootCost = AllDataStructues.Cost.Sum(LCost)
         result.IGen = GetItemsGenSettings(stack.items, isSettingsForRuins)
+        If expKilledSum > 0 Then result.WeightedOverlevel = result.WeightedOverlevel * result.StackSize / expKilledSum
 
         Return result
     End Function
@@ -655,7 +656,7 @@ Public Class RandStack
     End Sub
 
     ''' <summary>Генерирует один предмет. Если не получится выбрать подходящий предмет, вернет пустую строку</summary>
-       ''' <param name="GenSettings">Общие настройки</param>
+    ''' <param name="GenSettings">Общие настройки</param>
     ''' <param name="LogID">Номер задачи. От 0 до Size-1. Если меньше 0, запись будет сделана в общий лог</param>
     Public Function ThingGen(ByVal GenSettings As AllDataStructues.CommonLootCreationSettings, _
                              Optional ByVal LogID As Integer = -1) As String
@@ -1056,12 +1057,13 @@ Public Class RandStack
                 result.pos(i) = GenDefaultValues.emptyItem
             Next i
         End If
+        Call ApplyOverlevel(result, GenSettings)
 
         result.items = ItemsGen(New AllDataStructues.CommonLootCreationSettings With {.GoldCost = DynStackStats.LootCost, _
-                                                                                     .IGen = DynStackStats.IGen, _
-                                                                                     .TypeCostRestriction = Nothing, _
-                                                                                     .pos = GenSettings.pos, _
-                                                                                     .ApplyStrictTypesFilter = GenSettings.ApplyStrictTypesFilter})
+                                                                                      .IGen = DynStackStats.IGen, _
+                                                                                      .TypeCostRestriction = Nothing, _
+                                                                                      .pos = GenSettings.pos, _
+                                                                                      .ApplyStrictTypesFilter = GenSettings.ApplyStrictTypesFilter})
 
         Call log.Add("----Stack creation ended----")
 
@@ -1132,6 +1134,47 @@ Public Class RandStack
             Return inValue
         End If
     End Function
+    Private Sub ApplyOverlevel(ByRef stack As AllDataStructues.Stack, ByRef GenSettings As AllDataStructues.CommonStackCreationSettings)
+        If GenSettings.StackStats.WeightedOverlevel <= 0 Then Exit Sub
+        Dim unitOverlevelCost(UBound(stack.level)), minUnitOverlevelCost As Double
+        Dim order(UBound(stack.level)) As Integer
+        Dim u As Integer = -1
+        Dim k As Integer
+        Dim unit As AllDataStructues.Unit
+        Dim overlevel As Double = GenSettings.StackStats.WeightedOverlevel
+        minUnitOverlevelCost = Double.MaxValue
+        For i As Integer = 0 To UBound(stack.pos) Step 1
+            If Not stack.pos(i).ToUpper = GenDefaultValues.emptyItem Then
+                u += 1
+                order(u) = i
+                unit = FindUnitStats(stack.pos(i))
+                unitOverlevelCost(i) = (unit.EXPnext + unit.GetExpNextOverlevel(unit.level + 1)) / unit.EXPnext
+            End If
+        Next i
+        ReDim Preserve order(u)
+        Dim m As Double = GenSettings.StackStats.StackSize / GenSettings.StackStats.ExpStackKilled
+        For i As Integer = 0 To u Step 1
+            k = order(i)
+            unit = FindUnitStats(stack.pos(k))
+            unitOverlevelCost(k) *= unit.EXPkilled * m
+            minUnitOverlevelCost = Math.Min(minUnitOverlevelCost, unitOverlevelCost(k))
+        Next i
+        Dim chance As Double = 1 / order.Length
+        Do While True
+            Call rndgen.Shuffle(order)
+            For i As Integer = 0 To u Step 1
+                k = order(i)
+                If 2 * overlevel >= unitOverlevelCost(k) AndAlso rndgen.RndDblFast(0, 1) <= chance Then
+                    If overlevel >= unitOverlevelCost(k) OrElse unitOverlevelCost(k) * rndgen.RndDblFast(0, 1) > overlevel Then
+                        overlevel -= unitOverlevelCost(k)
+                        stack.level(k) += 1
+                    End If
+                End If
+            Next i
+            If 2 * overlevel < minUnitOverlevelCost Then Exit Do
+            If overlevel < minUnitOverlevelCost AndAlso minUnitOverlevelCost * rndgen.RndDblFast(0, 1) > overlevel Then overlevel = 0
+        Loop
+    End Sub
 
     Private Function GenStackMultithread(ByVal StackStats As AllDataStructues.DesiredStats, _
                                          ByVal BakDynStackStats As AllDataStructues.DesiredStats, _
@@ -2870,6 +2913,8 @@ Public Class AllDataStructues
         Dim LocationName As String
         ''' <summary>Настройки генерации предметов</summary>
         Dim IGen As LootGenSettings
+        ''' <summary>Суммарный оверлевел в отряде с учетом силы юнитов</summary>
+        Dim WeightedOverlevel As Double
 
         ''' <summary>Не nothing только для торговцев предметами и магией, а также лагеря наемников.
         ''' Список идентификаторов содержимого лавки с предметами/заклинаниями/наемниками, 
@@ -2909,9 +2954,10 @@ Public Class AllDataStructues
                                           .StackSize = v.StackSize, _
                                           .LootCost = v.LootCost, _
                                           .LocationName = v.LocationName, _
-                                          .IGen = AllDataStructues.LootGenSettings.copy(v.IGen), _
+                                          .IGen = AllDataStructues.LootGenSettings.Copy(v.IGen), _
                                           .shopContent = shopContentList, _
-                                          .isInternalCityGuard = v.isInternalCityGuard}
+                                          .isInternalCityGuard = v.isInternalCityGuard, _
+                                          .WeightedOverlevel = v.WeightedOverlevel}
         End Function
         ''' <param name="RaceNumberToRaceChar">Преобразует номер расы в ее текстовый идентификатор. Если передать Nothing, то будут печататься номера рас</param>
         Public Shared Function Print(ByVal v As DesiredStats, ByRef RaceNumberToRaceChar As Dictionary(Of Integer, String), Optional ByVal shortOut As Boolean = False) As String
@@ -2936,7 +2982,8 @@ Public Class AllDataStructues
                 End If
                 s &= "StackSize" & vbTab & v.StackSize & vbNewLine & _
                      "MaxGiants" & vbTab & v.MaxGiants & vbNewLine & _
-                     "MeleeCount" & vbTab & v.MeleeCount & vbNewLine
+                     "MeleeCount" & vbTab & v.MeleeCount & vbNewLine & _
+                     "WeightedOverlevel" & vbTab & v.WeightedOverlevel & vbNewLine
                 If Not shortOut Then
                     s &= "LootCost" & vbTab & v.LootCost & vbNewLine & _
                          "IsInternalCityGuard" & vbTab & v.isInternalCityGuard & vbNewLine & _
@@ -3023,6 +3070,44 @@ Public Class AllDataStructues
                                   .dynUpgrade2 = DynUpgrade.Copy(v.dynUpgrade2), _
                                   .useState = v.useState}
         End Function
+
+        ''' <summary>Вернет прибавку к опыту за убийство юнита при получении им оверлевелов</summary>
+        ''' <param name="unitLevel">Текущий уровень юнита</param>
+        Public Function GetExpKilledOverlevel(ByVal unitLevel As Integer) As Integer
+            If level >= unitLevel Then Return 0
+            Dim d1 As Integer = unitLevel - level
+            If unitLevel < dynUpgradeLevel Then
+                Return dynUpgrade1.EXPkilled * d1
+            Else
+                Dim d2 As Integer = dynUpgradeLevel - level
+                Return dynUpgrade1.EXPkilled * d2 + dynUpgrade2.EXPkilled * (d1 - d2)
+            End If
+        End Function
+        ''' <summary>Вернет прибавку к планке опыта юнита при получении им оверлевелов</summary>
+        ''' <param name="unitLevel">Текущий уровень юнита</param>
+        Public Function GetExpNextOverlevel(ByVal unitLevel As Integer) As Integer
+            If level >= unitLevel Then Return 0
+            Dim d1 As Integer = unitLevel - level
+            If unitLevel < dynUpgradeLevel Then
+                Return dynUpgrade1.EXPnext * d1
+            Else
+                Dim d2 As Integer = dynUpgradeLevel - level
+                Return dynUpgrade1.EXPnext * d2 + dynUpgrade2.EXPnext * (d1 - d2)
+            End If
+        End Function
+        ''' <summary>Вернет прибавку к стоимости найма юнита при получении им оверлевелов</summary>
+        ''' <param name="unitLevel">Текущий уровень юнита</param>
+        Public Function GetCostOverlevel(ByVal unitLevel As Integer) As Cost
+            If level >= unitLevel Then Return New Cost
+            Dim d1 As Integer = unitLevel - level
+            If unitLevel < dynUpgradeLevel Then
+                Return dynUpgrade1.unitCost * d1
+            Else
+                Dim d2 As Integer = dynUpgradeLevel - level
+                Return dynUpgrade1.unitCost * d2 + dynUpgrade2.unitCost * (d1 - d2)
+            End If
+        End Function
+
     End Structure
 
     Public Structure DynUpgrade

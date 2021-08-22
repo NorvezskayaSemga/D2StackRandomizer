@@ -325,7 +325,7 @@ Public Class RandStackTest
         expected.ExpBarAverage /= expected.StackSize
         expected.Race.AddRange(New Integer() {1, 2, 3, 4})
         Dim ok As Boolean = True
-        Dim calculated As AllDataStructues.DesiredStats = target.StackStats(s, False)
+        Dim calculated As AllDataStructues.DesiredStats = target.StackStats(s, False, False)
         If Not expected.ExpBarAverage = calculated.ExpBarAverage Then ok = False
         If Not expected.ExpStackKilled = calculated.ExpStackKilled Then ok = False
         If Not expected.LootCost = calculated.LootCost Then ok = False
@@ -452,7 +452,7 @@ Public Class RandStackTest
                                                                       "G000000000", "G000000000", "g000uu5130"}, _
                                                   .level = New Integer() {1, 0, 0, 0, 0, 1}, _
                                                   .items = New List(Of String)}
-        Dim res As AllDataStructues.DesiredStats = target.StackStats(s, False)
+        Dim res As AllDataStructues.DesiredStats = target.StackStats(s, False, False)
         Dim ok As Boolean = True
         If Not res.Race.Contains(1) Or res.Race.Count > 1 Then ok = False
         If Not res.ExpStackKilled = 60 Then ok = False
@@ -478,10 +478,10 @@ Public Class RandStackTest
                                                                        "G000000000", "G000000000", "G000000000"}, _
                                                   .level = New Integer() {1, 0, 0, 0, 0, 0}, _
                                                   .items = New List(Of String)}
-        Dim tstats As AllDataStructues.DesiredStats = target.StackStats(s, False)
+        Dim tstats As AllDataStructues.DesiredStats = target.StackStats(s, False, False)
 
         Dim stats As New AllDataStructues.DesiredStats With {.ExpBarAverage = 950, .ExpStackKilled = 120, .Race = New List(Of Integer), _
-                                                      .StackSize = 1, .MaxGiants = 0, .MeleeCount = 1, .LootCost = 0}
+                                                             .StackSize = 1, .MaxGiants = 0, .MeleeCount = 1, .LootCost = 0}
         Dim races() As Integer = New Integer() {10}
         stats.Race.AddRange(races)
 
@@ -526,7 +526,7 @@ Public Class RandStackTest
                                                                        "G000000000", "G000000000", "G000000000"}, _
                                                   .level = New Integer() {1, 0, 0, 0, 0, 0}, _
                                                   .items = New List(Of String)}
-        Dim stats As AllDataStructues.DesiredStats = target.StackStats(s, False)
+        Dim stats As AllDataStructues.DesiredStats = target.StackStats(s, False, False)
 
         Dim c As Integer
         For i As Integer = 0 To 1000 Step 1
@@ -559,7 +559,7 @@ Public Class RandStackTest
                                                                        "G000000000", "G000000000", "G000000000"}, _
                                                   .level = New Integer() {1, 1, 0, 0, 0, 0}, _
                                                   .items = New List(Of String)}
-        Dim stats As AllDataStructues.DesiredStats = target.StackStats(s, False)
+        Dim stats As AllDataStructues.DesiredStats = target.StackStats(s, False, False)
 
         Dim c As Integer
         For i As Integer = 0 To 1000 Step 1
@@ -638,7 +638,7 @@ Public Class RandStackTest
                                                  .level = New Integer() {1, 1, 1, 1, 1, 0}, _
                                                  .items = New List(Of String)}
         End If
-        Return target.StackStats(s, False)
+        Return target.StackStats(s, False, False)
     End Function
     Private Function TestGoblinsGen(ByRef target As RandStack_Accessor, ByRef stats As AllDataStructues.DesiredStats, _
                                     ByRef TestOverload1 As Boolean) As Boolean
@@ -716,7 +716,7 @@ Public Class RandStackTest
             target.AllUnits(0).level = unitBaseLevel
             For i As Integer = unitBaseLevel To expectedEkill.Length Step 1
                 s.level(0) = i
-                Dim stats As AllDataStructues.DesiredStats = target.StackStats(s, False)
+                Dim stats As AllDataStructues.DesiredStats = target.StackStats(s, False, False)
                 If Not stats.ExpStackKilled = expectedEkill(i - 1) Then ok = False
                 If Not stats.ExpBarAverage = expectedEbar(i - 1) Then ok = False
             Next i
@@ -803,11 +803,14 @@ Public Class RandStackTest
         target.log.Enable()
         target.comm.PrintResourcesToLog(target.log, target)
 
+        Dim overlevelLog As New Log(target.comm)
+        overlevelLog.Enable()
+
         Dim s As New AllDataStructues.Stack With {.pos = New String() {"g000uu5017", "g000uu5117", "g000uu5018", _
-                                                                       "g000uu5013", "G000000000", "g000uu5018"}, _
-                                                  .level = New Integer() {1, 1, 0, 0, 0, 0}, _
+                                                                       "g000uu5018", "G000000000", "g000uu5018"}, _
+                                                  .level = New Integer() {1, 1, 5, 1, 0, 10}, _
                                                   .items = New List(Of String)}
-        Dim stats As AllDataStructues.DesiredStats = target.StackStats(s, False)
+        Dim stats As AllDataStructues.DesiredStats = target.StackStats(s, False, True)
         stats.LootCost = 2000
         stats.IGen = New AllDataStructues.LootGenSettings With {.ConsumableItems = New AllDataStructues.ItemGenSettings With {.amount = 2}, _
                                                                 .NonconsumableItems = New AllDataStructues.ItemGenSettings With {.costPart = 0.333}, _
@@ -816,10 +819,29 @@ Public Class RandStackTest
         Dim gs As New AllDataStructues.CommonStackCreationSettings With {.StackStats = stats, .deltaLeadership = 0, .GroundTile = True, _
                                                                          .NoLeader = False, .pos = New Point(1, 1), .MapLords = Nothing, _
                                                                          .ApplyStrictTypesFilter = True}
+
+        overlevelLog.Add("level" & vbTab & "exp_killed" & vbTab & "unit_id")
+        For k As Integer = 0 To UBound(s.pos) Step 1
+            If Not s.pos(k).ToUpper = GenDefaultValues.emptyItem Then
+                Dim u As AllDataStructues.Unit = target.FindUnitStats(s.pos(k))
+                overlevelLog.Add(Math.Max(u.level, s.level(k)) & vbTab & u.EXPkilled & vbTab & u.unitID)
+            End If
+        Next k
+        overlevelLog.Add("----------")
+
+        Dim stack As AllDataStructues.Stack
         For i As Integer = 1 To 20 Step 1
-            Call target.Gen(gs)
+            stack = target.Gen(gs)
+            For k As Integer = 0 To UBound(s.pos) Step 1
+                If Not stack.pos(k).ToUpper = GenDefaultValues.emptyItem Then
+                    Dim u As AllDataStructues.Unit = target.FindUnitStats(stack.pos(k))
+                    overlevelLog.Add(stack.level(k) & vbTab & u.EXPkilled & vbTab & u.unitID)
+                End If
+            Next k
+            overlevelLog.Add("----------")
         Next i
         Dim log As String = target.log.PrintAll
+        Dim oLog As String = overlevelLog.PrintAll
         If log = "" Then ok = False
 
         If Not ok Then Assert.Inconclusive("Verify the correctness of this test method.")
