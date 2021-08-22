@@ -101,9 +101,9 @@ Public Class RandStack
             End If
 
             If PlayableSubraces.Contains(unitSubrace) Then
-                AllUnits(i).fromRaceBrach = True
+                AllUnits(i).fromRaceBranch = True
             Else
-                AllUnits(i).fromRaceBrach = False
+                AllUnits(i).fromRaceBranch = False
             End If
         Next i
 
@@ -1091,7 +1091,7 @@ Public Class RandStack
                                           ByRef MapLordsRaces As List(Of Integer)) As Boolean
         If Not comm.IsAppropriateLeader(AllUnits(leaderID)) Then Return False
 
-        If AllUnits(leaderID).fromRaceBrach AndAlso MapLordsRaces.Contains(AllUnits(leaderID).race) Then Return False
+        If AllUnits(leaderID).fromRaceBranch AndAlso MapLordsRaces.Contains(AllUnits(leaderID).race) Then Return False
 
         If Not setting_IgnoreUnitRace Then
             If Not StackStats.Race.Contains(AllUnits(leaderID).race) Then Return False
@@ -1539,7 +1539,7 @@ Public Class RandStack
                                            ByRef MapLordsRaces As List(Of Integer)) As Boolean
         If Not comm.IsAppropriateFighter(AllUnits(fighterID)) Then Return False
 
-        If AllUnits(fighterID).fromRaceBrach AndAlso MapLordsRaces.Contains(AllUnits(fighterID).race) Then Return False
+        If AllUnits(fighterID).fromRaceBranch AndAlso MapLordsRaces.Contains(AllUnits(fighterID).race) Then Return False
 
         If comm.SoleUnits.ContainsKey(AllUnits(fighterID).unitID) Then
             Dim sole As List(Of String) = comm.SoleUnits.Item(AllUnits(fighterID).unitID)
@@ -3003,7 +3003,7 @@ Public Class AllDataStructues
         ''' <summary>Можно ли использовать юнита. 0 - неизвестно, -1 - нет, 1 - да</summary>
         Friend useState As Integer
         ''' <summary>True - юнит находится в ветке развития играбельной расы</summary>
-        Friend fromRaceBrach As Boolean
+        Friend fromRaceBranch As Boolean
 
         Public Shared Function Copy(ByVal v As Unit) As Unit
             Return New Unit With {.name = v.name, _
