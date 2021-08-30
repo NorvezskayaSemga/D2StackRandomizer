@@ -80,7 +80,7 @@
             goAgain = False
             For y As Integer = 0 To m.ySize Step 1
                 For x As Integer = 0 To m.xSize Step 1
-                    If m.board(x, y).isRoad AndAlso (IsSquareCorner(m, x, y, 4) OrElse RoadCounter(m, x - 1, x + 1, y - 1, y + 1) = 1) Then
+                    If m.board(x, y).surface.isRoad AndAlso (IsSquareCorner(m, x, y, 4) OrElse RoadCounter(m, x - 1, x + 1, y - 1, y + 1) = 1) Then
                         Call SetRoad(m, settMap, x, y, False)
                         goAgain = True
                     End If
@@ -122,15 +122,15 @@
         If m.symmID > -1 Then
             Dim p() As Point = symm.ApplySymm(New Point(x, y), settMap.nRaces, m, 1)
             For i As Integer = 0 To UBound(p) Step 1
-                m.board(p(i).X, p(i).Y).isRoad = whatset
+                m.board(p(i).X, p(i).Y).surface.isRoad = whatset
             Next i
         Else
-            m.board(x, y).isRoad = whatset
+            m.board(x, y).surface.isRoad = whatset
         End If
     End Sub
     Private Function MayPlaceRoad(ByRef m As Map, ByRef possible(,) As Boolean, ByRef x As Integer, ByRef y As Integer) As Boolean
         If x < 0 Or y < 0 Or x > m.xSize Or y > m.ySize Then Return False
-        If m.board(x, y).isRoad Then Return False
+        If m.board(x, y).surface.isRoad Then Return False
         If Not possible(x, y) Then Return False
         If IsSquareCorner(m, x, y, 3) Then Return False
         Return True
@@ -153,7 +153,7 @@
             If y >= 0 And y <= m.ySize Then
                 For x As Integer = x1 To x2 Step 1
                     If x >= 0 And x <= m.xSize Then
-                        If m.board(x, y).isRoad Then n += 1
+                        If m.board(x, y).surface.isRoad Then n += 1
                     End If
                 Next x
             End If
@@ -168,10 +168,10 @@
                     If m.symmID > -1 Then
                         Dim p() As Point = symm.ApplySymm(New Point(x, y), settMap.nRaces, m, 1)
                         For i As Integer = 0 To UBound(p) Step 1
-                            m.board(p(i).X, p(i).Y).isForest = True
+                            m.board(p(i).X, p(i).Y).surface.isForest = True
                         Next i
                     Else
-                        m.board(x, y).isForest = True
+                        m.board(x, y).surface.isForest = True
                     End If
                 End If
             Next x
@@ -184,7 +184,7 @@
         Dim skip As Boolean
         For y As Integer = 0 To m.ySize Step 1
             For x As Integer = 0 To m.xSize Step 1
-                If Not m.Loc(m.board(x, y).locID(0) - 1).IsObtainedBySymmery And m.board(x, y).objectID = DefMapObjects.Types.Mine Then
+                If Not m.Loc(m.board(x, y).locID(0) - 1).IsObtainedBySymmery And m.board(x, y).mapObject.objectID = DefMapObjects.Types.Mine Then
                     skip = False
                     pos.Clear()
                     Dim b As Location.Borders = ImpenetrableMeshGen.NearestXY(x, y, m.xSize, m.ySize, 1)
@@ -224,11 +224,11 @@
 
         If m.Loc(c.locID(0) - 1).IsObtainedBySymmery Then Return False
 
-        If c.isAttended Then Return False
-        If c.isBorder Then Return False
-        If c.isForest Then Return False
-        If c.isRoad Then Return False
-        If c.isWater Then Return False
+        If c.passability.isAttended Then Return False
+        If c.passability.isBorder Then Return False
+        If c.surface.isForest Then Return False
+        If c.surface.isRoad Then Return False
+        If c.surface.isWater Then Return False
 
         If mustBeFree(x, y) Then Return False
 

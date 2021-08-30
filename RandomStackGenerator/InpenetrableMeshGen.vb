@@ -1232,30 +1232,30 @@ Public Class ImpenetrableMeshGen
 
             For y As Integer = d To r - d Step 1
                 For x As Integer = d To r - d Step 1
-                    result(i)(x, y).isAttended = True
+                    result(i)(x, y).passability.isAttended = True
                 Next x
             Next y
 
             For y As Integer = r - d - 1 To r - d + 1 Step 1
                 For x As Integer = r - d - 1 To r - d + 1 Step 1
-                    If Not result(i)(x, y).isAttended Then
-                        result(i)(x, y).Penetrable = True
+                    If Not result(i)(x, y).passability.isAttended Then
+                        result(i)(x, y).passability.isPenetrable = True
                     End If
                 Next x
             Next y
             If ActiveObjects(i).hasExternalGuard Then
                 For y As Integer = r - d To r - d + 2 Step 1
                     For x As Integer = r - d To r - d + 2 Step 1
-                        If Not result(i)(x, y).isAttended Then
-                            result(i)(x, y).Penetrable = True
+                        If Not result(i)(x, y).passability.isAttended Then
+                            result(i)(x, y).passability.isPenetrable = True
                         End If
                     Next x
                 Next y
                 For k As Integer = -1 To 1 Step 2
-                    result(i)(r - d + k, r - d - k).Penetrable = False
-                    result(i)(r - d + k, r - d - k).isBorder = True
+                    result(i)(r - d + k, r - d - k).passability.isPenetrable = False
+                    result(i)(r - d + k, r - d - k).passability.isBorder = True
                 Next k
-                result(i)(r - d + 1, r - d + 1).GuardLoc = True
+                result(i)(r - d + 1, r - d + 1).stack.GuardLoc = True
             End If
 
             If symmId > -1 Then
@@ -1264,14 +1264,14 @@ Public Class ImpenetrableMeshGen
                     For x As Integer = 0 To r Step 1
                         p = symm.ApplySymm(New Point(x, y), settMap.nRaces, New Map(r, r, symmId), 1)
                         For k As Integer = 0 To UBound(p) Step 1
-                            result(i)(p(k).X, p(k).Y).isAttended = result(i)(x, y).isAttended Or result(i)(p(k).X, p(k).Y).isAttended
-                            result(i)(p(k).X, p(k).Y).Penetrable = result(i)(x, y).Penetrable Or result(i)(p(k).X, p(k).Y).Penetrable
-                            result(i)(p(k).X, p(k).Y).isBorder = result(i)(x, y).isBorder Or result(i)(p(k).X, p(k).Y).isBorder
+                            result(i)(p(k).X, p(k).Y).passability.isAttended = result(i)(x, y).passability.isAttended Or result(i)(p(k).X, p(k).Y).passability.isAttended
+                            result(i)(p(k).X, p(k).Y).passability.isPenetrable = result(i)(x, y).passability.isPenetrable Or result(i)(p(k).X, p(k).Y).passability.isPenetrable
+                            result(i)(p(k).X, p(k).Y).passability.isBorder = result(i)(x, y).passability.isBorder Or result(i)(p(k).X, p(k).Y).passability.isBorder
                         Next k
                     Next x
                 Next y
             End If
-            result(i)(d, d).objectID = DefMapObjects.toObjType(i)
+            result(i)(d, d).mapObject.objectID = DefMapObjects.toObjType(i)
         Next i
         Return result
     End Function
@@ -1564,7 +1564,7 @@ clearandexit:
             For x As Integer = b.minX To b.maxX Step 1
                 For y As Integer = b.minY To b.maxY Step 1
                     If m.board(x, y).locID.Count = 0 Then
-                        m.board(p.X, p.Y).isBorder = True
+                        m.board(p.X, p.Y).passability.isBorder = True
                         x = b.maxX
                         Exit For
                     End If
@@ -1816,7 +1816,7 @@ clearandexit:
                         If dx >= 0 And dx <= m.xSize Then
                             Dim dy As Integer = y + p.Y
                             If dy >= 0 And dy <= m.ySize Then
-                                If m.board(dx, dy).isBorder Then
+                                If m.board(dx, dy).passability.isBorder Then
                                     add = True
                                 ElseIf m.board(dx, dy).locID.Count > 0 Then
                                     add = False
@@ -1896,10 +1896,10 @@ clearandexit:
             For y As Integer = 0 To m.ySize Step 1
                 m.board(x, y).ClearLocIDArray() 'New List(Of Integer)
                 m.board(x, y).groupID = 0
-                m.board(x, y).isAttended = False
-                m.board(x, y).isBorder = False
-                m.board(x, y).isPass = False
-                m.board(x, y).objectID = DefMapObjects.Types.None
+                m.board(x, y).passability.isAttended = False
+                m.board(x, y).passability.isBorder = False
+                m.board(x, y).passability.isPass = False
+                m.board(x, y).mapObject.objectID = DefMapObjects.Types.None
 
                 n += 1
                 allPoints(n) = New Point(x, y)
@@ -2114,7 +2114,7 @@ clearandexit:
                     Dim b As Location.Borders = NearestXY(x, y, tmpm.xSize, tmpm.ySize, borderRadius(x, y))
                     For i As Integer = b.minX To b.maxX Step 1
                         For j As Integer = b.minY To b.maxY Step 1
-                            tmpm.board(i, j).isBorder = True
+                            tmpm.board(i, j).passability.isBorder = True
                             If Not tmpm.board(i, j).locID.Contains(id) Then tmpm.board(i, j).AddToLocIDArray(id)
                         Next j
                     Next i
@@ -2137,7 +2137,7 @@ clearandexit:
                          b = NearestXY(x, y, tmpm.xSize, tmpm.ySize, 1)
                          For i As Integer = b.minX To b.maxX Step 1
                              For j As Integer = b.minY To b.maxY Step 1
-                                 If Not tmpm.board(i, j).isBorder Then
+                                 If Not tmpm.board(i, j).passability.isBorder Then
                                      n += 1
                                  End If
                              Next j
@@ -2172,7 +2172,7 @@ clearandexit:
              Sub(y As Integer)
                  For x As Integer = 0 To tmpm.xSize Step 1
                      If del(x, y) Then
-                         tmpm.board(x, y).isBorder = False
+                         tmpm.board(x, y).passability.isBorder = False
                          del(x, y) = False
                      End If
                  Next x
@@ -2188,7 +2188,7 @@ clearandexit:
         Next i
         For y As Integer = 0 To tmpm.ySize Step 1
             For x As Integer = 0 To tmpm.xSize Step 1
-                If tmpm.board(x, y).isBorder Then
+                If tmpm.board(x, y).passability.isBorder Then
                     Dim id As Integer = tmpm.board(x, y).locID(0)
                     Dim b As Location.Borders = NearestXY(x, y, tmpm.xSize, tmpm.ySize, 1)
                     For i As Integer = b.minX To b.maxX Step 1
@@ -2381,7 +2381,7 @@ clearandexit:
         Parallel.For(0, tmpm.ySize + 1, _
          Sub(y As Integer)
              For x As Integer = 0 To tmpm.xSize Step 1
-                 If Not tmpm.board(x, y).isBorder And tmpm.board(x, y).locID.Count > 1 Then
+                 If Not tmpm.board(x, y).passability.isBorder And tmpm.board(x, y).locID.Count > 1 Then
                      Dim n As Integer = tmpm.board(x, y).locID(0)
                      tmpm.board(x, y).ClearLocIDArray()
                      tmpm.board(x, y).AddToLocIDArray(n)
@@ -2396,22 +2396,22 @@ clearandexit:
         Parallel.For(0, tmpm.ySize + 1, _
          Sub(y As Integer)
              For x As Integer = 0 To tmpm.xSize Step 1
-                 If tmpm.board(x, y).isPass Then
+                 If tmpm.board(x, y).passability.isPass Then
                      If settMap.AddGuardsBetweenLocations Then
                          Dim removePathStatus As Boolean = True
                          Dim b As Location.Borders = NearestXY(x, y, tmpm.xSize, tmpm.ySize, 1)
                          For j As Integer = b.minY To b.maxY Step 1
                              For i As Integer = b.minX To b.maxX Step 1
-                                 If Not tmpm.board(x, y).locID(0) = tmpm.board(i, j).locID(0) And Not tmpm.board(i, j).isBorder Then
+                                 If Not tmpm.board(x, y).locID(0) = tmpm.board(i, j).locID(0) And Not tmpm.board(i, j).passability.isBorder Then
                                      removePathStatus = False
                                      i = b.maxX
                                      j = b.maxY
                                  End If
                              Next i
                          Next j
-                         tmpm.board(x, y).isPass = Not removePathStatus
+                         tmpm.board(x, y).passability.isPass = Not removePathStatus
                      Else
-                         tmpm.board(x, y).isPass = False
+                         tmpm.board(x, y).passability.isPass = False
                      End If
                  End If
              Next x
@@ -2428,7 +2428,7 @@ clearandexit:
             Dim init As Point = Nothing
             For x As Integer = 0 To m.xSize Step 1
                 For y As Integer = 0 To m.ySize Step 1
-                    If Not m.board(x, y).isBorder Then
+                    If Not m.board(x, y).passability.isBorder Then
                         init = New Point(x, y)
                         Exit For
                     End If
@@ -2477,7 +2477,7 @@ clearandexit:
             Dim p As New Point(-1, -1)
             For y As Integer = r.minY To r.maxY Step 1
                 For x As Integer = r.minX To r.maxX Step 1
-                    If m.board(x, y).locID(0) = m.board(dest.X, dest.Y).locID(0) And Not m.board(x, y).isBorder Then
+                    If m.board(x, y).locID(0) = m.board(dest.X, dest.Y).locID(0) And Not m.board(x, y).passability.isBorder Then
                         Dim d As Double = init.SqDist(x, y)
                         If minDist > d Then
                             minDist = d
@@ -2514,7 +2514,7 @@ clearandexit:
             b = NearestXY(CInt(tx), CInt(ty), m.xSize, m.ySize, CInt(2 * (0.5 * settMap.minPassWidth + 1)))
             For y As Integer = b.minY To b.maxY Step 1
                 For x As Integer = b.minX To b.maxX Step 1
-                    If m.board(x, y).isBorder Then
+                    If m.board(x, y).passability.isBorder Then
                         Dim dist As Double = Math.Sqrt(CDbl(x - tx) ^ 2 + CDbl(y - ty) ^ 2)
                         If dist < 0.5 * settMap.minPassWidth OrElse (dist <= settMap.minPassWidth AndAlso rndgen.Rand(0, 1, serial) > 0.5) Then
                             Dim c1 As Integer = Math.Max(Math.Min(x, m.xSize - 1), 1)
@@ -2537,16 +2537,16 @@ clearandexit:
                                 p = New Point() {New Point(c1, c2)}
                             End If
                             For Each item As Point In p
-                                If m.board(item.X, item.Y).isBorder Then
-                                    m.board(item.X, item.Y).isBorder = False
-                                    m.board(item.X, item.Y).isPass = setAsPath
-                                ElseIf m.board(item.X, item.Y).isAttended Then
+                                If m.board(item.X, item.Y).passability.isBorder Then
+                                    m.board(item.X, item.Y).passability.isBorder = False
+                                    m.board(item.X, item.Y).passability.isPass = setAsPath
+                                ElseIf m.board(item.X, item.Y).passability.isAttended Then
                                     Dim tb As Location.Borders = NearestXY(item, m, 1)
                                     For yy As Integer = tb.minY To tb.maxY Step 1
                                         For xx As Integer = tb.minX To tb.maxX Step 1
-                                            If m.board(xx, yy).isBorder Then
-                                                m.board(xx, yy).isBorder = False
-                                                m.board(xx, yy).isPass = setAsPath
+                                            If m.board(xx, yy).passability.isBorder Then
+                                                m.board(xx, yy).passability.isBorder = False
+                                                m.board(xx, yy).passability.isPass = setAsPath
                                             End If
                                         Next xx
                                     Next yy
@@ -2559,7 +2559,7 @@ clearandexit:
         Next r
     End Sub
     Friend Function FindConnected(ByRef m As Map, ByRef init As Point) As Boolean(,)
-        If m.board(init.X, init.Y).isBorder Then Throw New Exception("Find connected function: начальная точка непроходима")
+        If m.board(init.X, init.Y).passability.isBorder Then Throw New Exception("Find connected function: начальная точка непроходима")
         Dim connected(m.xSize, m.ySize), check(m.xSize, m.ySize) As Boolean
         check(init.X, init.Y) = True
         connected(init.X, init.Y) = True
@@ -2571,7 +2571,7 @@ clearandexit:
                         Dim b As Location.Borders = NearestXY(i, j, m.xSize, m.ySize, 1)
                         For x As Integer = b.minX To b.maxX Step 1
                             For y As Integer = b.minY To b.maxY Step 1
-                                If Not m.board(x, y).isBorder And Not connected(x, y) Then
+                                If Not m.board(x, y).passability.isBorder And Not connected(x, y) Then
                                     connected(x, y) = True
                                     check(x, y) = True
                                     r += 1
@@ -2594,7 +2594,7 @@ clearandexit:
         Dim m As New Map(UBound(free, 1), UBound(free, 2), -1)
         For j As Integer = 0 To m.ySize Step 1
             For i As Integer = 0 To m.xSize Step 1
-                m.board(i, j).isBorder = Not free(i, j)
+                m.board(i, j).passability.isBorder = Not free(i, j)
             Next i
         Next j
         Return m
@@ -2603,13 +2603,13 @@ clearandexit:
         If Not IsNothing(connected) AndAlso connected.Length > 0 Then
             For y As Integer = 0 To m.ySize Step 1
                 For x As Integer = 0 To m.xSize Step 1
-                    If Not m.board(x, y).isBorder And Not connected(x, y) Then Return New Point(x, y)
+                    If Not m.board(x, y).passability.isBorder And Not connected(x, y) Then Return New Point(x, y)
                 Next x
             Next y
         Else
             For y As Integer = 0 To m.ySize Step 1
                 For x As Integer = 0 To m.xSize Step 1
-                    If Not m.board(x, y).isBorder Then Return New Point(x, y)
+                    If Not m.board(x, y).passability.isBorder Then Return New Point(x, y)
                 Next x
             Next y
         End If
@@ -2636,7 +2636,7 @@ clearandexit:
         Dim init As Point = Nothing
         For x As Integer = 0 To m.xSize Step 1
             For y As Integer = 0 To m.ySize Step 1
-                If Not m.board(x, y).isBorder Then
+                If Not m.board(x, y).passability.isBorder Then
                     init = New Point(x, y)
                     Dim b As Location.Borders = NearestXY(x, y, m.xSize, m.ySize, 1)
 
@@ -2667,7 +2667,7 @@ clearandexit:
         Dim d1, d2 As Integer
         For x As Integer = 0 To m.xSize Step 1
             For y As Integer = 0 To m.ySize Step 1
-                If Not m.board(x, y).isBorder Then
+                If Not m.board(x, y).passability.isBorder Then
                     If Not settLoc(m.board(x, y).locID(0) - 1).ConnectWithAllNeighboringLocations Then
                         If Not m.Loc(m.board(x, y).locID(0) - 1).IsObtainedBySymmery Then
                             addedTo.Clear()
@@ -2718,17 +2718,17 @@ clearandexit:
             If Not TestChance(settMap.PassageCreationChance) Then
                 For x As Integer = 0 To m.xSize Step 1
                     For y As Integer = 0 To m.ySize Step 1
-                        tmpM.board(x, y).isBorder = m.board(x, y).isBorder
+                        tmpM.board(x, y).passability.isBorder = m.board(x, y).passability.isBorder
                     Next y
                 Next x
                 For Each p As Point In borders(nonEmpty(selected)(0), nonEmpty(selected)(1))
                     If m.symmID > -1 Then
                         s = symm.ApplySymm(p, settMap.nRaces, m, 1)
                         For Each item As Point In s
-                            tmpM.board(item.X, item.Y).isBorder = True
+                            tmpM.board(item.X, item.Y).passability.isBorder = True
                         Next item
                     Else
-                        tmpM.board(p.X, p.Y).isBorder = True
+                        tmpM.board(p.X, p.Y).passability.isBorder = True
                     End If
                 Next p
                 If IsNothing(FindDisconnected(tmpM, FindConnected(tmpM, init))) Then
@@ -2736,12 +2736,12 @@ clearandexit:
                         If m.symmID > -1 Then
                             s = symm.ApplySymm(p, settMap.nRaces, m, 1)
                             For Each item As Point In s
-                                m.board(item.X, item.Y).isBorder = True
-                                m.board(item.X, item.Y).isPass = False
+                                m.board(item.X, item.Y).passability.isBorder = True
+                                m.board(item.X, item.Y).passability.isPass = False
                             Next item
                         Else
-                            m.board(p.X, p.Y).isBorder = True
-                            m.board(p.X, p.Y).isPass = False
+                            m.board(p.X, p.Y).passability.isBorder = True
+                            m.board(p.X, p.Y).passability.isPass = False
                         End If
                     Next p
                 End If
@@ -3118,12 +3118,12 @@ clearandexit:
         Friend Shared Function MayPlaceObject(ByRef m As Map, ByRef id As DefMapObjects.Types, _
                                               ByRef x As Integer, ByRef y As Integer, _
                                               ByRef ActiveObjects() As AttendedObject) As Boolean
-            If m.board(x, y).isBorder Or m.board(x, y).isAttended Then Return False
+            If m.board(x, y).passability.isBorder Or m.board(x, y).passability.isAttended Then Return False
             Dim b As Location.Borders = ObjectBorders(id, x, y, ActiveObjects)
             If b.minX < 0 Or b.minY < 0 Or b.maxX > m.xSize Or b.maxY > m.ySize Then Return False
             For j As Integer = b.minY To b.maxY Step 1
                 For i As Integer = b.minX To b.maxX Step 1
-                    If m.board(i, j).isBorder Or m.board(i, j).isAttended Or Not m.board(i, j).locID(0) = id Then Return False
+                    If m.board(i, j).passability.isBorder Or m.board(i, j).passability.isAttended Or Not m.board(i, j).locID(0) = id Then Return False
                 Next i
             Next j
             Return True
@@ -3150,7 +3150,7 @@ clearandexit:
                 Dim b As Location.Borders = ObjectBorders(id, x, y, ActiveObjects)
                 For j As Integer = b.minY To b.maxY Step 1
                     For i As Integer = b.minX To b.maxX Step 1
-                        m.board(i, j).isAttended = True
+                        m.board(i, j).passability.isAttended = True
                     Next i
                 Next j
                 Call PlaceObject_SetProperties(m, id, GroupID, placedCities, settLoc, settMap, 0, b.minX, b.minY)
@@ -3165,7 +3165,7 @@ clearandexit:
                     For i As Integer = b.minX To b.maxX Step 1
                         plist = symm.ApplySymm(New Point(i, j), settMap.nRaces, m, 1)
                         For k As Integer = 0 To UBound(plist) Step 1
-                            m.board(plist(k).X, plist(k).Y).isAttended = True
+                            m.board(plist(k).X, plist(k).Y).passability.isAttended = True
                             If p(k).X >= plist(k).X And p(k).Y >= plist(k).Y Then p(k) = New Point(plist(k).X, plist(k).Y)
                         Next k
                     Next i
@@ -3185,12 +3185,12 @@ clearandexit:
                                                      ByRef settLoc As Map.SettingsLoc, ByRef settMap As Map.SettingsMap, _
                                                      ByRef ownerIncrement As Integer, _
                                                      ByRef x As Integer, ByRef y As Integer)
-            m.board(x, y).objectID = typeID
+            m.board(x, y).mapObject.objectID = typeID
             m.board(x, y).groupID = GroupID
             If typeID = DefMapObjects.Types.City Then
                 If Not IsNothing(settLoc.RaceCities) AndAlso placedCities < settLoc.RaceCities.Length Then
-                    m.board(x, y).City = Map.SettingsLoc.SettingsRaceCity.Copy(settLoc.RaceCities(placedCities))
-                    Call m.board(x, y).City.IncrementOwner(ownerIncrement, settMap.nRaces)
+                    m.board(x, y).mapObject.City = Map.SettingsLoc.SettingsRaceCity.Copy(settLoc.RaceCities(placedCities))
+                    Call m.board(x, y).mapObject.City.IncrementOwner(ownerIncrement, settMap.nRaces)
                 End If
             End If
         End Sub
@@ -3332,8 +3332,8 @@ clearandexit:
     ''' .Loc(from 0 to "количество локаций-1") и .board(from 0 to xSize, from 0 to ySize).
     ''' .Loc() - внутри инициализированные локации.
     ''' .board(,).LocID - как минимум одно значение (можно больше, если по соседству с тайлом есть тайлы других локаций (но тот, что первый в списке - основной).
-    ''' Непроходимые тайлы на границе локаций (внутри локаций следует их добавлять уже после расстановки посещаемых объектов) - .board(,).isBorder = True;
-    ''' Для тайлов, являющихся проходом между локациями - .board(,).isPass = True;
+    ''' Непроходимые тайлы на границе локаций (внутри локаций следует их добавлять уже после расстановки посещаемых объектов) - .board(,).passability.isBorder = True;
+    ''' Для тайлов, являющихся проходом между локациями - .board(,).passability.isPass = True;
     ''' остальные записи в board(,) могут быть пустыми, неинициализированными и всё такое.</param>
     ''' <param name="settMap">Общие настройки для карты</param>
     ''' <param name="settRaceLoc">Настройки для стартовых локаций играбельных рас.
@@ -3356,8 +3356,8 @@ clearandexit:
     ''' .Loc(from 0 to "количество локаций-1") и .board(from 0 to xSize, from 0 to ySize).
     ''' .Loc() - внутри инициализированные локации (первыми должны идти стартовые локации рас).
     ''' .board(,).LocID - как минимум одно значение (можно больше, если по соседству с тайлом есть тайлы других локаций (но тот, что первый в списке - основной).
-    ''' Непроходимые тайлы на границе локаций (внутри локаций следует их добавлять уже после расстановки посещаемых объектов) - .board(,).isBorder = True;
-    ''' Для тайлов, являющихся проходом между локациями - .board(,).isPass = True;
+    ''' Непроходимые тайлы на границе локаций (внутри локаций следует их добавлять уже после расстановки посещаемых объектов) - .board(,).passability.isBorder = True;
+    ''' Для тайлов, являющихся проходом между локациями - .board(,).passability.isPass = True;
     ''' остальные записи в board(,) могут быть пустыми, неинициализированными и всё такое.</param>
     ''' <param name="settMap">Общие настройки для карты</param>
     ''' <param name="settLoc">Настройки для каждой локации. Первыми должны идти стартовые локации рас.
@@ -3399,8 +3399,8 @@ clearandexit:
                            LocsPlacing(id - 1).maxY - dy) As Boolean
              For y As Integer = LocsPlacing(id - 1).minY To LocsPlacing(id - 1).maxY Step 1
                  For x As Integer = LocsPlacing(id - 1).minX To LocsPlacing(id - 1).maxX Step 1
-                     If Not tmpm.board(x, y).isBorder _
-                      And Not tmpm.board(x, y).isAttended _
+                     If Not tmpm.board(x, y).passability.isBorder _
+                      And Not tmpm.board(x, y).passability.isAttended _
                       AndAlso tmpm.board(x, y).locID(0) = id Then
                          LocArea(id - 1)(0) += 1
                          freeCells(x - dx, y - dy) = True
@@ -3531,10 +3531,10 @@ clearandexit:
 
         For y As Integer = tmpm.ySize To 0 Step -1
             For x As Integer = tmpm.xSize To 0 Step -1
-                If tmpm.board(x, y).objectID > DefMapObjects.Types.None Then
-                    Dim id As Integer = tmpm.board(x, y).objectID
+                If tmpm.board(x, y).mapObject.objectID > DefMapObjects.Types.None Then
+                    Dim id As Integer = tmpm.board(x, y).mapObject.objectID
                     Dim gid As Integer = tmpm.board(x, y).groupID
-                    Dim t_city As Map.SettingsLoc.SettingsRaceCity = Map.SettingsLoc.SettingsRaceCity.Copy(tmpm.board(x, y).City)
+                    Dim t_city As Map.SettingsLoc.SettingsRaceCity = Map.SettingsLoc.SettingsRaceCity.Copy(tmpm.board(x, y).mapObject.City)
                     Dim d As Integer = ActiveObjects(id).dxy
                     For j As Integer = 0 To UBound(ObjectBlank(id), 2) Step 1
                         Dim dy As Integer = y + j
@@ -3542,28 +3542,28 @@ clearandexit:
                             Dim dx As Integer = x + i
                             If dx <= tmpm.xSize And dy <= tmpm.ySize Then
                                 tmpm.board(dx, dy).groupID = ObjectBlank(id)(i, j).groupID
-                                tmpm.board(dx, dy).GuardLoc = ObjectBlank(id)(i, j).GuardLoc
-                                If tmpm.board(dx, dy).GuardLoc Then tmpm.board(dx, dy).isObjectGuard = True
-                                tmpm.board(dx, dy).isAttended = ObjectBlank(id)(i, j).isAttended
-                                tmpm.board(dx, dy).isBorder = ObjectBlank(id)(i, j).isBorder
-                                tmpm.board(dx, dy).Penetrable = ObjectBlank(id)(i, j).Penetrable
-                                tmpm.board(dx, dy).objectID = ObjectBlank(id)(i, j).objectID
-                                tmpm.board(dx, dy).City = Map.SettingsLoc.SettingsRaceCity.Copy(ObjectBlank(id)(i, j).City)
-                                If ObjectBlank(id)(i, j).isAttended Or ObjectBlank(id)(i, j).isBorder Then
-                                    tmpm.board(dx, dy).isPass = False
+                                tmpm.board(dx, dy).stack.GuardLoc = ObjectBlank(id)(i, j).stack.GuardLoc
+                                If tmpm.board(dx, dy).stack.GuardLoc Then tmpm.board(dx, dy).stack.ObjectGuard = True
+                                tmpm.board(dx, dy).passability.isAttended = ObjectBlank(id)(i, j).passability.isAttended
+                                tmpm.board(dx, dy).passability.isBorder = ObjectBlank(id)(i, j).passability.isBorder
+                                tmpm.board(dx, dy).passability.isPenetrable = ObjectBlank(id)(i, j).passability.isPenetrable
+                                tmpm.board(dx, dy).mapObject.objectID = ObjectBlank(id)(i, j).mapObject.objectID
+                                tmpm.board(dx, dy).mapObject.City = Map.SettingsLoc.SettingsRaceCity.Copy(ObjectBlank(id)(i, j).mapObject.City)
+                                If ObjectBlank(id)(i, j).passability.isAttended Or ObjectBlank(id)(i, j).passability.isBorder Then
+                                    tmpm.board(dx, dy).passability.isPass = False
                                 End If
-                                If tmpm.board(dx, dy).GuardLoc And tmpm.board(dx, dy).objectID = DefMapObjects.Types.City _
-                                 And tmpm.board(dx, dy).City.owner > 0 Then
-                                    tmpm.board(dx, dy).GuardLoc = False
+                                If tmpm.board(dx, dy).stack.GuardLoc And tmpm.board(dx, dy).mapObject.objectID = DefMapObjects.Types.City _
+                                 And tmpm.board(dx, dy).mapObject.City.owner > 0 Then
+                                    tmpm.board(dx, dy).stack.GuardLoc = False
                                 End If
-                            ElseIf ObjectBlank(id)(i, j).GuardLoc Or ObjectBlank(id)(i, j).isAttended Or ObjectBlank(id)(i, j).isBorder _
-                            Or ObjectBlank(id)(i, j).objectID > DefMapObjects.Types.None Then
+                            ElseIf ObjectBlank(id)(i, j).stack.GuardLoc Or ObjectBlank(id)(i, j).passability.isAttended Or ObjectBlank(id)(i, j).passability.isBorder _
+                            Or ObjectBlank(id)(i, j).mapObject.objectID > DefMapObjects.Types.None Then
                                 Throw New Exception("Неправильно поставлен объект: objectID = " & id & " position = " & x & "; " & y)
                             End If
                         Next i
                     Next j
                     tmpm.board(x + d, y + d).groupID = gid
-                    tmpm.board(x + d, y + d).City = Map.SettingsLoc.SettingsRaceCity.Copy(t_city)
+                    tmpm.board(x + d, y + d).mapObject.City = Map.SettingsLoc.SettingsRaceCity.Copy(t_city)
                     If ActiveObjects(id).hasExternalGuard Then
                         maxGroupID += 1
                         tmpm.board(x + d + ActiveObjects(id).Size, _
@@ -4102,14 +4102,14 @@ exitfunction:
                         b.minY = Math.Min(b.minY, y)
                         b.maxX = Math.Max(b.maxX, x)
                         b.maxY = Math.Max(b.maxY, y)
-                        m.board(x, y).isPass = False
-                        If Not m.board(x, y).isBorder And Not m.board(x, y).isAttended Then
+                        m.board(x, y).passability.isPass = False
+                        If Not m.board(x, y).passability.isBorder And Not m.board(x, y).passability.isAttended Then
                             n = NearestXY(x, y, m.xSize, m.ySize, 1)
                             For j As Integer = n.minY To n.maxY Step 1
                                 For i As Integer = n.minX To n.maxX Step 1
                                     If Not m.board(i, j).locID(0) = LocId Then
-                                        m.board(x, y).Penetrable = True
-                                        m.board(x, y).isPass = True
+                                        m.board(x, y).passability.isPenetrable = True
+                                        m.board(x, y).passability.isPass = True
                                         i = n.maxX
                                         j = n.maxY
                                     End If
@@ -4122,11 +4122,11 @@ exitfunction:
             For y As Integer = b.minY To b.maxY Step 1
                 For x As Integer = b.minX To b.maxX Step 1
                     If m.board(x, y).locID(0) = LocId Then
-                        m.board(x, y).isPass = m.board(x, y).isPass And m.board(x, y).Penetrable
+                        m.board(x, y).passability.isPass = m.board(x, y).passability.isPass And m.board(x, y).passability.isPenetrable
                         If m.symmID > -1 Then
                             Dim p() As Point = symm.ApplySymm(New Point(x, y), settMap.nRaces, m, 1)
                             For k As Integer = 0 To UBound(p) Step 1
-                                m.board(p(k).X, p(k).Y).isPass = m.board(x, y).isPass
+                                m.board(p(k).X, p(k).Y).passability.isPass = m.board(x, y).passability.isPass
                             Next k
                         End If
                     End If
@@ -4137,8 +4137,8 @@ exitfunction:
             For y As Integer = 0 To b.maxY - b.minY Step 1
                 For x As Integer = 0 To b.maxX - b.minX Step 1
                     If m.board(x + b.minX, y + b.minY).locID(0) = LocId _
-                    And Not m.board(x + b.minX, y + b.minY).isAttended _
-                    And Not m.board(x + b.minX, y + b.minY).isBorder Then
+                    And Not m.board(x + b.minX, y + b.minY).passability.isAttended _
+                    And Not m.board(x + b.minX, y + b.minY).passability.isBorder Then
                         free(x, y) = True
                     End If
                 Next x
@@ -4148,7 +4148,7 @@ exitfunction:
             Dim s As Boolean
             For y As Integer = 0 To b.maxY - b.minY Step 1
                 For x As Integer = 0 To b.maxX - b.minX Step 1
-                    If free(x, y) And m.board(x + b.minX, y + b.minY).isPass Then
+                    If free(x, y) And m.board(x + b.minX, y + b.minY).passability.isPass Then
                         s = True
                         If Not IsNothing(conn) Then
                             For i As Integer = 0 To UBound(conn) Step 1
@@ -4185,14 +4185,14 @@ exitfunction:
             Dim makeBorder As Boolean
             For y As Integer = b.minY To b.maxY Step 1
                 For x As Integer = b.minX To b.maxX Step 1
-                    If m.board(x, y).locID(0) = LocId And Not m.board(x, y).isAttended _
-                    And Not m.board(x, y).isBorder And m.board(x, y).isPass _
-                    And Not m.board(x, y).isObjectGuard And Not m.board(x, y).PassGuardLoc And Not m.board(x, y).GuardLoc Then
+                    If m.board(x, y).locID(0) = LocId And Not m.board(x, y).passability.isAttended _
+                    And Not m.board(x, y).passability.isBorder And m.board(x, y).passability.isPass _
+                    And Not m.board(x, y).stack.ObjectGuard And Not m.board(x, y).stack.PassGuardLoc And Not m.board(x, y).stack.GuardLoc Then
                         n = NearestXY(x, y, m.xSize, m.ySize, 1)
                         makeBorder = True
                         For j As Integer = n.minY To n.maxY Step 1
                             For i As Integer = n.minX To n.maxX Step 1
-                                If m.board(i, j).isBorder Then
+                                If m.board(i, j).passability.isBorder Then
                                     makeBorder = False
                                     i = n.maxX
                                     j = n.maxY
@@ -4209,14 +4209,14 @@ exitfunction:
                         If m.symmID > -1 Then
                             Dim p() As Point = symm.ApplySymm(New Point(x, y), settMap.nRaces, m, 1)
                             For k As Integer = 0 To UBound(p) Step 1
-                                m.board(p(k).X, p(k).Y).isPass = False
-                                m.board(p(k).X, p(k).Y).Penetrable = False
-                                m.board(p(k).X, p(k).Y).isBorder = True
+                                m.board(p(k).X, p(k).Y).passability.isPass = False
+                                m.board(p(k).X, p(k).Y).passability.isPenetrable = False
+                                m.board(p(k).X, p(k).Y).passability.isBorder = True
                             Next k
                         Else
-                            m.board(x, y).isPass = False
-                            m.board(x, y).Penetrable = False
-                            m.board(x, y).isBorder = True
+                            m.board(x, y).passability.isPass = False
+                            m.board(x, y).passability.isPenetrable = False
+                            m.board(x, y).passability.isBorder = True
                         End If
                     End If
                 Next x
@@ -4236,7 +4236,7 @@ exitfunction:
 
         For y As Integer = 0 To ySize Step 1
             For x As Integer = 0 To xSize Step 1
-                If connected(x, y) And Not m.board(x + LPos.X, y + LPos.Y).Penetrable Then isLifeField(x, y) = True
+                If connected(x, y) And Not m.board(x + LPos.X, y + LPos.Y).passability.isPenetrable Then isLifeField(x, y) = True
             Next x
         Next y
         If m.symmID > -1 Then
@@ -4440,7 +4440,7 @@ exitfunction:
         'делаем карту рядом со стольней свободнее
         For j As Integer = 0 To ySize Step 1
             For i As Integer = 0 To xSize Step 1
-                If m.board(i + LPos.X, j + LPos.Y).objectID = DefMapObjects.Types.Capital Then
+                If m.board(i + LPos.X, j + LPos.Y).mapObject.objectID = DefMapObjects.Types.Capital Then
                     Dim center As New Point(CInt(i + (ActiveObjects(DefMapObjects.Types.Capital).Size - 1) * 0.5), _
                                             CInt(j + (ActiveObjects(DefMapObjects.Types.Capital).Size - 1) * 0.5))
                     Dim R As Double = 7
@@ -4465,10 +4465,10 @@ exitfunction:
                     If m.symmID > -1 Then
                         Dim p() As Point = symm.ApplySymm(New Point(x + LPos.X, y + LPos.Y), settMap.nRaces, m, 1)
                         For k As Integer = 0 To UBound(p) Step 1
-                            m.board(p(k).X, p(k).Y).isBorder = Not free(x, y)
+                            m.board(p(k).X, p(k).Y).passability.isBorder = Not free(x, y)
                         Next k
                     Else
-                        m.board(x + LPos.X, y + LPos.Y).isBorder = Not free(x, y)
+                        m.board(x + LPos.X, y + LPos.Y).passability.isBorder = Not free(x, y)
                     End If
                 End If
             Next x
@@ -5425,7 +5425,7 @@ Public Class shortMapFormat
     '    Dim groups As New List(Of Integer)
     '    For y As Integer = 0 To UBound(m.board, 2) Step 1
     '        For x As Integer = 0 To UBound(m.board, 1) Step 1
-    '            If m.board(x, y).objectID > DefMapObjects.Types.None Or m.board(x, y).GuardLoc Or m.board(x, y).isObjectGuard Or m.board(x, y).PassGuardLoc Then
+    '            If m.board(x, y).mapObject.objectID > DefMapObjects.Types.None Or m.board(x, y).stack.GuardLoc Or m.board(x, y).stack.isObjectGuard Or m.board(x, y).stack.PassGuardLoc Then
     '                Dim group As Integer = m.board(x, y).groupID
     '                If groups.Contains(group) Then
     '                    MsgBox("")
@@ -5444,10 +5444,10 @@ Public Class shortMapFormat
     'End Sub
     'Public Shared Sub checkraces(ByRef m As Map, x As Integer, y As Integer)
     '
-    '    If m.board(x, y).objectID = DefMapObjects.Types.City Then
+    '    If m.board(x, y).mapObject.objectID = DefMapObjects.Types.City Then
     '        Dim pos As New Point(x, y)
-    '        Dim owner As String = m.board(x, y).City.race
-    '        Dim level As Integer = m.board(x, y).City.level
+    '        Dim owner As String = m.board(x, y).mapObject.City.race
+    '        Dim level As Integer = m.board(x, y).mapObject.City.level
     '        Dim isGround As Boolean = Not RaceGen.MayBeWater(m, x, y)
     '
     '        Dim desiredStatsExter As AllDataStructues.DesiredStats = Nothing
@@ -5466,8 +5466,8 @@ Public Class shortMapFormat
     '                MsgBox("")
     '            End If
     '        End If
-    '    ElseIf m.board(x, y).objectID = DefMapObjects.Types.Ruins Then
-    '    ElseIf m.board(x, y).GuardLoc Or m.board(x, y).PassGuardLoc Or m.board(x, y).isObjectGuard Then
+    '    ElseIf m.board(x, y).mapObject.objectID = DefMapObjects.Types.Ruins Then
+    '    ElseIf m.board(x, y).stack.GuardLoc Or m.board(x, y).stack.PassGuardLoc Or m.board(x, y).stack.isObjectGuard Then
     '        Dim desiredStats As AllDataStructues.DesiredStats = m.groupStats.Item(m.board(x, y).groupID)
     '        Dim isGround As Boolean = Not RaceGen.MayBeWater(m, x, y)
     '        If desiredStats.Race.Count = 1 AndAlso desiredStats.Race.Item(0) = RaceGen.WaterRace And isGround Then
@@ -5494,7 +5494,7 @@ Public Class shortMapFormat
         Dim attObjects() As AttendedObject = (New ImpenetrableMeshGen).ActiveObjects
         Dim sName As New SetName(lang)
         Call sName.ResetNames(True, -1)
-        
+
         Dim allSpells(objContent.spells.Count + objContent.excludedSpells.Count - 1) As AllDataStructues.Spell
         Dim ns As Integer = -1
         For Each spellsList As Dictionary(Of String, AllDataStructues.Spell) In {objContent.spells, objContent.excludedSpells}
@@ -5546,8 +5546,8 @@ Public Class shortMapFormat
         End If
         For y As Integer = 0 To UBound(m.board, 2) Step 1
             For x As Integer = 0 To UBound(m.board, 1) Step 1
-                If m.board(x, y).objectID = DefMapObjects.Types.Mine Then
-                    name = m.board(x, y).objectName
+                If m.board(x, y).mapObject.objectID = DefMapObjects.Types.Mine Then
+                    name = m.board(x, y).mapObject.objectName
                     Call AddObject(res.mines, x, y, objContent.SetMineType(name), attObjects(DefMapObjects.Types.Mine).Size)
                     If Not allMines.Contains(res.mines(UBound(res.mines)).id) Then allMines.Add(res.mines(UBound(res.mines)).id)
                 End If
@@ -5562,8 +5562,8 @@ Public Class shortMapFormat
                 n += 1
                 tilesList.Add(n)
                 tiles(n) = New Point(x, y)
-                If m.board(x, y).objectID = DefMapObjects.Types.Capital Then
-                    playableRaces.Add(objContent.randStack.comm.defValues.capitalToGeneratorRace(m.board(x, y).objectName))
+                If m.board(x, y).mapObject.objectID = DefMapObjects.Types.Capital Then
+                    playableRaces.Add(objContent.randStack.comm.defValues.capitalToGeneratorRace(m.board(x, y).mapObject.objectName))
                 End If
             Next x
         Next y
@@ -5576,37 +5576,37 @@ Public Class shortMapFormat
             'ландшафт
             res.landscape(x, y).owner = objContent.randStack.comm.defValues.RaceNumberToRaceChar(objContent.randStack.comm.RaceIdentifierToSubrace("Neutral"))
             res.landscape(x, y).treeID = -1
-            If m.board(x, y).isWater Then
+            If m.board(x, y).surface.isWater Then
                 res.landscape(x, y).ground = TileState.GroundType.Water
             Else
-                If Not playableRaces.Contains(objContent.randStack.comm.defValues.RaceNumberToRaceChar(m.board(x, y).objRace.Item(0))) Then
-                    res.landscape(x, y).owner = objContent.randStack.comm.defValues.RaceNumberToRaceChar(m.board(x, y).objRace.Item(0))
+                If Not playableRaces.Contains(objContent.randStack.comm.defValues.RaceNumberToRaceChar(m.board(x, y).mapObject.objRace.Item(0))) Then
+                    res.landscape(x, y).owner = objContent.randStack.comm.defValues.RaceNumberToRaceChar(m.board(x, y).mapObject.objRace.Item(0))
                 End If
-                If m.board(x, y).isForest Then
+                If m.board(x, y).surface.isForest Then
                     res.landscape(x, y).ground = TileState.GroundType.Forest
                     Dim max As Integer = treesAmont(objContent.randStack.comm.RaceIdentifierToSubrace(res.landscape(x, y).owner)) - 1
                     res.landscape(x, y).treeID = objContent.randStack.rndgen.RndInt(0, max, True)
-                ElseIf m.board(x, y).isRoad Then
+                ElseIf m.board(x, y).surface.isRoad Then
                     res.landscape(x, y).ground = TileState.GroundType.Road
                 Else
                     res.landscape(x, y).ground = TileState.GroundType.Plain
                 End If
             End If
 
-            name = m.board(x, y).objectName
+            name = m.board(x, y).mapObject.objectName
 
             'объекты местности
             If Not name = "" Then
-                If m.board(x, y).objectID = DefMapObjects.Types.Capital Then
+                If m.board(x, y).mapObject.objectID = DefMapObjects.Types.Capital Then
                     Dim subrace As Integer = objContent.randStack.comm.RaceIdentifierToSubrace(objContent.randStack.comm.defValues.capitalToGeneratorRace(name))
                     Dim resources As AllDataStructues.Cost = raceT1mana.Item(subrace) * CDbl(settGen.common_settMap.StartMana / AllDataStructues.Cost.Sum(raceT1mana.Item(subrace)))
                     resources.Gold += settGen.common_settMap.StartGold
                     Call AddObject(res.capitals, x, y, name, objContent, attObjects, sName, resources, startItems)
-                ElseIf m.board(x, y).objectID = DefMapObjects.Types.City Then
+                ElseIf m.board(x, y).mapObject.objectID = DefMapObjects.Types.City Then
                     Dim pos As New Point(x, y)
-                    Dim owner As String = m.board(x, y).City.race
-                    Dim level As Integer = m.board(x, y).City.level
-                    Dim landRace As Integer = m.board(x, y).objRace.Item(0)
+                    Dim owner As String = m.board(x, y).mapObject.City.race
+                    Dim level As Integer = m.board(x, y).mapObject.City.level
+                    Dim landRace As Integer = m.board(x, y).mapObject.objRace.Item(0)
 
                     Dim desiredStatsExter As AllDataStructues.DesiredStats = Nothing
                     Dim desiredStatsInter As AllDataStructues.DesiredStats = Nothing
@@ -5635,30 +5635,31 @@ Public Class shortMapFormat
                         stackInter = objContent.randStack.Gen(gs)
                     End If
                     Call AddObject(res.cities, x, y, name, desiredStatsExter, desiredStatsInter, stackExter, stackInter, owner, level, objContent, attObjects, landRace, sName)
-                ElseIf m.board(x, y).objectID = DefMapObjects.Types.Vendor Then
+                ElseIf m.board(x, y).mapObject.objectID = DefMapObjects.Types.Vendor Then
                     Dim content As List(Of String) = objContent.GetMerchantListSettings(m, gLocSettings, x, y)
                     Dim items As List(Of String) = objContent.MakeMerchantItemsList(New AllDataStructues.DesiredStats With {.shopContent = content}, Nothing, m.log)
                     Call AddObject(res.merchantsItems, x, y, name, items, objContent, attObjects, sName)
-                ElseIf m.board(x, y).objectID = DefMapObjects.Types.Mercenary Then
+                ElseIf m.board(x, y).mapObject.objectID = DefMapObjects.Types.Mercenary Then
                     Dim content As List(Of String) = objContent.GetMercenariesListSettings(m, gLocSettings, x, y, settGen.common_settMap.nRaces)
                     Dim items As List(Of String) = objContent.MakeMercenariesList(New AllDataStructues.DesiredStats With {.shopContent = content}, m.log)
                     Call AddObject(res.merchantsUnits, x, y, name, items, objContent, attObjects, sName)
-                ElseIf m.board(x, y).objectID = DefMapObjects.Types.Mage Then
+                ElseIf m.board(x, y).mapObject.objectID = DefMapObjects.Types.Mage Then
                     Dim content As List(Of String) = objContent.GetSpellsListSettings(m, gLocSettings, x, y, settGen.common_settMap.nRaces)
                     Dim items As List(Of String) = objContent.MakeSpellsList(New AllDataStructues.DesiredStats With {.shopContent = content}, allMines, m.log)
                     Call AddObject(res.merchantsSpells, x, y, name, items, objContent, attObjects, sName)
-                ElseIf m.board(x, y).objectID = DefMapObjects.Types.Trainer Then
+                ElseIf m.board(x, y).mapObject.objectID = DefMapObjects.Types.Trainer Then
                     Call AddObject(res.trainers, x, y, name, attObjects, sName)
-                ElseIf m.board(x, y).objectID = DefMapObjects.Types.Ruins Then
+                ElseIf m.board(x, y).mapObject.objectID = DefMapObjects.Types.Ruins Then
                     Dim pos As New Point(x, y)
                     Dim desiredStats As AllDataStructues.DesiredStats = m.groupStats.Item(m.board(x, y).groupID)
-                    Dim gs As New AllDataStructues.CommonStackCreationSettings With {.StackStats = desiredStats, _
-                                                                                     .deltaLeadership = 0, _
-                                                                                     .GroundTile = Not m.board(x, y).isWater, _
-                                                                                     .NoLeader = True, _
-                                                                                     .pos = pos, _
-                                                                                     .MapLords = lordsList, _
-                                                                                     .ApplyStrictTypesFilter = ApplyStrictTypesFilter}
+                    Dim gs As New AllDataStructues.CommonStackCreationSettings _
+                     With {.StackStats = desiredStats, _
+                           .deltaLeadership = 0, _
+                           .GroundTile = Not m.board(x, y).surface.isWater, _
+                           .NoLeader = True, _
+                           .pos = pos, _
+                           .MapLords = lordsList, _
+                           .ApplyStrictTypesFilter = ApplyStrictTypesFilter}
                     Dim stack As AllDataStructues.Stack = objContent.randStack.Gen(gs)
                     Dim itemCost As Integer = objContent.randStack.rndgen.RndInt(CInt(0.25 * desiredStats.LootCost), desiredStats.LootCost, True)
 
@@ -5670,9 +5671,9 @@ Public Class shortMapFormat
                     stack.items.Clear()
                     stack.items.Add(loot)
                     Call AddObject(res.ruins, x, y, name, desiredStats, stack, resources, attObjects, sName)
-                ElseIf m.board(x, y).objectID = DefMapObjects.Types.Mine Then
+                ElseIf m.board(x, y).mapObject.objectID = DefMapObjects.Types.Mine Then
                     'do nothing
-                ElseIf m.board(x, y).objectID = DefMapObjects.Types.None Then
+                ElseIf m.board(x, y).mapObject.objectID = DefMapObjects.Types.None Then
                     If name.ToUpper.StartsWith(GenDefaultValues.wObjKeyMountain.ToUpper) Then
                         Call AddObject(res.mountains, x, y, name, ImpenetrableObjects.GlobalMapDecoration.MountainSize(name))
                     Else
@@ -5681,7 +5682,7 @@ Public Class shortMapFormat
                 Else
                     Throw New Exception("shortMapFormat.MapConversion: unknown object type")
                 End If
-            ElseIf m.board(x, y).GuardLoc Or m.board(x, y).PassGuardLoc Or m.board(x, y).isObjectGuard Then
+            ElseIf m.board(x, y).stack.GuardLoc Or m.board(x, y).stack.PassGuardLoc Or m.board(x, y).stack.ObjectGuard Then
                 Dim desiredStats As AllDataStructues.DesiredStats = m.groupStats.Item(m.board(x, y).groupID)
                 Dim isGround As Boolean = Not RaceGen.MayBeWater(m, x, y)
                 Dim gs As New AllDataStructues.CommonStackCreationSettings With {.StackStats = desiredStats, _
@@ -5706,16 +5707,16 @@ Public Class shortMapFormat
 
         For y As Integer = 0 To UBound(m.board, 2) Step 1
             For x As Integer = 0 To UBound(m.board, 1) Step 1
-                name = m.board(x, y).objectName
+                name = m.board(x, y).mapObject.objectName
                 If Not IsNothing(name) AndAlso Not name = "" Then
                     Dim owner As String = ""
                     Dim size As Integer
-                    If m.board(x, y).objectID = DefMapObjects.Types.Capital Then
+                    If m.board(x, y).mapObject.objectID = DefMapObjects.Types.Capital Then
                         owner = objContent.randStack.comm.defValues.capitalToGeneratorRace(name)
-                        size = attObjects(m.board(x, y).objectID).Size
-                    ElseIf m.board(x, y).objectID = DefMapObjects.Types.City Then
-                        owner = m.board(x, y).City.race
-                        size = attObjects(m.board(x, y).objectID).Size
+                        size = attObjects(m.board(x, y).mapObject.objectID).Size
+                    ElseIf m.board(x, y).mapObject.objectID = DefMapObjects.Types.City Then
+                        owner = m.board(x, y).mapObject.City.race
+                        size = attObjects(m.board(x, y).mapObject.objectID).Size
                     ElseIf name.ToUpper.StartsWith(GenDefaultValues.wObjKeyMountain.ToUpper) Then
                         owner = objContent.randStack.comm.defValues.RaceNumberToRaceChar(objContent.randStack.comm.RaceIdentifierToSubrace("Neutral"))
                         size = ImpenetrableObjects.GlobalMapDecoration.MountainSize(name).Width
@@ -5970,7 +5971,7 @@ Public Class Map
         For x As Integer = 0 To xSize Step 1
             For y As Integer = 0 To ySize Step 1
                 board(x, y).ClearLocIDArray() 'New List(Of Integer)
-                board(x, y).NewTagsList()
+                board(x, y).mapObject.NewTagsList()
             Next y
         Next x
         If Not IsNothing(comm) Then
@@ -5982,57 +5983,71 @@ Public Class Map
     Public Structure Cell
         ''' <summary>ID локаций, с которыми связана эта клетка</summary>
         Dim locID() As Integer 'List(Of Integer)
-        ''' <summary>True, если на клетке должен стоять непроходимый непосещаемый объект</summary>
-        Dim isBorder As Boolean
-        ''' <summary>True, если клетка обязательно должна быть проходимой</summary>
-        Dim Penetrable As Boolean
-        ''' <summary>True, если клетка является частью прохода между локациями</summary>
-        Dim isPass As Boolean
-        ''' <summary>True, если клетка находится под посещаемым объектом</summary>
-        Dim isAttended As Boolean
-        ''' <summary>True, отряд является внешней или внутренней охраной посещаемого объекта</summary>
-        Dim isObjectGuard As Boolean
-        ''' <summary>True, если на клетке нужно разместить обычный отряд</summary>
-        Dim GuardLoc As Boolean
-        ''' <summary>True, если на клетке нужно разместить отряд, охраняющий проход в соседнюю локацию</summary>
-        Dim PassGuardLoc As Boolean
-        ''' <summary>Если клетка является углом посещаемого объекта c наименьшей координатой по X и Y, то здесь хранится ID объекта</summary>
-        Dim objectID As DefMapObjects.Types
-        ''' <summary>Если клетка является углом объекта c наименьшей координатой по X и Y, то здесь хранится ID объекта, как он записан в ресурсах игры</summary>
-        Dim objectName As String
         ''' <summary>Для объектов с одинаковым ID выставляются одинаковые параметры генерации отрядов и лута или одинаковый класс.
         ''' При необходимости выставляются одинаковые отряды и лут.</summary>
         Dim groupID As Integer
-        ''' <summary>Расы, допустимые для объекта, занимающего эту клетку</summary>
-        Dim objRace As List(Of Integer)
-        ''' <summary>Расы, допустимые для воинов отряда, занимающего эту клетку</summary>
-        Dim stackRace As List(Of Integer)
-        ''' <summary>True, если на клетке вода</summary>
-        Dim isWater As Boolean
-        ''' <summary>True, если на клетке дорога</summary>
-        Dim isRoad As Boolean
-        ''' <summary>True, если на клетке лес</summary>
-        Dim isForest As Boolean
-        ''' <summary>Если 0, то город будет нейтральным, иначе - такая же раса, как и раса-владелец указанной локации</summary>
-        Dim City As SettingsLoc.SettingsRaceCity
-        ''' <summary>Объекты с какими тэгами можно расположить в данном тайле</summary>
-        Private ObjectTags As List(Of String)
 
-        Public Function TagsList() As List(Of String)
-            Return ObjectTags
-        End Function
-        Public Function InTagsList(ByRef v As String) As Boolean
-            Return ObjectTags.Contains(v.ToUpper)
-        End Function
-        Public Sub NewTagsList()
-            ObjectTags = New List(Of String)
-        End Sub
-        Public Sub AddTag(ByRef v As String)
-            ObjectTags.Add(v.ToUpper)
-        End Sub
-        Public Sub RemoveTag(ByRef v As String)
-            ObjectTags.Remove(v.ToUpper)
-        End Sub
+        Dim surface As AreaData
+        Dim passability As CrossabilityData
+        Dim mapObject As ObjectData
+        Dim stack As TroopData
+
+        Public Structure TroopData
+            ''' <summary>True, отряд является внешней или внутренней охраной посещаемого объекта</summary>
+            Dim ObjectGuard As Boolean
+            ''' <summary>True, если на клетке нужно разместить обычный отряд</summary>
+            Dim GuardLoc As Boolean
+            ''' <summary>True, если на клетке нужно разместить отряд, охраняющий проход в соседнюю локацию</summary>
+            Dim PassGuardLoc As Boolean
+            ''' <summary>Расы, допустимые для воинов отряда, занимающего эту клетку</summary>
+            Dim stackRace As List(Of Integer)
+        End Structure
+        Public Structure ObjectData
+            ''' <summary>Если клетка является углом посещаемого объекта c наименьшей координатой по X и Y, то здесь хранится ID объекта</summary>
+            Dim objectID As DefMapObjects.Types
+            ''' <summary>Если клетка является углом объекта c наименьшей координатой по X и Y, то здесь хранится ID объекта, как он записан в ресурсах игры</summary>
+            Dim objectName As String
+            ''' <summary>Расы, допустимые для объекта, занимающего эту клетку</summary>
+            Dim objRace As List(Of Integer)
+            ''' <summary>Если 0, то город будет нейтральным, иначе - такая же раса, как и раса-владелец указанной локации</summary>
+            Dim City As SettingsLoc.SettingsRaceCity
+            ''' <summary>Объекты с какими тэгами можно расположить в данном тайле</summary>
+            Private ObjectTags As List(Of String)
+
+            Public Function TagsList() As List(Of String)
+                Return ObjectTags
+            End Function
+            Public Function InTagsList(ByRef v As String) As Boolean
+                Return ObjectTags.Contains(v.ToUpper)
+            End Function
+            Public Sub NewTagsList()
+                ObjectTags = New List(Of String)
+            End Sub
+            Public Sub AddTag(ByRef v As String)
+                ObjectTags.Add(v.ToUpper)
+            End Sub
+            Public Sub RemoveTag(ByRef v As String)
+                ObjectTags.Remove(v.ToUpper)
+            End Sub
+        End Structure
+        Public Structure CrossabilityData
+            ''' <summary>True, если на клетке должен стоять непроходимый непосещаемый объект</summary>
+            Dim isBorder As Boolean
+            ''' <summary>True, если клетка обязательно должна быть проходимой</summary>
+            Dim isPenetrable As Boolean
+            ''' <summary>True, если клетка является частью прохода между локациями</summary>
+            Dim isPass As Boolean
+            ''' <summary>True, если клетка находится под посещаемым объектом</summary>
+            Dim isAttended As Boolean
+        End Structure
+        Public Structure AreaData
+            ''' <summary>True, если на клетке вода</summary>
+            Dim isWater As Boolean
+            ''' <summary>True, если на клетке дорога</summary>
+            Dim isRoad As Boolean
+            ''' <summary>True, если на клетке лес</summary>
+            Dim isForest As Boolean
+        End Structure
 
         Public Sub AddToLocIDArray(ByRef value As Integer)
             If locID.Count = 0 Then
@@ -6776,44 +6791,44 @@ Public Class Map
 
         For x As Integer = 0 To xSize Step 1
             For y As Integer = 0 To ySize Step 1
-                If board(x, y).isBorder And board(x, y).isAttended Then
+                If board(x, y).passability.isBorder And board(x, y).passability.isAttended Then
                     Return "Warning: border and object are on the same place"
-                ElseIf board(x, y).isBorder And board(x, y).isPass Then
+                ElseIf board(x, y).passability.isBorder And board(x, y).passability.isPass Then
                     Return "Warning: border and pass are on the same place"
-                ElseIf board(x, y).isBorder And board(x, y).Penetrable Then
+                ElseIf board(x, y).passability.isBorder And board(x, y).passability.isPenetrable Then
                     Return "Warning: border and penetrable cell are on the same place"
-                ElseIf board(x, y).isAttended And board(x, y).Penetrable Then
+                ElseIf board(x, y).passability.isAttended And board(x, y).passability.isPenetrable Then
                     Return "Warning: object and penetrable cell are on the same place"
-                ElseIf board(x, y).isAttended And board(x, y).isPass Then
+                ElseIf board(x, y).passability.isAttended And board(x, y).passability.isPass Then
                     Return "Warning: object and pass are on the same place"
                 End If
-                If complited.StacksPlacing_Done And board(x, y).GuardLoc Then
-                    If board(x, y).isBorder Then
+                If complited.StacksPlacing_Done And board(x, y).stack.GuardLoc Then
+                    If board(x, y).passability.isBorder Then
                         Return "Warning: border and guard are on the same place"
-                    ElseIf board(x, y).isAttended And board(x, y).objectID = DefMapObjects.Types.None Then
+                    ElseIf board(x, y).passability.isAttended And board(x, y).mapObject.objectID = DefMapObjects.Types.None Then
                         Return "Warning: object and guard are on the same place"
-                    ElseIf (board(x, y).objectID = DefMapObjects.Types.City Or _
-                            board(x, y).objectID = DefMapObjects.Types.Ruins) And board(x, y).groupID < 1 Then
+                    ElseIf (board(x, y).mapObject.objectID = DefMapObjects.Types.City Or _
+                            board(x, y).mapObject.objectID = DefMapObjects.Types.Ruins) And board(x, y).groupID < 1 Then
                         Return "Warning: group for internal guard for object is zero"
-                    ElseIf board(x, y).objectID > DefMapObjects.Types.None AndAlso imp.ActiveObjects(board(x, y).objectID).hasExternalGuard Then
+                    ElseIf board(x, y).mapObject.objectID > DefMapObjects.Types.None AndAlso imp.ActiveObjects(board(x, y).mapObject.objectID).hasExternalGuard Then
                         Return "Warning: object with external guard has internal one"
                     End If
                 End If
                 If complited.StacksPlacing_Done Then
-                    If Not board(x, y).GuardLoc And ((board(x, y).objectID = DefMapObjects.Types.City And board(x, y).City.owner = 0) Or _
-                                                     board(x, y).objectID = DefMapObjects.Types.Ruins) Then
+                    If Not board(x, y).stack.GuardLoc And ((board(x, y).mapObject.objectID = DefMapObjects.Types.City And board(x, y).mapObject.City.owner = 0) Or _
+                                                     board(x, y).mapObject.objectID = DefMapObjects.Types.Ruins) Then
                         Return "Warning: internal guard for object is not set"
                     End If
-                    If board(x, y).GuardLoc And board(x, y).objectID = DefMapObjects.Types.City And board(x, y).City.owner > 0 Then
+                    If board(x, y).stack.GuardLoc And board(x, y).mapObject.objectID = DefMapObjects.Types.City And board(x, y).mapObject.City.owner > 0 Then
                         Return "Warning: internal guard for race city is set"
                     End If
                 End If
-                If complited.StacksPlacing_Done And board(x, y).PassGuardLoc Then
-                    If board(x, y).isBorder Then
+                If complited.StacksPlacing_Done And board(x, y).stack.PassGuardLoc Then
+                    If board(x, y).passability.isBorder Then
                         Return "Warning: border and pass guard are on the same place"
-                    ElseIf board(x, y).isAttended Then
+                    ElseIf board(x, y).passability.isAttended Then
                         Return "Warning: object and pass guard are on the same place"
-                    ElseIf board(x, y).GuardLoc Then
+                    ElseIf board(x, y).stack.GuardLoc Then
                         Return "Warning: common guard and pass guard are on the same place"
                     ElseIf board(x, y).groupID < 1 Then
                         Return "Warning: group for pass guard is zero"
@@ -6842,10 +6857,10 @@ Public Class Map
             log.Add("----Type: " & objList(i) & "----")
             For y As Integer = 0 To ySize Step 1
                 For x As Integer = 0 To xSize Step 1
-                    If board(x, y).objectID = i _
-                    And ((i = DefMapObjects.Types.None And Not board(x, y).objectName = "") _
+                    If board(x, y).mapObject.objectID = i _
+                    And ((i = DefMapObjects.Types.None And Not board(x, y).mapObject.objectName = "") _
                          Or Not i = DefMapObjects.Types.None) Then
-                        Dim basic As String = board(x, y).objectName & " ; pos: " & vbTab & x & vbTab & y
+                        Dim basic As String = board(x, y).mapObject.objectName & " ; pos: " & vbTab & x & vbTab & y
                         Dim min As String = ""
                         Dim max As String = ""
                         Dim x1, x2, y1, y2 As Integer
@@ -6853,8 +6868,8 @@ Public Class Map
                             x1 = x
                             y1 = y
                             If Not IsNothing(ObjectsSize) Then
-                                x2 = x1 + ObjectsSize.Item(board(x, y).objectName).Width - 1
-                                y2 = y1 + ObjectsSize.Item(board(x, y).objectName).Height - 1
+                                x2 = x1 + ObjectsSize.Item(board(x, y).mapObject.objectName).Width - 1
+                                y2 = y1 + ObjectsSize.Item(board(x, y).mapObject.objectName).Height - 1
                             Else
                                 x2 = x1
                                 y2 = y1
@@ -6874,7 +6889,7 @@ Public Class Map
         log.Add("----Stacks positions list----")
         For y As Integer = 0 To ySize Step 1
             For x As Integer = 0 To xSize Step 1
-                If (board(x, y).GuardLoc Or board(x, y).PassGuardLoc) And board(x, y).objectID = DefMapObjects.Types.None Then log.Add(x & vbTab & y)
+                If (board(x, y).stack.GuardLoc Or board(x, y).stack.PassGuardLoc) And board(x, y).mapObject.objectID = DefMapObjects.Types.None Then log.Add(x & vbTab & y)
             Next x
         Next y
         log.Add("----End of stack positions list----")
@@ -7026,8 +7041,8 @@ Public Class StackLocationsGen
         Dim tmpm As Map = m
         For y As Integer = 0 To m.ySize Step 1
             For x As Integer = 0 To m.xSize Step 1
-                If m.board(x, y).objectID = DefMapObjects.Types.Mine Then
-                    Dim b As Location.Borders = ImpenetrableMeshGen.ActiveObjectsPlacer.ObjectBorders(m.board(x, y).objectID, _
+                If m.board(x, y).mapObject.objectID = DefMapObjects.Types.Mine Then
+                    Dim b As Location.Borders = ImpenetrableMeshGen.ActiveObjectsPlacer.ObjectBorders(m.board(x, y).mapObject.objectID, _
                                                                                                       x, y, genmap.ActiveObjects)
                     b.minX = Math.Max(b.minX, 0)
                     b.minY = Math.Max(b.minY, 0)
@@ -7035,8 +7050,8 @@ Public Class StackLocationsGen
                     b.maxY = Math.Min(b.maxY, m.ySize)
                     For j As Integer = b.minY To b.maxY Step 1
                         For i As Integer = b.minX To b.maxX Step 1
-                            If m.board(i, j).Penetrable And Not m.board(i, j).isPass Then
-                                m.board(i, j).Penetrable = False
+                            If m.board(i, j).passability.isPenetrable And Not m.board(i, j).passability.isPass Then
+                                m.board(i, j).passability.isPenetrable = False
                             End If
                         Next i
                     Next j
@@ -7067,11 +7082,11 @@ Public Class StackLocationsGen
                             Dim tx As Integer = pp(k).X
                             Dim ty As Integer = pp(k).Y
                             m.board(pp(k).X, pp(k).Y).groupID = GroupID
-                            m.board(pp(k).X, pp(k).Y).GuardLoc = True
+                            m.board(pp(k).X, pp(k).Y).stack.GuardLoc = True
                         Next k
                     Else
                         m.board(p.X, p.Y).groupID = GroupID
-                        m.board(p.X, p.Y).GuardLoc = True
+                        m.board(p.X, p.Y).stack.GuardLoc = True
                     End If
                 Next p
             End If
@@ -7080,9 +7095,9 @@ Public Class StackLocationsGen
         Dim protect(m.xSize, m.ySize) As Boolean
         For y As Integer = 0 To m.ySize Step 1
             For x As Integer = 0 To m.xSize Step 1
-                If m.board(x, y).objectID > DefMapObjects.Types.None AndAlso genmap.ActiveObjects(m.board(x, y).objectID).hasExternalGuard Then
-                    protect(x + genmap.ActiveObjects(m.board(x, y).objectID).Size, _
-                            y + genmap.ActiveObjects(m.board(x, y).objectID).Size) = True
+                If m.board(x, y).mapObject.objectID > DefMapObjects.Types.None AndAlso genmap.ActiveObjects(m.board(x, y).mapObject.objectID).hasExternalGuard Then
+                    protect(x + genmap.ActiveObjects(m.board(x, y).mapObject.objectID).Size, _
+                            y + genmap.ActiveObjects(m.board(x, y).mapObject.objectID).Size) = True
                 End If
             Next x
         Next y
@@ -7099,7 +7114,7 @@ Public Class StackLocationsGen
 
         For y As Integer = 0 To m.ySize Step 1
             For x As Integer = 0 To m.xSize Step 1
-                If m.board(x, y).GuardLoc Then
+                If m.board(x, y).stack.GuardLoc Then
                     Dim d1, d2 As Double
                     d1 = minDistance(m.board(x, y).locID(0) - 1)
                     'If m.board(x, y).locID(0) <= settMap.nRaces Then
@@ -7110,7 +7125,7 @@ Public Class StackLocationsGen
                     Dim t As Location.Borders = ImpenetrableMeshGen.NearestXY(x, y, m.xSize, m.ySize, tolerance)
                     For j As Integer = t.minY To t.maxY Step 1
                         For i As Integer = t.minX To t.maxX Step 1
-                            If m.board(i, j).GuardLoc And (Not x = i Or Not y = j) Then
+                            If m.board(i, j).stack.GuardLoc And (Not x = i Or Not y = j) Then
                                 Dim d As Double = New Point(x, y).SqDist(i, j)
                                 d2 = minDistance(m.board(i, j).locID(0) - 1)
                                 'If m.board(i, j).locID(0) <= settMap.nRaces Then
@@ -7125,10 +7140,10 @@ Public Class StackLocationsGen
                                             If m.symmID > -1 Then
                                                 Dim pp() As Point = symm.ApplySymm(p(k), settMap.nRaces, m, 1)
                                                 For Each item As Point In pp
-                                                    m.board(item.X, item.Y).GuardLoc = False
+                                                    m.board(item.X, item.Y).stack.GuardLoc = False
                                                 Next item
                                             Else
-                                                m.board(p(k).X, p(k).Y).GuardLoc = False
+                                                m.board(p(k).X, p(k).Y).stack.GuardLoc = False
                                             End If
                                             If k = 1 Then
                                                 i = t.maxX
@@ -7146,14 +7161,14 @@ Public Class StackLocationsGen
 
         For y As Integer = 0 To m.ySize Step 1
             For x As Integer = 0 To m.xSize Step 1
-                If m.board(x, y).objectID = DefMapObjects.Types.City Then
-                    If tmpm.board(x, y).City.owner > 0 Then
-                        tmpm.board(x, y).GuardLoc = False
+                If m.board(x, y).mapObject.objectID = DefMapObjects.Types.City Then
+                    If tmpm.board(x, y).mapObject.City.owner > 0 Then
+                        tmpm.board(x, y).stack.GuardLoc = False
                     Else
-                        tmpm.board(x, y).GuardLoc = True
+                        tmpm.board(x, y).stack.GuardLoc = True
                     End If
-                ElseIf m.board(x, y).objectID = DefMapObjects.Types.Ruins Then
-                    m.board(x, y).GuardLoc = True
+                ElseIf m.board(x, y).mapObject.objectID = DefMapObjects.Types.Ruins Then
+                    m.board(x, y).stack.GuardLoc = True
                 End If
             Next x
         Next y
@@ -7183,10 +7198,10 @@ Public Class StackLocationsGen
         For y As Integer = 0 To ySize Step 1
             For x As Integer = 0 To xSize Step 1
                 If m.board(x + LPos.X, y + LPos.Y).locID(0) = LocID _
-                And Not m.board(x + LPos.X, y + LPos.Y).Penetrable _
-                And Not m.board(x + LPos.X, y + LPos.Y).isPass _
-                And Not m.board(x + LPos.X, y + LPos.Y).isAttended _
-                And Not m.board(x + LPos.X, y + LPos.Y).isBorder Then
+                And Not m.board(x + LPos.X, y + LPos.Y).passability.isPenetrable _
+                And Not m.board(x + LPos.X, y + LPos.Y).passability.isPass _
+                And Not m.board(x + LPos.X, y + LPos.Y).passability.isAttended _
+                And Not m.board(x + LPos.X, y + LPos.Y).passability.isBorder Then
                     isPossiblePoint(x, y) = True
                 End If
             Next x
@@ -7217,7 +7232,7 @@ Public Class StackLocationsGen
                     Dim t As Location.Borders = ImpenetrableMeshGen.NearestXY(x, y, xSize, ySize, CInt(Math.Ceiling(settLoc.minStackToStackDist)))
                     For j As Integer = t.minY To t.maxY Step 1
                         For i As Integer = t.minX To t.maxX Step 1
-                            If m.board(i + LPos.X, j + LPos.Y).GuardLoc _
+                            If m.board(i + LPos.X, j + LPos.Y).stack.GuardLoc _
                             AndAlso New Point(x, y).SqDist(i, j) < settLoc.minStackToStackDist * settLoc.minStackToStackDist Then
                                 isPossiblePoint(x, y) = False
                             End If
@@ -7230,7 +7245,7 @@ Public Class StackLocationsGen
         Dim corners As New List(Of Point)
         For y As Integer = 0 To m.ySize Step 1
             For x As Integer = 0 To m.xSize Step 1
-                If m.board(x, y).objectID = DefMapObjects.Types.Capital Then
+                If m.board(x, y).mapObject.objectID = DefMapObjects.Types.Capital Then
                     For j As Integer = 0 To 1 Step 1
                         For i As Integer = 0 To 1 Step 1
                             corners.Add(New Point(x + i * (genmap.ActiveObjects(DefMapObjects.Types.Capital).Size - 1), _
@@ -7357,7 +7372,7 @@ Public Class StackLocationsGen
         Dim passTile(m.xSize, m.ySize) As Boolean
         For y As Integer = 0 To m.ySize Step 1
             For x As Integer = 0 To m.xSize Step 1
-                passTile(x, y) = m.board(x, y).isPass
+                passTile(x, y) = m.board(x, y).passability.isPass
             Next x
         Next y
         Dim connected()(,) As Boolean = GetConnected(passTile)
@@ -7395,11 +7410,11 @@ Public Class StackLocationsGen
                      Else
                          passages(i).passTiles(x - minx, y - miny) = -1
                      End If
-                     If Not connected(i)(x, y) And Not m.board(x, y).isBorder And Not m.board(x, y).isAttended Then
+                     If Not connected(i)(x, y) And Not m.board(x, y).passability.isBorder And Not m.board(x, y).passability.isAttended Then
                          Dim b As Location.Borders = ImpenetrableMeshGen.NearestXY(x, y, m.xSize, m.ySize, 1)
                          For q As Integer = b.minY To b.maxY Step 1
                              For p As Integer = b.minX To b.maxX Step 1
-                                 If connected(i)(p, q) And Not m.board(x, y).isBorder And Not m.board(x, y).isAttended Then
+                                 If connected(i)(p, q) And Not m.board(x, y).passability.isBorder And Not m.board(x, y).passability.isAttended Then
                                      'passages(i).edgePoints(m.board(x, y).locID(0) - 1).Add(New Point(x - minx, y - miny))
                                      Call passages(i).edges(m.board(x, y).locID(0) - 1).AddPoint(x - minx, y - miny)
                                      p = b.maxX
@@ -7485,9 +7500,9 @@ Public Class StackLocationsGen
         If unmarkPassagesWithoutGuard Then
             For y As Integer = 0 To m.ySize Step 1
                 For x As Integer = 0 To m.xSize Step 1
-                    If m.board(x, y).isPass Then
-                        m.board(x, y).isPass = False
-                        m.board(x, y).Penetrable = False
+                    If m.board(x, y).passability.isPass Then
+                        m.board(x, y).passability.isPass = False
+                        m.board(x, y).passability.isPenetrable = False
                     End If
                 Next x
             Next y
@@ -7502,12 +7517,12 @@ Public Class StackLocationsGen
                                 If m.symmID > -1 Then
                                     Dim p() As Point = symm.ApplySymm(New Point(xb, yb), settMap.nRaces, m, 1)
                                     For r As Integer = 0 To UBound(p) Step 1
-                                        m.board(p(r).X, p(r).Y).isPass = setAsPass
-                                        m.board(p(r).X, p(r).Y).Penetrable = setAsPass
+                                        m.board(p(r).X, p(r).Y).passability.isPass = setAsPass
+                                        m.board(p(r).X, p(r).Y).passability.isPenetrable = setAsPass
                                     Next r
                                 Else
-                                    m.board(xb, yb).isPass = setAsPass
-                                    m.board(xb, yb).Penetrable = setAsPass
+                                    m.board(xb, yb).passability.isPass = setAsPass
+                                    m.board(xb, yb).passability.isPenetrable = setAsPass
                                 End If
                             End If
                         Next x
@@ -8091,7 +8106,7 @@ Public Class StackLocationsGen
         '    For i As Integer = 0 To UBound(conn) Step 1
         '        For y As Integer = 0 To m.ySize Step 1
         '            For x As Integer = 0 To m.xSize Step 1
-        '                If conn(i)(x, y) And Not m.board(x, y).isPass Then
+        '                If conn(i)(x, y) And Not m.board(x, y).passability.isPass Then
         '                    n += 1
         '                    x = m.xSize
         '                    y = m.ySize
@@ -8137,7 +8152,7 @@ Public Class StackLocationsGen
     '    Dim free(m.xSize, m.ySize) As Boolean
     '    For y As Integer = 0 To m.ySize Step 1
     '        For x As Integer = 0 To m.xSize Step 1
-    '            If Not m.board(x, y).isBorder And Not m.board(x, y).isAttended Then free(x, y) = True
+    '            If Not m.board(x, y).passability.isBorder And Not m.board(x, y).passability.isAttended Then free(x, y) = True
     '        Next x
     '    Next y
     '    Dim n As Integer
@@ -8197,11 +8212,11 @@ Public Class StackLocationsGen
                 Dim pp() As Point = symm.ApplySymm(p, settMap.nRaces, m, 1)
                 For Each item As Point In pp
                     m.board(item.X, item.Y).groupID = GroupID
-                    m.board(item.X, item.Y).PassGuardLoc = True
+                    m.board(item.X, item.Y).stack.PassGuardLoc = True
                 Next item
             Else
                 m.board(p.X, p.Y).groupID = GroupID
-                m.board(p.X, p.Y).PassGuardLoc = True
+                m.board(p.X, p.Y).stack.PassGuardLoc = True
             End If
         Next p
     End Sub
@@ -8302,8 +8317,8 @@ Public Class WaterGen
         Dim HaveToBeGround(m.xSize, m.ySize) As Boolean
         For i As Integer = 0 To m.xSize Step 1
             For j As Integer = 0 To m.ySize Step 1
-                If m.board(i, j).isAttended Or m.board(i, j).Penetrable Then HaveToBeGround(i, j) = True
-                If m.board(i, j).objectID = DefMapObjects.Types.Mine Then
+                If m.board(i, j).passability.isAttended Or m.board(i, j).passability.isPenetrable Then HaveToBeGround(i, j) = True
+                If m.board(i, j).mapObject.objectID = DefMapObjects.Types.Mine Then
                     Dim b As Location.Borders = ImpenetrableMeshGen.NearestXY(i, j, m.xSize, m.ySize, 1)
                     For x As Integer = b.minX To b.maxX Step 1
                         For y As Integer = b.minY To b.maxY Step 1
@@ -8380,13 +8395,13 @@ Public Class WaterGen
         For i As Integer = 0 To m.xSize Step 1
             For j As Integer = 0 To m.ySize Step 1
                 If m.board(i, j).locID(0) = loc.ID And Not HaveToBeGround(i, j) Then
-                    If m.board(i, j).isBorder Then
+                    If m.board(i, j).passability.isBorder Then
                         Dim b As Location.Borders = ImpenetrableMeshGen.NearestXY(i, j, m.xSize, m.ySize, 1)
                         For x As Integer = b.minX To b.maxX Step 1
                             For y As Integer = b.minY To b.maxY Step 1
-                                If Not m.board(x, y).isBorder And Not HaveToBeGround(x, y) Then
+                                If Not m.board(x, y).passability.isBorder And Not HaveToBeGround(x, y) Then
                                     WaterAmount += 1
-                                    If m.board(i, j).isWater Then
+                                    If m.board(i, j).surface.isWater Then
                                         Watered += 1
                                     Else
                                         freeCell(i, j) = True
@@ -8398,7 +8413,7 @@ Public Class WaterGen
                         Next x
                     Else
                         WaterAmount += 1
-                        If m.board(i, j).isWater Then
+                        If m.board(i, j).surface.isWater Then
                             Watered += 1
                         Else
                             freeCell(i, j) = True
@@ -8420,7 +8435,7 @@ Public Class WaterGen
                 b = ImpenetrableMeshGen.NearestXY(points(i), m, CInt(lakeDist))
                 For x As Integer = b.minX To b.maxX Step 1
                     For y As Integer = b.minY To b.maxY Step 1
-                        If m.board(x, y).isWater AndAlso (p = 1 OrElse points(i).SqDist(x, y) < lakeDist * lakeDist) Then
+                        If m.board(x, y).surface.isWater AndAlso (p = 1 OrElse points(i).SqDist(x, y) < lakeDist * lakeDist) Then
                             add = False
                             x = b.maxX
                             y = b.maxY
@@ -8452,11 +8467,11 @@ Public Class WaterGen
         'делаем берег неровным
         For L As Integer = 0 To 1 Step 1
             For Each p As Point In waterTiles
-                If m.board(p.X, p.Y).isWater Then
+                If m.board(p.X, p.Y).surface.isWater Then
                     Dim b As Location.Borders = ImpenetrableMeshGen.NearestXY(p, m, 1)
                     For x As Integer = b.minX To b.maxX Step 1
                         For y As Integer = b.minY To b.maxY Step 1
-                            If Not m.board(x, y).isWater Then
+                            If Not m.board(x, y).surface.isWater Then
                                 coastalTile.Add(p)
                                 x = b.maxX
                                 y = b.maxY
@@ -8479,12 +8494,12 @@ Public Class WaterGen
         Dim threshold As Double = 1 - (1 - settMap.WaterAmount) / ((0.5 * (minIslandR + maxIslandR)) ^ 2)
         Dim dD As Double = 0.05
         For Each p As Point In waterTiles
-            If m.board(p.X, p.Y).isWater Then
+            If m.board(p.X, p.Y).surface.isWater Then
                 Dim maybe As Boolean = True
                 Dim b As Location.Borders = ImpenetrableMeshGen.NearestXY(p, m, 1)
                 For x As Integer = b.minX To b.maxX Step 1
                     For y As Integer = b.minY To b.maxY Step 1
-                        If Not m.board(x, y).isWater Then
+                        If Not m.board(x, y).surface.isWater Then
                             maybe = False
                             x = b.maxX
                             y = b.maxY
@@ -8496,7 +8511,7 @@ Public Class WaterGen
                     For x As Integer = b.minX To b.maxX Step 1
                         For y As Integer = b.minY To b.maxY Step 1
                             Dim d As Double = p.Dist(x, y)
-                            If m.board(x, y).isWater AndAlso d < R Then
+                            If m.board(x, y).surface.isWater AndAlso d < R Then
                                 If rndgen.PRand(0, R + 2 * dD) > d + dD Then
                                     Call SetGroundCellSymm(x, y, m, settMap)
                                 End If
@@ -8526,7 +8541,7 @@ Public Class WaterGen
             freeCell(i, j) = False
             WaterAmount -= 1
         End If
-        m.board(i, j).isWater = True
+        m.board(i, j).surface.isWater = True
     End Sub
     Private Sub SetGroundCellSymm(ByRef i As Integer, ByRef j As Integer, ByRef m As Map, ByRef settMap As Map.SettingsMap)
         If m.symmID > -1 Then
@@ -8534,10 +8549,10 @@ Public Class WaterGen
             For k As Integer = 0 To UBound(pp) Step 1
                 Dim tx As Integer = pp(k).X
                 Dim ty As Integer = pp(k).Y
-                m.board(tx, ty).isWater = False
+                m.board(tx, ty).surface.isWater = False
             Next k
         Else
-            m.board(i, j).isWater = False
+            m.board(i, j).surface.isWater = False
         End If
     End Sub
 
@@ -8546,14 +8561,14 @@ Public Class WaterGen
         Dim makeWatered As Boolean
         For i As Integer = 0 To m.xSize Step 1
             For j As Integer = 0 To m.ySize Step 1
-                If m.board(i, j).locID(0) = loc.ID And m.board(i, j).objectID = DefMapObjects.Types.Ruins Then
+                If m.board(i, j).locID(0) = loc.ID And m.board(i, j).mapObject.objectID = DefMapObjects.Types.Ruins Then
                     makeWatered = (rndgen.PRand(0, 1) < chance)
 
                     Dim d As Integer = 1
                     Dim x1 As Integer = Math.Max(i - d, 0)
-                    Dim x2 As Integer = Math.Min(i + imp.ActiveObjects(m.board(i, j).objectID).Size + d - 1, m.xSize)
+                    Dim x2 As Integer = Math.Min(i + imp.ActiveObjects(m.board(i, j).mapObject.objectID).Size + d - 1, m.xSize)
                     Dim y1 As Integer = Math.Max(j - d, 0)
-                    Dim y2 As Integer = Math.Min(j + imp.ActiveObjects(m.board(i, j).objectID).Size + d - 1, m.ySize)
+                    Dim y2 As Integer = Math.Min(j + imp.ActiveObjects(m.board(i, j).mapObject.objectID).Size + d - 1, m.ySize)
                     For x As Integer = x1 To x2 Step 1
                         For y As Integer = y1 To y2 Step 1
                             If makeWatered Then
@@ -8570,7 +8585,7 @@ Public Class WaterGen
                     y2 = Math.Min(y2 + 1, m.ySize)
                     For x As Integer = x1 To x2 Step 1
                         For y As Integer = y1 To y2 Step 1
-                            If (x = x1 Or x = x2 Or y = y1 Or y = y2) And Not ((x = x1 Or x = x2) And (y = y1 Or y = y2)) And Not m.board(x, y).isAttended Then
+                            If (x = x1 Or x = x2 Or y = y1 Or y = y2) And Not ((x = x1 Or x = x2) And (y = y1 Or y = y2)) And Not m.board(x, y).passability.isAttended Then
                                 If rndgen.PRand(0, 1) < 0.45 Then
                                     If makeWatered Then
                                         Call SetWaterCellSymm(x, y, m, Nothing, Nothing, settMap)
@@ -8591,14 +8606,14 @@ Public Class WaterGen
         Dim var As New List(Of Point)
         For i As Integer = 0 To m.xSize Step 1
             For j As Integer = 0 To m.ySize Step 1
-                If m.board(i, j).isWater Then
+                If m.board(i, j).surface.isWater Then
                     Dim b As Location.Borders = ImpenetrableMeshGen.NearestXY(i, j, m.xSize, m.ySize, 1)
                     n = 0
                     var.Clear()
                     For x As Integer = b.minX To b.maxX Step 1
                         For y As Integer = b.minY To b.maxY Step 1
                             If x = i Or y = j Then
-                                If m.board(x, y).isWater Then
+                                If m.board(x, y).surface.isWater Then
                                     n += 1
                                 Else
                                     If (Not x = i Or Not y = j) And Not HaveToBeGround(x, y) Then var.Add(New Point(x, y))
@@ -8616,13 +8631,13 @@ Public Class WaterGen
         Next i
         For i As Integer = 0 To m.xSize Step 1
             For j As Integer = 0 To m.ySize Step 1
-                If m.board(i, j).isWater Then
+                If m.board(i, j).surface.isWater Then
                     Dim b As Location.Borders = ImpenetrableMeshGen.NearestXY(i, j, m.xSize, m.ySize, 1)
                     n = 0
                     For x As Integer = b.minX To b.maxX Step 1
                         For y As Integer = b.minY To b.maxY Step 1
                             If x = i Or y = j Then
-                                If m.board(x, y).isWater Then n += 1
+                                If m.board(x, y).surface.isWater Then n += 1
                             End If
                         Next y
                     Next x
@@ -8983,7 +8998,7 @@ Public Class ImpenetrableObjects
                 n += 1
                 pointID(x, y) = n
                 pointPos(n) = New Point(x, y)
-                tmpm.board(x, y).NewTagsList()
+                tmpm.board(x, y).mapObject.NewTagsList()
             Next x
         Next y
         Parallel.For(0, tmpm.Loc.Length, _
@@ -8998,7 +9013,7 @@ Public Class ImpenetrableObjects
              minSublocationR *= 0.75
              For y As Integer = 0 To tmpm.ySize Step 1
                  For x As Integer = 0 To tmpm.xSize Step 1
-                     If tmpm.board(x, y).isBorder And free(x, y) And tmpm.board(x, y).locID(0) = tmpm.Loc(i).ID Then
+                     If tmpm.board(x, y).passability.isBorder And free(x, y) And tmpm.board(x, y).locID(0) = tmpm.Loc(i).ID Then
                          posPool.Add(pointID(x, y))
                      End If
                  Next x
@@ -9011,7 +9026,7 @@ Public Class ImpenetrableObjects
                  del.Clear()
                  For Each pid As Integer In posPool
                      If pointPos(pid).SqDist(pointPos(selectedPointID)) < r2Set Then
-                         tmpm.board(pointPos(selectedPointID).X, pointPos(selectedPointID).Y).AddTag(selectedTag)
+                         tmpm.board(pointPos(selectedPointID).X, pointPos(selectedPointID).Y).mapObject.AddTag(selectedTag)
                      End If
                      If pointPos(pid).SqDist(pointPos(selectedPointID)) < r2Rem Then del.Add(pid)
                  Next pid
@@ -9023,7 +9038,7 @@ Public Class ImpenetrableObjects
              For y As Integer = 0 To tmpm.ySize Step 1
                  For x As Integer = 0 To tmpm.xSize Step 1
                      If tmpm.board(x, y).locID(0) = tmpm.Loc(i).ID Then
-                         If tmpm.board(x, y).TagsList.Count = 0 Then posPool.Add(pointID(x, y))
+                         If tmpm.board(x, y).mapObject.TagsList.Count = 0 Then posPool.Add(pointID(x, y))
                      End If
                  Next x
              Next y
@@ -9037,8 +9052,8 @@ Public Class ImpenetrableObjects
                      Dim b As Location.Borders = ImpenetrableMeshGen.NearestXY(x, y, tmpm.xSize, tmpm.ySize, 1)
                      For p As Integer = b.minY To b.maxY Step 1
                          For q As Integer = b.minX To b.maxX Step 1
-                             If tmpm.board(q, p).TagsList.Count > 0 Then
-                                 For Each t As String In tmpm.board(q, p).TagsList
+                             If tmpm.board(q, p).mapObject.TagsList.Count > 0 Then
+                                 For Each t As String In tmpm.board(q, p).mapObject.TagsList
                                      If Not tags.Contains(t) Then tags.Add(t)
                                  Next t
                              End If
@@ -9046,7 +9061,7 @@ Public Class ImpenetrableObjects
                      Next p
                      If tags.Count > 0 Then
                          Dim t As String = tags(rndgen.RndIntFast(0, tags.Count - 1))
-                         tmpm.board(x, y).AddTag(t)
+                         tmpm.board(x, y).mapObject.AddTag(t)
                          posPool.Remove(selectedPointID)
                      End If
                  Loop
@@ -9086,7 +9101,7 @@ Public Class ImpenetrableObjects
                               ByRef free(,) As Boolean, ByRef obj As Landmark) As Boolean
         Dim ok As Boolean = False
         For Each t As String In obj.tags
-            If m.board(x, y).InTagsList(t) Then
+            If m.board(x, y).mapObject.InTagsList(t) Then
                 ok = True
                 Exit For
             End If
@@ -9138,11 +9153,11 @@ Public Class ImpenetrableObjects
         If x + xSize - 1 > m.xSize Or y + ySize - 1 > m.ySize Then Return False
         Dim x2 As Integer = x + xSize - 1
         Dim y2 As Integer = y + ySize - 1
-        If Not CheckRaces(m.board(x, y).objRace, races) Then Return False
+        If Not CheckRaces(m.board(x, y).mapObject.objRace, races) Then Return False
         For j As Integer = y To y2 Step 1
             For i As Integer = x To x2 Step 1
-                If Not m.board(i, j).isBorder Or Not free(i, j) Then Return False
-                If Not CheckSurface(m.board(i, j).isWater, isGround, isWater) Then Return False
+                If Not m.board(i, j).passability.isBorder Or Not free(i, j) Then Return False
+                If Not CheckSurface(m.board(i, j).surface.isWater, isGround, isWater) Then Return False
             Next i
         Next j
         Return True
@@ -9183,7 +9198,7 @@ Public Class ImpenetrableObjects
         For p As Integer = b.minY To b.maxY Step 1
             dy = p - y : dy = dy * dy + 1
             For q As Integer = b.minX To b.maxX Step 1
-                If objName = m.board(q, p).objectName Then
+                If objName = m.board(q, p).mapObject.objectName Then
                     dx = q - x : dx = dx * dx + 1
                     w = w * (minW + dW * CDbl(dx * dy))
                 End If
@@ -9198,37 +9213,37 @@ Public Class ImpenetrableObjects
         Dim id As Integer
         For y As Integer = 0 To m.ySize Step 1
             For x As Integer = 0 To m.xSize Step 1
-                If m.board(x, y).objectID > DefMapObjects.Types.City And m.board(x, y).objectID < DefMapObjects.Types.Mine Then
-                    If m.board(x, y).objectID = DefMapObjects.Types.Vendor Then
+                If m.board(x, y).mapObject.objectID > DefMapObjects.Types.City And m.board(x, y).mapObject.objectID < DefMapObjects.Types.Mine Then
+                    If m.board(x, y).mapObject.objectID = DefMapObjects.Types.Vendor Then
                         objList = merchants
-                    ElseIf m.board(x, y).objectID = DefMapObjects.Types.Mercenary Then
+                    ElseIf m.board(x, y).mapObject.objectID = DefMapObjects.Types.Mercenary Then
                         objList = mercenaries
-                    ElseIf m.board(x, y).objectID = DefMapObjects.Types.Mage Then
+                    ElseIf m.board(x, y).mapObject.objectID = DefMapObjects.Types.Mage Then
                         objList = mages
-                    ElseIf m.board(x, y).objectID = DefMapObjects.Types.Trainer Then
+                    ElseIf m.board(x, y).mapObject.objectID = DefMapObjects.Types.Trainer Then
                         objList = trainers
-                    ElseIf m.board(x, y).objectID = DefMapObjects.Types.Ruins Then
+                    ElseIf m.board(x, y).mapObject.objectID = DefMapObjects.Types.Ruins Then
                         objList = ruins
                     Else
                         objList = Nothing
                     End If
                     IDs.Clear()
                     If IsNothing(objList) Then
-                        Throw New Exception("Список объектов для objectID=" & m.board(x, y).objectID & " пуст (см. DefMapObjects.Types)")
+                        Throw New Exception("Список объектов для objectID=" & m.board(x, y).mapObject.objectID & " пуст (см. DefMapObjects.Types)")
                     End If
                     For i As Integer = 0 To UBound(objList) Step 1
-                        If CheckSurface(m.board(x, y).isWater, objList(i).ground, objList(i).water) _
-                        AndAlso CheckRaces(m.board(x, y).objRace, objList(i).race) Then
+                        If CheckSurface(m.board(x, y).surface.isWater, objList(i).ground, objList(i).water) _
+                        AndAlso CheckRaces(m.board(x, y).mapObject.objRace, objList(i).race) Then
                             IDs.Add(i)
                         End If
                     Next i
                     If IDs.Count > 0 Then
                         id = comm.RandomSelection(IDs, True)
                     Else
-                        Throw New Exception("Нет ни одного подходящего объекта для objectID=" & m.board(x, y).objectID & " (см. DefMapObjects.Types)")
+                        Throw New Exception("Нет ни одного подходящего объекта для objectID=" & m.board(x, y).mapObject.objectID & " (см. DefMapObjects.Types)")
                         id = -1
                     End If
-                    m.board(x, y).objectName = objList(id).name
+                    m.board(x, y).mapObject.objectName = objList(id).name
                 End If
             Next x
         Next y
@@ -9239,16 +9254,16 @@ Public Class ImpenetrableObjects
         locRace.Add(0, "N")
         For y As Integer = 0 To m.ySize Step 1
             For x As Integer = 0 To m.xSize Step 1
-                If m.board(x, y).objectID = DefMapObjects.Types.Capital Then
-                    m.board(x, y).objectName = comm.defValues.generatorRaceToCapitalID(comm.defValues.RaceNumberToRaceChar(m.board(x, y).objRace.Item(0)))
-                    locRace.Add(m.board(x, y).locID(0), comm.defValues.RaceNumberToRaceChar(m.board(x, y).objRace.Item(0)))
+                If m.board(x, y).mapObject.objectID = DefMapObjects.Types.Capital Then
+                    m.board(x, y).mapObject.objectName = comm.defValues.generatorRaceToCapitalID(comm.defValues.RaceNumberToRaceChar(m.board(x, y).mapObject.objRace.Item(0)))
+                    locRace.Add(m.board(x, y).locID(0), comm.defValues.RaceNumberToRaceChar(m.board(x, y).mapObject.objRace.Item(0)))
                 End If
             Next x
         Next y
         If cityGroup.Count > 0 Then
             For Each L As List(Of Point) In cityGroup.Values
                 Dim town As String
-                Dim level As Integer = m.board(L.Item(0).X, L.Item(0).Y).City.level
+                Dim level As Integer = m.board(L.Item(0).X, L.Item(0).Y).mapObject.City.level
                 If level = 0 Then
                     If m.board(L.Item(0).X, L.Item(0).Y).locID(0) <= settMap.nRaces Then
                         level = 1
@@ -9274,12 +9289,12 @@ Public Class ImpenetrableObjects
                 ElseIf level = 5 Then
                     town = DefMapObjects.townT5
                 Else
-                    Throw New Exception("Unexpected preset town level: " & m.board(L.Item(0).X, L.Item(0).Y).City.level)
+                    Throw New Exception("Unexpected preset town level: " & m.board(L.Item(0).X, L.Item(0).Y).mapObject.City.level)
                 End If
                 For Each p As Point In L
-                    m.board(p.X, p.Y).objectName = town
-                    m.board(p.X, p.Y).City.level = level
-                    m.board(p.X, p.Y).City.race = locRace.Item(m.board(p.X, p.Y).City.owner)
+                    m.board(p.X, p.Y).mapObject.objectName = town
+                    m.board(p.X, p.Y).mapObject.City.level = level
+                    m.board(p.X, p.Y).mapObject.City.race = locRace.Item(m.board(p.X, p.Y).mapObject.City.owner)
                 Next p
             Next L
         End If
@@ -9288,7 +9303,7 @@ Public Class ImpenetrableObjects
         Dim cityGroup As New Dictionary(Of Integer, List(Of Point))
         For y As Integer = 0 To m.ySize Step 1
             For x As Integer = 0 To m.xSize Step 1
-                If m.board(x, y).objectID = DefMapObjects.Types.City Then
+                If m.board(x, y).mapObject.objectID = DefMapObjects.Types.City Then
                     Dim g As Integer = m.board(x, y).groupID
                     If Not cityGroup.ContainsKey(g) Then cityGroup.Add(g, New List(Of Point))
                     cityGroup.Item(g).Add(New Point(x, y))
@@ -9305,7 +9320,7 @@ Public Class ImpenetrableObjects
         For Each g As Integer In cityGroup.Keys
             If m.groupStats.ContainsKey(-g) Then
                 s = AllDataStructues.DesiredStats.Copy(m.groupStats.Item(-g))
-                cityName = m.board(cityGroup.Item(g).Item(0).X, cityGroup.Item(g).Item(0).Y).objectName
+                cityName = m.board(cityGroup.Item(g).Item(0).X, cityGroup.Item(g).Item(0).Y).mapObject.objectName
                 citySize = CInt(cityName.Substring(cityName.Length - 1))
                 If s.StackSize > citySize Then
                     s.ExpBarAverage = CInt((s.ExpBarAverage * s.StackSize) / citySize)
@@ -9357,21 +9372,21 @@ Public Class ImpenetrableObjects
                         Else
                             tier = 3
                         End If
-                        types = raceManaTier(m.board(x, y).objRace(0))(tier).Split(CChar(" "))
+                        types = raceManaTier(m.board(x, y).mapObject.objRace(0))(tier).Split(CChar(" "))
                         ReDim weights(UBound(types))
                         For i As Integer = 0 To UBound(types) Step 1
                             If types(i) = "gold" Then
-                                weights(i) = raceMana.Item(m.board(x, y).objRace(0))(tier).Gold
+                                weights(i) = raceMana.Item(m.board(x, y).mapObject.objRace(0))(tier).Gold
                             ElseIf types(i) = "green" Then
-                                weights(i) = raceMana.Item(m.board(x, y).objRace(0))(tier).Green
+                                weights(i) = raceMana.Item(m.board(x, y).mapObject.objRace(0))(tier).Green
                             ElseIf types(i) = "black" Then
-                                weights(i) = raceMana.Item(m.board(x, y).objRace(0))(tier).Black
+                                weights(i) = raceMana.Item(m.board(x, y).mapObject.objRace(0))(tier).Black
                             ElseIf types(i) = "white" Then
-                                weights(i) = raceMana.Item(m.board(x, y).objRace(0))(tier).White
+                                weights(i) = raceMana.Item(m.board(x, y).mapObject.objRace(0))(tier).White
                             ElseIf types(i) = "red" Then
-                                weights(i) = raceMana.Item(m.board(x, y).objRace(0))(tier).Red
+                                weights(i) = raceMana.Item(m.board(x, y).mapObject.objRace(0))(tier).Red
                             ElseIf types(i) = "blue" Then
-                                weights(i) = raceMana.Item(m.board(x, y).objRace(0))(tier).Blue
+                                weights(i) = raceMana.Item(m.board(x, y).mapObject.objRace(0))(tier).Blue
                             End If
                         Next i
                         If tier = 1 Then
@@ -9389,7 +9404,7 @@ Public Class ImpenetrableObjects
                         IDs.Add(i)
                     Next i
                     Dim r As Integer = comm.RandomSelection(IDs, True)
-                    m.board(x, y).objectName = types(r)
+                    m.board(x, y).mapObject.objectName = types(r)
                 End If
             Next x
         Next y
@@ -9401,9 +9416,9 @@ Public Class ImpenetrableObjects
         For y As Integer = 0 To m.ySize Step 1
             For x As Integer = 0 To m.xSize Step 1
                 If m.board(x, y).locID(0) = Loc.ID Then
-                    If m.board(x, y).objectID = DefMapObjects.Types.Mine Then
+                    If m.board(x, y).mapObject.objectID = DefMapObjects.Types.Mine Then
                         ListPos.Add(New Point(x, y))
-                    ElseIf m.board(x, y).objectID = DefMapObjects.Types.Capital Then
+                    ElseIf m.board(x, y).mapObject.objectID = DefMapObjects.Types.Capital Then
                         capitalPos = New Point(x, y)
                     End If
                 End If
@@ -9448,7 +9463,7 @@ Public Class ImpenetrableObjects
         Dim ListPos As New List(Of Point)
         For y As Integer = 0 To m.ySize Step 1
             For x As Integer = 0 To m.xSize Step 1
-                If m.board(x, y).locID(0) = Loc.ID And m.board(x, y).objectID = DefMapObjects.Types.Mine Then ListPos.Add(New Point(x, y))
+                If m.board(x, y).locID(0) = Loc.ID And m.board(x, y).mapObject.objectID = DefMapObjects.Types.Mine Then ListPos.Add(New Point(x, y))
             Next x
         Next y
         Dim goldLimit As Double = CDbl(ListPos.Count) * settCommLoc.maxGoldMines / (settCommLoc.maxGoldMines + settCommLoc.maxManaSources + 0.001)
@@ -9597,7 +9612,7 @@ Public Class ImpenetrableObjects
             ok = MakeChain(m, basic, places(id).X, places(id).Y, free, connectors, res)
             If ok Then
                 For i As Integer = 0 To res.n Step 1
-                    m.board(res.pos(i).X, res.pos(i).Y).objectName = res.obj(i).name
+                    m.board(res.pos(i).X, res.pos(i).Y).mapObject.objectName = res.obj(i).name
                 Next i
                 Return True
             Else
@@ -9896,14 +9911,14 @@ Public Class ImpenetrableObjects
     Private Function TestCellForMountain(ByRef m As Map, ByRef free(,) As Boolean, _
                                          ByRef x As Integer, ByRef y As Integer) As Boolean
         If Not free(x, y) Then Return False
-        If Not m.board(x, y).isBorder Then Return False
-        If m.board(x, y).isWater Then
+        If Not m.board(x, y).passability.isBorder Then Return False
+        If m.board(x, y).surface.isWater Then
             Dim b As Location.Borders = ImpenetrableMeshGen.NearestXY(x, y, m.xSize, m.ySize, 1)
             For p As Integer = b.minY To b.maxY Step 1
                 For q As Integer = b.minX To b.maxX Step 1
-                    If m.board(q, p).isWater And (m.board(q, p).GuardLoc Or _
-                                                  m.board(q, p).isObjectGuard Or _
-                                                  m.board(q, p).PassGuardLoc) Then
+                    If m.board(q, p).surface.isWater And (m.board(q, p).stack.GuardLoc Or _
+                                                  m.board(q, p).stack.ObjectGuard Or _
+                                                  m.board(q, p).stack.PassGuardLoc) Then
                         Return False
                     End If
                 Next q
@@ -9972,7 +9987,7 @@ Public Class ImpenetrableObjects
         For p As Integer = 0 To size - 1 Step 1
             For q As Integer = 0 To size - 1 Step 1
                 free(x + q, y + p) = False
-                m.board(x + q, y + p).isWater = False
+                m.board(x + q, y + p).surface.isWater = False
                 If Not IsNothing(ismountain) Then ismountain(x + q, y + p) = True
             Next q
         Next p
@@ -9980,7 +9995,7 @@ Public Class ImpenetrableObjects
         Dim weight(UBound(mountains)) As Double
         For p As Integer = 0 To 1 Step 1
             For n As Integer = 0 To UBound(mountains) Step 1
-                If mountains(n).xSize = size AndAlso (p = 1 OrElse CheckRaces(m.board(x, y).objRace, mountains(n).race)) Then
+                If mountains(n).xSize = size AndAlso (p = 1 OrElse CheckRaces(m.board(x, y).mapObject.objRace, mountains(n).race)) Then
                     IDs.Add(n)
                     weight(n) = ObjectWeight(m, mountains(n), x, y)
                 End If
@@ -9988,7 +10003,7 @@ Public Class ImpenetrableObjects
             If IDs.Count > 0 Then Exit For
         Next p
         Dim selected As Integer = comm.RandomSelection(IDs, weight, True)
-        m.board(x, y).objectName = mountains(selected).name
+        m.board(x, y).mapObject.objectName = mountains(selected).name
     End Sub
 
     Private Sub PlaceOtherObjects(ByRef m As Map, ByRef free(,) As Boolean)
@@ -10002,7 +10017,7 @@ Public Class ImpenetrableObjects
             nextloop = False
             For y As Integer = 0 To tmpm.ySize Step 1
                 For x As Integer = 0 To tmpm.xSize Step 1
-                    If f(x, y) And tmpm.board(x, y).isBorder Then
+                    If f(x, y) And tmpm.board(x, y).passability.isBorder Then
                         nextloop = True
                         IDs.Clear()
                         Dim xx As Integer = x
@@ -10020,7 +10035,7 @@ Public Class ImpenetrableObjects
                         Next n
                         If IDs.Count > 0 Then
                             Dim selected As Integer = comm.RandomSelection(IDs, weight, True)
-                            tmpm.board(x, y).objectName = objects(selected).name
+                            tmpm.board(x, y).mapObject.objectName = objects(selected).name
                             Call PlaceObject(f, x, y, objects(selected))
                         End If
                     End If
@@ -10031,10 +10046,10 @@ Public Class ImpenetrableObjects
         Parallel.For(0, tmpm.ySize + 1,
          Sub(y As Integer)
              For x As Integer = 0 To tmpm.xSize Step 1
-                 If f(x, y) And tmpm.board(x, y).isBorder Then
+                 If f(x, y) And tmpm.board(x, y).passability.isBorder Then
                      If IDs.Count > 0 Then
                          'f(x, y) = False
-                         'tmpm.board(x, y).objectName = "MOMNE0100"
+                         'tmpm.board(x, y).mapObject.objectName = "MOMNE0100"
                          Call PlaceSingleMountain(tmpm, f, x, y, 1, Nothing)
                      End If
                  End If
@@ -10057,7 +10072,7 @@ Public Class ImpenetrableObjects
     '            setNewGroup = False
     '            levels = SelectSpellsLevel(settLoc(pLocID - 1))
     '            For Each p As Point In objList.Item(g)
-    '                r = m.board(p.X, p.Y).objRace.Item(0)
+    '                r = m.board(p.X, p.Y).mapObject.objRace.Item(0)
     '                If setNewGroup Then
     '                    maxGroupID += 1
     '                    n = maxGroupID
@@ -10104,7 +10119,7 @@ Public Class ImpenetrableObjects
     '    Dim res As New Dictionary(Of Integer, List(Of Point))
     '    For y As Integer = 0 To m.ySize Step 1
     '        For x As Integer = 0 To m.xSize Step 1
-    '            If m.board(x, y).objectID = objType Then
+    '            If m.board(x, y).mapObject.objectID = objType Then
     '                If Not res.ContainsKey(m.board(x, y).groupID) Then res.Add(m.board(x, y).groupID, New List(Of Point))
     '                res.Item(m.board(x, y).groupID).Add(New Point(x, y))
     '            End If
@@ -10768,7 +10783,7 @@ Public Class ObjectsContentSet
         If m.board(x, y).locID(0) > nRaces Then
             spellRace = My.Resources.spellRandomRace
         Else
-            spellRace = randStack.comm.defValues.RaceNumberToRaceChar(m.board(x, y).objRace(0))
+            spellRace = randStack.comm.defValues.RaceNumberToRaceChar(m.board(x, y).mapObject.objRace(0))
         End If
         For i As Integer = 1 To s.mageSpellsCount Step 1
             level = RndPart(s.mageSpellsMinLevel, s.mageSpellsMaxLevel, i, s.mageSpellsCount)
@@ -10954,7 +10969,7 @@ Public Class ObjectsContentSet
                 selected = randStack.comm.defValues.neutralRaces(randStack.rndgen.RndInt(0, UBound(randStack.comm.defValues.neutralRaces), True))
                 raceID = randStack.comm.RaceIdentifierToSubrace(selected)
             Else
-                raceID = m.board(x, y).objRace(0)
+                raceID = m.board(x, y).mapObject.objRace(0)
             End If
             mercRace = randStack.comm.defValues.RaceNumberToRaceChar(raceID)
             bar = RndPart(s.mercenariesMinExpBar, s.mercenariesMaxExpBar, i, s.mercenariesCount)

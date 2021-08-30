@@ -162,50 +162,50 @@ Friend Class StartForm
         Dim t(grid.xSize, grid.ySize) As Integer
         For x As Integer = 0 To grid.xSize Step 1
             For y As Integer = 0 To grid.ySize Step 1
-                If grid.board(x, y).locID.Count = 0 Or Not grid.board(x, y).isBorder Then
+                If grid.board(x, y).locID.Count = 0 Or Not grid.board(x, y).passability.isBorder Then
                     t(x, y) = 0
                 End If
-                If grid.board(x, y).isAttended Then
-                    t(x, y) = 51 + 2 * grid.board(x, y).objectID
-                ElseIf grid.board(x, y).isPass Then
+                If grid.board(x, y).passability.isAttended Then
+                    t(x, y) = 51 + 2 * grid.board(x, y).mapObject.objectID
+                ElseIf grid.board(x, y).passability.isPass Then
                     t(x, y) = 155
                 End If
-                If grid.board(x, y).Penetrable Then
+                If grid.board(x, y).passability.isPenetrable Then
                     't(x, y) = 100
                 End If
-                If grid.board(x, y).GuardLoc Then
+                If grid.board(x, y).stack.GuardLoc Then
                     t(x, y) = 185
-                ElseIf grid.board(x, y).objectID = DefMapObjects.Types.City Then
+                ElseIf grid.board(x, y).mapObject.objectID = DefMapObjects.Types.City Then
                     t(x, y) += 55
                 End If
-                If grid.board(x, y).PassGuardLoc Then
+                If grid.board(x, y).stack.PassGuardLoc Then
                     t(x, y) = 94
                 End If
-                If grid.board(x, y).isBorder Then
-                    If Not IsNothing(grid.board(x, y).objRace) Then
-                        t(x, y) = grid.board(x, y).objRace.Item(0)
+                If grid.board(x, y).passability.isBorder Then
+                    If Not IsNothing(grid.board(x, y).mapObject.objRace) Then
+                        t(x, y) = grid.board(x, y).mapObject.objRace.Item(0)
                     Else
                         t(x, y) = 5 + grid.board(x, y).locID(0)
                     End If
-                ElseIf grid.board(x, y).isWater Then
+                ElseIf grid.board(x, y).surface.isWater Then
                     't(x, y) += 200
                 End If
-                    If grid.board(x, y).isForest Then
-                        't(x, y) = 135
-                    End If
-                    If grid.board(x, y).isRoad Then
-                        't(x, y) = 145
-                    End If
+                If grid.board(x, y).surface.isForest Then
+                    't(x, y) = 135
+                End If
+                If grid.board(x, y).surface.isRoad Then
+                    't(x, y) = 145
+                End If
             Next y
         Next x
         For x As Integer = 0 To grid.xSize Step 1
             For y As Integer = 0 To grid.ySize Step 1
-                If grid.board(x, y).isBorder Then
-                    If Not IsNothing(grid.board(x, y).objectName) AndAlso grid.board(x, y).objectName.Length > 0 Then
-                        Dim s As Size = ObjectsSize.Item(grid.board(x, y).objectName)
+                If grid.board(x, y).passability.isBorder Then
+                    If Not IsNothing(grid.board(x, y).mapObject.objectName) AndAlso grid.board(x, y).mapObject.objectName.Length > 0 Then
+                        Dim s As Size = ObjectsSize.Item(grid.board(x, y).mapObject.objectName)
                         For j As Integer = y To y + s.Height - 1 Step 1
                             For i As Integer = x To x + s.Width - 1 Step 1
-                                If Not grid.board(i, j).isBorder Or t(i, j) > 500 Then
+                                If Not grid.board(i, j).passability.isBorder Or t(i, j) > 500 Then
                                     Throw New Exception
                                 End If
                                 't(i, j) = 501

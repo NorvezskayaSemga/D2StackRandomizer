@@ -72,15 +72,15 @@
         centerY = 0.5 * m.ySize
         For y As Integer = 0 To m.ySize Step 1
             For x As Integer = 0 To m.xSize Step 1
-                If m.board(x, y).isAttended AndAlso m.board(x, y).objectID = DefMapObjects.Types.Capital Then
-                    CapPos.Add(New Point(CInt(x + 0.5 * (imp.ActiveObjects(m.board(x, y).objectID).Size - 1)), _
-                                         CInt(y + 0.5 * (imp.ActiveObjects(m.board(x, y).objectID).Size - 1))))
+                If m.board(x, y).passability.isAttended AndAlso m.board(x, y).mapObject.objectID = DefMapObjects.Types.Capital Then
+                    CapPos.Add(New Point(CInt(x + 0.5 * (imp.ActiveObjects(m.board(x, y).mapObject.objectID).Size - 1)), _
+                                         CInt(y + 0.5 * (imp.ActiveObjects(m.board(x, y).mapObject.objectID).Size - 1))))
                 End If
             Next x
         Next y
         For y As Integer = 0 To m.ySize Step 1
             For x As Integer = 0 To m.xSize Step 1
-                If (m.board(x, y).GuardLoc Or m.board(x, y).PassGuardLoc) AndAlso Not locs.ContainsKey(m.board(x, y).groupID) Then
+                If (m.board(x, y).stack.GuardLoc Or m.board(x, y).stack.PassGuardLoc) AndAlso Not locs.ContainsKey(m.board(x, y).groupID) Then
                     Dim CenDist As Double = New Point(x, y).Dist(centerX, centerY)
                     Dim CapDist As Double = Double.MaxValue
                     For Each p As Point In CapPos
@@ -89,11 +89,11 @@
                     Dim g As Integer = m.board(x, y).groupID
                     locs.Add(g, New StackLoc With {.CapDist = CapDist, _
                                                    .CenDist = CenDist, _
-                                                   .isPassGuard = m.board(x, y).PassGuardLoc, _
-                                                   .isObjectGuard = m.board(x, y).isObjectGuard, _
+                                                   .isPassGuard = m.board(x, y).stack.PassGuardLoc, _
+                                                   .isObjectGuard = m.board(x, y).stack.ObjectGuard, _
                                                    .pos = New Point(x, y), _
                                                    .LocID = m.board(x, y).locID(0)})
-                    If m.board(x, y).objectID = DefMapObjects.Types.City And m.board(x, y).locID(0) > settMap.nRaces Then
+                    If m.board(x, y).mapObject.objectID = DefMapObjects.Types.City And m.board(x, y).locID(0) > settMap.nRaces Then
                         If g = 0 Then Throw New Exception("Unexpected group ID of city guards")
                         locs.Add(-g, locs.Item(g)) 'm.groupStats.Add(-
                     End If
@@ -112,9 +112,9 @@
         centerY = 0.5 * m.ySize
         For y As Integer = 0 To m.ySize Step 1
             For x As Integer = 0 To m.xSize Step 1
-                If m.board(x, y).isAttended AndAlso m.board(x, y).objectID = 1 Then
-                    CapPos.Add(New Point(CInt(x + 0.5 * (imp.ActiveObjects(m.board(x, y).objectID).Size - 1)), _
-                                         CInt(y + 0.5 * (imp.ActiveObjects(m.board(x, y).objectID).Size - 1))))
+                If m.board(x, y).passability.isAttended AndAlso m.board(x, y).mapObject.objectID = 1 Then
+                    CapPos.Add(New Point(CInt(x + 0.5 * (imp.ActiveObjects(m.board(x, y).mapObject.objectID).Size - 1)), _
+                                         CInt(y + 0.5 * (imp.ActiveObjects(m.board(x, y).mapObject.objectID).Size - 1))))
                 End If
             Next x
         Next y
@@ -129,7 +129,7 @@
         Next i
         For y As Integer = 0 To m.ySize Step 1
             For x As Integer = 0 To m.xSize Step 1
-                If Not m.board(x, y).isBorder And Not m.board(x, y).isAttended Then
+                If Not m.board(x, y).passability.isBorder And Not m.board(x, y).passability.isAttended Then
                     Dim id As Integer = m.board(x, y).locID(0) - 1
                     Area(id) += 1
                     Lpos(id).X += x
@@ -227,9 +227,9 @@
                         Dim t As Double = CapitalDistWeight(guards.Item(id).CapDist, minCapDist, maxCapDist)
                         If i >= settMap.nRaces Then t += CenterDistWeight(guards.Item(id).CenDist, minCenDist, maxCenDist)
                         t *= r
-                        If m.board(x, y).objectID = DefMapObjects.Types.Ruins Then
+                        If m.board(x, y).mapObject.objectID = DefMapObjects.Types.Ruins Then
                             t *= settLoc(m.board(x, y).locID(0) - 1).ruinsPowerMultiplicator
-                        ElseIf m.board(x, y).objectID = DefMapObjects.Types.City Then
+                        ElseIf m.board(x, y).mapObject.objectID = DefMapObjects.Types.City Then
                             t *= settLoc(m.board(x, y).locID(0) - 1).citiesPowerMultiplicator
                         End If
                         W.Add(id, t)
@@ -258,9 +258,9 @@
                 Dim e As Double = stackPowerMultiplier * LocTotalExp(guards.Item(id).LocID - 1) * W.Item(id) / Wsum(guards.Item(id).LocID - 1)
                 expKilled.Add(id, e)
                 Dim t As Double = e * rndgen.PRand(minD, maxD)
-                If m.board(x, y).objectID = DefMapObjects.Types.Ruins Then
+                If m.board(x, y).mapObject.objectID = DefMapObjects.Types.Ruins Then
                     t *= settLoc(m.board(x, y).locID(0) - 1).ruinsWealthMultiplicator
-                ElseIf m.board(x, y).objectID = DefMapObjects.Types.City Then
+                ElseIf m.board(x, y).mapObject.objectID = DefMapObjects.Types.City Then
                     t *= settLoc(m.board(x, y).locID(0) - 1).citiesWealthMultiplicator
                 End If
                 WLoot.Add(id, t)
@@ -457,14 +457,14 @@ Public Class RaceGen
 
         For y As Integer = 0 To m.ySize Step 1
             For x As Integer = 0 To m.xSize Step 1
-                If m.board(x, y).GuardLoc Or m.board(x, y).PassGuardLoc Then
+                If m.board(x, y).stack.GuardLoc Or m.board(x, y).stack.PassGuardLoc Then
                     Dim group As Integer = m.board(x, y).groupID
-                    If m.groupStats.Item(group).Race.Count = 0 Then 'AndAlso Not IsNothing(m.board(x, y).stackRace) Then
-                        For Each r As Integer In m.board(x, y).stackRace
+                    If m.groupStats.Item(group).Race.Count = 0 Then 'AndAlso Not IsNothing(m.board(x, y).stack.stackRace) Then
+                        For Each r As Integer In m.board(x, y).stack.stackRace
                             m.groupStats.Item(group).Race.Add(r)
                         Next r
                         If m.groupStats.ContainsKey(-group) Then
-                            For Each r As Integer In m.board(x, y).stackRace
+                            For Each r As Integer In m.board(x, y).stack.stackRace
                                 m.groupStats.Item(-group).Race.Add(r)
                             Next r
                         End If
@@ -486,7 +486,7 @@ Public Class RaceGen
         Dim n As Integer = 0
         For y As Integer = 0 To m.ySize Step 1
             For x As Integer = 0 To m.xSize Step 1
-                If m.board(x, y).isAttended AndAlso m.board(x, y).objectID = DefMapObjects.Types.Capital Then n += 1
+                If m.board(x, y).passability.isAttended AndAlso m.board(x, y).mapObject.objectID = DefMapObjects.Types.Capital Then n += 1
             Next x
         Next y
         Return n
@@ -609,7 +609,7 @@ Public Class RaceGen
         For NLoop As Integer = 0 To 1 Step 1
             For y As Integer = 0 To m.ySize Step 1
                 For x As Integer = 0 To m.xSize Step 1
-                    If IsNothing(m.board(x, y).stackRace) And (Not m.Loc(m.board(x, y).locID(0) - 1).IsObtainedBySymmery Or NLoop = 1) Then
+                    If IsNothing(m.board(x, y).stack.stackRace) And (Not m.Loc(m.board(x, y).locID(0) - 1).IsObtainedBySymmery Or NLoop = 1) Then
                         Call SetCellRace(m, LocR, nRaces, races, weight, x, y, settLoc)
                     End If
                 Next x
@@ -618,9 +618,9 @@ Public Class RaceGen
 
         For y As Integer = 0 To m.ySize Step 1
             For x As Integer = 0 To m.xSize Step 1
-                m.board(x, y).objRace = New List(Of Integer)
+                m.board(x, y).mapObject.objRace = New List(Of Integer)
                 For Each r As Integer In m.board(x, y).locID
-                    If Not m.board(x, y).objRace.Contains(LocR(r - 1)) Then m.board(x, y).objRace.Add(LocR(r - 1))
+                    If Not m.board(x, y).mapObject.objRace.Contains(LocR(r - 1)) Then m.board(x, y).mapObject.objRace.Add(LocR(r - 1))
                 Next r
             Next x
         Next y
@@ -698,15 +698,15 @@ Public Class RaceGen
         If m.symmID > -1 Then
             Dim pp() As Point = symm.ApplySymm(New Point(x, y), nRaces, m, 1)
             For Each p As Point In pp
-                m.board(p.X, p.Y).stackRace = New List(Of Integer)
+                m.board(p.X, p.Y).stack.stackRace = New List(Of Integer)
                 For Each r As Integer In rS
-                    m.board(p.X, p.Y).stackRace.Add(r)
+                    m.board(p.X, p.Y).stack.stackRace.Add(r)
                 Next r
             Next p
         Else
-            m.board(x, y).stackRace = New List(Of Integer)
+            m.board(x, y).stack.stackRace = New List(Of Integer)
             For Each r As Integer In rS
-                m.board(x, y).stackRace.Add(r)
+                m.board(x, y).stack.stackRace.Add(r)
             Next r
         End If
     End Sub
@@ -723,7 +723,7 @@ Public Class RaceGen
         Dim b As Location.Borders = ImpenetrableMeshGen.NearestXY(x, y, m.xSize, m.ySize, 1)
         For q As Integer = b.minY To b.maxY Step 1
             For p As Integer = b.minX To b.maxX Step 1
-                If Not m.board(p, q).isWater Then Return False
+                If Not m.board(p, q).surface.isWater Then Return False
             Next p
         Next q
         Return True
