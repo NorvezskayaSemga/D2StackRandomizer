@@ -1,10 +1,10 @@
 ﻿Public Class MapGenWrapper
 
     Private objPlace As ImpenetrableObjects
-    Dim genmesh As New ImpenetrableMeshGen
+    Dim genmesh As ImpenetrableMeshGen
     Dim watergenerator As New WaterGen
     Dim stackstats As New StackPowerGen
-    Dim racegen As New RaceGen
+    Dim racegen As RaceGen
     Dim penOnjGen As New PenetrableObjectsGen
 
     ''' <param name="ImpObjectPlacer">Инициализированный класс</param>
@@ -24,17 +24,20 @@
     ''' Она обычно производится меньше чем за пару секунд, но бывает, что выполняется дольше минуты.
     ''' В этом случае быстрее перегенерировать карту.
     ''' Если не получится с пяти попыток, вернет пустую карту с сохраненным логом</param>
+    ''' <param name="modName">Название мода, на котором происходит генерация.
+    ''' Ваианты можно получить из GenDefaultValues.GetSupportedMods</param>
     Public Function SimpleGen(ByRef sM As Map.SettingsMap, _
                               ByRef sR As Map.SettingsLoc, _
                               ByRef sC As Map.SettingsLoc, _
-                              ByVal genTimeLimit As Integer) As Map
+                              ByVal genTimeLimit As Integer, _
+                              ByVal modName As String) As Map
 
         Dim sett As New ImpenetrableMeshGen.GenSettings
         sett.genMode = ImpenetrableMeshGen.GenSettings.genModes.simple
         sett.common_settMap = sM
         sett.simple_settRaceLoc = sR
         sett.simple_settCommLoc = sC
-        Return CommonGen(sett, genTimeLimit)
+        Return CommonGen(sett, genTimeLimit, modName)
     End Function
 
     ''' <summary>Генерирует заготовку ландшафта. В случае неудачи вернет пустую карту с сохраненным логом</summary>
@@ -49,14 +52,17 @@
     ''' Она обычно производится меньше чем за пару секунд, но бывает, что выполняется дольше минуты.
     ''' В этом случае быстрее перегенерировать карту.
     ''' Если не получится с пяти попыток, вернет пустую карту с сохраненным логом</param>
+    ''' <param name="modName">Название мода, на котором происходит генерация.
+    ''' Ваианты можно получить из GenDefaultValues.GetSupportedMods</param>
     Public Function TemplateGen(ByRef sM As Map.SettingsMap, _
                                 ByRef sL() As ImpenetrableMeshGen.GenSettings.LocationGenSetting, _
-                                ByVal genTimeLimit As Integer) As Map
+                                ByVal genTimeLimit As Integer, _
+                                ByVal modName As String) As Map
         Dim sett As New ImpenetrableMeshGen.GenSettings
         sett.genMode = ImpenetrableMeshGen.GenSettings.genModes.template
         sett.common_settMap = sM
         sett.template_settGenLoc = sL
-        Return CommonGen(sett, genTimeLimit)
+        Return CommonGen(sett, genTimeLimit, modName)
     End Function
 
     ''' <summary>Генерирует заготовку ландшафта. В случае неудачи вернет пустую карту с сохраненным логом</summary>
@@ -65,10 +71,13 @@
     ''' Она обычно производится меньше чем за пару секунд, но бывает, что выполняется дольше минуты.
     ''' В этом случае быстрее перегенерировать карту.
     ''' Если не получится с пяти попыток, вернет пустую карту с сохраненным логом</param>
+    ''' <param name="modName">Название мода, на котором происходит генерация.
+    ''' Ваианты можно получить из GenDefaultValues.GetSupportedMods</param>
     Public Function TemplatePoolGen(ByRef templates() As ImpenetrableMeshGen.GenSettings, _
-                                    ByVal genTimeLimit As Integer) As Map
+                                    ByVal genTimeLimit As Integer, _
+                                    ByVal modName As String) As Map
         Dim selected As Integer = (New RndValueGen).RndInt(0, UBound(templates), True)
-        Return CommonGen(templates(selected), genTimeLimit)
+        Return CommonGen(templates(selected), genTimeLimit, modName)
     End Function
 
     ''' <summary>Генерирует заготовку ландшафта. В случае неудачи вернет пустую карту с сохраненным логом</summary>
@@ -78,11 +87,16 @@
     ''' В этом случае быстрее перегенерировать карту.
     ''' Если не получится с пяти попыток, вернет пустую карту с сохраненным логом</param>
     Public Function CommonGen(ByRef settGen As ImpenetrableMeshGen.GenSettings, _
-                              ByVal genTimeLimit As Integer) As Map
+                              ByVal genTimeLimit As Integer, _
+                              ByVal modName As String) As Map
 
         Dim t0 As Integer = Environment.TickCount
 
-        Dim grid As New Map(0, 0, -1, New Common)
+        Dim comm As New Common(modName)
+        genmesh = New ImpenetrableMeshGen(comm)
+        racegen = New RaceGen(comm)
+
+        Dim grid As New Map(0, 0, -1, comm)
         Dim copiedSettings() As Map.SettingsLoc
 
         grid.log.Add(GenDefaultValues.PrintVersion)
@@ -184,7 +198,7 @@ again:
         End If
 
         If Not IsNothing(grid.board) Then
-            Dim staclocgen As New StackLocationsGen(genmesh)
+            Dim staclocgen As New StackLocationsGen(comm, genmesh)
             If Not staclocgen.Gen(grid, settGen.common_settMap, copiedSettings, genTimeLimit) Then GoTo again
         Else
             grid.Clear()

@@ -1,0 +1,2 @@
+
+ReadFromFile .\Resources\mod_settings_MNS\MapObjectRace.txt

@@ -3,7 +3,7 @@
     Private link As String = "https://norvezskayasemga.wixsite.com/d2bfwmod/donaters"
     Private path As String = ".\Donaters.txt"
     Private users() As Donater = Nothing
-    Private comm As New Common
+    Private comm As Common
     Private rndgen As New RndValueGen
     Private exclude As New List(Of String)
     Private excludeRace As New List(Of Integer)
@@ -40,8 +40,8 @@
         Dim unitsCount As Integer
     End Structure
 
-    Public Sub New(ByVal lang As GenDefaultValues.TextLanguage)
-
+    Public Sub New(ByVal lang As GenDefaultValues.TextLanguage, ByVal modName As String)
+        comm = New Common(modName)
         log = New Log(comm)
 
         customObjectsNames = New GenDefaultValues.MapObjectsText(lang, comm.defValues)

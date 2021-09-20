@@ -1,9 +1,9 @@
 ﻿Public Class StackPowerGen
 
     Private rndgen As New RndValueGen
-    Private imp As New ImpenetrableMeshGen
+    Private imp As ImpenetrableMeshGen
     Private valConv As New ValueConverter
-    Private defValues As New GenDefaultValues(Nothing)
+    Private defValues As GenDefaultValues
 
     Private Structure StackLoc
         Dim pos As Point
@@ -52,6 +52,9 @@
             Throw New Exception("Сначала нужно выполнить StackLocations.Gen " & _
                                 "и протестировать результат с помощью m.TestMap")
         End If
+
+        defValues = m.comm.defValues
+        imp = New ImpenetrableMeshGen(m.comm)
 
         Dim t0 As Integer = Environment.TickCount
         Dim guards As Dictionary(Of Integer, StackLoc) = MakeGuardsList(m, settMap)
@@ -372,7 +375,7 @@ End Class
 
 Public Class RaceGen
 
-    Dim comm As New Common
+    Dim comm As Common
     Dim rndgen As New RndValueGen
     Dim symm As New SymmetryOperations
 
@@ -396,7 +399,8 @@ Public Class RaceGen
     Dim SRaces()()() As Integer
     ReadOnly neutralI As Integer = -1
 
-    Public Sub New()
+    Public Sub New(ByRef c As Common)
+        comm = c
         ReDim LRaces(UBound(comm.defValues.LocRacesBlocks)), LRacesWeight(UBound(comm.defValues.LocRacesBlocks))
         Dim m As Integer = 0
         Dim tmpRaceWeight As New Dictionary(Of String, Double)

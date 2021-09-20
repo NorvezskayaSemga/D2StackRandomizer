@@ -1,0 +1,4 @@
+#строка, начинающаяся с решетки, игнорируется
+#ID юнитов
+
+ReadFromFile .\Resources\mod_settings_MNS\ExcludeIDs_ModLore.txt

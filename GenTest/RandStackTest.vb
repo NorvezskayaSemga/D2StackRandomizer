@@ -55,14 +55,30 @@ Public Class RandStackTest
     '
 #End Region
 
+
+    Private def() As String = {"%default%"}
+
     Friend Function CreateRandStack_Accessor() As RandStack_Accessor
         If IsNothing(UnitsList) Then Call ReadTestUnits()
         If IsNothing(ItemsList) Then Call ReadTestItems()
         If IsNothing(AllSpells) Then Call ReadTestSpells()
-        Return New RandStack_Accessor(UnitsList, ItemsList, AllSpells, excludeList, customLootChanceList, _
-                                      customRaceList, soleUnitsList, bigStackUnitsList, preservedItemsList, 5)
+        Dim rstackData As New RandStack.ConstructorInput With {.AllUnitsList = UnitsList, _
+                                                               .AllItemsList = ItemsList, _
+                                                               .AllSpellsList = AllSpells, _
+                                                               .modName = GenDefaultValues.DefaultMod}
+        Return New RandStack_Accessor(rstackData)
     End Function
-
+    Friend Function CreateRandStack() As RandStack
+        If IsNothing(UnitsList) Then Call ReadTestUnits()
+        If IsNothing(ItemsList) Then Call ReadTestItems()
+        If IsNothing(AllSpells) Then Call ReadTestSpells()
+        Dim rstackData As New RandStack.ConstructorInput With {.AllUnitsList = UnitsList, _
+                                                               .AllItemsList = ItemsList, _
+                                                               .AllSpellsList = AllSpells, _
+                                                               .modName = GenDefaultValues.DefaultMod}
+        Return New RandStack(rstackData)
+    End Function
+    
     Friend T1Units() As String = {
 "g000uu3001", "g000uu0023", "g000uu0019", "g000uu0020", "g000uu8248", "g000uu0022", "g000uu0001", "g000uu0006", "g000uu0008", "g000uu0011", "g000uu0018", "g003uu5001",
 "g000uu3002", "g000uu0048", "g000uu0044", "g000uu0045", "g000uu8249", "g000uu0047", "g000uu0036", "g000uu0026", "g000uu0033", "g000uu0029", "g000uu0043", "g004uu5039",
@@ -89,14 +105,13 @@ Public Class RandStackTest
     Friend AllSpells() As AllDataStructues.Spell = Nothing
 
     Friend Sub ReadTestUnits()
-        UnitsList = (New ImpenetrableMeshShow.StartForm_Accessor).ReadTestUnits
+        UnitsList = ImpenetrableMeshShow.StartForm_Accessor.ReadTestUnits(GenDefaultValues.DefaultMod)
     End Sub
     Friend Sub ReadTestItems()
-        ItemsList = (New ImpenetrableMeshShow.StartForm_Accessor).ReadTestItems
+        ItemsList = ImpenetrableMeshShow.StartForm_Accessor.ReadTestItems(GenDefaultValues.DefaultMod)
     End Sub
     Friend Sub ReadTestSpells()
-        Dim s As New ImpenetrableMeshShow.StartForm_Accessor
-        AllSpells = s.ReadSpells
+        AllSpells = ImpenetrableMeshShow.StartForm_Accessor.ReadSpells
     End Sub
 
     '''<summary>
@@ -162,7 +177,7 @@ Public Class RandStackTest
     Public Sub RandTest()
         If IsNothing(UnitsList) Then Call ReadTestUnits()
         If IsNothing(ItemsList) Then Call ReadTestItems()
-        Dim target As Common_Accessor = New Common_Accessor()
+        Dim target As Common_Accessor = New Common_Accessor(GenDefaultValues.DefaultMod)
         Dim maxval As Integer = 10000
         Dim ok, g(maxval / 10), tmpok As Boolean
         ok = True
@@ -792,10 +807,8 @@ Public Class RandStackTest
     Public Sub LoggingTest()
 
         Call CreateRandStack_Accessor()
-        Dim target As RandStack = New RandStack(UnitsList, ItemsList, AllSpells, excludeList, customLootChanceList, customRaceList, _
-                                                soleUnitsList, bigStackUnitsList, preservedItemsList, 5)
+        Dim target As RandStack = CreateRandStack()
         target.comm.ReadExcludedObjectsList({RandomStackGenerator.My.Resources.readDefaultFileKeyword, _
-                                             RandomStackGenerator.My.Resources.readVLoreFileKeyword, _
                                              RandomStackGenerator.My.Resources.readMLoreFileKeyword})
 
         Dim ok As Boolean = True

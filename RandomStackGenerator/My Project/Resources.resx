@@ -117,36 +117,11 @@
   <resheader name="writer">
     <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
   </resheader>
-  <assembly alias="System.Windows.Forms" name="System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089" />
-  <data name="ExcludeIDs" type="System.Resources.ResXFileRef, System.Windows.Forms">
-    <value>..\Resources\ExcludeIDs.txt;System.String, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089;windows-1251</value>
-  </data>
-  <data name="Items" type="System.Resources.ResXFileRef, System.Windows.Forms">
-    <value>..\Resources\Items.txt;System.String, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089;windows-1251</value>
-  </data>
-  <data name="Races" type="System.Resources.ResXFileRef, System.Windows.Forms">
-    <value>..\Resources\Races.txt;System.String, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089;windows-1251</value>
-  </data>
-  <data name="StackStatsFields" type="System.Resources.ResXFileRef, System.Windows.Forms">
-    <value>..\Resources\StackStatsFields.txt;System.String, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089;windows-1251</value>
-  </data>
-  <data name="UnitRace" type="System.Resources.ResXFileRef, System.Windows.Forms">
-    <value>..\Resources\UnitRace.txt;System.String, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089;windows-1251</value>
-  </data>
   <data name="readDefaultFileKeyword" xml:space="preserve">
     <value>%default%</value>
   </data>
   <data name="testFileKeyword" xml:space="preserve">
     <value>%testfile%</value>
-  </data>
-  <data name="ExcludeIDsForNames" type="System.Resources.ResXFileRef, System.Windows.Forms">
-    <value>..\Resources\ExcludeIDsForNames.txt;System.String, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089;windows-1251</value>
-  </data>
-  <data name="MapObjectRace" type="System.Resources.ResXFileRef, System.Windows.Forms">
-    <value>..\Resources\MapObjectRace.txt;System.String, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089;windows-1251</value>
-  </data>
-  <data name="PlateauConstructor" type="System.Resources.ResXFileRef, System.Windows.Forms">
-    <value>..\Resources\PlateauConstructor.txt;System.String, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089;windows-1251</value>
   </data>
   <data name="objKeyMage" xml:space="preserve">
     <value>G000SI0000MAGE</value>
@@ -178,39 +153,6 @@
   <data name="mineTypeT3Mana" xml:space="preserve">
     <value>t3mana</value>
   </data>
-  <data name="Lords" type="System.Resources.ResXFileRef, System.Windows.Forms">
-    <value>..\Resources\Lords.txt;System.String, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089;windows-1251</value>
-  </data>
-  <data name="TestStackStats" type="System.Resources.ResXFileRef, System.Windows.Forms">
-    <value>..\resources\teststackstats.txt;System.String, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089;windows-1251</value>
-  </data>
-  <data name="LootItemChanceMultiplier" type="System.Resources.ResXFileRef, System.Windows.Forms">
-    <value>..\Resources\LootItemChanceMultiplier.txt;System.String, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089;windows-1251</value>
-  </data>
-  <data name="SingleUnits" type="System.Resources.ResXFileRef, System.Windows.Forms">
-    <value>..\Resources\SingleUnits.txt;System.String, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089;windows-1251</value>
-  </data>
-  <data name="ExcludeIDs_ModLore" type="System.Resources.ResXFileRef, System.Windows.Forms">
-    <value>..\Resources\ExcludeIDs_ModLore.txt;System.String, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089;windows-1251</value>
-  </data>
-  <data name="ExcludeIDs_VanillaLore" type="System.Resources.ResXFileRef, System.Windows.Forms">
-    <value>..\Resources\ExcludeIDs_VanillaLore.txt;System.String, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089;windows-1251</value>
-  </data>
-  <data name="readMLoreFileKeyword" xml:space="preserve">
-    <value>%nomodlore%</value>
-  </data>
-  <data name="readVLoreFileKeyword" xml:space="preserve">
-    <value>%novanillalore%</value>
-  </data>
-  <data name="BigStackUnits" type="System.Resources.ResXFileRef, System.Windows.Forms">
-    <value>..\resources\bigstackunits.txt;System.String, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089;windows-1251</value>
-  </data>
-  <data name="Constants" type="System.Resources.ResXFileRef, System.Windows.Forms">
-    <value>..\resources\constants.txt;System.String, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089;windows-1251</value>
-  </data>
-  <data name="PreservedItems" type="System.Resources.ResXFileRef, System.Windows.Forms">
-    <value>..\resources\preserveditems.txt;System.String, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089;windows-1251</value>
-  </data>
   <data name="template_creation" xml:space="preserve">
     <value>Creation_settings</value>
   </data>
@@ -223,26 +165,11 @@
   <data name="template_new_Block" xml:space="preserve">
     <value>//</value>
   </data>
-  <data name="example_template_1" type="System.Resources.ResXFileRef, System.Windows.Forms">
-    <value>..\resources\example_template_1.txt;System.String, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089;windows-1251</value>
-  </data>
-  <data name="example_template_2_symm" type="System.Resources.ResXFileRef, System.Windows.Forms">
-    <value>..\resources\example_template_2_symm.txt;System.String, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089;windows-1251</value>
-  </data>
-  <data name="example_template_2_unsymm" type="System.Resources.ResXFileRef, System.Windows.Forms">
-    <value>..\resources\example_template_2_unsymm.txt;System.String, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089;windows-1251</value>
-  </data>
   <data name="template_read_from_file" xml:space="preserve">
     <value>ReadFromFile</value>
   </data>
-  <data name="PlayableSubraces" type="System.Resources.ResXFileRef, System.Windows.Forms">
-    <value>..\resources\playablesubraces.txt;System.String, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089;windows-1251</value>
-  </data>
   <data name="spellRandomRace" xml:space="preserve">
     <value>R</value>
-  </data>
-  <data name="Capitals" type="System.Resources.ResXFileRef, System.Windows.Forms">
-    <value>..\resources\capitals.txt;System.String, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089;utf-8</value>
   </data>
   <data name="objKeyTown" xml:space="preserve">
     <value>G000FT0000</value>
@@ -253,31 +180,83 @@
   <data name="template_RandomRaceShortKeyword" xml:space="preserve">
     <value>R</value>
   </data>
-  <data name="GenParametersRange" type="System.Resources.ResXFileRef, System.Windows.Forms">
-    <value>..\resources\genparametersrange.txt;System.String, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089;utf-8</value>
+  <data name="template_header_keyword" xml:space="preserve">
+    <value>header</value>
   </data>
-  <data name="GenParametersDescription_Eng" type="System.Resources.ResXFileRef, System.Windows.Forms">
-    <value>..\resources\genparametersdescription_eng.txt;System.String, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089;utf-8</value>
+  <data name="modSettings_keyword" xml:space="preserve">
+    <value>mod_settings_</value>
   </data>
-  <data name="GenParametersDescription_Rus" type="System.Resources.ResXFileRef, System.Windows.Forms">
-    <value>..\resources\genparametersdescription_rus.txt;System.String, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089;utf-8</value>
+  <assembly alias="System.Windows.Forms" name="System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089" />
+  <data name="Constants" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\resources\mod_settings_vanilla\constants.txt;System.String, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089;windows-1251</value>
   </data>
   <data name="emptyloc" type="System.Resources.ResXFileRef, System.Windows.Forms">
     <value>..\resources\emptyloc.txt;System.String, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089;windows-1251</value>
   </data>
+  <data name="example_template_1" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\resources\example_template_1.txt;System.String, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089;windows-1251</value>
+  </data>
+  <data name="example_template_2_symm" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\resources\example_template_2_symm.txt;System.String, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089;windows-1251</value>
+  </data>
+  <data name="example_template_2_unsymm" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\resources\example_template_2_unsymm.txt;System.String, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089;windows-1251</value>
+  </data>
+  <data name="example_template_2_unsymm1" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\resources\example_template_2_unsymm.txt;System.String, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089;windows-1251</value>
+  </data>
+  <data name="MapObjectRace" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\resources\mod_settings_mns\mapobjectrace.txt;System.String, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089;koi8-r</value>
+  </data>
+  <data name="ObjectsText_Eng" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\resources\mod_settings_mns\objectstext_eng.txt;System.String, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089;utf-8</value>
+  </data>
+  <data name="ObjectsText_Rus" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\resources\mod_settings_mns\objectstext_rus.txt;System.String, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089;utf-8</value>
+  </data>
+  <data name="PlateauConstructor" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\resources\mod_settings_mns\plateauconstructor.txt;System.String, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089;windows-1251</value>
+  </data>
+  <data name="PreservedItems" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\resources\mod_settings_mns\preserveditems.txt;System.String, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089;windows-1251</value>
+  </data>
+  <data name="Races" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\resources\mod_settings_mns\races.txt;System.String, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089;windows-1251</value>
+  </data>
+  <data name="RaceSublocations" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\resources\mod_settings_vanilla\racesublocations.txt;System.String, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089;utf-8</value>
+  </data>
   <data name="template_48x48_unsymm_simple" type="System.Resources.ResXFileRef, System.Windows.Forms">
     <value>..\resources\template_48x48_unsymm_simple.txt;System.String, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089;windows-1251</value>
   </data>
-  <data name="ObjectsText_Eng" type="System.Resources.ResXFileRef, System.Windows.Forms">
-    <value>..\resources\objectstext_eng.txt;System.String, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089;utf-8</value>
+  <data name="readMLoreFileKeyword" xml:space="preserve">
+    <value>%nomodlore%</value>
   </data>
-  <data name="ObjectsText_Rus" type="System.Resources.ResXFileRef, System.Windows.Forms">
-    <value>..\resources\objectstext_rus.txt;System.String, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089;utf-8</value>
+  <data name="Capitals" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\resources\common_game_data\capitals.txt;System.String, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089;utf-8</value>
   </data>
-  <data name="RaceSublocations" type="System.Resources.ResXFileRef, System.Windows.Forms">
-    <value>..\resources\racesublocations.txt;System.String, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089;utf-8</value>
+  <data name="Capitals1" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\resources\common_game_data\capitals.txt;System.String, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089;utf-8</value>
   </data>
-  <data name="template_header_keyword" xml:space="preserve">
-    <value>header</value>
+  <data name="ExcludeIDsForNames" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\resources\common_game_data\excludeidsfornames.txt;System.String, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089;windows-1251</value>
+  </data>
+  <data name="GenParametersDescription_Eng" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\resources\common_game_data\genparametersdescription_eng.txt;System.String, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089;utf-8</value>
+  </data>
+  <data name="GenParametersDescription_Rus" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\resources\common_game_data\genparametersdescription_rus.txt;System.String, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089;utf-8</value>
+  </data>
+  <data name="GenParametersRange" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\resources\common_game_data\genparametersrange.txt;System.String, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089;utf-8</value>
+  </data>
+  <data name="Items" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\resources\common_game_data\items.txt;System.String, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089;windows-1251</value>
+  </data>
+  <data name="Lords" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\resources\common_game_data\lords.txt;System.String, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089;windows-1251</value>
+  </data>
+  <data name="PlayableSubraces" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\resources\common_game_data\playablesubraces.txt;System.String, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089;windows-1251</value>
   </data>
 </root>

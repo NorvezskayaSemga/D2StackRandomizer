@@ -1,0 +1,16 @@
+#строка, начинающа€с€ с решетки, игнорируетс€
+#»дентификаторы рас.
+#¬ конце каждой строки ID, на который будут замен€тьс€ все остальные ID строки
+Humans			H	6	1
+Undead			U	2
+Legions			L	3
+Clans			C	K	4
+Elves			E	7	14
+Neutral			N	5
+Greenskins		G	O	8
+Dragons			D	9
+Swamp			S	10
+Water			W	11
+Barbarians		B	12
+Animals			A	13
+AnimalSnowTerr	AST	16

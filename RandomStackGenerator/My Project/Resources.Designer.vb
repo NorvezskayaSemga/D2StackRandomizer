@@ -62,53 +62,6 @@ Namespace My.Resources
         
         '''<summary>
         '''  Looks up a localized string similar to #строка, начинающаяся с решетки, игнорируется
-        '''#ID юнитов и минимальный размер стэка
-        '''
-        '''#темный эльф-гаст
-        '''g000uu8144	3
-        '''g000uu8044	3
-        '''
-        '''#ведьма
-        '''g000uu0067	2
-        '''#колдунья
-        '''g000uu0068	3
-        '''#суккуб
-        '''g000uu0173	4
-        '''#инкуб
-        '''g000uu0065	4
-        '''#якшини
-        '''g000uu8156	4
-        '''g000uu7532	4
-        '''#привидение
-        '''g000uu0078	2
-        '''#призрак
-        '''g000uu0079	2
-        '''g000uu5279	2
-        '''#эльф-призрак
-        '''g000uu8267	3
-        '''g001uu8267	3
-        '''#тень
-        '''g000uu0174	3
-        '''
-        '''#волхв
-        '''g000uu8218	4
-        '''g000uu8222	4
-        '''#травница
-        '''g000uu0033	2
-        '''#посвященная
-        '''g000uu0034	3
-        '''#друид
-        '''g000uu0035	3
-        '''#ар [rest of string was truncated]&quot;;.
-        '''</summary>
-        Friend ReadOnly Property BigStackUnits() As String
-            Get
-                Return ResourceManager.GetString("BigStackUnits", resourceCulture)
-            End Get
-        End Property
-        
-        '''<summary>
-        '''  Looks up a localized string similar to #строка, начинающаяся с решетки, игнорируется
         '''#Соответствие между расами, ID рас в игре и ID столиц
         '''
         '''    G000FT0000HU0  H G000RR0000
@@ -127,16 +80,42 @@ Namespace My.Resources
         
         '''<summary>
         '''  Looks up a localized string similar to #строка, начинающаяся с решетки, игнорируется
+        '''#Соответствие между расами, ID рас в игре и ID столиц
+        '''
+        '''    G000FT0000HU0  H G000RR0000
+        '''    G000FT0000DWC0 C G000RR0001
+        '''    G000FT0000HE0  L G000RR0002
+        '''    G000FT0000UN0  U G000RR0003
+        '''    G000FT0000NE0  N G000RR0004
+        '''    G000FT0000EL0  E G000RR0005
+        '''.
+        '''</summary>
+        Friend ReadOnly Property Capitals1() As String
+            Get
+                Return ResourceManager.GetString("Capitals1", resourceCulture)
+            End Get
+        End Property
+        
+        '''<summary>
+        '''  Looks up a localized string similar to #строка, начинающаяся с решетки, игнорируется
         '''#файл, определяющий константы, используемые генератором
         '''#Параметр (без пробелов), значение (без пробелов), разделитель таб или пробел
         '''#слэш - перенос строки
-        '''#если параметр не найден, используется заданный по умолчанию
         '''
-        '''#Множитель для Сигмы в распределении Гаусса. Сигма=Множитель*Желаемое_значение
-        '''defaultSigma				0.1
+        '''ReadFromFile .\Resources\mod_settings_MNS\Constants.txt
         '''
-        '''#В заданном радиусе от столицы уменьшается множитель силы юнитов и стоимости лута, задаваемый в регенерторе
-        '''#в зависимости от расстояния  [rest of string was truncated]&quot;;.
+        '''#Humans             H
+        '''#Undead             U
+        '''#Legions            L
+        '''#Clans              C
+        '''#Elves              E
+        '''#Neutral            N
+        '''#Greenskins         G
+        '''#Dragons            D
+        '''#Swamp              S
+        '''#Water              W
+        '''#Barbarians         B
+        '''#Animals  [rest of string was truncated]&quot;;.
         '''</summary>
         Friend ReadOnly Property Constants() As String
             Get
@@ -179,7 +158,10 @@ Namespace My.Resources
         '''mageGlobalSpellsEnabled	False
         '''
         '''mercenariesMaxExpBar		1900
-        '''mercenariesMinExpB [rest of string was truncated]&quot;;.
+        '''mercenariesMinExpBar		1000
+        '''mercenariesCount		4
+        '''
+        '''merc [rest of string was truncated]&quot;;.
         '''</summary>
         Friend ReadOnly Property emptyloc() As String
             Get
@@ -198,7 +180,7 @@ Namespace My.Resources
         '''#порядок блоков тоже может быть любым с одним исключением:
         '''#блоки Location для расовых локаций должны стоять выше, чем блоки для обычных локаций (независимо от genMode)
         '''
-        '''#если в блоке Location параметр имеет два значения, то при генерации будет выб [rest of string was truncated]&quot;;.
+        '''#если в блоке Location параметр имеет два значения, то при генерации будет выбрано случа [rest of string was truncated]&quot;;.
         '''</summary>
         Friend ReadOnly Property example_template_1() As String
             Get
@@ -217,7 +199,7 @@ Namespace My.Resources
         '''#порядок блоков тоже может быть любым с одним исключением:
         '''#блоки Location для расовых локаций должны стоять выше, чем блоки для обычных локаций (независимо от genMode)
         '''
-        '''#если в блоке Location параметр имеет два значения, то при генерации будет выб [rest of string was truncated]&quot;;.
+        '''#если в блоке Location параметр имеет два значения, то при генерации будет выбрано случа [rest of string was truncated]&quot;;.
         '''</summary>
         Friend ReadOnly Property example_template_2_symm() As String
             Get
@@ -236,7 +218,7 @@ Namespace My.Resources
         '''#порядок блоков тоже может быть любым с одним исключением:
         '''#блоки Location для расовых локаций должны стоять выше, чем блоки для обычных локаций (независимо от genMode)
         '''
-        '''#если в блоке Location параметр имеет два значения, то при генерации будет выб [rest of string was truncated]&quot;;.
+        '''#если в блоке Location параметр имеет два значения, то при генерации будет выбрано случа [rest of string was truncated]&quot;;.
         '''</summary>
         Friend ReadOnly Property example_template_2_unsymm() As String
             Get
@@ -245,122 +227,21 @@ Namespace My.Resources
         End Property
         
         '''<summary>
-        '''  Looks up a localized string similar to #строка, начинающаяся с решетки, игнорируется
-        '''#ID юнитов
-        '''#лидеры империи
-        '''g000uu0019
-        '''g000uu0020
-        '''g000uu0021
-        '''g000uu0022
-        '''g000uu8248
-        '''#лидеры кланов
-        '''g000uu0044
-        '''g000uu0045
-        '''g000uu0046
-        '''g000uu0047
-        '''g000uu8249
-        '''#лидеры легионов
-        '''g000uu0070
-        '''g000uu0071
-        '''g000uu0072
-        '''g000uu0073
-        '''g000uu8250
-        '''#лидеры нежити
-        '''g000uu0096
-        '''g000uu0097
-        '''g000uu0098
-        '''g000uu0099
-        '''g000uu8252
-        '''g000uu8253
-        '''#лидеры эльфов
-        '''g000uu8009
-        '''g000uu8010
-        '''g000uu8011
-        '''g000uu8012
-        '''g000uu8251
+        '''  Looks up a localized string similar to Map generator by Norvezskaya Semga
         '''
-        '''#стражи столиц
-        '''g000uu3001
-        '''g000uu3002
-        '''g000uu3003
-        '''g000 [rest of string was truncated]&quot;;.
+        '''#строка, начинающаяся с решетки, игнорируется
+        '''#параметры и их значения не чувствительны к регистру
+        '''#разделитель - пробел или табуляция (может идти несколько подряд)
+        '''
+        '''#внутри блоков настройки могут идти в любом порядке
+        '''#порядок блоков тоже может быть любым с одним исключением:
+        '''#блоки Location для расовых локаций должны стоять выше, чем блоки для обычных локаций (независимо от genMode)
+        '''
+        '''#если в блоке Location параметр имеет два значения, то при генерации будет выбрано случа [rest of string was truncated]&quot;;.
         '''</summary>
-        Friend ReadOnly Property ExcludeIDs() As String
+        Friend ReadOnly Property example_template_2_unsymm1() As String
             Get
-                Return ResourceManager.GetString("ExcludeIDs", resourceCulture)
-            End Get
-        End Property
-        
-        '''<summary>
-        '''  Looks up a localized string similar to #строка, начинающаяся с решетки, игнорируется
-        '''#ID юнитов
-        '''#последователь
-        '''g000uu8276
-        '''#уста богов
-        '''g000uu2024
-        '''g000uu8277
-        '''#божественная длань
-        '''g000uu8278
-        '''#избранник богов
-        '''g000uu8298
-        '''g001uu8298
-        '''#каратель
-        '''g000uu7560
-        '''g001uu7560
-        '''#мастер культа
-        '''g000uu7585
-        '''g001uu7585
-        '''.
-        '''</summary>
-        Friend ReadOnly Property ExcludeIDs_ModLore() As String
-            Get
-                Return ResourceManager.GetString("ExcludeIDs_ModLore", resourceCulture)
-            End Get
-        End Property
-        
-        '''<summary>
-        '''  Looks up a localized string similar to #строка, начинающаяся с решетки, игнорируется
-        '''#ID юнитов
-        '''#дрега зул
-        '''g000uu6021
-        '''g000uu6121
-        '''#принцесса яата&apos;халли
-        '''g000uu6006
-        '''g000uu6106
-        '''#юбер де лали
-        '''g000uu6008
-        '''g000uu6108
-        '''#эрхог темная
-        '''g000uu6009
-        '''g000uu6109
-        '''#утер
-        '''g000uu6020
-        '''g000uu6120
-        '''#темный эльф лиф
-        '''g000uu6007
-        '''g000uu6107
-        '''#утер второй
-        '''g000uu6001
-        '''g000uu6101
-        '''#некромант эрхог
-        '''g000uu6019
-        '''g000uu6119
-        '''#нидхегг
-        '''g000uu6010
-        '''g000uu6110
-        '''#маг хугин
-        '''g000uu6005
-        '''g000uu6105
-        '''#демон утер
-        '''g000uu6002
-        '''g000uu6102
-        '''#астарот
-        '''g000uu6011
-        '''g000uu6111 [rest of string was truncated]&quot;;.
-        '''</summary>
-        Friend ReadOnly Property ExcludeIDs_VanillaLore() As String
-            Get
-                Return ResourceManager.GetString("ExcludeIDs_VanillaLore", resourceCulture)
+                Return ResourceManager.GetString("example_template_2_unsymm1", resourceCulture)
             End Get
         End Property
         
@@ -408,7 +289,10 @@ Namespace My.Resources
         '''#крестьянин
         '''g000uu5001
         '''g000uu5101
-        '''#тол [rest of string was truncated]&quot;;.
+        '''#толстый бес
+        '''g000uu6004
+        '''g000uu6104
+        '''#ведьмино от [rest of string was truncated]&quot;;.
         '''</summary>
         Friend ReadOnly Property ExcludeIDsForNames() As String
             Get
@@ -450,7 +334,9 @@ Namespace My.Resources
         '''
         '''SpellsMaxLevel	[Common_map_settings]	[Integer]	1	5
         '''
-        '''ApplySymmetry	[Common_map_settings]	[Boolean]	False	True [rest of string was truncated]&quot;;.
+        '''ApplySymmetry	[Common_map_settings]	[Boolean]	False	True
+        '''
+        '''SymmetryClass [rest of string was truncated]&quot;;.
         '''</summary>
         Friend ReadOnly Property GenParametersRange() As String
             Get
@@ -485,36 +371,6 @@ Namespace My.Resources
         End Property
         
         '''<summary>
-        '''  Looks up a localized string similar to #строка, начинающаяся с решетки, игнорируется
-        '''#Идентификаторы предметов и множители шанса появления предмета.
-        '''#эльфийские сапоги
-        '''G000IG1010	0.33
-        '''#мешочек трав
-        '''G001IG0180	0.2
-        '''#талисман скваера
-        '''G000IG9101	0.2
-        '''#клыкастая связка
-        '''G001IG0082	0.1
-        '''
-        '''#Эликсир защиты от магии Воздуха
-        '''G000IG0021	1.4
-        '''#Эликсир защиты от магии Воды
-        '''G000IG0022	1.4
-        '''#Эликсир защиты от магии Земли
-        '''G000IG0023	1.4
-        '''#Эликсир защиты от магии Огня
-        '''G000IG0024	1.4
-        '''#Эликсир защиты от магии Смерти
-        '''G001IG0036	1.4
-        '''#Эликсир защиты от  [rest of string was truncated]&quot;;.
-        '''</summary>
-        Friend ReadOnly Property LootItemChanceMultiplier() As String
-            Get
-                Return ResourceManager.GetString("LootItemChanceMultiplier", resourceCulture)
-            End Get
-        End Property
-        
-        '''<summary>
         '''  Looks up a localized string similar to g000LR0001	H
         '''g000LR0002	H
         '''g000LR0003	H
@@ -539,25 +395,26 @@ Namespace My.Resources
         End Property
         
         '''<summary>
-        '''  Looks up a localized string similar to #строка, начинающаяся с решетки, игнорируется
-        '''#Первый столбец - идентификаторы объектов.
-        '''#В остальных - допустимые места расстановки объектов и расы
-        '''# в теге обязателен знак %
+        '''  Looks up a localized string similar to #ЯРПНЙЮ, МЮВХМЮЧЫЮЪЯЪ Я ПЕЬЕРЙХ, ХЦМНПХПСЕРЯЪ
+        '''#оЕПБШИ ЯРНКАЕЖ - ХДЕМРХТХЙЮРНПШ НАЗЕЙРНБ.
+        '''#б НЯРЮКЭМШУ - ДНОСЯРХЛШЕ ЛЕЯРЮ ПЮЯЯРЮМНБЙХ НАЗЕЙРНБ Х ПЮЯШ
+        '''# Б РЕЦЕ НАЪГЮРЕКЕМ ГМЮЙ %
         '''
-        '''#здания
+        '''#ГДЮМХЪ
         '''g000mg0001	G	H C E N S		%religious% %natural%
         '''g000mg0002	G	C				%building%
         '''g000mg0003	G	H N S			%building%
         '''g000mg0004	G	L				%building% %natural%
         '''g000mg0005	G	L				%building% %natural%
         '''
-        '''#водопады
+        '''#БНДНОЮДШ
         '''#g000mg0006	G	H L C U E N S
         '''#g000mg0007	G	H L C U E N S
         '''
-        '''#плато
+        '''#ОКЮРН
         '''#g000mg0008	G	H L C U E N S
-        '''#g000mg0009	G	H L C U [rest of string was truncated]&quot;;.
+        '''#g000mg0009	G	H L C U E N S
+        '''#g000mg0010 [rest of string was truncated]&quot;;.
         '''</summary>
         Friend ReadOnly Property MapObjectRace() As String
             Get
@@ -602,21 +459,11 @@ Namespace My.Resources
         End Property
         
         '''<summary>
-        '''  Looks up a localized string similar to #строка, начинающаяся с решетки, игнорируется
-        '''#ID объекта, в остальных столбцах возможные названия
-        '''#разделитель - _
-        '''
-        '''#лорды Humans Clans Legions Undead Elvens (имена доллжны походить как девочкам, так и мальчикам. За исключением Кланов)
-        '''g000LR0001_Алексис_Лотай_Келли_Моар_Дориа
-        '''g000LR0002_Алексис_Лотай_Келли_Моар_Дориа
-        '''g000LR0003_Алексис_Лотай_Келли_Моар_Дориа
-        '''g000LR0004_Орхтар_Дархорд_Фуррт_Бордольт_Неромт
-        '''g000LR0005_Орхтар_Дархорд_Фуррт_Бордольт_Неромт
-        '''g000LR0006_Орхтар_Дархорд_Фуррт_Бордольт_Не [rest of string was truncated]&quot;;.
+        '''  Looks up a localized string similar to mod_settings_.
         '''</summary>
-        Friend ReadOnly Property ObjectsText_Eng() As String
+        Friend ReadOnly Property modSettings_keyword() As String
             Get
-                Return ResourceManager.GetString("ObjectsText_Eng", resourceCulture)
+                Return ResourceManager.GetString("modSettings_keyword", resourceCulture)
             End Get
         End Property
         
@@ -631,7 +478,27 @@ Namespace My.Resources
         '''g000LR0003_Алексис_Лотай_Келли_Моар_Дориа
         '''g000LR0004_Орхтар_Дархорд_Фуррт_Бордольт_Неромт
         '''g000LR0005_Орхтар_Дархорд_Фуррт_Бордольт_Неромт
-        '''g000LR0006_Орхтар_Дархорд_Фуррт_Бордольт_Не [rest of string was truncated]&quot;;.
+        '''g000LR0006_Орхтар_Дархорд_Фуррт_Бордольт_Неромт
+        '''g000L [rest of string was truncated]&quot;;.
+        '''</summary>
+        Friend ReadOnly Property ObjectsText_Eng() As String
+            Get
+                Return ResourceManager.GetString("ObjectsText_Eng", resourceCulture)
+            End Get
+        End Property
+        
+        '''<summary>
+        '''  Looks up a localized string similar to #строка, начинающаяся с решетки, игнорируется
+        '''#ID объекта, в остальных столбцах возможные названия
+        '''#разделитель - _
+        '''
+        '''ReadFromFile .\Resources\mod_settings_Vanilla\ObjectsText_Rus.txt
+        '''
+        '''#руины (названия такие, чтобы можно было их использовать безотносительно того, кто сидит внитри. При этом названия разные. Вероятно, это понадобится при добавлении квестов)
+        '''G000RU0000011_Врата Бездны_Пылающий разлом_Огненное капище_Адская расщелина_Разлом Хаоса
+        '''G000RU0000012_Стойбище
+        '''G000RU0000013_Шахта
+        '''G000RU0000014_Форт на в [rest of string was truncated]&quot;;.
         '''</summary>
         Friend ReadOnly Property ObjectsText_Rus() As String
             Get
@@ -717,19 +584,8 @@ Namespace My.Resources
         '''#RB = 2/1
         '''#W = водопад
         '''
-        '''#обычные
-        '''g000mg0008	U L
-        '''g000mg0010	L R
-        '''g000mg0013	U D
-        '''g000mg0060	D R
-        '''g000mg0063	U L
-        '''
-        '''#затычки
-        '''g000mg0009	R
-        '''g000mg0011	L
-        '''g000mg0061	U
-        '''g000mg0062	D
-        '''g000mg [rest of string was truncated]&quot;;.
+        '''ReadFromFile .\Resources\mod_settings_Vanilla\PlateauConstructor.txt
+        '''.
         '''</summary>
         Friend ReadOnly Property PlateauConstructor() As String
             Get
@@ -763,17 +619,8 @@ Namespace My.Resources
         '''  Looks up a localized string similar to #строка, начинающаяся с решетки, игнорируется
         '''#ID предметов, которые генератор должен оставлять на месте
         '''
-        '''#Ржавые кандалы
-        '''G000IG2007
+        '''ReadFromFile .\Resources\mod_settings_Vanilla\PreservedItems.txt
         '''
-        '''#Лютня очарования
-        '''G000IG3022
-        '''
-        '''#Тиара чистоты
-        '''G000IG2006
-        '''
-        '''#типы предметов
-        '''special
         '''.
         '''</summary>
         Friend ReadOnly Property PreservedItems() As String
@@ -821,7 +668,7 @@ Namespace My.Resources
         '''U %natural%:4 %building%:4							 %graveyard%:4					%undbuilding%:4 %undelfbuilding%:4
         '''E %natural%:4 %building%:4
         '''N %natural%:4 %building%:4 %religious%:3 %marshes%:4 %graveyard%:3
-        '''S %natural%:4 %building%: [rest of string was truncated]&quot;;.
+        '''S %natural%:4 %building%:3 %religio [rest of string was truncated]&quot;;.
         '''</summary>
         Friend ReadOnly Property RaceSublocations() As String
             Get
@@ -848,53 +695,11 @@ Namespace My.Resources
         End Property
         
         '''<summary>
-        '''  Looks up a localized string similar to %novanillalore%.
-        '''</summary>
-        Friend ReadOnly Property readVLoreFileKeyword() As String
-            Get
-                Return ResourceManager.GetString("readVLoreFileKeyword", resourceCulture)
-            End Get
-        End Property
-        
-        '''<summary>
-        '''  Looks up a localized string similar to #строка, начинающаяся с решетки, игнорируется
-        '''#ID юнитов, которых в отряде должно быть по одному.
-        '''#В каждой строке список юнитов, которые не должны появляться в одном отряде
-        '''#волхв травница посвященная друид архидруид исса хэйсса ламия
-        '''g000uu8218 g000uu8222 g000uu0033 g000uu0034 g000uu0035 g000uu0160 g000uu7558 g000uu7559 g000uu2022
-        '''#верховный некромант
-        '''g000uu8219 g000uu8223
-        '''#длань мортис мумификатор
-        '''g000uu2008 g000uu2007 g000uu7528
-        '''#проповедник
-        '''g000uu2021
-        '''#элементаль воды
-        '''g000uu7536 g002uu5026        ''' [rest of string was truncated]&quot;;.
-        '''</summary>
-        Friend ReadOnly Property SingleUnits() As String
-            Get
-                Return ResourceManager.GetString("SingleUnits", resourceCulture)
-            End Get
-        End Property
-        
-        '''<summary>
         '''  Looks up a localized string similar to R.
         '''</summary>
         Friend ReadOnly Property spellRandomRace() As String
             Get
                 Return ResourceManager.GetString("spellRandomRace", resourceCulture)
-            End Get
-        End Property
-        
-        '''<summary>
-        '''  Looks up a localized string similar to #строка, начинающаяся с решетки, игнорируется
-        '''Строка без пробелов, табов и знаков равенства. Идентификатор локации (ID). На карте названия локаций для размещения отрядов должны состоять из ID, знака подчеркивания и любого символа(ов). Примеры:$newline$В файле: MyLocId ; На карте (одна локация): MyLocId_A$newline$В файле: Тир2_1 ; На карте (две локации): Тир2_1_A Тир2_1_B$newline$В файле: Kraken ; На карте (три локации): Kraken_LegionLoc Kraken_ClanLoc Kraken_CommonLoc
-        '''ID
-        '''Целое число. Юниты с этой планкой [rest of string was truncated]&quot;;.
-        '''</summary>
-        Friend ReadOnly Property StackStatsFields() As String
-            Get
-                Return ResourceManager.GetString("StackStatsFields", resourceCulture)
             End Get
         End Property
         
@@ -909,7 +714,7 @@ Namespace My.Resources
         '''#порядок блоков тоже может быть любым с одним исключением:
         '''#блоки Location для расовых локаций должны стоять выше, чем блоки для обычных локаций (независимо от genMode)
         '''
-        '''#если в блоке Location параметр имеет два значения, то при генерации будет выб [rest of string was truncated]&quot;;.
+        '''#если в блоке Location параметр имеет два значения, то при генерации будет выбрано случа [rest of string was truncated]&quot;;.
         '''</summary>
         Friend ReadOnly Property template_48x48_unsymm_simple() As String
             Get
@@ -995,48 +800,6 @@ Namespace My.Resources
         Friend ReadOnly Property testFileKeyword() As String
             Get
                 Return ResourceManager.GetString("testFileKeyword", resourceCulture)
-            End Get
-        End Property
-        
-        '''<summary>
-        '''  Looks up a localized string similar to #строка, начинающаяся с решетки, игнорируется
-        '''#разделители полей: пробел, таб, знак равенства
-        '''#идущие подряд разделители интерпретируются как один
-        '''ID location1 AverageExpBar = 1000	ExpStackKilled 200  Race=U StackSize 1 MaxGiants 0		MeleeSlots 2 LootCost 0
-        '''AverageExpBar = 100 ID testloc2 StackSize 3 MaxGiants 1		MeleeSlots -1 LootCost 3400 	ExpStackKilled 200  Race=U+d
-        '''ID=loc3 AverageExpBar = 1000 Race=HuMans StackSize 1 MeleeSlots 2 LootCost 0	ExpStackKilled 200   MaxGiants 0
-        '''ID=loc54 AverageExpBar = [rest of string was truncated]&quot;;.
-        '''</summary>
-        Friend ReadOnly Property TestStackStats() As String
-            Get
-                Return ResourceManager.GetString("TestStackStats", resourceCulture)
-            End Get
-        End Property
-        
-        '''<summary>
-        '''  Looks up a localized string similar to #строка, начинающаяся с решетки, игнорируется
-        '''#файл, определяющий расу некоторых юнитов независимо от файлов игры
-        '''#ID юнита, имя юнита без пробелов и табов, раса
-        '''g000uu6010	Гидра	A
-        '''g000uu6110	Гидра	A
-        '''g000uu6016	Мантикора	A
-        '''g000uu6116	Мантикора	A
-        '''g000uu8270	Серный_змей	A
-        '''g001uu8270	Серный_змей	A
-        '''g000uu8218	Волхв	C
-        '''g000uu8222	Волхв	C
-        '''g000uu8221	Ледяной_кузнец	C
-        '''g000uu8226	Сын_Земли	C
-        '''g000uu8243	Жрец_Имира	C
-        '''g001uu8259	Колосс	C
-        '''g000uu8259	Колосс	C
-        '''g000uu8266	Дроттар	C
-        '''g000uu7500	Гримтурс	C
-        '''g0 [rest of string was truncated]&quot;;.
-        '''</summary>
-        Friend ReadOnly Property UnitRace() As String
-            Get
-                Return ResourceManager.GetString("UnitRace", resourceCulture)
             End Get
         End Property
     End Module

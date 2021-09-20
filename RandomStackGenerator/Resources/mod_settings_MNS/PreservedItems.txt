@@ -1,0 +1,5 @@
+#строка, начинающаяся с решетки, игнорируется
+#ID предметов, которые генератор должен оставлять на месте
+
+ReadFromFile .\Resources\mod_settings_Vanilla\PreservedItems.txt
+

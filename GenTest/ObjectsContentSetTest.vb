@@ -65,9 +65,7 @@ Public Class ObjectsContentSetTest
         If IsNothing(rndtest.ItemsList) Then rndtest.ReadTestItems()
         If IsNothing(rndtest.AllSpells) Then rndtest.ReadTestSpells()
 
-        Dim rStack As New RandStack(rndtest.UnitsList, rndtest.ItemsList, rndtest.AllSpells, rndtest.excludeList, rndtest.customLootChanceList, _
-                                    rndtest.customRaceList, rndtest.soleUnitsList, rndtest.bigStackUnitsList, _
-                                    rndtest.preservedItemsList, 5)
+        Dim rStack As RandStack = rndtest.CreateRandStack
 
         Dim target As New ObjectsContentSet(rStack)
         Dim ok As Boolean = True
@@ -103,9 +101,7 @@ Public Class ObjectsContentSetTest
         If IsNothing(rndtest.ItemsList) Then rndtest.ReadTestItems()
         If IsNothing(rndtest.AllSpells) Then rndtest.ReadTestSpells()
 
-        Dim rStack As New RandStack(rndtest.UnitsList, rndtest.ItemsList, rndtest.AllSpells, rndtest.excludeList, rndtest.customLootChanceList, _
-                                    rndtest.customRaceList, rndtest.soleUnitsList, rndtest.bigStackUnitsList, _
-                                    rndtest.preservedItemsList, 5)
+        Dim rStack As RandStack = rndtest.CreateRandStack
 
         Dim target As New ObjectsContentSet(rStack)
         Dim ok As Boolean = True
@@ -114,7 +110,7 @@ Public Class ObjectsContentSetTest
         Dim races() As String = New String() {"H", "U", "E", "C", "L", "R"}
         Dim mass() As String = New String() {"F", "T"}
         Dim c As New AllDataStructues.Cost
-        Dim log As New Log(New Common)
+        Dim log As New Log(New Common(GenDefaultValues.DefaultMod))
         Call log.Enable()
 
         For i As Integer = 1 To 10 Step 1
@@ -168,15 +164,13 @@ Public Class ObjectsContentSetTest
         If IsNothing(rndtest.ItemsList) Then rndtest.ReadTestItems()
         If IsNothing(rndtest.AllSpells) Then rndtest.ReadTestSpells()
 
-        Dim rStack As New RandStack(rndtest.UnitsList, rndtest.ItemsList, rndtest.AllSpells, rndtest.excludeList, rndtest.customLootChanceList, _
-                                    rndtest.customRaceList, rndtest.soleUnitsList, rndtest.bigStackUnitsList, _
-                                    rndtest.preservedItemsList, 5)
+        Dim rStack As RandStack = rndtest.CreateRandStack
 
         Dim target As New ObjectsContentSet(rStack)
         Dim ok As Boolean = True
         Dim actual As List(Of String)
         Dim input As New List(Of String)
-        Dim log As New Log(New Common)
+        Dim log As New Log(New Common(GenDefaultValues.DefaultMod))
         Call log.Enable()
 
         For i As Integer = 100 To 10000 Step 100
@@ -203,15 +197,13 @@ Public Class ObjectsContentSetTest
         If IsNothing(rndtest.ItemsList) Then rndtest.ReadTestItems()
         If IsNothing(rndtest.AllSpells) Then rndtest.ReadTestSpells()
 
-        Dim rStack As New RandStack(rndtest.UnitsList, rndtest.ItemsList, rndtest.AllSpells, rndtest.excludeList, rndtest.customLootChanceList, _
-                                    rndtest.customRaceList, rndtest.soleUnitsList, rndtest.bigStackUnitsList, _
-                                    rndtest.preservedItemsList, 5)
+        Dim rStack As RandStack = rndtest.CreateRandStack
 
         Dim target As New ObjectsContentSet(rStack)
         Dim ok As Boolean = True
         Dim actual As List(Of String)
         Dim input As New List(Of String)
-        Dim log As New Log(New Common)
+        Dim log As New Log(New Common(GenDefaultValues.DefaultMod))
         Call log.Enable()
 
         For i As Integer = 100 To 10000 Step 100
@@ -239,10 +231,7 @@ Public Class ObjectsContentSetTest
         If IsNothing(rndtest.ItemsList) Then rndtest.ReadTestItems()
         If IsNothing(rndtest.AllSpells) Then rndtest.ReadTestSpells()
 
-        Dim rStack As New RandStack(rndtest.UnitsList, rndtest.ItemsList, rndtest.AllSpells, rndtest.excludeList, rndtest.customLootChanceList, _
-                                    rndtest.customRaceList, rndtest.soleUnitsList, rndtest.bigStackUnitsList, _
-                                    rndtest.preservedItemsList, 5)
-
+        Dim rStack As RandStack = rndtest.CreateRandStack
 
         Dim target As New ObjectsContentSet(rStack)
         Dim ok As Boolean = True
@@ -253,7 +242,7 @@ Public Class ObjectsContentSetTest
         'Next spell
 
         Dim input, mana As New List(Of String)
-        Dim log As New Log(New Common)
+        Dim log As New Log(New Common(GenDefaultValues.DefaultMod))
         mana.AddRange({"G000CR0000GR", "G000CR0000RG", "G000CR0000WH", "G000CR0000RD", "G000CR0000YE"})
         Call log.Enable()
 

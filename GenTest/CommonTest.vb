@@ -174,12 +174,13 @@ Public Class CommonTest
     Dim idArray() As Integer = New Integer() {1, 6, 7, 3, 14, 9, 19}
     Dim someStats() As Double = New Double() {1.9, 2, 1.8, 1.77, 1.87, 1.85, 1.95}
     Dim av As Double = 1.9
+
     '''<summary>
     '''A test for RandomSelection
     '''</summary>
     <TestMethod()> _
     Public Sub RandomSelectionTest1()
-        Dim target As Common = New Common()
+        Dim target As Common = New Common(GenDefaultValues.DefaultMod)
         Dim IDs As New List(Of Integer)
         IDs.AddRange(idArray)
         Dim expected(IDs.Max), actual(IDs.Max) As Boolean
@@ -213,7 +214,7 @@ Public Class CommonTest
     '''</summary>
     <TestMethod()> _
     Public Sub RandomSelectionTest2()
-        Dim target As Common = New Common()
+        Dim target As Common = New Common(GenDefaultValues.DefaultMod)
         Dim IDs As New List(Of Integer)
         IDs.AddRange(idArray)
         Dim expected(IDs.Max), actual(IDs.Max) As Boolean
@@ -248,7 +249,7 @@ Public Class CommonTest
     '''</summary>
     <TestMethod()> _
     Public Sub RandomSelectionTest3()
-        Dim target As Common = New Common()
+        Dim target As Common = New Common(GenDefaultValues.DefaultMod)
         Dim IDs As New List(Of Integer)
         IDs.AddRange(idArray)
         Dim expected(IDs.Max), actual(IDs.Max) As Boolean
@@ -283,7 +284,7 @@ Public Class CommonTest
     <TestMethod(), _
      DeploymentItem("RandomStackGenerator.dll")> _
     Public Sub ReadIntFieldTest()
-        Dim target As Common_Accessor = New Common_Accessor()
+        Dim target As Common_Accessor = New Common_Accessor(GenDefaultValues.DefaultMod)
         Dim ok As Boolean = True
         For i As Integer = 0 To 1000 Step 1
             If Not i = ValueConverter.StrToInt(i.ToString, "", "") Then ok = False

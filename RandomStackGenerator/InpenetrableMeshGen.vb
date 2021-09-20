@@ -898,9 +898,9 @@ Public Class ImpenetrableMeshGen
     End Structure
 
     Private rndgen As New RndValueGen
-    Protected Friend comm As New Common
+    Protected Friend comm As Common
     Protected Friend symm As New SymmetryOperations
-    Private stackLocGen As New StackLocationsGen(Me)
+    Private stackLocGen As StackLocationsGen
 
     Public ActiveObjects() As AttendedObject
 
@@ -1208,8 +1208,10 @@ Public Class ImpenetrableMeshGen
 
     End Structure
 
-    Public Sub New()
-        minLocationRadiusAtAll = (New GenDefaultValues(Nothing)).minLocationRadiusAtAll
+    Public Sub New(ByRef c As Common)
+        comm = c
+        stackLocGen = New StackLocationsGen(comm, Me)
+        minLocationRadiusAtAll = c.defValues.minLocationRadiusAtAll
 
         ActiveObjects = New AttendedObject() {Nothing, _
                                               New AttendedObject(5, DefMapObjects.Types.Capital), _
@@ -1307,8 +1309,7 @@ Public Class ImpenetrableMeshGen
         Dim copiedSettings() As Map.SettingsLoc
 
         If Not IsNothing(log) Then
-            m = New Map(-1, -1, -1)
-            m.log = log
+            m = New Map(-1, -1, -1) With {.log = log, .comm = comm}
         End If
 
         Do While AttemptsN < 5
@@ -2856,7 +2857,7 @@ clearandexit:
 
             Dim locSize As Integer = 29
 
-            Dim actObj() As AttendedObject = (New ImpenetrableMeshGen).ActiveObjects
+            Dim actObj() As AttendedObject = (New ImpenetrableMeshGen(New Common(GenDefaultValues.DefaultMod))).ActiveObjects
             Dim center As New Point(CInt(locSize / 2), CInt(locSize / 2))
             Dim free(locSize, locSize) As Boolean
             For y As Integer = 0 To locSize Step 1
@@ -5491,8 +5492,8 @@ Public Class shortMapFormat
                                          ByRef treesAmont() As Integer, _
                                          ByRef lang As GenDefaultValues.TextLanguage) As shortMapFormat
 
-        Dim attObjects() As AttendedObject = (New ImpenetrableMeshGen).ActiveObjects
-        Dim sName As New SetName(lang)
+        Dim attObjects() As AttendedObject = (New ImpenetrableMeshGen(m.comm)).ActiveObjects
+        Dim sName As New SetName(lang, m.comm.defValues.selectedMod)
         Call sName.ResetNames(True, -1)
 
         Dim allSpells(objContent.spells.Count + objContent.excludedSpells.Count - 1) As AllDataStructues.Spell
@@ -5959,11 +5960,13 @@ Public Class Map
     ''' <summary>Запись о ходе генерации карты</summary>
     Public log As Log
 
+    Public comm As Common
+
     ''' <param name="xDim">Правая граница карты (например, если генерируем карту 24x48, то сюда пишем 23)</param>
     ''' <param name="yDim">Верхняя граница карты (например, если генерируем карту 24x48, то сюда пишем 47)</param>
     ''' <param name="SymmApplied">Идентификатор симметрии, применяемой при генерации</param>
-    ''' <param name="comm">Пекредаем инициализированный класс только если нужно что-то писать в лог</param>
-    Public Sub New(ByVal xDim As Integer, ByVal yDim As Integer, ByVal SymmApplied As Integer, Optional ByRef comm As Common = Nothing)
+    ''' <param name="common_data">Пекредаем инициализированный класс только если нужно что-то писать в лог</param>
+    Public Sub New(ByVal xDim As Integer, ByVal yDim As Integer, ByVal SymmApplied As Integer, Optional ByRef common_data As Common = Nothing)
         xSize = xDim
         ySize = yDim
         symmID = SymmApplied
@@ -5974,9 +5977,10 @@ Public Class Map
                 board(x, y).mapObject.NewTagsList()
             Next y
         Next x
-        If Not IsNothing(comm) Then
-            log = New Log(comm)
+        If Not IsNothing(common_data) Then
+            log = New Log(common_data)
             log.Enable()
+            comm = common_data
         End If
     End Sub
 
@@ -6783,7 +6787,7 @@ Public Class Map
 
     ''' <summary>Вернет True, если все нормально, иначе стоит перегенерировать</summary>
     Public Function TestMap() As String
-        Dim imp As New ImpenetrableMeshGen
+        Dim imp As New ImpenetrableMeshGen(comm)
         If Not complited.LoationsCreation_Done Then
             Throw New Exception("Сначала нужно выполнить ImpenetrableMeshGen.SymmGen или ImpenetrableMeshGen.UnsymmGen")
         End If
@@ -6847,7 +6851,7 @@ Public Class Map
     Public Sub PrintObjectsPositions(ByRef log As Log, ByRef ObjectsSize As Dictionary(Of String, Size))
         If Not log.IsEnabled Then Exit Sub
 
-        Dim imp As New ImpenetrableMeshGen
+        Dim imp As New ImpenetrableMeshGen(comm)
 
         Dim objList() As String = New String() {"None", "Capital", "City", "Vendor", "Mercenary", _
                                                 "Mage", "Trainer", "Ruins", "Mine"}
@@ -6945,14 +6949,14 @@ Public Class StackLocationsGen
     Private symm As SymmetryOperations
     Private comm As Common
 
-    Public Sub New(Optional ByRef gm As ImpenetrableMeshGen = Nothing)
+    Public Sub New(ByVal c As Common, Optional ByRef gm As ImpenetrableMeshGen = Nothing)
         If IsNothing(gm) Then
-            genmap = New ImpenetrableMeshGen
+            genmap = New ImpenetrableMeshGen(c)
         Else
             genmap = gm
         End If
         symm = genmap.symm
-        comm = genmap.comm
+        comm = c
     End Sub
 
     ''' <summary>Расставляет локации для отрядов на карту с подготовленную в InpenetrableMeshGen
@@ -8298,9 +8302,9 @@ Public Class WaterGen
     End Sub
 
     Private rndgen As New RndValueGen
-    Private comm As New Common
+    Private comm As Common
     Private symm As New SymmetryOperations
-    Private imp As New ImpenetrableMeshGen
+    Private imp As ImpenetrableMeshGen
 
     '''<summary>Сгенерирует озера на карте</summary>
     ''' <param name="m">Карта с сгенерированной силой отрядов</param>
@@ -8312,6 +8316,9 @@ Public Class WaterGen
         If Not m.complited.StacksDesiredStatsGen_Done Then
             Throw New Exception("Сначала нужно выполнить StackPowerGen.Gen")
         End If
+
+        comm = m.comm
+        imp = New ImpenetrableMeshGen(comm)
 
         Dim t0 As Integer = Environment.TickCount
         Dim HaveToBeGround(m.xSize, m.ySize) As Boolean
@@ -8677,7 +8684,7 @@ Public Class ImpenetrableObjects
     End Class
 
     Private symm As New SymmetryOperations
-    Private comm As New Common
+    Private comm As Common
     Private objects As Landmark()
     Private mountains, ruins, mages, merchants, mercenaries, trainers As MapObject()
     Private plateau() As PlateauObject
@@ -8762,7 +8769,8 @@ Public Class ImpenetrableObjects
     ''' Для чтения из дефолтного листа в массив нужно добавить строчку %default% (наличие этого ключевого в файле запустит чтение дефолтного файла)</param>
     ''' <param name="spells">Все заклинания в игре</param>
     Public Sub New(ByRef ObjectsSize() As GlobalMapDecoration, ByRef ExcludeLists() As String, ByRef CustomBuildingRace() As String, _
-                   ByRef PlateauConstructionDescription() As String, ByRef spells() As AllDataStructues.Spell)
+                   ByRef PlateauConstructionDescription() As String, ByRef spells() As AllDataStructues.Spell, ByRef c As Common)
+        comm = c
         Call comm.ReadExcludedObjectsList(ExcludeLists)
         Call comm.ReadCustomBuildingRace(CustomBuildingRace)
         Call comm.ReadPlateauConstructionDescription(PlateauConstructionDescription)
@@ -8887,7 +8895,7 @@ Public Class ImpenetrableObjects
             raceIdToString.Add(CInt(splited(UBound(splited))), splited(1).ToUpper)
         Next s
 
-        Dim rSublocations() As String = comm.TxtSplit(My.Resources.RaceSublocations)
+        Dim rSublocations() As String = comm.TxtSplit(comm.defValues.RaceSublocations)
         For Each Str As String In rSublocations
             Dim s() As String = Str.Split(CChar(" "))
             Dim r As Integer = comm.RaceIdentifierToSubrace(s(0))
@@ -8958,6 +8966,8 @@ Public Class ImpenetrableObjects
         If Not m.complited.StacksRaceGen_Done Then
             Throw New Exception("Сначала нужно выполнить RaceGen.Gen")
         End If
+
+        comm = m.comm
 
         Dim t0 As Integer = Environment.TickCount
 
@@ -11012,9 +11022,8 @@ Public Class VanillaSagaContentReplace
     ''' <param name="RStack">Инициализированный класс</param>
     Public Sub New(ByRef RStack As RandStack)
         RndStack = RStack
-        Dim c As New Common
-        c.ReadExcludedObjectsList(New String() {My.Resources.readVLoreFileKeyword})
-        VanillaLoreUnits = c.excludedObjects
+        RStack.comm.ReadExcludedObjectsList(New String() {".\Resources\mod_settings_Vanilla\ExcludeIDs_ModLore.txt"})
+        VanillaLoreUnits = RStack.comm.excludedObjects
     End Sub
 
     Public Function ReplaceItem(ByRef ID As String) As String

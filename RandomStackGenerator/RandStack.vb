@@ -2,6 +2,66 @@
 
 Public Class RandStack
 
+    Public Class ConstructorInput
+        ''' <summary>
+        ''' Dсе юниты в игре
+        ''' </summary>
+        Public AllUnitsList() As AllDataStructues.Unit
+        ''' <summary>
+        ''' >Все предметы в игре
+        ''' </summary>
+        Public AllItemsList() As AllDataStructues.Item
+        ''' <summary>
+        ''' Все заклинания в игре
+        ''' </summary>
+        Public AllSpellsList() As AllDataStructues.Spell
+        ''' <summary>
+        ''' Файлы со списками исключенных объектов. Записи в них могут повторяться. 
+        ''' Допускается передача неинициализитрованного массива.
+        ''' Для чтения из дефолтного листа в массив нужно добавить строчку %default% (наличие этого ключевого в файле запустит чтение дефолтного файла)
+        ''' </summary>
+        Public ExcludeLists() As String = {My.Resources.readDefaultFileKeyword}
+        ''' <summary>
+        ''' Файлы с множителями шанса появления определенных предметов.
+        ''' Допускается передача неинициализитрованного массива.
+        ''' Для чтения из дефолтного листа в массив нужно добавить строчку %default% (наличие этого ключевого в файле запустит чтение дефолтного файла)
+        ''' </summary>
+        Public LootChanceMultiplierLists() As String = {My.Resources.readDefaultFileKeyword}
+        ''' <summary>
+        ''' Файлы со списками рас юнитов. Записи в них могут повторяться, но записи с повторяющимся ID будут перезаписываться. 
+        ''' Допускается передача неинициализитрованного массива.
+        ''' Для чтения из дефолтного листа в массив нужно добавить строчку %default% (наличие этого ключевого в файле запустит чтение дефолтного файла)
+        ''' </summary>
+        Public CustomUnitRace() As String = {My.Resources.readDefaultFileKeyword}
+        ''' <summary>
+        ''' Файлы со списками юнитов, которые должны находиться в отряде в единственном экземпляре. Записи в них могут повторяться, но записи с повторяющимся ID будут перезаписываться. 
+        ''' Допускается передача неинициализитрованного массива.
+        ''' Для чтения из дефолтного листа в массив нужно добавить строчку %default% (наличие этого ключевого в файле запустит чтение дефолтного файла)
+        ''' </summary>
+        Public SoleUnitsList() As String = {My.Resources.readDefaultFileKeyword}
+        ''' <summary>
+        ''' Файлы со списками юнитов, которые могут находиться в отряде начиная с заданного количества слотов. Записи в них могут повторяться, но записи с повторяющимся ID будут перезаписываться. 
+        ''' Допускается передача неинициализитрованного массива.
+        ''' Для чтения из дефолтного листа в массив нужно добавить строчку %default% (наличие этого ключевого в файле запустит чтение дефолтного файла)
+        ''' </summary>
+        Public BigStackUnits() As String = {My.Resources.readDefaultFileKeyword}
+        ''' <summary>
+        ''' Файлы со списками предметов, которые нельзя перегенерировать. Записи в них могут повторяться. 
+        ''' Допускается передача неинициализитрованного массива.
+        ''' Для чтения из дефолтного листа в массив нужно добавить строчку %default% (наличие этого ключевого в файле запустит чтение дефолтного файла)
+        ''' </summary>
+        Public PreservedItemsList() As String = {My.Resources.readDefaultFileKeyword}
+        ''' <summary>
+        ''' Количество использований талисманов
+        ''' </summary>
+        Public TalismanChargesDefaultAmount As Integer = 5
+        ''' <summary>
+        ''' Название мода, на котором происходит генерация.
+        ''' Ваианты можно получить из GenDefaultValues.GetSupportedMods
+        ''' </summary>
+        Public modName As String
+    End Class
+
     Private busytransfer() As Integer = New Integer() {1, -1, 3, -1, 5, -1}
     Private firstrow() As Integer = New Integer() {0, 2, 4}
     Private secondrow() As Integer = New Integer() {1, 3, 5}
@@ -18,7 +78,7 @@ Public Class RandStack
     Friend AllSpells() As AllDataStructues.Spell
 
     Public rndgen As RndValueGen
-    Public comm As New Common With {.onExcludedListChanged = AddressOf ResetExclusions}
+    Public comm As Common
 
     Private ExpBar(), ExpKilled(), multiplierUnitDesiredStats() As Double
 
@@ -34,45 +94,20 @@ Public Class RandStack
     ''' <summary>Если True, генератор будет игнорировать ограничения по расе при создании отрядов. По умолчанию False</summary>
     Public setting_IgnoreUnitRace As Boolean = False
 
-    ''' <param name="AllUnitsList">Dсе юниты в игре</param>
-    ''' <param name="AllItemsList">Все предметы в игре</param>
-    ''' <param name="ExcludeLists">Файлы со списками исключенных объектов. Записи в них могут повторяться. 
-    ''' Допускается передача неинициализитрованного массива.
-    ''' Для чтения из дефолтного листа в массив нужно добавить строчку %default% (наличие этого ключевого в файле запустит чтение дефолтного файла)</param>
-    ''' <summary>Читает множители шанса выпадения для отдельных предметов</summary>
-    ''' <param name="LootChanceMultiplierLists">Файлы с множителями шанса появления определенных предметов.
-    ''' Допускается передача неинициализитрованного массива.
-    ''' Для чтения из дефолтного листа в массив нужно добавить строчку %default% (наличие этого ключевого в файле запустит чтение дефолтного файла)</param>
-    ''' <param name="CustomUnitRace">Файлы со списками рас юнитов. Записи в них могут повторяться, но записи с повторяющимся ID будут перезаписываться. 
-    ''' Допускается передача неинициализитрованного массива.
-    ''' Для чтения из дефолтного листа в массив нужно добавить строчку %default% (наличие этого ключевого в файле запустит чтение дефолтного файла)</param>
-    ''' <param name="SoleUnitsList">Файлы со списками юнитов, которые должны находиться в отряде в единственном экземпляре. Записи в них могут повторяться, но записи с повторяющимся ID будут перезаписываться. 
-    ''' Допускается передача неинициализитрованного массива.
-    ''' Для чтения из дефолтного листа в массив нужно добавить строчку %default% (наличие этого ключевого в файле запустит чтение дефолтного файла)</param>
-    ''' <param name="BigStackUnits">Файлы со списками юнитов, которые должны находиться в отряде начиная с заданного количества слотов. Записи в них могут повторяться, но записи с повторяющимся ID будут перезаписываться. 
-    ''' Допускается передача неинициализитрованного массива.
-    ''' Для чтения из дефолтного листа в массив нужно добавить строчку %default% (наличие этого ключевого в файле запустит чтение дефолтного файла)</param>
-    ''' <param name="PreservedItemsList">Файлы со списками предметов, которые нельзя перегенерировать. Записи в них могут повторяться. 
-    ''' Допускается передача неинициализитрованного массива.
-    ''' Для чтения из дефолтного листа в массив нужно добавить строчку %default% (наличие этого ключевого в файле запустит чтение дефолтного файла)</param>
-    ''' <param name="TalismanChargesDefaultAmount">Количество зарядов у талисманов (таблица GVars, поле TALIS_CHRG)</param>
-    Public Sub New(ByRef AllUnitsList() As AllDataStructues.Unit, ByRef AllItemsList() As AllDataStructues.Item, _
-                   ByRef AllSpellsList() As AllDataStructues.Spell, _
-                   ByRef ExcludeLists() As String, ByRef LootChanceMultiplierLists() As String, ByRef CustomUnitRace() As String, _
-                   ByRef SoleUnitsList() As String, ByRef BigStackUnits() As String, ByRef PreservedItemsList() As String, _
-                   ByRef TalismanChargesDefaultAmount As Integer)
+    Public Sub New(ByRef data As ConstructorInput)
+        comm = New Common(data.modName) With {.onExcludedListChanged = AddressOf ResetExclusions}
         rndgen = comm.rndgen
         log = New Log(comm)
-        If IsNothing(AllUnitsList) Or IsNothing(AllItemsList) Then Exit Sub
+        If IsNothing(data.AllUnitsList) Or IsNothing(data.AllItemsList) Then Exit Sub
 
-        If TalismanChargesDefaultAmount < 1 Then Throw New Exception("Unexpected TalismanChargesDefaultAmount")
+        If data.TalismanChargesDefaultAmount < 1 Then Throw New Exception("Unexpected TalismanChargesDefaultAmount")
 
-        Call comm.ReadExcludedObjectsList(ExcludeLists)
-        Call comm.ReadCustomUnitRace(CustomUnitRace)
-        Call comm.ReadLootItemChanceMultiplier(LootChanceMultiplierLists)
-        Call comm.ReadSoleUnits(SoleUnitsList)
-        Call comm.ReadBigStackUnits(BigStackUnits)
-        Call comm.ReadPreservedItemsList(PreservedItemsList)
+        Call comm.ReadExcludedObjectsList(data.ExcludeLists)
+        Call comm.ReadCustomUnitRace(data.CustomUnitRace)
+        Call comm.ReadLootItemChanceMultiplier(data.LootChanceMultiplierLists)
+        Call comm.ReadSoleUnits(data.SoleUnitsList)
+        Call comm.ReadBigStackUnits(data.BigStackUnits)
+        Call comm.ReadPreservedItemsList(data.PreservedItemsList)
 
         Dim PlayableSubraces As New List(Of Integer)
         For Each item As String In comm.TxtSplit(comm.defValues.PlayableSubraces)
@@ -80,9 +115,10 @@ Public Class RandStack
         Next item
         Dim unitSubrace As Integer
 
-        ReDim AllUnits(UBound(AllUnitsList)), ExpBar(UBound(AllUnitsList)), ExpKilled(UBound(AllUnitsList)), multiplierUnitDesiredStats(UBound(AllUnitsList))
-        For i As Integer = 0 To UBound(AllUnitsList) Step 1
-            AllUnits(i) = AllDataStructues.Unit.Copy(AllUnitsList(i))
+        ReDim AllUnits(UBound(data.AllUnitsList)), ExpBar(UBound(data.AllUnitsList)), _
+              ExpKilled(UBound(data.AllUnitsList)), multiplierUnitDesiredStats(UBound(data.AllUnitsList))
+        For i As Integer = 0 To UBound(data.AllUnitsList) Step 1
+            AllUnits(i) = AllDataStructues.Unit.Copy(data.AllUnitsList(i))
             UnitsArrayPos.Add(AllUnits(i).unitID.ToUpper, i)
 
             unitSubrace = AllUnits(i).race
@@ -107,7 +143,7 @@ Public Class RandStack
             End If
         Next i
 
-        ReDim AllItems(UBound(AllItemsList)), ItemCostSum(UBound(AllItemsList)), multiplierItemsWeight(UBound(AllItemsList))
+        ReDim AllItems(UBound(data.AllItemsList)), ItemCostSum(UBound(data.AllItemsList)), multiplierItemsWeight(UBound(data.AllItemsList))
 
         Dim weight As New Dictionary(Of String, String)
         For Each s As String In comm.defValues.Global_ItemType_ChanceMultiplier.Split(CChar(";"))
@@ -116,9 +152,9 @@ Public Class RandStack
         Next s
         minItemGoldCost = Integer.MaxValue
         For i As Integer = 0 To UBound(AllItems) Step 1
-            AllItems(i) = AllDataStructues.Item.Copy(AllItemsList(i))
+            AllItems(i) = AllDataStructues.Item.Copy(data.AllItemsList(i))
             If AllItems(i).type = GenDefaultValues.ItemTypes.talisman Then
-                AllItems(i).itemCost *= TalismanChargesDefaultAmount
+                AllItems(i).itemCost *= data.TalismanChargesDefaultAmount
             End If
             ItemsArrayPos.Add(AllItems(i).itemID.ToUpper, i)
 
@@ -132,9 +168,9 @@ Public Class RandStack
         Next i
         bak_multiplierItemsWeight = CType(multiplierItemsWeight.Clone, Double())
 
-        ReDim AllSpells(UBound(AllSpellsList))
-        For i As Integer = 0 To UBound(AllSpellsList) Step 1
-            AllSpells(i) = AllDataStructues.Spell.Copy(AllSpellsList(i))
+        ReDim AllSpells(UBound(data.AllSpellsList))
+        For i As Integer = 0 To UBound(data.AllSpellsList) Step 1
+            AllSpells(i) = AllDataStructues.Spell.Copy(data.AllSpellsList(i))
             SpellsArrayPos.Add(AllSpells(i).spellID.ToUpper, i)
         Next i
 
@@ -2155,13 +2191,15 @@ Public Class Common
 
     Protected Friend onExcludedListChanged As RefreshExcluded = Nothing
 
-    Public Sub New()
+    ''' <param name="modName">Название мода, на котором происходит генерация.
+    ''' Ваианты можно получить из GenDefaultValues.GetSupportedMods</param>
+    Public Sub New(ByVal modName As String)
         Call ReadingLog.Enable()
 
-        defValues = New GenDefaultValues(ReadingLog)
+        defValues = New GenDefaultValues(ReadingLog, modName)
 
-        Dim splitedFields() As String = TxtSplit(defValues.StackStatsFields)
-        ReDim StatFields(CInt(splitedFields.Length / 2 - 1))
+        'Dim splitedFields() As String = TxtSplit(defValues.StackStatsFields)
+        'ReDim StatFields(CInt(splitedFields.Length / 2 - 1))
 
         Dim racesList As String = ""
         Dim splitedRace() As String = defValues.Races.Replace(Chr(10), Chr(13)).Split(Chr(13))
@@ -2170,17 +2208,17 @@ Public Class Common
                 racesList &= splitedRace(i) & vbNewLine
             End If
         Next i
-        Dim valConv As New ValueConverter
-        Dim k As Integer
-        For i As Integer = 0 To UBound(splitedFields) Step 2
-            k = CInt(i / 2)
-            StatFields(k).description = splitedFields(i)
-            StatFields(k).name = splitedFields(i + 1)
-            StatFields(k).description = StatFields(k).description.Replace("$jm$", defValues.JewelItemsCostDevider.ToString)
-            StatFields(k).description = StatFields(k).description.Replace("$gm$", defValues.giantUnitsExpMultiplier.ToString)
-            StatFields(k).description = StatFields(k).description.Replace("$ri$", racesList)
-            StatFields(k).description = StatFields(k).description.Replace("$newline$", vbNewLine)
-        Next i
+        'Dim valConv As New ValueConverter
+        'Dim k As Integer
+        'For i As Integer = 0 To UBound(splitedFields) Step 2
+        '    k = CInt(i / 2)
+        '    StatFields(k).description = splitedFields(i)
+        '    StatFields(k).name = splitedFields(i + 1)
+        '    StatFields(k).description = StatFields(k).description.Replace("$jm$", defValues.JewelItemsCostDevider.ToString)
+        '    StatFields(k).description = StatFields(k).description.Replace("$gm$", defValues.giantUnitsExpMultiplier.ToString)
+        '    StatFields(k).description = StatFields(k).description.Replace("$ri$", racesList)
+        '    StatFields(k).description = StatFields(k).description.Replace("$newline$", vbNewLine)
+        'Next i
 
         Dim lords() As String = TxtSplit(defValues.Lords)
         For i As Integer = 0 To UBound(lords) Step 1
@@ -2480,7 +2518,17 @@ Public Class Common
     Public Function TxtSplit(ByVal TXT As String, ByRef transferChar As String) As String()
         Return ValueConverter.TxtSplit(TXT, transferChar)
     End Function
-
+    ''' <summary>Разбивает на строки текст по разделителям Chr(10) и Chr(13). Заменяет все табы на пробелы, удаляет повторяющиеся подряд пробелы, удаляет пробелы в начале и конце строки. Не добавляет в выходной массив строки, начинающиеся с #</summary>
+    ''' <param name="TXT">Какой-нибудь текст</param>
+    Public Function TxtSplit(ByVal TXT() As String) As String()
+        Return ValueConverter.TxtSplit(TXT)
+    End Function
+    ''' <summary>Разбивает на строки текст по разделителям Chr(10) и Chr(13). Заменяет все табы на пробелы, удаляет повторяющиеся подряд пробелы, удаляет пробелы в начале и конце строки. Не добавляет в выходной массив строки, начинающиеся с #</summary>
+    ''' <param name="TXT">Какой-нибудь текст</param>
+    ''' <param name="transferChar">Если строка заканчивается этой подстрокой, то подстрока удаляется, а текущая строка объединяется со следующей</param>
+    Public Function TxtSplit(ByVal TXT() As String, ByRef transferChar As String) As String()
+        Return ValueConverter.TxtSplit(TXT, transferChar)
+    End Function
 
     ''' <summary>Dыбирает случайным образом запись из списка</summary>
     ''' <param name="IDs">Список намеров записей, из которых делается выбор.
@@ -2549,11 +2597,9 @@ Public Class Common
     Public Sub ReadExcludedObjectsList(ByRef ExcludeLists() As String)
         If IsNothing(ExcludeLists) Then Exit Sub
         Dim s() As String
-        Dim defaultKeys() As String = New String() {My.Resources.readDefaultFileKeyword, My.Resources.readMLoreFileKeyword, My.Resources.readVLoreFileKeyword}
-        Dim defaultVals() As String = New String() {defValues.ExcludedIDs, defValues.ExcludedIDs_ModLore, defValues.ExcludedIDs_VanillaLore}
         For i As Integer = 0 To UBound(ExcludeLists) Step 1
-            s = prepareToFileRead(ExcludeLists(i), defaultKeys, defaultVals)
-            Call ReadFile(1, s, ExcludeLists(i), AddressOf ReadExcludedObjectsList, defaultKeys)
+            s = prepareToFileRead(ExcludeLists(i), Nothing, Nothing)
+            Call ReadFile(1, s, ExcludeLists(i), AddressOf ReadExcludedObjectsList, Nothing)
         Next i
         If Not IsNothing(onExcludedListChanged) Then Call onExcludedListChanged()
     End Sub
@@ -2743,11 +2789,11 @@ Public Class Common
     Private Function prepareToFileRead(ByRef filePath As String, ByRef defaultKeywords() As String, ByRef defaultValues() As String) As String()
         If Not IsNothing(defaultKeywords) Then
             For i As Integer = 0 To UBound(defaultKeywords) Step 1
-                If filePath.ToLower = defaultKeywords(i).ToLower Then Return TxtSplit(defaultValues(i))
+                If filePath.ToLower = defaultKeywords(i).ToLower Then Return TxtSplit(RecursiveReadFile(defaultValues(i).Split(CChar(vbNewLine))))
             Next i
         End If
         If IO.File.Exists(filePath) Then
-            Return TxtSplit(IO.File.ReadAllText(filePath))
+            Return TxtSplit(RecursiveReadFile(filePath))
         Else
             Return Nothing
         End If
@@ -2842,6 +2888,46 @@ Public Class Common
             Return item.itemCost / defValues.NonJewelItemsCostDevider
         End If
     End Function
+
+    ''' <summary>Прочитает файл и если встретит в нем ReadFromFile, прочитает и из указанного файла, 
+    ''' разместив результат в том месте, где встретилось это ключевое слово</summary>
+    ''' <param name="path">Путь к файлу</param>
+    Public Shared Function RecursiveReadFile(ByVal path As String) As String()
+        If Not IO.File.Exists(path) Then Throw New Exception("Could find file " & path)
+        Dim content() As String = IO.File.ReadAllLines(path)
+        Dim output() As String = RecursiveReadFile(content)
+        Return output
+    End Function
+    ''' <summary>Прочитает файл и если встретит в нем ReadFromFile, прочитает и из указанного файла, 
+    ''' разместив результат в том месте, где встретилось это ключевое слово.
+    ''' Пропускает пустые строки</summary>
+    ''' <param name="content">Содержимое файла</param>
+    Public Shared Function RecursiveReadFile(ByVal content() As String) As String()
+        Dim output(UBound(content)), r(), p As String
+        Dim n As Integer = -1
+        For i As Integer = 0 To UBound(content) Step 1
+            If content(i).ToLower.StartsWith(My.Resources.template_read_from_file.ToLower) Then
+                p = content(i).Substring(My.Resources.template_read_from_file.Length + 1)
+                r = RecursiveReadFile(p)
+                ReDim Preserve output(UBound(output) + r.Length)
+                For k As Integer = 0 To UBound(r) Step 1
+                    If Not r(k).Trim(CChar(" "), CChar(vbTab)) = "" Then
+                        n += 1
+                        output(n) = r(k)
+                    End If
+                Next k
+                r = Nothing
+            Else
+                If Not content(i).Trim(CChar(" "), CChar(vbTab)) = "" Then
+                    n += 1
+                    output(n) = content(i)
+                End If
+            End If
+        Next i
+        If UBound(output) > n Then ReDim Preserve output(n)
+        Return output
+    End Function
+
 End Class
 
 Public MustInherit Class DecorationPlacingPropertiesFields
@@ -3660,7 +3746,7 @@ Public Class AllDataStructues
 
 End Class
 
-Friend Class ValueConverter
+Public Class ValueConverter
 
     Friend Shared Function StrToDbl(ByRef s As String) As Double
         Return CDbl(ValueConverter.StrToDblStr(s))
@@ -3758,7 +3844,12 @@ Friend Class ValueConverter
 
     ''' <summary>Разбивает на строки текст по разделителям Chr(10) и Chr(13). Заменяет все табы на пробелы, удаляет повторяющиеся подряд пробелы, удаляет пробелы в начале и конце строки. Не добавляет в выходной массив строки, начинающиеся с #</summary>
     ''' <param name="TXT">Какой-нибудь текст</param>
-    Protected Friend Shared Function TxtSplit(ByRef TXT As String) As String()
+    Public Shared Function TxtSplit(ByRef TXT() As String) As String()
+        Return TxtSplit(String.Join(vbNewLine, TXT))
+    End Function
+    ''' <summary>Разбивает на строки текст по разделителям Chr(10) и Chr(13). Заменяет все табы на пробелы, удаляет повторяющиеся подряд пробелы, удаляет пробелы в начале и конце строки. Не добавляет в выходной массив строки, начинающиеся с #</summary>
+    ''' <param name="TXT">Какой-нибудь текст</param>
+    Public Shared Function TxtSplit(ByRef TXT As String) As String()
         Dim splited() As String = TXT.Replace(Chr(10), Chr(13)).Replace(vbTab, " ").Split(Chr(13))
         Dim parseString(UBound(splited)) As Boolean
         Dim nStrings As Integer = -1
@@ -3794,7 +3885,13 @@ Friend Class ValueConverter
     ''' <summary>Разбивает на строки текст по разделителям Chr(10) и Chr(13). Заменяет все табы на пробелы, удаляет повторяющиеся подряд пробелы, удаляет пробелы в начале и конце строки. Не добавляет в выходной массив строки, начинающиеся с #</summary>
     ''' <param name="TXT">Какой-нибудь текст</param>
     ''' <param name="transferChar">Если строка заканчивается этой подстрокой, то подстрока удаляется, а текущая строка объединяется со следующей</param>
-    Protected Friend Shared Function TxtSplit(ByRef TXT As String, ByRef transferChar As String) As String()
+    Public Shared Function TxtSplit(ByRef TXT() As String, ByRef transferChar As String) As String()
+        Return TxtSplit(String.Join(vbNewLine, TXT), transferChar)
+    End Function
+    ''' <summary>Разбивает на строки текст по разделителям Chr(10) и Chr(13). Заменяет все табы на пробелы, удаляет повторяющиеся подряд пробелы, удаляет пробелы в начале и конце строки. Не добавляет в выходной массив строки, начинающиеся с #</summary>
+    ''' <param name="TXT">Какой-нибудь текст</param>
+    ''' <param name="transferChar">Если строка заканчивается этой подстрокой, то подстрока удаляется, а текущая строка объединяется со следующей</param>
+    Public Shared Function TxtSplit(ByRef TXT As String, ByRef transferChar As String) As String()
         Dim t() As String = ValueConverter.TxtSplit(TXT)
         Dim result(UBound(t)) As String
         Dim n As Integer = 0
@@ -3823,16 +3920,25 @@ End Class
 
 Public Class GenDefaultValues
 
+    Public Const DefaultMod As String = "MNS"
+
+    ''' <summary>Название выбранного мода</summary>
+    ''' <remarks></remarks>
+    Public selectedMod As String
     Private myLog As Log
 
     Protected Friend linked_Races As New Dictionary(Of String, Integer)
     Friend RaceNumberToRaceChar As New Dictionary(Of Integer, String)
 
     ''' <param name="log">Лог для записи отчета, можно nothing</param>
+    ''' <param name="modName">Название мода, на котором происходит генерация.
+    ''' Ваианты можно получить из GenDefaultValues.GetSupportedMods</param>
     ''' <remarks></remarks>
-    Public Sub New(ByRef log As Log)
+    Public Sub New(ByRef log As Log, ByVal modName As String)
 
         myLog = log
+        selectedMod = modName
+        If Not GetSupportedMods().Contains(selectedMod) Then Throw New Exception("Unexpected mod name: " & selectedMod)
 
         Dim itemTypeID As New Dictionary(Of String, Integer)
         Dim itemTypeName As New Dictionary(Of Integer, String)
@@ -3878,7 +3984,8 @@ Public Class GenDefaultValues
         '#####################
 
         Dim RConstants As Dictionary(Of String, String) = PropertiesArrayToDictionary(ValueConverter.TxtSplit(Constants(), "/"))
-        Dim DConstants As Dictionary(Of String, String) = PropertiesArrayToDictionary(ValueConverter.TxtSplit(My.Resources.Constants, "/"))
+        Dim DConstants As Dictionary(Of String, String) = PropertiesArrayToDictionary(ValueConverter.TxtSplit(Common.RecursiveReadFile( _
+                                                            My.Resources.Constants.Replace(Chr(13), Chr(10)).Split(CChar(Chr(10)))), "/"))
 
         Dim HasSynonyms, sendLinkedRaces As New List(Of String)
         HasSynonyms.AddRange({"StackRaceChance".ToUpper})
@@ -3886,8 +3993,8 @@ Public Class GenDefaultValues
 
 
         Dim fields() As String = ClassFieldsHandler.GetFieldsNamesList(Me, {"myLog", "linked_Races", "RaceNumberToRaceChar", "playableRaces", "neutralRaces", _
-                                                                       "generatorRaceToGameRace", "generatorRaceToCapitalID", "capitalToGeneratorRace", _
-                                                                       "gameRaceToGeneratorRace"})
+                                                                            "generatorRaceToGameRace", "generatorRaceToCapitalID", "capitalToGeneratorRace", _
+                                                                            "gameRaceToGeneratorRace", "selectedMod"})
 
         For Each f As String In fields
             If sendLinkedRaces.Contains(f.ToUpper) Then
@@ -3929,6 +4036,14 @@ Public Class GenDefaultValues
         End If
 
     End Sub
+    ''' <summary>Вернет список поддерживаемых модов</summary>
+    Public Shared Function GetSupportedMods() As String()
+        Dim f() As String = IO.Directory.GetDirectories(".\Resources", My.Resources.modSettings_keyword & "*")
+        For i As Integer = 0 To UBound(f) Step 1
+            f(i) = IO.Path.GetFileName(f(i)).Substring(My.Resources.modSettings_keyword.Length)
+        Next i
+        Return f
+    End Function
 
     Private Function PrintItemsSettings(ByRef name As String, ByRef settings() As String, ByRef spaces As String) As String
         Dim result As String = name & " ="
@@ -3996,9 +4111,14 @@ Public Class GenDefaultValues
     End Function
     Private Function PropertiesArrayToDictionary(ByRef input() As String) As Dictionary(Of String, String)
         Dim res As New Dictionary(Of String, String)
+        Dim k As String
         For Each line As String In input
             Dim s() As String = line.Split(CChar(" "))
-            If s.Length = 2 Then res.Add(s(0).ToUpper, s(1))
+            If s.Length = 2 Then
+                k = s(0).ToUpper
+                If res.ContainsKey(k) Then res.Remove(k)
+                res.Add(k, s(1))
+            End If
         Next line
         Return res
     End Function
@@ -4237,9 +4357,6 @@ Public Class GenDefaultValues
     Public Shared Function wReadModLoreFileKeyword() As String
         Return My.Resources.readMLoreFileKeyword
     End Function
-    Public Shared Function wReadVanillaLoreFileKeyword() As String
-        Return My.Resources.readVLoreFileKeyword
-    End Function
     Public Shared Function wTemplate_CreationKeyword() As String
         Return My.Resources.template_creation
     End Function
@@ -4305,8 +4422,14 @@ Public Class GenDefaultValues
     End Enum
 
     'default files
-    Private Function ReadResources(ByRef name As String, ByRef defaultValue As String) As String
-        Dim path As String = Environment.CurrentDirectory & "\Resources\" & name & ".txt"
+    Private Function ReadResources(ByRef name As String, ByRef defaultValue As String, ByVal modSpecific As Boolean) As String
+        Dim path As String = Environment.CurrentDirectory & "\Resources\"
+        If modSpecific Then
+            path &= My.Resources.modSettings_keyword & selectedMod & "\"
+        Else
+            path &= "common_game_data\"
+        End If
+        path &= name & ".txt"
         If IO.File.Exists(path) Then
             If Not IsNothing(myLog) Then
                 Try
@@ -4315,7 +4438,7 @@ Public Class GenDefaultValues
                     Console.WriteLine("Reading " & name & "; external; " & ex.Message)
                 End Try
             End If
-            Return IO.File.ReadAllText(path)
+            Return String.Join(vbNewLine, Common.RecursiveReadFile(path))
         Else
             If Not IsNothing(myLog) Then
                 Try
@@ -4324,73 +4447,73 @@ Public Class GenDefaultValues
                     Console.WriteLine("Reading " & name & "; internal; " & ex.Message)
                 End Try
             End If
-            Return defaultValue
+            Return String.Join(vbNewLine, Common.RecursiveReadFile(defaultValue.Split(CChar(vbNewLine))))
         End If
     End Function
+
+    'mod-specific
     Public Function BigStackUnits() As String
-        Return ReadResources("BigStackUnits", My.Resources.BigStackUnits)
+        Return ReadResources("BigStackUnits", "", True)
     End Function
     Public Function Constants() As String
-        Return ReadResources("Constants", My.Resources.Constants)
+        Return ReadResources("Constants", My.Resources.Constants, True)
     End Function
     Public Function ExcludedIDs() As String
-        Return ReadResources("ExcludeIDs", My.Resources.ExcludeIDs)
+        Return ReadResources("ExcludeIDs", "", True)
     End Function
     Public Function ExcludedIDs_ModLore() As String
-        Return ReadResources("ExcludeIDs_ModLore", My.Resources.ExcludeIDs_ModLore)
-    End Function
-    Public Function ExcludedIDs_VanillaLore() As String
-        Return ReadResources("ExcludeIDs_VanillaLore", My.Resources.ExcludeIDs_VanillaLore)
-    End Function
-    Public Function ExcludeIDsForNames() As String
-        Return ReadResources("ExcludeIDsForNames", My.Resources.ExcludeIDsForNames)
-    End Function
-    Public Function Items() As String
-        Return ReadResources("Items", My.Resources.Items)
+        Return ReadResources("ExcludeIDs_ModLore", "", True)
     End Function
     Public Function LootItemChanceMultiplier() As String
-        Return ReadResources("LootItemChanceMultiplier", My.Resources.LootItemChanceMultiplier)
-    End Function
-    Public Function Lords() As String
-        Return ReadResources("Lords", My.Resources.Lords)
+        Return ReadResources("LootItemChanceMultiplier", "", True)
     End Function
     Public Function MapObjectRace() As String
-        Return ReadResources("MapObjectRace", My.Resources.MapObjectRace)
-    End Function
-    Public Function PlateauConstructor() As String
-        Return ReadResources("PlateauConstructor", My.Resources.PlateauConstructor)
-    End Function
-    Public Function Races() As String
-        Return ReadResources("Races", My.Resources.Races)
-    End Function
-    Public Function SingleUnits() As String
-        Return ReadResources("SingleUnits", My.Resources.SingleUnits)
-    End Function
-    Public Function StackStatsFields() As String
-        Return ReadResources("StackStatsFields", My.Resources.StackStatsFields)
-    End Function
-    Public Function UnitRace() As String
-        Return ReadResources("UnitRace", My.Resources.UnitRace)
-    End Function
-    Public Function PreservedItems() As String
-        Return ReadResources("PreservedItems", My.Resources.PreservedItems)
-    End Function
-    Public Function PlayableSubraces() As String
-        Return ReadResources("PlayableSubraces", My.Resources.PlayableSubraces)
-    End Function
-    Public Function Capitals() As String
-        Return ReadResources("Capitals", My.Resources.Capitals)
+        Return ReadResources("MapObjectRace", My.Resources.MapObjectRace, True)
     End Function
     Public Function ObjectsText(ByVal lang As GenDefaultValues.TextLanguage) As String
         Dim content As String = Nothing
         If lang = GenDefaultValues.TextLanguage.Rus Then
-            content = ReadResources("ObjectsText_Rus", My.Resources.ObjectsText_Rus)
+            content = ReadResources("ObjectsText_Rus", My.Resources.ObjectsText_Rus, True)
         ElseIf lang = GenDefaultValues.TextLanguage.Eng Then
-            content = ReadResources("ObjectsText_Eng", My.Resources.ObjectsText_Eng)
+            content = ReadResources("ObjectsText_Eng", My.Resources.ObjectsText_Eng, True)
         Else
             Throw New Exception("Unexpected language")
         End If
         Return content
+    End Function
+    Public Function PlateauConstructor() As String
+        Return ReadResources("PlateauConstructor", My.Resources.PlateauConstructor, True)
+    End Function
+    Public Function PreservedItems() As String
+        Return ReadResources("PreservedItems", My.Resources.PreservedItems, True)
+    End Function
+    Public Function Races() As String
+        Return ReadResources("Races", My.Resources.Races, True)
+    End Function
+    Public Function RaceSublocations() As String
+        Return ReadResources("RaceSublocations", My.Resources.RaceSublocations, True)
+    End Function
+    Public Function SingleUnits() As String
+        Return ReadResources("SingleUnits", "", True)
+    End Function
+    Public Function UnitRace() As String
+        Return ReadResources("UnitRace", "", True)
+    End Function
+    'common
+    Public Function Capitals() As String
+        Return ReadResources("Capitals", My.Resources.Capitals, False)
+    End Function
+    Public Function ExcludeIDsForNames() As String
+        Return ReadResources("ExcludeIDsForNames", My.Resources.ExcludeIDsForNames, False)
+    End Function
+    Public Function Items() As String
+        Return ReadResources("Items", My.Resources.Items, False)
+    End Function
+    Public Function Lords() As String
+        Return ReadResources("Lords", My.Resources.Lords, False)
+    End Function
+    Public Function PlayableSubraces() As String
+        Return ReadResources("PlayableSubraces", My.Resources.PlayableSubraces, False)
     End Function
 
     Public Class MapObjectsText
@@ -4760,7 +4883,7 @@ Public Class Log
     ''' <param name="contString">Будут добавлены поля этой переменной</param>
     Public Sub Add(ByRef contString As AllDataStructues.DesiredStats, ByVal shortOut As Boolean)
         If Not Enabled Then Exit Sub
-        If IsNothing(comm) Then comm = New Common
+        Content.Add(AllDataStructues.DesiredStats.Print(contString, comm.defValues.RaceNumberToRaceChar, shortOut))
     End Sub
     ''' <summary>Добавить запись в лог, если логирование включено</summary>
     ''' <param name="contString">Будут добавлены поля этой переменной</param>

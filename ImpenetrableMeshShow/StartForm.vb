@@ -4,7 +4,7 @@ Friend Class StartForm
 
     Dim zoom As New ArrayZoom
     Dim draw As New ColorSelector
-    Dim comm As New Common
+    Dim comm As New Common(GenDefaultValues.DefaultMod)
     Dim ObjectsSize As New Dictionary(Of String, Size)
 
     Private Sub GenMany_click() Handles GenManyButton.Click
@@ -94,7 +94,7 @@ Friend Class StartForm
 
         Dim treesAmount() As Integer = {0, 20, 20, 20, 20, 20, 0, 0, 0, 0, 0, 0, 0, 0, 20}
 
-        Dim rstack As New RandStack(ReadTestUnits, ReadTestItems, ReadSpells, def, def, def, def, def, def, 5)
+        Dim rstack As New RandStack(DefaultGenData)
         Dim objCont As New ObjectsContentSet(rstack)
 
         'Dim ds As New AllDataStructues.DesiredStats With {.ExpBarAverage = 50, .ExpStackKilled = 56, .MaxGiants = 3, _
@@ -103,10 +103,10 @@ Friend Class StartForm
         'Dim dds As AllDataStructues.DesiredStats = AllDataStructues.DesiredStats.Copy(ds)
         'Call rstack.GenFingters(ds, dds, 3, -1, True, 6, True, New List(Of Integer), 0, 0.5, -1)
 
-        Call comm.ReadExcludedObjectsList({"%default%"})
+        Call comm.ReadExcludedObjectsList(def)
         Dim objSizeArray() As ImpenetrableObjects.GlobalMapDecoration = ReadObjSize()
 
-        Dim objplace As New ImpenetrableObjects(objSizeArray, def, def, def, ReadSpells)
+        Dim objplace As New ImpenetrableObjects(objSizeArray, def, def, def, ReadSpells, comm)
 
         Dim grid As Map
         Dim genTimeLimit As Integer = 10000
@@ -148,7 +148,7 @@ Friend Class StartForm
         'gsettings.common_settMap.ForestAmount = 0
         '###
 
-        grid = New MapGenWrapper(objplace).CommonGen(gsettings, genTimeLimit)
+        grid = New MapGenWrapper(objplace).CommonGen(gsettings, genTimeLimit, GenDefaultValues.DefaultMod)
 
         If Not IsNothing(grid.board) Then
             Call ShowResult(grid)
@@ -234,9 +234,9 @@ Friend Class StartForm
         PictureBox1.Image = img
     End Sub
 
-    Public Function ReadSpells() As AllDataStructues.Spell()
-        Dim spells() As String = comm.TxtSplit(My.Resources.TestSpells)
-        Dim rspells() As String = comm.TxtSplit(My.Resources.TestSpellsRace)
+    Public Shared Function ReadSpells() As AllDataStructues.Spell()
+        Dim spells() As String = ValueConverter.TxtSplit(My.Resources.TestSpells)
+        Dim rspells() As String = ValueConverter.TxtSplit(My.Resources.TestSpellsRace)
         Dim res(UBound(spells) - 1) As AllDataStructues.Spell
         For i As Integer = 1 To UBound(spells) Step 1
             Dim s() As String = spells(i).Split(" ")
@@ -272,8 +272,8 @@ Friend Class StartForm
         Return result
     End Function
 
-    Public Function ReadTestUnits() As AllDataStructues.Unit()
-        Dim comm As New Common
+    Public Shared Function ReadTestUnits(ByVal modName As String) As AllDataStructues.Unit()
+        Dim comm As New Common(modName)
         Dim s() As String = comm.TxtSplit(My.Resources.TestUnitsTable)
         Dim r() As String
         Dim UnitsList(UBound(s) - 1) As AllDataStructues.Unit
@@ -299,8 +299,8 @@ Friend Class StartForm
         Return UnitsList
     End Function
 
-    Public Function ReadTestItems() As AllDataStructues.Item()
-        Dim comm As New Common
+    Public Shared Function ReadTestItems(ByVal modName As String) As AllDataStructues.Item()
+        Dim comm As New Common(modName)
         Dim s() As String = comm.TxtSplit(My.Resources.TestItemsTable)
         Dim r() As String
         Dim ItemsList(UBound(s) - 1) As AllDataStructues.Item
@@ -316,15 +316,9 @@ Friend Class StartForm
         Return ItemsList
     End Function
 
-    Private Sub itemGenTest()
+    Private Sub itemGenTest(ByVal modName As String)
 
-        Dim r As New RandStack(ReadTestUnits, ReadTestItems, ReadSpells, {GenDefaultValues.wReadDefaultFileKeyword}, _
-                                                                         {GenDefaultValues.wReadDefaultFileKeyword}, _
-                                                                         {GenDefaultValues.wReadDefaultFileKeyword}, _
-                                                                         {GenDefaultValues.wReadDefaultFileKeyword}, _
-                                                                         {GenDefaultValues.wReadDefaultFileKeyword}, _
-                                                                         {GenDefaultValues.wReadDefaultFileKeyword}, _
-                                                                         5)
+        Dim r As New RandStack(DefaultGenData)
 
         Dim items As New List(Of String)
         items.Add("G000IG0004")
@@ -338,5 +332,14 @@ Friend Class StartForm
                                                                           .ApplyStrictTypesFilter = True}
         Dim result As List(Of String) = r.ItemsGen(sett)
     End Sub
+
+    Public Shared Function DefaultGenData() As RandStack.ConstructorInput
+        Dim r As New RandStack.ConstructorInput
+        r.AllUnitsList = ReadTestUnits(GenDefaultValues.DefaultMod)
+        r.AllItemsList = ReadTestItems(GenDefaultValues.DefaultMod)
+        r.AllSpellsList = ReadSpells()
+        r.modName = GenDefaultValues.DefaultMod
+        Return r
+    End Function
 
 End Class

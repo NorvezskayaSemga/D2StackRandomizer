@@ -1,0 +1,11 @@
+#строка, начинающаяся с решетки, игнорируется
+#Идентификаторы предметов и множители шанса появления предмета.
+
+ReadFromFile .\Resources\mod_settings_MNS\LootItemChanceMultiplier.txt
+
+G001IG0180	1
+G001IG0082	1
+G001IG0036	1
+G001IG0125	1
+G001IG0128	1
+
