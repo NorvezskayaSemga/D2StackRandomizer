@@ -4264,7 +4264,7 @@ Public Class GenDefaultValues
         Next i
     End Sub
 
-    Public Const myVersion As String = "30.03.2021.19.40"
+    Public Const myVersion As String = "21.09.2021.00.48"
 
     Public Shared Function PrintVersion() As String
         Return "Semga's DLL version: " & myVersion
