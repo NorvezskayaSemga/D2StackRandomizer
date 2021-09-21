@@ -6959,7 +6959,7 @@ Public Class StackLocationsGen
         comm = c
     End Sub
 
-    ''' <summary>Расставляет локации для отрядов на карту с подготовленную в InpenetrableMeshGen
+    ''' <summary>Расставляет локации для отрядов на карту с подготовленную в ImpenetrableMeshGen
     ''' Для руин и городов выставляет локации с параметрами отрядов там же, где и хранится objectID.
     ''' Если не получится, вернет False</summary>
     ''' <param name="m">Карта с расставленными объектами и границами между локациями</param>
@@ -6982,7 +6982,7 @@ Public Class StackLocationsGen
         Return Gen(m, settMap, a, maxGenTime)
     End Function
 
-    ''' <summary>Расставляет локации для отрядов на карту с подготовленную в InpenetrableMeshGen
+    ''' <summary>Расставляет локации для отрядов на карту с подготовленную в ImpenetrableMeshGen
     ''' Для руин и городов выставляет локации с параметрами отрядов там же, где и хранится objectID.
     ''' Если не получится, вернет False</summary>
     ''' <param name="m">Карта с расставленными объектами и границами между локациями</param>
