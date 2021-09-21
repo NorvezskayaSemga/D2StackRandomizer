@@ -2080,6 +2080,7 @@ clearandexit:
             Next x
         Next y
 
+        ' определяем, какие тайлы могут быть границей между локациями {
         For y As Integer = 0 To tmpm.ySize Step 1
             For x As Integer = 0 To tmpm.xSize Step 1
                 If borderRadius(x, y) = -1 Then
@@ -2123,8 +2124,10 @@ clearandexit:
             Next x
         Next y
         borderRadius = Nothing
-        Dim nNeighbours(tmpm.xSize, tmpm.ySize) As Integer
+        ' } закончили определять, какие тайлы могут быть границей между локациями
 
+        ' делаем границы тоньше и рельефнее {
+        Dim nNeighbours(tmpm.xSize, tmpm.ySize) As Integer
         Dim nRepeatLoop As Integer = 2
         Dim nRepeatLoopSmall As Integer = 3
         For repeatloop As Integer = 0 To Math.Max(nRepeatLoop, nRepeatLoopSmall) Step 1
@@ -2181,7 +2184,9 @@ clearandexit:
         Next repeatloop
         freeze = Nothing
         nNeighbours = Nothing
+        ' } закончили делать границы тоньше 
 
+        ' для соседствующих между собой локаций составляем списки пограничных тайлов {
         For i As Integer = 0 To UBound(tmpm.Loc) - 1 Step 1
             For j As Integer = i + 1 To UBound(tmpm.Loc) Step 1
                 LocBorders(i, j) = New Dictionary(Of String, Point)
@@ -2211,15 +2216,18 @@ clearandexit:
                 If LocBorders(i, j).Count < settMap.minPassWidth + 0.5 * settMap.minPassDist Then LocBorders(i, j).Clear()
             Next j
         Next i
+        ' } закончили составлять списки пограничных тайлов
+
+        ' убираем из возможных тайлов для создания прохода между локациямите, что находится слишком близко к какой-либо третьей локации
         Dim delList As New List(Of String)
         Dim nearRLocs As New List(Of Integer)
         For i As Integer = 0 To UBound(tmpm.Loc) - 1 Step 1
             For j As Integer = i + 1 To UBound(tmpm.Loc) Step 1
                 Dim dR As Double
                 If i < settMap.nRaces Then
-                    dR = 2 * (settMap.minPassDist + 1)
+                    dR = 2 * (settMap.minPassDist + settMap.minPassWidth + 1)
                 Else
-                    dR = 0.7 * settMap.minPassDist + 1
+                    dR = 1.2 * (settMap.minPassDist + settMap.minPassWidth) + 1
                 End If
                 Do While dR >= 1
                     delList.Clear()
@@ -2284,7 +2292,9 @@ clearandexit:
                 End If
             Next j
         Next i
+        ' } закончили убирать лишние тайлы
 
+        ' создаем список неэквивалентных пар локаций, чтобы не создать проходы дважды {
         Dim equalLocPairsList As New List(Of String)
         If tmpm.symmID > -1 Then
             Dim Id(1)(), a() As Integer
@@ -2316,6 +2326,7 @@ clearandexit:
                 Next j
             Next i
         End If
+        ' } закончили делать список
 
         Parallel.For(0, UBound(tmpm.Loc), _
          Sub(i As Integer)
@@ -2332,6 +2343,7 @@ clearandexit:
              End If
              For j As Integer = startI To UBound(tmpm.Loc) Step 1
                  If LocBorders(i, j).Count > 0 AndAlso Not equalLocPairsList.Contains(i & "_" & j) Then
+                     ' выбор точек, через которые пройдут проходы между локациями {
                      Dim maxD, D As Integer
                      Dim pointsslist(LocBorders(i, j).Count - 1) As Point
                      LocBorders(i, j).Values.CopyTo(pointsslist, 0)
@@ -2361,6 +2373,7 @@ clearandexit:
                          Next p
                          If ids.Count = 0 Then Exit For
                      Next k
+                     ' } закончили выбор точек
                      Dim Centers() As Point = New Point() {tmpm.Loc(i).pos, tmpm.Loc(j).pos}
                      For Each c As Point In Centers
                          For Each p As Integer In selected
