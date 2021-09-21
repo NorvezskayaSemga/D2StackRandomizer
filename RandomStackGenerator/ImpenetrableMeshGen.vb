@@ -9540,26 +9540,29 @@ Public Class ImpenetrableObjects
         End If
     End Sub
     Friend Shared Function RacesManaUsing(ByRef c As Common, ByRef rSpells() As AllDataStructues.Spell) As Dictionary(Of Integer, AllDataStructues.Cost())
-        Dim r() As String = c.TxtSplit(c.defValues.Races)
+        Dim spellsCostSumID As Integer = 0
+        Dim maxSpellLevel As Integer = 5
         Dim res As New Dictionary(Of Integer, AllDataStructues.Cost())
-        For i As Integer = 0 To UBound(r) Step 1
-            Dim s() As String = r(i).Split(CChar(" "))
-            res.Add(c.RaceIdentifierToSubrace(s(UBound(s))), New AllDataStructues.Cost() {Nothing, Nothing, Nothing, Nothing, Nothing, Nothing})
-        Next i
+        For Each r As Integer In c.LordsRace.Values
+            If Not res.ContainsKey(r) Then
+                res.Add(r, New AllDataStructues.Cost() {})
+                ReDim res.Item(r)(maxSpellLevel)
+            End If
+        Next r
         For s As Integer = 0 To UBound(rSpells) Step 1
             If rSpells(s).researchCost.Count > 0 Then
                 For Each L As String In rSpells(s).researchCost.Keys
                     Dim LRace As Integer = c.LordsRace.Item(L)
-                    res.Item(LRace)(rSpells(s).level) = rSpells(s).researchCost.Item(L) + rSpells(s).castCost
+                    res.Item(LRace)(rSpells(s).level) += rSpells(s).researchCost.Item(L) + rSpells(s).castCost
                 Next L
             End If
         Next s
         Dim remove As New List(Of Integer)
         For Each i As Integer In res.Keys
-            For j As Integer = 1 To 5 Step 1
-                res.Item(i)(0) += res.Item(i)(j)
+            For j As Integer = 1 To maxSpellLevel Step 1
+                res.Item(i)(spellsCostSumID) += res.Item(i)(j)
             Next j
-            If AllDataStructues.Cost.Sum(res.Item(i)(0)) = 0 Then remove.Add(i)
+            If AllDataStructues.Cost.Sum(res.Item(i)(spellsCostSumID)) = 0 Then remove.Add(i)
         Next i
         For Each i As Integer In remove
             res.Remove(i)
