@@ -60,6 +60,8 @@ Public Class RandStack
         ''' Ваианты можно получить из GenDefaultValues.GetSupportedMods
         ''' </summary>
         Public modName As String
+        ''' <summary>Если True, генератор будет игнорировать ограничения по расе при создании отрядов. По умолчанию False</summary>
+        Public ignoreUnitRace As Boolean
     End Class
 
     Private busytransfer() As Integer = New Integer() {1, -1, 3, -1, 5, -1}
@@ -67,6 +69,7 @@ Public Class RandStack
     Private secondrow() As Integer = New Integer() {1, 3, 5}
     Private Const itemGenSigma As Double = 0.5
     Private Const multiItemGenSigmaMultiplier As Double = 1.5
+    Private IgnoreUnitRace As Boolean
 
     Private UnitsArrayPos As New Dictionary(Of String, Integer)
     Friend AllUnits() As AllDataStructues.Unit
@@ -91,8 +94,6 @@ Public Class RandStack
     ''' <summary>Сюда генератор пишет лог</summary>
     Public log As Log
 
-    ''' <summary>Если True, генератор будет игнорировать ограничения по расе при создании отрядов. По умолчанию False</summary>
-    Public setting_IgnoreUnitRace As Boolean = False
 
     Public Sub New(ByRef data As ConstructorInput)
         comm = New Common(data.modName) With {.onExcludedListChanged = AddressOf ResetExclusions}
@@ -101,6 +102,7 @@ Public Class RandStack
         If IsNothing(data.AllUnitsList) Or IsNothing(data.AllItemsList) Then Exit Sub
 
         If data.TalismanChargesDefaultAmount < 1 Then Throw New Exception("Unexpected TalismanChargesDefaultAmount")
+        IgnoreUnitRace = data.ignoreUnitRace
 
         Call comm.ReadExcludedObjectsList(data.ExcludeLists)
         Call comm.ReadCustomUnitRace(data.CustomUnitRace)
@@ -1131,7 +1133,7 @@ Public Class RandStack
 
         If AllUnits(leaderID).fromRaceBranch AndAlso MapLordsRaces.Contains(AllUnits(leaderID).race) Then Return False
 
-        If Not setting_IgnoreUnitRace Then
+        If Not IgnoreUnitRace Then
             If Not StackStats.Race.Contains(AllUnits(leaderID).race) Then Return False
         End If
 
@@ -1628,7 +1630,7 @@ Public Class RandStack
             Next id
         End If
 
-        If Not setting_IgnoreUnitRace Then
+        If Not IgnoreUnitRace Then
             If Not DynStackStats.Race.Contains(AllUnits(fighterID).race) Then Return False
         End If
 
