@@ -213,7 +213,7 @@ again:
 
         Try
             Call stackstats.Gen(grid, settGen.common_settMap, copiedSettings)
-            Call watergenerator.Gen(grid, settGen.common_settMap)
+            Call watergenerator.Gen(grid, settGen.common_settMap, {"%default%"}, genmesh)
             Call racegen.Gen(grid, PlayersRaces, copiedSettings)
             Call objPlace.Gen(grid, settGen.common_settMap, copiedSettings)
             Call penOnjGen.Gen(grid, settGen.common_settMap)

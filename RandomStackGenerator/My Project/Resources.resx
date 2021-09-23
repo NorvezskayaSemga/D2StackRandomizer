@@ -259,4 +259,13 @@
   <data name="PlayableSubraces" type="System.Resources.ResXFileRef, System.Windows.Forms">
     <value>..\resources\common_game_data\playablesubraces.txt;System.String, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089;windows-1251</value>
   </data>
+  <data name="WaterBlocks3x3Objects" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\resources\common_game_data\waterblocks3x3objects.txt;System.String, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089;utf-8</value>
+  </data>
+  <data name="WaterBlocksCommon" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\resources\common_game_data\waterblockscommon.txt;System.String, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089;utf-8</value>
+  </data>
+  <data name="WaterBlocksUnacceptable" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\resources\common_game_data\waterblocksunacceptable.txt;System.String, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089;utf-8</value>
+  </data>
 </root>

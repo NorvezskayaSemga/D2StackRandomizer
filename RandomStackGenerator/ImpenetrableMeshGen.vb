@@ -903,6 +903,7 @@ Public Class ImpenetrableMeshGen
     Private stackLocGen As StackLocationsGen
 
     Public ActiveObjects() As AttendedObject
+    Public ObjectBlank()(,) As Map.Cell
 
     Public Structure GenSettings
 
@@ -3384,7 +3385,7 @@ clearandexit:
     Public Sub PlaceActiveObjects(ByRef m As Map, ByVal settMap As Map.SettingsMap, _
                                   ByVal settLoc() As Map.SettingsLoc, _
                                   ByRef Term As TerminationCondition)
-        Dim ObjectBlank()(,) As Map.Cell = ActiveObjectsSet(settMap, m.symmID)
+        ObjectBlank = ActiveObjectsSet(settMap, m.symmID)
         Dim tmpm As Map = m
         Dim LocsPlacing(UBound(tmpm.Loc)) As Location.Borders
         Dim LocArea(UBound(tmpm.Loc))() As Integer
@@ -8309,6 +8310,7 @@ End Class
 
 Public Class WaterGen
 
+    Public Const PlaceWaterMode As Integer = 2
     Public ReadOnly minLocationRadiusAtAll As Double
     Public Sub New()
         minLocationRadiusAtAll = 2
@@ -8318,11 +8320,14 @@ Public Class WaterGen
     Private comm As Common
     Private symm As New SymmetryOperations
     Private imp As ImpenetrableMeshGen
+    Private wpCommon As WaterPlacer_Common
+
+    Public waterAttendedObj As New Dictionary(Of DefMapObjects.Types, List(Of Integer))
 
     '''<summary>Сгенерирует озера на карте</summary>
     ''' <param name="m">Карта с сгенерированной силой отрядов</param>
     ''' <param name="settMap">Общие настройки для карты</param>
-    Public Sub Gen(ByRef m As Map, ByRef settMap As Map.SettingsMap)
+    Public Sub Gen(ByRef m As Map, ByRef settMap As Map.SettingsMap, ByRef CustomBuildingRace() As String, ByRef impMG As ImpenetrableMeshGen)
 
         If Not settMap.isChecked Then Throw New Exception("Check parameters via settMap.Check()")
 
@@ -8331,341 +8336,943 @@ Public Class WaterGen
         End If
 
         comm = m.comm
-        imp = New ImpenetrableMeshGen(comm)
+        Call comm.ReadCustomBuildingRace(CustomBuildingRace)
+        imp = impMG
 
         Dim t0 As Integer = Environment.TickCount
-        Dim HaveToBeGround(m.xSize, m.ySize) As Boolean
-        For i As Integer = 0 To m.xSize Step 1
-            For j As Integer = 0 To m.ySize Step 1
-                If m.board(i, j).passability.isAttended Or m.board(i, j).passability.isPenetrable Then HaveToBeGround(i, j) = True
-                If m.board(i, j).mapObject.objectID = DefMapObjects.Types.Mine Then
-                    Dim b As Location.Borders = ImpenetrableMeshGen.NearestXY(i, j, m.xSize, m.ySize, 1)
-                    For x As Integer = b.minX To b.maxX Step 1
-                        For y As Integer = b.minY To b.maxY Step 1
-                            HaveToBeGround(x, y) = True
-                        Next y
-                    Next x
-                End If
-            Next j
-        Next i
-        If m.symmID > -1 Then
-            For i As Integer = 0 To m.xSize Step 1
-                For j As Integer = 0 To m.ySize Step 1
-                    If HaveToBeGround(i, j) Then
-                        Dim pp() As Point = symm.ApplySymm(New Point(i, j), settMap.nRaces, m, 1)
-                        For k As Integer = 0 To UBound(pp) Step 1
-                            Dim tx As Integer = pp(k).X
-                            Dim ty As Integer = pp(k).Y
-                            HaveToBeGround(tx, ty) = True
-                        Next k
-                    End If
-                Next j
-            Next i
-        End If
 
-        For i As Integer = 0 To m.Loc.Length - 1 Step 1
-            If Not m.Loc(i).IsObtainedBySymmery Then Call PlaceWater(m, m.Loc(i), settMap, HaveToBeGround)
-        Next i
-        Call Extend(m, settMap, HaveToBeGround)
+        Call MakeAttendedObjectsWithWaterPlacing()
+        wpCommon = New WaterPlacer_Common(Me, m, settMap)
+
+        If PlaceWaterMode = 1 Then
+            Dim w As New WaterPlacer_1(Me, m, settMap)
+            For i As Integer = 0 To m.Loc.Length - 1 Step 1
+                If Not m.Loc(i).IsObtainedBySymmery Then Call w.PlaceWater(m.Loc(i))
+            Next i
+            Call w.Extend()
+        ElseIf PlaceWaterMode = 2 Then
+            Dim w As New WaterPlacer_2(Me, m, settMap)
+            For i As Integer = 0 To m.Loc.Length - 1 Step 1
+                If Not m.Loc(i).IsObtainedBySymmery Then Call w.PlaceWater(m.Loc(i))
+            Next i
+        Else
+            MsgBox("Unexpected PlaceWaterMode" & PlaceWaterMode)
+        End If
         m.complited.WaterCreation_Done = True
         Call m.log.Add("Water creation: " & Environment.TickCount - t0 & " ms")
     End Sub
+    Private Sub MakeAttendedObjectsWithWaterPlacing()
+        Dim r As Dictionary(Of String, DecorationPlacingProperties) = comm.objectRace
 
-    Private Sub PlaceWater(ByRef m As Map, ByRef loc As Location, ByRef settMap As Map.SettingsMap, ByRef HaveToBeGround(,) As Boolean)
+        Dim obj As New Dictionary(Of String, DefMapObjects.Types)
+        obj.Add(GenDefaultValues.wObjKeyMerchant, DefMapObjects.Types.Vendor)
+        obj.Add(GenDefaultValues.wObjKeyMercenaries, DefMapObjects.Types.Mercenary)
+        obj.Add(GenDefaultValues.wObjKeyMage, DefMapObjects.Types.Mage)
+        obj.Add(GenDefaultValues.wObjKeyTrainer, DefMapObjects.Types.Trainer)
+        obj.Add(GenDefaultValues.wObjKeyRuin, DefMapObjects.Types.Ruins)
 
-        Dim lake As Location
-        Dim WaterLocSettings As New Map.SettingsLoc With {.AverageRadius = CInt(0.3 * Math.Sqrt(loc.gASize * loc.gBSize) * settMap.WaterAmount), _
-                                                          .maxRadiusDispersion = 0.25, _
-                                                          .maxEccentricityDispersion = 0.35}
-        Dim freeCell(,) As Boolean = Nothing
-        Dim WaterAmount As Integer = WaterAmountCalc(m, loc, settMap, freeCell, HaveToBeGround)
-        Dim n As Integer = -1
-        For i As Integer = 0 To m.xSize Step 1
-            For j As Integer = 0 To m.ySize Step 1
-                If freeCell(i, j) Then n += 1
-            Next j
-        Next i
-        Dim points(n) As Point
-        Dim AllIds As New List(Of Integer)
-        n = -1
-        For i As Integer = 0 To m.xSize Step 1
-            For j As Integer = 0 To m.ySize Step 1
-                If freeCell(i, j) Then
-                    n += 1
-                    points(n) = New Point(i, j)
-                    AllIds.Add(n)
+        Dim rObjList As List(Of String) = r.Keys.ToList
+        Dim objList As List(Of String) = obj.Keys.ToList
+        For Each k1 As String In robjList
+            For Each k2 As String In objList
+                If k1.ToLower.StartsWith(k2.ToLower) AndAlso r.Item(k1).water Then
+                    If Not waterAttendedObj.ContainsKey(obj.Item(k2)) Then
+                        waterAttendedObj.Add(obj.Item(k2), New List(Of Integer))
+                    End If
+                    For Each race As Integer In r.Item(k1).race
+                        If Not waterAttendedObj.Item(obj.Item(k2)).Contains(race) Then
+                            waterAttendedObj.Item(obj.Item(k2)).Add(race)
+                        End If
+                    Next race
                 End If
-            Next j
-        Next i
-
-        Do While WaterAmount > minLocationRadiusAtAll * minLocationRadiusAtAll
-            lake = Location.GenLocSize(WaterLocSettings, 0, rndgen, minLocationRadiusAtAll)
-            Dim selected As Integer = SelectLakePlace(AllIds, points, m, 0.5 * WaterLocSettings.AverageRadius)
-            If selected < 0 Then Exit Do
-            Call PlaceLake(AllIds, points, m, settMap, selected, freeCell, lake, WaterAmount, HaveToBeGround)
-        Loop
-
-        Call MakeRuinsWatered(m, loc, settMap)
-
+            Next k2
+        Next k1
     End Sub
-    Private Function WaterAmountCalc(ByRef m As Map, ByRef loc As Location, ByRef settMap As Map.SettingsMap, _
-                                     ByRef freeCell(,) As Boolean, ByRef HaveToBeGround(,) As Boolean) As Integer
-        ReDim freeCell(m.xSize, m.ySize)
-        Dim WaterAmount, Watered As Integer
-        For i As Integer = 0 To m.xSize Step 1
-            For j As Integer = 0 To m.ySize Step 1
-                If m.board(i, j).locID(0) = loc.ID And Not HaveToBeGround(i, j) Then
-                    If m.board(i, j).passability.isBorder Then
+
+    Public Class FreePointsInfo       
+        ''' <summary>
+        ''' True, если:
+        '''  Not owner.wpCommon.HaveToBeGround
+        '''  расстояние до обрабатываемой локации меньше или равно locationBorderTolerance.
+        '''  по соседству есть хоть один тайл, который не занят непосещаемым объектом и может быть занят водой
+        ''' </summary>
+        Public isFree(,) As Boolean
+        Public points() As Point
+        Public IDs As List(Of Integer)
+        Public xMax, yMax As Integer
+
+        Public Sub New(ByRef freeCell(,) As Boolean)
+            isFree = freeCell
+            points = MakeFreePointsArray()
+            IDs = MakeIDsList(0, UBound(points))
+        End Sub
+
+        Private Function MakeFreePointsArray() As Point()
+            xMax = UBound(isFree, 1)
+            yMax = UBound(isFree, 2)
+            Dim n As Integer = -1
+            For i As Integer = 0 To xMax Step 1
+                For j As Integer = 0 To yMax Step 1
+                    If isFree(i, j) Then n += 1
+                Next j
+            Next i
+            Dim points(n) As Point
+            n = -1
+            For i As Integer = 0 To xMax Step 1
+                For j As Integer = 0 To yMax Step 1
+                    If isFree(i, j) Then
+                        n += 1
+                        points(n) = New Point(i, j)
+                    End If
+                Next j
+            Next i
+            Return points
+        End Function
+        Friend Shared Function MakeIDsList(ByVal minID As Integer, ByVal maxID As Integer) As List(Of Integer)
+            Dim r As New List(Of Integer)
+            For i As Integer = minID To maxID Step 1
+                r.Add(i)
+            Next i
+            Return r
+        End Function
+    End Class
+    Public Class WaterPlacer_Common
+        Public owner As WaterGen
+        Public m As Map
+        Public settMap As Map.SettingsMap
+        Public HaveToBeGround(,) As Boolean
+
+        Public Sub New(ByRef w As WaterGen, ByRef myMap As Map, ByRef sM As Map.SettingsMap)
+            owner = w
+            m = myMap
+            settMap = sM
+            Call MakeHaveToBeGround()
+        End Sub
+        Private Sub MakeHaveToBeGround()
+            ReDim HaveToBeGround(m.xSize, m.ySize)
+            For i As Integer = 0 To m.xSize Step 1
+                For j As Integer = 0 To m.ySize Step 1
+                    'под всеми объектами и вокруг них не должно быть воды
+                    'может быть проигнорировано для посещаемых объектов, для которых есть графика, предназначенная для воды
+                    If m.board(i, j).passability.isAttended Or m.board(i, j).passability.isPenetrable Then HaveToBeGround(i, j) = True
+                    If m.board(i, j).mapObject.objectID = DefMapObjects.Types.Mine Then
+                        'вокруг шахт обязательно земля
                         Dim b As Location.Borders = ImpenetrableMeshGen.NearestXY(i, j, m.xSize, m.ySize, 1)
                         For x As Integer = b.minX To b.maxX Step 1
                             For y As Integer = b.minY To b.maxY Step 1
-                                If Not m.board(x, y).passability.isBorder And Not HaveToBeGround(x, y) Then
-                                    WaterAmount += 1
-                                    If m.board(i, j).surface.isWater Then
-                                        Watered += 1
-                                    Else
-                                        freeCell(i, j) = True
+                                HaveToBeGround(x, y) = True
+                            Next y
+                        Next x
+                    End If
+                    'под лесом и дорогами не должно быть воды
+                    If m.board(i, j).surface.isForest Or m.board(i, j).surface.isRoad Then HaveToBeGround(i, j) = True
+                Next j
+            Next i
+            If m.symmID > -1 Then
+                'применяем операции симметрии, если надо
+                For i As Integer = 0 To m.xSize Step 1
+                    For j As Integer = 0 To m.ySize Step 1
+                        If HaveToBeGround(i, j) Then
+                            Dim pp() As Point = owner.symm.ApplySymm(New Point(i, j), settMap.nRaces, m, 1)
+                            For k As Integer = 0 To UBound(pp) Step 1
+                                Dim tx As Integer = pp(k).X
+                                Dim ty As Integer = pp(k).Y
+                                HaveToBeGround(tx, ty) = True
+                            Next k
+                        End If
+                    Next j
+                Next i
+            End If
+        End Sub
+
+        Public Function WaterAmountCalc(ByRef loc As Location, ByRef freeCell(,) As Boolean, Optional ByVal locationBorderTolerance As Integer = 0) As Integer
+            ReDim freeCell(m.xSize, m.ySize)
+            Dim WaterAmount, Watered As Integer
+            Dim locationFilter, surfaceFilter As Boolean
+            Dim b As Location.Borders
+            Dim p As Point
+            For i As Integer = 0 To m.xSize Step 1
+                For j As Integer = 0 To m.ySize Step 1
+                    p = New Point(i, j)
+                    locationFilter = False
+                    b = ImpenetrableMeshGen.NearestXY(i, j, m.xSize, m.ySize, locationBorderTolerance)
+                    For x As Integer = b.minX To b.maxX Step 1
+                        For y As Integer = b.minY To b.maxY Step 1
+                            If m.board(x, y).locID(0) = loc.ID And Not owner.wpCommon.HaveToBeGround(x, y) AndAlso p.Dist(x, y) <= locationBorderTolerance Then
+                                locationFilter = True
+                                Exit For
+                            End If
+                        Next y
+                        If locationFilter Then Exit For
+                    Next x
+                    If locationFilter Then
+                        If m.board(i, j).passability.isBorder Then
+                            surfaceFilter = False
+                            b = ImpenetrableMeshGen.NearestXY(i, j, m.xSize, m.ySize, 1)
+                            For x As Integer = b.minX To b.maxX Step 1
+                                For y As Integer = b.minY To b.maxY Step 1
+                                    If Not m.board(x, y).passability.isBorder And Not owner.wpCommon.HaveToBeGround(x, y) Then
+                                        surfaceFilter = True
+                                        Exit For
                                     End If
-                                    x = b.maxX
-                                    y = b.maxY
+                                Next y
+                                If surfaceFilter Then Exit For
+                            Next x
+                            If surfaceFilter Then
+                                If m.board(i, j).locID(0) = loc.ID Then WaterAmount += 1
+                                If m.board(i, j).surface.isWater Then
+                                    If m.board(i, j).locID(0) = loc.ID Then Watered += 1
+                                Else
+                                    freeCell(i, j) = True
+                                End If
+                            End If
+                        Else
+                            If m.board(i, j).locID(0) = loc.ID Then WaterAmount += 1
+                            If m.board(i, j).surface.isWater Then
+                                If m.board(i, j).locID(0) = loc.ID Then Watered += 1
+                            Else
+                                freeCell(i, j) = True
+                            End If
+                        End If
+                    End If
+                Next j
+            Next i
+            WaterAmount = CInt(Math.Floor(WaterAmount * Math.Min(settMap.WaterAmount, 1))) - Watered
+            Return WaterAmount
+        End Function
+
+        Public Function MakeWaterSufaceTestArray(ByRef pos As Point, ByRef w As WaterPlacer_2.WaterBlock) As Boolean(,)
+            Dim result(m.xSize, m.ySize) As Boolean
+            For y As Integer = 0 To m.ySize Step 1
+                For x As Integer = 0 To m.xSize Step 1
+                    result(x, y) = m.board(x, y).surface.isWater
+                Next x
+            Next y
+            For y As Integer = 0 To w.yMax Step 1
+                For x As Integer = 0 To w.xMax Step 1
+                    If w.GetValue(x, y) Then
+                        If m.symmID > -1 Then
+                            Dim pp() As Point = owner.symm.ApplySymm(New Point(pos.X + x, pos.Y + y), settMap.nRaces, m, 1)
+                            For k As Integer = 0 To UBound(pp) Step 1
+                                Dim tx As Integer = pp(k).X
+                                Dim ty As Integer = pp(k).Y
+                                result(tx, ty) = True
+                            Next k
+                        Else
+                            result(pos.X + x, pos.Y + y) = True
+                        End If
+                    End If
+                Next x
+            Next y
+            Return result
+        End Function
+
+        Public Sub SetWaterCellSymm(ByRef x As Integer, ByRef y As Integer, ByRef freeCell(,) As Boolean, ByRef WaterAmount As Integer)
+            If m.symmID > -1 Then
+                Dim changeWaterAmount As Boolean = True
+                Dim pp() As Point = owner.symm.ApplySymm(New Point(x, y), settMap.nRaces, m, 1)
+                For k As Integer = 0 To UBound(pp) Step 1
+                    Dim tx As Integer = pp(k).X
+                    Dim ty As Integer = pp(k).Y
+                    Call SetWaterCell(tx, ty, freeCell, WaterAmount, changeWaterAmount)
+                    changeWaterAmount = False
+                Next k
+            Else
+                Call SetWaterCell(x, y, freeCell, WaterAmount, True)
+            End If
+        End Sub
+        Private Sub SetWaterCell(ByRef x As Integer, ByRef y As Integer, ByRef freeCell(,) As Boolean, ByRef WaterAmount As Integer, ByVal changeWaterAmount As Boolean)
+            If Not IsNothing(freeCell) Then freeCell(x, y) = False
+            If Not m.board(x, y).surface.isWater Then
+                m.board(x, y).surface.isWater = True
+                If changeWaterAmount Then WaterAmount -= 1
+            End If
+        End Sub
+        Public Sub SetGroundCellSymm(ByRef x As Integer, ByRef y As Integer, ByRef WaterAmount As Integer)
+            If m.symmID > -1 Then
+                Dim changeWaterAmount As Boolean = True
+                Dim pp() As Point = owner.symm.ApplySymm(New Point(x, y), settMap.nRaces, m, 1)
+                For k As Integer = 0 To UBound(pp) Step 1
+                    Dim tx As Integer = pp(k).X
+                    Dim ty As Integer = pp(k).Y
+                    Call SetGroundCell(tx, ty, WaterAmount, changeWaterAmount)
+                    changeWaterAmount = False
+                Next k
+            Else
+                Call SetGroundCell(x, y, WaterAmount, True)
+            End If
+        End Sub
+        Private Sub SetGroundCell(ByRef x As Integer, ByRef y As Integer, ByRef WaterAmount As Integer, ByVal changeWaterAmount As Boolean)
+            If m.board(x, y).surface.isWater Then
+                m.board(x, y).surface.isWater = False
+                If changeWaterAmount Then WaterAmount += 1
+            End If
+        End Sub
+
+        Public Sub MakeRuinsWatered(ByRef loc As Location, ByRef WaterAmount As Integer)
+            Dim chance As Double = 0.1 + settMap.WaterAmount * 0.4
+            Dim makeWatered As Boolean
+            For i As Integer = 0 To m.xSize Step 1
+                For j As Integer = 0 To m.ySize Step 1
+                    If m.board(i, j).locID(0) = loc.ID And m.board(i, j).mapObject.objectID = DefMapObjects.Types.Ruins Then
+                        makeWatered = (owner.rndgen.PRand(0, 1) < chance)
+
+                        Dim d As Integer = 1
+                        Dim x1 As Integer = Math.Max(i - d, 0)
+                        Dim x2 As Integer = Math.Min(i + owner.imp.ActiveObjects(m.board(i, j).mapObject.objectID).Size + d - 1, m.xSize)
+                        Dim y1 As Integer = Math.Max(j - d, 0)
+                        Dim y2 As Integer = Math.Min(j + owner.imp.ActiveObjects(m.board(i, j).mapObject.objectID).Size + d - 1, m.ySize)
+                        For x As Integer = x1 To x2 Step 1
+                            For y As Integer = y1 To y2 Step 1
+                                If makeWatered Then
+                                    Call SetWaterCellSymm(x, y, Nothing, WaterAmount)
+                                Else
+                                    Call SetGroundCellSymm(x, y, WaterAmount)
                                 End If
                             Next y
                         Next x
-                    Else
-                        WaterAmount += 1
-                        If m.board(i, j).surface.isWater Then
-                            Watered += 1
-                        Else
-                            freeCell(i, j) = True
-                        End If
-                    End If
-                End If
-            Next j
-        Next i
-        WaterAmount = CInt(Math.Floor(WaterAmount * Math.Min(settMap.WaterAmount, 1))) - Watered
-        Return WaterAmount
-    End Function
-    Private Function SelectLakePlace(ByRef AllIds As List(Of Integer), ByRef points() As Point, ByRef m As Map, ByRef lakeDist As Double) As Integer
-        Dim IDs As New List(Of Integer)
-        Dim add As Boolean
-        Dim b As Location.Borders
-        For p As Integer = 0 To 1 Step 1
-            For Each i As Integer In AllIds
-                add = True
-                b = ImpenetrableMeshGen.NearestXY(points(i), m, CInt(lakeDist))
-                For x As Integer = b.minX To b.maxX Step 1
-                    For y As Integer = b.minY To b.maxY Step 1
-                        If m.board(x, y).surface.isWater AndAlso (p = 1 OrElse points(i).SqDist(x, y) < lakeDist * lakeDist) Then
-                            add = False
-                            x = b.maxX
-                            y = b.maxY
-                        End If
-                    Next y
-                Next x
-                If add Then IDs.Add(i)
-            Next i
-            If IDs.Count > 0 Then Exit For
-        Next p
-        If IDs.Count = 0 Then Return -1
-        Return comm.RandomSelection(IDs, True)
-    End Function
-    Private Sub PlaceLake(ByRef AllIds As List(Of Integer), ByRef points() As Point, ByRef m As Map, ByRef settMap As Map.SettingsMap, _
-                          ByRef selected As Integer, ByRef freeCell(,) As Boolean, ByRef lake As Location, ByRef WaterAmount As Integer, ByRef HaveToBeGround(,) As Boolean)
-        'размещаем эллиптическое озеро
-        AllIds.Remove(selected)
-        lake.pos = points(selected)
-        Dim waterTiles, coastalTile, internalLakeTile As New List(Of Point)
-        For i As Integer = 0 To m.xSize Step 1
-            For j As Integer = 0 To m.ySize Step 1
-                If Not HaveToBeGround(i, j) AndAlso lake.IsInside(i, j) Then
-                    waterTiles.Add(New Point(i, j))
-                    Call SetWaterCellSymm(i, j, m, freeCell, WaterAmount, settMap)
-                End If
-            Next j
-        Next i
 
-        'делаем берег неровным
-        For L As Integer = 0 To 1 Step 1
-            For Each p As Point In waterTiles
-                If m.board(p.X, p.Y).surface.isWater Then
-                    Dim b As Location.Borders = ImpenetrableMeshGen.NearestXY(p, m, 1)
+                        x1 = Math.Max(x1 - 1, 0)
+                        x2 = Math.Min(x2 + 1, m.xSize)
+                        y1 = Math.Max(y1 - 1, 0)
+                        y2 = Math.Min(y2 + 1, m.ySize)
+                        For x As Integer = x1 To x2 Step 1
+                            For y As Integer = y1 To y2 Step 1
+                                If (x = x1 Or x = x2 Or y = y1 Or y = y2) And Not ((x = x1 Or x = x2) And (y = y1 Or y = y2)) And Not m.board(x, y).passability.isAttended Then
+                                    If owner.rndgen.PRand(0, 1) < 0.45 Then
+                                        If makeWatered Then
+                                            Call SetWaterCellSymm(x, y, Nothing, WaterAmount)
+                                        Else
+                                            Call SetGroundCellSymm(x, y, WaterAmount)
+                                        End If
+                                    End If
+                                End If
+                            Next y
+                        Next x
+                    End If
+                Next j
+            Next i
+        End Sub
+
+    End Class
+    Public Class WaterPlacer_1
+        Public WaterAmountSum As Integer = 0
+        Public owner As WaterGen
+        Public m As Map
+        Public settMap As Map.SettingsMap
+
+        Public Sub New(ByRef w As WaterGen, ByRef myMap As Map, ByRef sM As Map.SettingsMap)
+            owner = w
+            m = myMap
+            settMap = sM
+        End Sub
+
+        Public Sub PlaceWater(ByRef loc As Location)
+            Dim lake As Location
+            Dim WaterLocSettings As New Map.SettingsLoc With {.AverageRadius = CInt(0.3 * Math.Sqrt(loc.gASize * loc.gBSize) * settMap.WaterAmount), _
+                                                              .maxRadiusDispersion = 0.25, _
+                                                              .maxEccentricityDispersion = 0.35}
+            Dim freeCell(,) As Boolean = Nothing
+            Dim WaterAmount As Integer = owner.wpCommon.WaterAmountCalc(loc, freeCell)
+            Dim fpInfo As New FreePointsInfo(freeCell)
+
+            Do While WaterAmount > owner.minLocationRadiusAtAll * owner.minLocationRadiusAtAll
+                lake = Location.GenLocSize(WaterLocSettings, 0, owner.rndgen, owner.minLocationRadiusAtAll)
+                Dim selected As Integer = SelectLakePlace(fpInfo, 0.5 * WaterLocSettings.AverageRadius)
+                If selected < 0 Then Exit Do
+                Call PlaceLake(fpInfo, selected, lake, WaterAmount)
+            Loop
+
+            Call owner.wpCommon.MakeRuinsWatered(loc, WaterAmount)
+            WaterAmountSum += WaterAmount
+        End Sub
+        Private Function SelectLakePlace(ByRef fpInfo As FreePointsInfo, ByRef lakeDist As Double) As Integer
+            Dim IDs As New List(Of Integer)
+            Dim add As Boolean
+            Dim b As Location.Borders
+            For p As Integer = 0 To 1 Step 1
+                For Each i As Integer In fpInfo.IDs
+                    add = True
+                    b = ImpenetrableMeshGen.NearestXY(fpInfo.points(i), m, CInt(lakeDist))
                     For x As Integer = b.minX To b.maxX Step 1
                         For y As Integer = b.minY To b.maxY Step 1
-                            If Not m.board(x, y).surface.isWater Then
-                                coastalTile.Add(p)
+                            If m.board(x, y).surface.isWater AndAlso (p = 1 OrElse fpInfo.points(i).SqDist(x, y) < lakeDist * lakeDist) Then
+                                add = False
                                 x = b.maxX
                                 y = b.maxY
                             End If
                         Next y
                     Next x
-                End If
+                    If add Then IDs.Add(i)
+                Next i
+                If IDs.Count > 0 Then Exit For
             Next p
-            For Each p As Point In coastalTile
-                If rndgen.PRand(0, 1) < 0.25 - 0.1 * CDbl(L) Then
-                    Call SetGroundCellSymm(p.X, p.Y, m, settMap)
-                End If
-            Next p
-            coastalTile.Clear()
-        Next L
+            If IDs.Count = 0 Then Return -1
+            Return owner.comm.RandomSelection(IDs, True)
+        End Function
+        Private Sub PlaceLake(ByRef fpInfo As FreePointsInfo, ByRef selected As Integer, ByRef lake As Location, ByRef WaterAmount As Integer)
+            'размещаем эллиптическое озеро
+            fpInfo.IDs.Remove(selected)
+            lake.pos = fpInfo.points(selected)
+            Dim waterTiles, coastalTile, internalLakeTile As New List(Of Point)
+            For i As Integer = 0 To m.xSize Step 1
+                For j As Integer = 0 To m.ySize Step 1
+                    If Not owner.wpCommon.HaveToBeGround(i, j) AndAlso lake.IsInside(i, j) Then
+                        waterTiles.Add(New Point(i, j))
+                        Call owner.wpCommon.SetWaterCellSymm(i, j, fpInfo.isFree, WaterAmount)
+                    End If
+                Next j
+            Next i
 
-        'размещем острова
-        Dim minIslandR As Integer = 2
-        Dim maxIslandR As Integer = 3
-        Dim threshold As Double = 1 - (1 - settMap.WaterAmount) / ((0.5 * (minIslandR + maxIslandR)) ^ 2)
-        Dim dD As Double = 0.05
-        For Each p As Point In waterTiles
-            If m.board(p.X, p.Y).surface.isWater Then
-                Dim maybe As Boolean = True
-                Dim b As Location.Borders = ImpenetrableMeshGen.NearestXY(p, m, 1)
-                For x As Integer = b.minX To b.maxX Step 1
-                    For y As Integer = b.minY To b.maxY Step 1
-                        If Not m.board(x, y).surface.isWater Then
-                            maybe = False
-                            x = b.maxX
-                            y = b.maxY
-                        End If
-                    Next y
-                Next x
-                If maybe AndAlso rndgen.PRand(0, 1) > threshold Then
-                    Dim R As Double = rndgen.PRand(CDbl(minIslandR), CDbl(maxIslandR))
+            'делаем берег неровным
+            For L As Integer = 0 To 1 Step 1
+                For Each p As Point In waterTiles
+                    If m.board(p.X, p.Y).surface.isWater Then
+                        Dim b As Location.Borders = ImpenetrableMeshGen.NearestXY(p, m, 1)
+                        For x As Integer = b.minX To b.maxX Step 1
+                            For y As Integer = b.minY To b.maxY Step 1
+                                If Not m.board(x, y).surface.isWater Then
+                                    coastalTile.Add(p)
+                                    x = b.maxX
+                                    y = b.maxY
+                                End If
+                            Next y
+                        Next x
+                    End If
+                Next p
+                For Each p As Point In coastalTile
+                    If owner.rndgen.PRand(0, 1) < 0.25 - 0.1 * CDbl(L) Then
+                        Call owner.wpCommon.SetGroundCellSymm(p.X, p.Y, WaterAmount)
+                    End If
+                Next p
+                coastalTile.Clear()
+            Next L
+
+            'размещем острова
+            Dim minIslandR As Integer = 2
+            Dim maxIslandR As Integer = 3
+            Dim threshold As Double = 1 - (1 - settMap.WaterAmount) / ((0.5 * (minIslandR + maxIslandR)) ^ 2)
+            Dim dD As Double = 0.05
+            For Each p As Point In waterTiles
+                If m.board(p.X, p.Y).surface.isWater Then
+                    Dim maybe As Boolean = True
+                    Dim b As Location.Borders = ImpenetrableMeshGen.NearestXY(p, m, 1)
                     For x As Integer = b.minX To b.maxX Step 1
                         For y As Integer = b.minY To b.maxY Step 1
-                            Dim d As Double = p.Dist(x, y)
-                            If m.board(x, y).surface.isWater AndAlso d < R Then
-                                If rndgen.PRand(0, R + 2 * dD) > d + dD Then
-                                    Call SetGroundCellSymm(x, y, m, settMap)
-                                End If
+                            If Not m.board(x, y).surface.isWater Then
+                                maybe = False
+                                x = b.maxX
+                                y = b.maxY
                             End If
                         Next y
                     Next x
-                End If
-            End If
-        Next p
-
-    End Sub
-    Private Sub SetWaterCellSymm(ByRef i As Integer, ByRef j As Integer, ByRef m As Map, ByRef freeCell(,) As Boolean, _
-                                 ByRef WaterAmount As Integer, ByRef settMap As Map.SettingsMap)
-        If m.symmID > -1 Then
-            Dim pp() As Point = symm.ApplySymm(New Point(i, j), settMap.nRaces, m, 1)
-            For k As Integer = 0 To UBound(pp) Step 1
-                Dim tx As Integer = pp(k).X
-                Dim ty As Integer = pp(k).Y
-                Call SetWaterCell(tx, ty, m, freeCell, WaterAmount)
-            Next k
-        Else
-            Call SetWaterCell(i, j, m, freeCell, WaterAmount)
-        End If
-    End Sub
-    Private Sub SetWaterCell(ByRef i As Integer, ByRef j As Integer, ByRef m As Map, ByRef freeCell(,) As Boolean, ByRef WaterAmount As Integer)
-        If Not IsNothing(freeCell) AndAlso freeCell(i, j) Then
-            freeCell(i, j) = False
-            WaterAmount -= 1
-        End If
-        m.board(i, j).surface.isWater = True
-    End Sub
-    Private Sub SetGroundCellSymm(ByRef i As Integer, ByRef j As Integer, ByRef m As Map, ByRef settMap As Map.SettingsMap)
-        If m.symmID > -1 Then
-            Dim pp() As Point = symm.ApplySymm(New Point(i, j), settMap.nRaces, m, 1)
-            For k As Integer = 0 To UBound(pp) Step 1
-                Dim tx As Integer = pp(k).X
-                Dim ty As Integer = pp(k).Y
-                m.board(tx, ty).surface.isWater = False
-            Next k
-        Else
-            m.board(i, j).surface.isWater = False
-        End If
-    End Sub
-
-    Private Sub MakeRuinsWatered(ByRef m As Map, ByRef loc As Location, ByRef settMap As Map.SettingsMap)
-        Dim chance As Double = 0.1 + settMap.WaterAmount * 0.4
-        Dim makeWatered As Boolean
-        For i As Integer = 0 To m.xSize Step 1
-            For j As Integer = 0 To m.ySize Step 1
-                If m.board(i, j).locID(0) = loc.ID And m.board(i, j).mapObject.objectID = DefMapObjects.Types.Ruins Then
-                    makeWatered = (rndgen.PRand(0, 1) < chance)
-
-                    Dim d As Integer = 1
-                    Dim x1 As Integer = Math.Max(i - d, 0)
-                    Dim x2 As Integer = Math.Min(i + imp.ActiveObjects(m.board(i, j).mapObject.objectID).Size + d - 1, m.xSize)
-                    Dim y1 As Integer = Math.Max(j - d, 0)
-                    Dim y2 As Integer = Math.Min(j + imp.ActiveObjects(m.board(i, j).mapObject.objectID).Size + d - 1, m.ySize)
-                    For x As Integer = x1 To x2 Step 1
-                        For y As Integer = y1 To y2 Step 1
-                            If makeWatered Then
-                                Call SetWaterCellSymm(x, y, m, Nothing, Nothing, settMap)
-                            Else
-                                Call SetGroundCellSymm(x, y, m, settMap)
-                            End If
-                        Next y
-                    Next x
-
-                    x1 = Math.Max(x1 - 1, 0)
-                    x2 = Math.Min(x2 + 1, m.xSize)
-                    y1 = Math.Max(y1 - 1, 0)
-                    y2 = Math.Min(y2 + 1, m.ySize)
-                    For x As Integer = x1 To x2 Step 1
-                        For y As Integer = y1 To y2 Step 1
-                            If (x = x1 Or x = x2 Or y = y1 Or y = y2) And Not ((x = x1 Or x = x2) And (y = y1 Or y = y2)) And Not m.board(x, y).passability.isAttended Then
-                                If rndgen.PRand(0, 1) < 0.45 Then
-                                    If makeWatered Then
-                                        Call SetWaterCellSymm(x, y, m, Nothing, Nothing, settMap)
-                                    Else
-                                        Call SetGroundCellSymm(x, y, m, settMap)
+                    If maybe AndAlso owner.rndgen.PRand(0, 1) > threshold Then
+                        Dim R As Double = owner.rndgen.PRand(CDbl(minIslandR), CDbl(maxIslandR))
+                        For x As Integer = b.minX To b.maxX Step 1
+                            For y As Integer = b.minY To b.maxY Step 1
+                                Dim d As Double = p.Dist(x, y)
+                                If m.board(x, y).surface.isWater AndAlso d < R Then
+                                    If owner.rndgen.PRand(0, R + 2 * dD) > d + dD Then
+                                        Call owner.wpCommon.SetGroundCellSymm(x, y, WaterAmount)
                                     End If
                                 End If
-                            End If
-                        Next y
-                    Next x
-                End If
-            Next j
-        Next i
-    End Sub
-
-    Private Sub Extend(ByRef m As Map, ByRef settMap As Map.SettingsMap, ByRef HaveToBeGround(,) As Boolean)
-        Dim n As Integer
-        Dim var As New List(Of Point)
-        For i As Integer = 0 To m.xSize Step 1
-            For j As Integer = 0 To m.ySize Step 1
-                If m.board(i, j).surface.isWater Then
-                    Dim b As Location.Borders = ImpenetrableMeshGen.NearestXY(i, j, m.xSize, m.ySize, 1)
-                    n = 0
-                    var.Clear()
-                    For x As Integer = b.minX To b.maxX Step 1
-                        For y As Integer = b.minY To b.maxY Step 1
-                            If x = i Or y = j Then
-                                If m.board(x, y).surface.isWater Then
-                                    n += 1
-                                Else
-                                    If (Not x = i Or Not y = j) And Not HaveToBeGround(x, y) Then var.Add(New Point(x, y))
-                                End If
-                            End If
-                        Next y
-                    Next x
-                    If n < 2 And var.Count > 0 Then
-                        n = rndgen.RndPos(var.Count, True) - 1
-                        Dim p As Point = var.Item(n)
-                        Call SetWaterCellSymm(p.X, p.Y, m, Nothing, Nothing, settMap)
+                            Next y
+                        Next x
                     End If
                 End If
-            Next j
-        Next i
-        For i As Integer = 0 To m.xSize Step 1
-            For j As Integer = 0 To m.ySize Step 1
-                If m.board(i, j).surface.isWater Then
-                    Dim b As Location.Borders = ImpenetrableMeshGen.NearestXY(i, j, m.xSize, m.ySize, 1)
-                    n = 0
-                    For x As Integer = b.minX To b.maxX Step 1
-                        For y As Integer = b.minY To b.maxY Step 1
-                            If x = i Or y = j Then
-                                If m.board(x, y).surface.isWater Then n += 1
+            Next p
+
+        End Sub
+
+        Public Sub Extend()
+            Dim n As Integer
+            Dim var As New List(Of Point)
+            For i As Integer = 0 To m.xSize Step 1
+                For j As Integer = 0 To m.ySize Step 1
+                    If m.board(i, j).surface.isWater Then
+                        Dim b As Location.Borders = ImpenetrableMeshGen.NearestXY(i, j, m.xSize, m.ySize, 1)
+                        n = 0
+                        var.Clear()
+                        For x As Integer = b.minX To b.maxX Step 1
+                            For y As Integer = b.minY To b.maxY Step 1
+                                If x = i Or y = j Then
+                                    If m.board(x, y).surface.isWater Then
+                                        n += 1
+                                    Else
+                                        If (Not x = i Or Not y = j) And Not owner.wpCommon.HaveToBeGround(x, y) Then var.Add(New Point(x, y))
+                                    End If
+                                End If
+                            Next y
+                        Next x
+                        If n < 2 And var.Count > 0 Then
+                            n = owner.rndgen.RndPos(var.Count, True) - 1
+                            Dim p As Point = var.Item(n)
+                            Call owner.wpCommon.SetWaterCellSymm(p.X, p.Y, Nothing, WaterAmountSum)
+                        End If
+                    End If
+                Next j
+            Next i
+            For i As Integer = 0 To m.xSize Step 1
+                For j As Integer = 0 To m.ySize Step 1
+                    If m.board(i, j).surface.isWater Then
+                        Dim b As Location.Borders = ImpenetrableMeshGen.NearestXY(i, j, m.xSize, m.ySize, 1)
+                        n = 0
+                        For x As Integer = b.minX To b.maxX Step 1
+                            For y As Integer = b.minY To b.maxY Step 1
+                                If x = i Or y = j Then
+                                    If m.board(x, y).surface.isWater Then n += 1
+                                End If
+                            Next y
+                        Next x
+                        If n < 2 Then Call owner.wpCommon.SetGroundCellSymm(i, j, WaterAmountSum)
+                    End If
+                Next j
+            Next i
+        End Sub
+
+    End Class
+    Public Class WaterPlacer_2
+        Public owner As WaterGen
+        Public m As Map
+        Public settMap As Map.SettingsMap
+
+        Private wBlocks, objWBlocks, unacceptWBlocks As Dictionary(Of String, WaterBlock)
+
+        Public Class WaterBlock
+            ''' <summary>
+            ''' Блок в текстовом виде
+            ''' </summary>
+            Public ReadOnly key As String
+            ''' <summary>
+            ''' Должен ли быть тайл водным.
+            ''' (row_index, column_index)
+            ''' </summary>
+            Private ReadOnly isWater(,) As Boolean
+            ''' <summary>
+            ''' Количество воды
+            ''' </summary>
+            Public ReadOnly waterAmount As Integer
+
+            Public ReadOnly xMax, yMax As Integer
+
+            Public Sub New(ByRef k As String, ByVal isObjBlock As Boolean)
+                key = k
+                isWater = StrToBool(k)
+                xMax = UBound(isWater, 2)
+                yMax = UBound(isWater, 1)
+                waterAmount = CalculateWaterAmount(isObjBlock)
+                If waterAmount = 0 Then
+                    Dim txt As String = "No water in block" & vbNewLine & k
+                    MsgBox(txt)
+                    Throw New Exception(txt)
+                End If
+            End Sub
+
+            Public Sub SetValue(ByRef x As Integer, ByRef y As Integer, ByRef v As Boolean)
+                isWater(y, x) = v
+            End Sub
+            Public Function GetValue(ByRef x As Integer, ByRef y As Integer) As Boolean
+                Return isWater(y, x)
+            End Function
+
+            Private Function CalculateWaterAmount(ByVal isObjBlock As Boolean) As Integer
+                Dim w As Integer
+                If isObjBlock Then
+                    For Each u As Integer In {xMax, yMax}
+                        If Not (u Mod 2) = 0 Then
+                            Dim txt As String = "Unexpected block dimension" & vbNewLine & key
+                            MsgBox(txt)
+                            Throw New Exception(txt)
+                        End If
+                    Next u
+                    Dim c1 As Integer = CInt(xMax / 2)
+                    Dim c2 As Integer = CInt(yMax / 2)
+
+                    For i As Integer = 0 To xMax Step 1
+                        For j As Integer = 0 To yMax Step 1
+                            If Not (i >= c1 - 1 And i <= c1 + 1 And j >= c2 - 1 And j <= c2 + 1) And GetValue(i, j) Then
+                                w += 1
                             End If
-                        Next y
+                        Next j
+                    Next i
+                Else
+                    For Each v As Boolean In isWater
+                        If v Then w += 1
+                    Next v
+                End If
+                Return w
+            End Function
+
+            Public Shared Function ApplySymmetry(ByRef v(,) As Boolean) As Boolean()(,)
+                Dim out(4 * 2 * 2 - 1)(,) As Boolean
+                out(0) = CType(v.Clone, Boolean(,))
+                Dim n As Integer = 0
+                For i As Integer = 1 To 3 Step 1
+                    n += 1
+                    out(n) = Rotate90(out(n - 1))
+                Next i
+                Dim m As Integer
+                For p As Integer = 0 To 1 Step 1
+                    m = n
+                    For i As Integer = 0 To m Step 1
+                        n += 1
+                        out(n) = Reflection(out(i), p = 0)
+                    Next i
+                Next p
+                Return out
+            End Function
+            Private Shared Function Rotate90(ByRef v(,) As Boolean) As Boolean(,)
+                Dim u1 As Integer = UBound(v, 1)
+                Dim u2 As Integer = UBound(v, 2)
+                Dim r(u2, u1) As Boolean
+                For i As Integer = 0 To u1 Step 1
+                    For j As Integer = 0 To u2 Step 1
+                        r(j, u1 - i) = v(i, j)
+                    Next j
+                Next i
+                Return r
+            End Function
+            Private Shared Function Reflection(ByRef v(,) As Boolean, ByRef horisontal As Boolean) As Boolean(,)
+                Dim u1 As Integer = UBound(v, 1)
+                Dim u2 As Integer = UBound(v, 2)
+                Dim r(u1, u2) As Boolean
+                If horisontal Then
+                    For i As Integer = 0 To u1 Step 1
+                        For j As Integer = 0 To u2 Step 1
+                            r(i, u2 - j) = v(i, j)
+                        Next j
+                    Next i
+                Else
+                    For i As Integer = 0 To u1 Step 1
+                        For j As Integer = 0 To u2 Step 1
+                            r(u1 - i, j) = v(i, j)
+                        Next j
+                    Next i
+                End If
+                Return r
+            End Function
+
+            Public Shared Function StrToBool(ByRef blockKey As String) As Boolean(,)
+                Dim lines() As String = blockKey.Split(Chr(10))
+                Dim v(UBound(lines), lines(0).Length - 1) As Boolean
+                For i As Integer = 0 To UBound(lines) Step 1
+                    If Not lines(i).Length = lines(0).Length Then
+                        Dim txt As String = "Unexpected length of line " & i + 1 & " in block" & vbNewLine & blockKey
+                        MsgBox(txt)
+                        Throw New Exception(txt)
+                    End If
+                    For j As Integer = 0 To lines(i).Length - 1 Step 1
+                        v(i, j) = StrToBool(lines(i).Substring(j, 1), blockKey)
+                    Next j
+                Next i
+                Return v
+            End Function
+            Public Shared Function StrToBool(ByRef v As String, ByRef blockKey As String) As Boolean
+                If v.ToUpper = "W" Then
+                    Return True
+                ElseIf v.ToUpper = "G" Then
+                    Return False
+                Else
+                    Dim txt As String = "Unexpected symbol " & v & " in block" & vbNewLine & blockKey
+                    MsgBox(txt)
+                    Throw New Exception(txt)
+                End If
+            End Function
+            Public Shared Function BoolToStr(ByRef v(,) As Boolean) As String
+                Dim k As String = ""
+                For i As Integer = 0 To UBound(v, 1) Step 1
+                    If i > 0 Then k &= Chr(10)
+                    For j As Integer = 0 To UBound(v, 2) Step 1
+                        k &= BoolToStr(v(i, j))
+                    Next j
+                Next i
+                Return k
+            End Function
+            Public Shared Function BoolToStr(ByRef v As Boolean) As String
+                If v Then
+                    Return "W"
+                Else
+                    Return "G"
+                End If
+            End Function
+
+        End Class
+
+        Public Sub New(ByRef w As WaterGen, ByRef myMap As Map, ByRef sM As Map.SettingsMap)
+            owner = w
+            m = myMap
+            settMap = sM
+            wBlocks = ReadWaterBlocks(owner.comm.defValues.WaterBlocksCommon, False)
+            objWBlocks = ReadWaterBlocks(owner.comm.defValues.WaterBlocks3x3Objects, True)
+            unacceptWBlocks = ReadWaterBlocks(owner.comm.defValues.WaterBlocksUnacceptable, False)
+        End Sub
+        Private Function ReadWaterBlocks(ByVal blocksText As String, ByVal isObjBlock As Boolean) As Dictionary(Of String, WaterBlock)
+            Dim result As New Dictionary(Of String, WaterBlock)
+            Dim lines() As String = owner.comm.TxtSplit(blocksText)
+            Dim key As String = ""
+            For i As Integer = 0 To UBound(lines) Step 1
+                If lines(i).StartsWith("_") Then
+                    Call AddNewBlock(key, result, isObjBlock)
+                    key = ""
+                Else
+                    If Not key = "" Then key &= Chr(10)
+                    key &= lines(i).ToUpper
+                End If
+            Next i
+            Call AddNewBlock(key, result, isObjBlock)
+            Return result
+        End Function
+        Private Sub AddNewBlock(ByRef key As String, ByRef dest As Dictionary(Of String, WaterBlock), ByVal isObjBlock As Boolean)
+            If key = "" Then Exit Sub
+            If dest.ContainsKey(key) Then Exit Sub
+            Dim k As String
+            Dim s()(,) As Boolean = WaterBlock.ApplySymmetry(WaterBlock.StrToBool(key))
+            For i As Integer = 0 To UBound(s) Step 1
+                k = WaterBlock.BoolToStr(s(i))
+                If Not dest.ContainsKey(k) Then dest.Add(k, New WaterBlock(k, isObjBlock))
+            Next i
+        End Sub
+
+        Public Sub PlaceWater(ByRef loc As Location)
+            'определяем, сколько может быть воды в локации, затем если можем, с каким-то шансом добавляем воду под торговцев/руины
+            'если еще можем разместить воду, то добавляем блоки
+            Dim freeCell(,) As Boolean = Nothing
+            Dim WaterAmount As Integer = owner.wpCommon.WaterAmountCalc(loc, freeCell, 3)
+            Dim fpInfo As New FreePointsInfo(freeCell)
+
+            Call AddWaterToAttendedObjects(loc, fpInfo, WaterAmount)
+            Call AddWaterCommon(loc, fpInfo, WaterAmount)
+        End Sub
+
+        Private Sub AddWaterToAttendedObjects(ByVal loc As Location, ByVal fpInfo As FreePointsInfo, ByRef WaterAmount As Integer)
+            Dim chance As Double = 0.1 + settMap.WaterAmount * 0.9
+            Dim pList As New List(Of Point)
+            For j As Integer = 0 To m.ySize Step 1
+                For i As Integer = 0 To m.xSize Step 1
+                    If m.board(i, j).locID(0) = loc.ID _
+                    AndAlso owner.waterAttendedObj.ContainsKey(m.board(i, j).mapObject.objectID) Then
+                        'не проверяем расы, т.к. они определяются где-то после добавления воды
+                        'AndAlso ContainsAny(owner.waterAttendedObj.Item(m.board(i, j).mapObject.objectID), m.board(i, j).mapObject.objRace) Then
+                        If owner.rndgen.RndDblFast(0, 1) <= chance Then pList.Add(New Point(i, j))
+                    End If
+                Next i
+            Next j
+            If pList.Count = 0 Then Exit Sub
+            Dim HaveToBeGround_bak(,) As Boolean = CType(owner.wpCommon.HaveToBeGround.Clone, Boolean(,))
+            Dim isFree_bak(,) As Boolean = CType(fpInfo.isFree.Clone, Boolean(,))
+            Dim objID As Integer
+            Dim possibleWaterPlaces As New Dictionary(Of String, Integer)
+
+            For Each p As Point In pList
+                owner.wpCommon.HaveToBeGround = CType(HaveToBeGround_bak.Clone, Boolean(,))
+                fpInfo.isFree = CType(isFree_bak.Clone, Boolean(,))
+
+                objID = m.board(p.X, p.Y).mapObject.objectID
+                Dim xb1 As Integer = p.X - owner.imp.ActiveObjects(objID).dxy
+                Dim xb2 As Integer = xb1 + UBound(owner.imp.ObjectBlank(objID), 1)
+                Dim yb1 As Integer = p.Y - owner.imp.ActiveObjects(objID).dxy
+                Dim yb2 As Integer = yb1 + UBound(owner.imp.ObjectBlank(objID), 2)
+                For y As Integer = yb1 To yb2 Step 1
+                    For x As Integer = xb1 To xb2 Step 1
+                        If owner.imp.ObjectBlank(objID)(x - xb1, y - yb1).passability.isAttended _
+                        Or owner.imp.ObjectBlank(objID)(x - xb1, y - yb1).passability.isPenetrable Then
+                            owner.wpCommon.HaveToBeGround(x, y) = False
+                            fpInfo.isFree(x, y) = True
+                        End If
                     Next x
-                    If n < 2 Then Call SetGroundCellSymm(i, j, m, settMap)
+                Next y
+
+                possibleWaterPlaces.Clear()
+                Dim keys() As String = objWBlocks.Keys.ToArray
+                Dim addsWaterAmount(UBound(keys)) As Integer
+                Dim pWaterAmount As Integer = WaterAmount
+                Dim pp As Point = p
+                Parallel.For(0, keys.Length, _
+                 Sub(i As Integer)
+                     Dim pos As Point = ObjectWaterPos(pp, objID, GetWaterBlock(keys(i), True))
+                     addsWaterAmount(i) = CanAddWatherAmount(loc, fpInfo, pWaterAmount, pos, keys(i), True, True)
+                 End Sub)
+
+                For i As Integer = 0 To UBound(keys) Step 1
+                    If addsWaterAmount(i) > 0 Then
+                        Dim pos As Point = ObjectWaterPos(p, objID, GetWaterBlock(keys(i), True))
+                        possibleWaterPlaces.Add(keys(i) & "_" & pos.X & "_" & pos.Y, addsWaterAmount(i))
+                    End If
+                Next i
+                If possibleWaterPlaces.Count > 0 Then
+                    Dim idsArray() As String = possibleWaterPlaces.Keys.ToArray
+                    Dim ids As List(Of Integer) = WaterGen.FreePointsInfo.MakeIDsList(0, UBound(idsArray))
+                    Dim weight() As Double = MakeWeight(possibleWaterPlaces, idsArray, WaterAmount)
+                    Dim selected As Integer = owner.comm.RandomSelection(ids, weight, True, True)
+                    Dim k() As String = idsArray(selected).Split(CChar("_"))
+                    Dim key As String = k(0)
+                    Dim x As Integer = CInt(k(1))
+                    Dim y As Integer = CInt(k(2))
+                    Call AddWater(WaterAmount, key, x, y, True)
+                End If
+            Next p
+            owner.wpCommon.HaveToBeGround = CType(HaveToBeGround_bak.Clone, Boolean(,))
+            fpInfo.isFree = CType(isFree_bak.Clone, Boolean(,))
+        End Sub
+        Private Function ObjectWaterPos(ByRef p As Point, ByRef objID As Integer, ByRef w As WaterBlock) As Point
+            Return New Point(p.X - CInt((w.xMax + 1 - owner.imp.ActiveObjects(objID).Size) / 2), _
+                             p.Y - CInt((w.yMax + 1 - owner.imp.ActiveObjects(objID).Size) / 2))
+        End Function
+        Private Function ContainsAny(ByRef L1 As List(Of Integer), ByRef L2 As List(Of Integer)) As Boolean
+            If L1.Count >= L2.Count Then
+                For Each i As Integer In L2
+                    If L1.Contains(i) Then Return True
+                Next i
+            Else
+                For Each i As Integer In L1
+                    If L2.Contains(i) Then Return True
+                Next i
+            End If
+            Return False
+        End Function
+
+        Private Sub AddWaterCommon(ByVal loc As Location, ByVal fpInfo As FreePointsInfo, ByRef WaterAmount As Integer)
+            Dim possibleWaterPlaces As New Dictionary(Of String, Integer)
+            possibleWaterPlaces.Add("---", 0)
+            Dim addsWaterAmount(UBound(fpInfo.points)), pWaterAmount As Integer
+            Dim pKey As String
+            Do While WaterAmount > 0 And possibleWaterPlaces.Count > 0
+                possibleWaterPlaces.Clear()
+                For Each k As String In wBlocks.Keys
+                    pKey = k
+                    pWaterAmount = WaterAmount
+                    Parallel.For(0, fpInfo.points.Length, _
+                     Sub(i As Integer)
+                         addsWaterAmount(i) = CanAddWatherAmount(loc, fpInfo, pWaterAmount, fpInfo.points(i), pKey, False)
+                     End Sub)
+                    For i As Integer = 0 To UBound(fpInfo.points) Step 1
+                        If addsWaterAmount(i) > 0 Then
+                            possibleWaterPlaces.Add(k & "_" & fpInfo.points(i).X & "_" & fpInfo.points(i).Y, addsWaterAmount(i))
+                        End If
+                    Next i
+                Next k
+                If possibleWaterPlaces.Count > 0 Then
+                    Dim idsArray() As String = possibleWaterPlaces.Keys.ToArray
+                    Dim ids As List(Of Integer) = WaterGen.FreePointsInfo.MakeIDsList(0, UBound(idsArray))
+                    Dim weight() As Double = MakeWeight(possibleWaterPlaces, idsArray, WaterAmount)
+                    Dim selected As Integer = owner.comm.RandomSelection(ids, weight, True, True)
+                    Dim k() As String = idsArray(selected).Split(CChar("_"))
+                    Dim key As String = k(0)
+                    Dim x As Integer = CInt(k(1))
+                    Dim y As Integer = CInt(k(2))
+                    Call AddWater(WaterAmount, key, x, y, False)
+                End If
+            Loop
+        End Sub
+        Private Function MakeWeight(ByRef possibleWaterPlaces As Dictionary(Of String, Integer), ByRef idsArray() As String, ByRef WaterAmount As Integer) As Double()
+            Dim weight(UBound(idsArray)) As Double
+            Dim w As Integer
+            For i As Integer = 0 To UBound(idsArray) Step 1
+                w = possibleWaterPlaces.Item(idsArray(i))
+                weight(i) = w ^ 2
+                If w > WaterAmount Then weight(i) /= (w - WaterAmount)
+            Next i
+            Return weight
+        End Function
+        Private Function GetWaterBlock(ByRef key As String, ByVal useObjWBlocks As Boolean) As WaterBlock
+            If useObjWBlocks Then
+                Return objWBlocks.Item(key)
+            Else
+                Return wBlocks.Item(key)
+            End If
+        End Function
+        Private Function CanAddWatherAmount(ByRef loc As Location, ByRef fpInfo As FreePointsInfo, ByRef WaterAmount As Integer, _
+                                            ByRef p As Point, ByRef key As String, ByVal useObjWBlocks As Boolean, _
+                                            Optional ByVal IgnoreSize As Boolean = False) As Integer
+            Dim w As WaterBlock = GetWaterBlock(key, useObjWBlocks)
+
+            Dim x2 As Integer = p.X + w.xMax
+            Dim y2 As Integer = p.Y + w.yMax
+            If Not IgnoreSize Then
+                If p.X < 0 Then Return 0
+                If p.Y < 0 Then Return 0
+                If x2 > fpInfo.xMax Then Return 0
+                If y2 > fpInfo.yMax Then Return 0
+            End If
+
+            Dim hasLocID As Boolean = False
+            Dim hasGroundTileToWater As Boolean = False
+            Dim addsWaterAmount As Integer = 0
+            For j As Integer = p.Y To y2 Step 1
+                If Not IgnoreSize Or YFilter(j) Then
+                    For i As Integer = p.X To x2 Step 1
+                        If Not IgnoreSize Or XFilter(i) Then
+                            If w.GetValue(i - p.X, j - p.Y) Then
+                                If owner.wpCommon.HaveToBeGround(i, j) Then Return 0
+                                If Not m.board(i, j).passability.isBorder And Not fpInfo.isFree(i, j) Then Return 0
+                                If m.board(i, j).locID(0) = loc.ID Then hasLocID = True
+                                If Not m.board(i, j).surface.isWater And fpInfo.isFree(i, j) Then
+                                    hasGroundTileToWater = True
+                                    addsWaterAmount += 1
+                                End If
+                            End If
+                        End If
+                    Next i
                 End If
             Next j
-        Next i
-    End Sub
+            If Not hasLocID Then Return 0
+            If Not hasGroundTileToWater Then Return 0
+            If WaterAmount + 2 < addsWaterAmount Then Return 0
+            If addsWaterAmount > 0 Then
+                Dim wTest(,) As Boolean = owner.wpCommon.MakeWaterSufaceTestArray(p, w)
+                For Each u As WaterBlock In unacceptWBlocks.Values
+                    If TestByUnacceptableBlock(wTest, u, w, p) Then Return 0
+                Next u
+            End If
+            Return addsWaterAmount
+        End Function
+        Private Function XFilter(ByRef x As Integer) As Boolean
+            Return (x >= 0 And x <= m.xSize)
+        End Function
+        Private Function YFilter(ByRef y As Integer) As Boolean
+            Return (y >= 0 And y <= m.ySize)
+        End Function
+        Private Function TestByUnacceptableBlock(ByRef wTest(,) As Boolean, ByRef unacceptable As WaterBlock, _
+                                                 ByRef adding As WaterBlock, ByRef p As Point) As Boolean
+            Dim X1 As Integer = Math.Max(0, p.X - unacceptable.xMax)
+            Dim X2 As Integer = Math.Min(m.xSize - unacceptable.xMax, p.X + adding.xMax)
+            Dim Y1 As Integer = Math.Max(0, p.Y - unacceptable.yMax)
+            Dim Y2 As Integer = Math.Min(m.ySize - unacceptable.yMax, p.Y + adding.yMax)
+            Dim runNextTestLoop As Boolean
+            For y As Integer = Y1 To Y2 Step 1
+                For x As Integer = X1 To X2 Step 1
+                    runNextTestLoop = False
+                    For j As Integer = 0 To unacceptable.yMax Step 1
+                        For i As Integer = 0 To unacceptable.xMax Step 1
+                            If Not wTest(x + i, y + j) = unacceptable.GetValue(i, j) Then
+                                runNextTestLoop = True
+                                Exit For
+                            End If
+                        Next i
+                        If runNextTestLoop Then Exit For
+                    Next j
+                    If Not runNextTestLoop Then Return True
+                Next x
+            Next y
+            Return False
+        End Function
+        Private Sub AddWater(ByRef WaterAmount As Integer, ByRef key As String, ByRef x As Integer, ByRef y As Integer, ByVal useObjWBlocks As Boolean)
+            Dim w As WaterBlock = GetWaterBlock(key, useObjWBlocks)
+            Dim x2 As Integer = x + w.xMax
+            Dim y2 As Integer = y + w.yMax
+            For j As Integer = y To y2 Step 1
+                If YFilter(j) Then
+                    For i As Integer = x To x2 Step 1
+                        If XFilter(i) Then
+                            If w.GetValue(i - x, j - y) Then
+                                Call owner.wpCommon.SetWaterCellSymm(i, j, Nothing, WaterAmount)
+                            End If
+                        End If
+                    Next i
+                End If
+            Next j
+        End Sub
+    End Class
 
 End Class
 
@@ -9076,7 +9683,8 @@ Public Class ImpenetrableObjects
                      For p As Integer = b.minY To b.maxY Step 1
                          For q As Integer = b.minX To b.maxX Step 1
                              If tmpm.board(q, p).mapObject.TagsList.Count > 0 Then
-                                 For Each t As String In tmpm.board(q, p).mapObject.TagsList
+                                 Dim tL As List(Of String) = tmpm.board(q, p).mapObject.TagsList
+                                 For Each t As String In tL
                                      If Not tags.Contains(t) Then tags.Add(t)
                                  Next t
                              End If

@@ -109,6 +109,15 @@
     </None>
   </ItemGroup>
   <ItemGroup>
+    <Content Include="Resources\common_game_data\WaterBlocksUnacceptable.txt">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
+    <Content Include="Resources\common_game_data\WaterBlocks3x3Objects.txt">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
+    <Content Include="Resources\common_game_data\WaterBlocksCommon.txt">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
     <Content Include="Resources\mod_settings_SMNS\BigStackUnits.txt">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>

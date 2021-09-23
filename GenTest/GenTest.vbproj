@@ -87,6 +87,7 @@
     <Compile Include="RndValueGenTest.vb" />
     <Compile Include="StackLocationsGen_PassageGuardPlacerTest.vb" />
     <Compile Include="ValueConverterTest.vb" />
+    <Compile Include="WaterGen_WaterPlacer_2Test.vb" />
   </ItemGroup>
   <ItemGroup>
     <Shadow Include="Test References\RandomStackGenerator.accessor" />

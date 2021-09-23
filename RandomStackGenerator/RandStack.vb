@@ -2935,9 +2935,9 @@ End Class
 Public MustInherit Class DecorationPlacingPropertiesFields
     ''' <summary>Допустимые расы</summary>
     Public race As New List(Of Integer)
-    ''' <summary>Можно лит ставить на суше</summary>
+    ''' <summary>Можно ли ставить на суше</summary>
     Public ground As Boolean
-    ''' <summary>Можно лит ставить на воде</summary>
+    ''' <summary>Можно ли ставить на воде</summary>
     Public water As Boolean
 End Class
 
@@ -4516,6 +4516,15 @@ Public Class GenDefaultValues
     End Function
     Public Function PlayableSubraces() As String
         Return ReadResources("PlayableSubraces", My.Resources.PlayableSubraces, False)
+    End Function
+    Public Function WaterBlocksCommon() As String
+        Return ReadResources("WaterBlocksCommon", My.Resources.WaterBlocksCommon, False)
+    End Function
+    Public Function WaterBlocks3x3Objects() As String
+        Return ReadResources("WaterBlocks3x3Objects", My.Resources.WaterBlocks3x3Objects, False)
+    End Function
+    Public Function WaterBlocksUnacceptable() As String
+        Return ReadResources("WaterBlocksUnacceptable", My.Resources.WaterBlocksUnacceptable, False)
     End Function
 
     Public Class MapObjectsText

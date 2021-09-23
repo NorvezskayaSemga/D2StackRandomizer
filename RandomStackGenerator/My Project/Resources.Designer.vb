@@ -158,10 +158,7 @@ Namespace My.Resources
         '''mageGlobalSpellsEnabled	False
         '''
         '''mercenariesMaxExpBar		1900
-        '''mercenariesMinExpBar		1000
-        '''mercenariesCount		4
-        '''
-        '''merc [rest of string was truncated]&quot;;.
+        '''mercenariesMinExpB [rest of string was truncated]&quot;;.
         '''</summary>
         Friend ReadOnly Property emptyloc() As String
             Get
@@ -180,7 +177,7 @@ Namespace My.Resources
         '''#порядок блоков тоже может быть любым с одним исключением:
         '''#блоки Location для расовых локаций должны стоять выше, чем блоки для обычных локаций (независимо от genMode)
         '''
-        '''#если в блоке Location параметр имеет два значения, то при генерации будет выбрано случа [rest of string was truncated]&quot;;.
+        '''#если в блоке Location параметр имеет два значения, то при генерации будет выб [rest of string was truncated]&quot;;.
         '''</summary>
         Friend ReadOnly Property example_template_1() As String
             Get
@@ -199,7 +196,7 @@ Namespace My.Resources
         '''#порядок блоков тоже может быть любым с одним исключением:
         '''#блоки Location для расовых локаций должны стоять выше, чем блоки для обычных локаций (независимо от genMode)
         '''
-        '''#если в блоке Location параметр имеет два значения, то при генерации будет выбрано случа [rest of string was truncated]&quot;;.
+        '''#если в блоке Location параметр имеет два значения, то при генерации будет выб [rest of string was truncated]&quot;;.
         '''</summary>
         Friend ReadOnly Property example_template_2_symm() As String
             Get
@@ -218,7 +215,7 @@ Namespace My.Resources
         '''#порядок блоков тоже может быть любым с одним исключением:
         '''#блоки Location для расовых локаций должны стоять выше, чем блоки для обычных локаций (независимо от genMode)
         '''
-        '''#если в блоке Location параметр имеет два значения, то при генерации будет выбрано случа [rest of string was truncated]&quot;;.
+        '''#если в блоке Location параметр имеет два значения, то при генерации будет выб [rest of string was truncated]&quot;;.
         '''</summary>
         Friend ReadOnly Property example_template_2_unsymm() As String
             Get
@@ -237,7 +234,7 @@ Namespace My.Resources
         '''#порядок блоков тоже может быть любым с одним исключением:
         '''#блоки Location для расовых локаций должны стоять выше, чем блоки для обычных локаций (независимо от genMode)
         '''
-        '''#если в блоке Location параметр имеет два значения, то при генерации будет выбрано случа [rest of string was truncated]&quot;;.
+        '''#если в блоке Location параметр имеет два значения, то при генерации будет выб [rest of string was truncated]&quot;;.
         '''</summary>
         Friend ReadOnly Property example_template_2_unsymm1() As String
             Get
@@ -632,7 +629,7 @@ Namespace My.Resources
         '''<summary>
         '''  Looks up a localized string similar to #строка, начинающаяся с решетки, игнорируется
         '''#Идентификаторы рас.
-        '''#В конце каждой строки ID, на который будут заменяться все остальные ID стртоки
+        '''#В конце каждой строки ID, на который будут заменяться все остальные ID строки
         '''Humans			H	6	1
         '''Undead			U	2
         '''Legions			L	3
@@ -714,7 +711,7 @@ Namespace My.Resources
         '''#порядок блоков тоже может быть любым с одним исключением:
         '''#блоки Location для расовых локаций должны стоять выше, чем блоки для обычных локаций (независимо от genMode)
         '''
-        '''#если в блоке Location параметр имеет два значения, то при генерации будет выбрано случа [rest of string was truncated]&quot;;.
+        '''#если в блоке Location параметр имеет два значения, то при генерации будет выб [rest of string was truncated]&quot;;.
         '''</summary>
         Friend ReadOnly Property template_48x48_unsymm_simple() As String
             Get
@@ -800,6 +797,85 @@ Namespace My.Resources
         Friend ReadOnly Property testFileKeyword() As String
             Get
                 Return ResourceManager.GetString("testFileKeyword", resourceCulture)
+            End Get
+        End Property
+        
+        '''<summary>
+        '''  Looks up a localized string similar to #строка, начинающаяся с решетки, игнорируется
+        '''#Блоки, из которых будет строиться водное покрытие.
+        '''#Как строить: расставляем символы G (земля) и W (вода) прямоугольником или квадратом любого размера.
+        '''#чтобы разделить блоки между собой, добавляем строчку &quot;_&quot;
+        '''#К блокам будет применен поворот и отражение, чтобы не делать руками список из по сути одинаковых блоков.
+        '''#Например:
+        '''# GGW   WWW    WW
+        '''# WWW , GGW  и WG можно считать одинаковыми
+        '''#              WG
+        '''#Делать блок нужно с учетом того, что объект будет в центр [rest of string was truncated]&quot;;.
+        '''</summary>
+        Friend ReadOnly Property WaterBlocks3x3Objects() As String
+            Get
+                Return ResourceManager.GetString("WaterBlocks3x3Objects", resourceCulture)
+            End Get
+        End Property
+        
+        '''<summary>
+        '''  Looks up a localized string similar to #строка, начинающаяся с решетки, игнорируется
+        '''#Блоки, из которых будет строиться водное покрытие.
+        '''#Как строить: расставляем символы G (земля) и W (вода) прямоугольником или квадратом любого размера.
+        '''#чтобы разделить блоки между собой, добавляем строчку &quot;_&quot;
+        '''#К блокам будет применен поворот и отражение, чтобы не делать руками список из по сути одинаковых блоков.
+        '''#Например:
+        '''# GGW   WWW    WW
+        '''# WWW , GGW  и WG можно считать одинаковыми
+        '''#              WG
+        '''
+        '''WW
+        '''WW
+        '''_
+        '''
+        '''WWG
+        '''WWW
+        '''_
+        '''
+        '''WWG
+        '''WGW
+        '''_
+        '''.
+        '''</summary>
+        Friend ReadOnly Property WaterBlocksCommon() As String
+            Get
+                Return ResourceManager.GetString("WaterBlocksCommon", resourceCulture)
+            End Get
+        End Property
+        
+        '''<summary>
+        '''  Looks up a localized string similar to #строка, начинающаяся с решетки, игнорируется
+        '''#Блоки, которые не должны встречаться на карте.
+        '''#Как строить: расставляем символы G (земля) и W (вода) прямоугольником или квадратом любого размера.
+        '''#чтобы разделить блоки между собой, добавляем строчку &quot;_&quot;
+        '''#К блокам будет применен поворот и отражение, чтобы не делать руками список из по сути одинаковых блоков.
+        '''#Например:
+        '''# GGW   WWW    WW
+        '''# WWW , GGW  и WG можно считать одинаковыми
+        '''#              WG
+        '''
+        '''GG
+        '''WW
+        '''GG
+        '''_
+        '''
+        '''GGW
+        '''GWG
+        '''WGG
+        '''_
+        '''
+        '''WWW
+        '''GGG
+        '''_.
+        '''</summary>
+        Friend ReadOnly Property WaterBlocksUnacceptable() As String
+            Get
+                Return ResourceManager.GetString("WaterBlocksUnacceptable", resourceCulture)
             End Get
         End Property
     End Module
