@@ -460,6 +460,7 @@
 
     Friend Sub ResetNames(ByRef newMapGen As Boolean, ByRef LogID As Integer)
         If newMapGen Then
+            Call ClearLog(LogID)
             Call calcUWeigt(Nothing)
             Call ResetUsedStackNames(LogID)
             Call ResetLordsNames(LogID)
@@ -500,6 +501,13 @@
             Call log.MAdd(LogID, Msg)
         Else
             Call log.Add(Msg)
+        End If
+    End Sub
+    Private Sub ClearLog(ByRef LogID As Integer)
+        If LogID > -1 Then
+            Call log.MClear(LogID)
+        Else
+            Call log.Clear()
         End If
     End Sub
 
