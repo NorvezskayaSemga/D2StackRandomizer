@@ -2142,6 +2142,7 @@ Public Class RndValueGen
     ''' <param name="v">Массив</param>
     Public Sub Shuffle(ByRef v() As Integer)
         'Dim rnd As New RndValueGen(seed)
+        If UBound(v) < 1 Then Exit Sub
         Dim t, m As Integer
         Dim u As Integer = UBound(v)
         For i As Integer = 0 To 3 * UBound(v) Step 1
