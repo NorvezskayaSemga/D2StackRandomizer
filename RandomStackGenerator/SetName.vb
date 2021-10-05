@@ -86,8 +86,7 @@
     Private Sub DownloadList()
 
         Dim w As System.Net.WebClient = Nothing
-        Dim Tn() As String = Nothing
-        Dim Tw() As Double = Nothing
+        Dim TableContent()() As String = Nothing
         Try
             Net.ServicePointManager.SecurityProtocol = CType(3072, Net.SecurityProtocolType) Or _
                                                        CType(768, Net.SecurityProtocolType) Or _
@@ -97,6 +96,7 @@
             w = New System.Net.WebClient With {.Proxy = Nothing}
             Dim byteData() As Byte = w.DownloadData(link)
             Dim d As String = Text.Encoding.UTF8.GetString(byteData)
+
             Dim str() As String = d.Replace(Chr(10), vbNewLine).Split(CChar(vbNewLine))
             Dim base As String = ""
             For s As Integer = 0 To UBound(str) Step 1
@@ -110,75 +110,76 @@
                 Exit Sub
             End If
             str = base.Split(CChar("<"))
-            Dim n As Integer = 0
-            Dim m As Integer = 0
+            Dim tableRow As Integer = 0
+            Dim tableColumn As Integer = 0
+            Dim columnsCount As Integer = 4
+            Dim table As String = ""
             For i As Integer = 0 To UBound(str) Step 1
-                If Not str(i).Contains("font-family") Then
+                If Not str(i).StartsWith("span class=\") Then
                     str(i) = ""
                 Else
                     str(i) = str(i).Substring(str(i).IndexOf(">") + 1)
-                    Console.WriteLine(str(i))
-                    If n >= m Then
-                        m += 1
+                    table &= str(i)
+                    tableColumn += 1
+                    If tableColumn = columnsCount Then
+                        tableRow += 1
+                        tableColumn = 0
+                        table &= vbNewLine
                     Else
-                        n += 1
+                        table &= " "
                     End If
                 End If
             Next i
-            If n > 0 Then
-                ReDim Tn(n - 1), Tw(n - 1)
-                n = 0
-                m = 0
+            If tableRow > 0 Then
+                ReDim TableContent(tableRow - 1)
+                tableRow = 0
+                tableColumn = 0
                 For i As Integer = 0 To UBound(str) Step 1
                     If Not str(i) = "" Then
-                        If n = m Then
-                            Tn(n) = str(i)
-                        Else
-                            Tw(n) = ValueConverter.StrToDbl(str(i))
-                        End If
-                        If n >= m Then
-                            m += 1
-                        Else
-                            n += 1
+                        tableColumn += 1
+                        If tableColumn = 1 Then ReDim TableContent(tableRow)(columnsCount - 1)
+                        TableContent(tableRow)(tableColumn - 1) = str(i)
+                        If tableColumn = columnsCount Then
+                            tableRow += 1
+                            tableColumn = 0
                         End If
                     End If
                 Next i
-                Dim wsum As Double = 0
-                For i As Integer = 0 To UBound(Tn) Step 1
-                    wsum += Tw(i)
-                Next i
-                For i As Integer = 0 To UBound(Tn) Step 1
-                    Tw(i) /= wsum
-                Next i
-                LordMinWeight = lordDonationThreshold / wsum
             End If
         Catch ex As Exception
             Console.WriteLine(ex.Message)
             AddToLog(-1, "Names downloader: " & ex.Message)
         End Try
-        Dim printmsg As Boolean = True
         Try
-            If Not IsNothing(Tn) And Not IsNothing(Tw) Then
+            If Not IsNothing(TableContent) Then
                 Dim added As New Dictionary(Of String, Integer)
-                ReDim users(UBound(Tn))
-                For i As Integer = 0 To UBound(Tn) Step 1
-                    If Not IsNothing(Tn(i)) AndAlso Not Tn(i) = "" AndAlso Tw(i) > 0 Then
-                        Dim s As String = Tn(i).ToUpper
+                ReDim users(UBound(TableContent))
+                For i As Integer = 0 To UBound(TableContent) Step 1
+                    Dim name As String = TableContent(i)(0)
+                    Dim lineWeight As Double = CDbl(TableContent(i)(1)) + CDbl(TableContent(i)(2))
+                    Dim prefID As String = TableContent(i)(3)
+                    If IsNothing(prefID) OrElse prefID = "" Then prefID = GenDefaultValues.emptyItem
+                    prefID = prefID.ToUpper
+                    If Not IsNothing(name) AndAlso Not name = "" AndAlso lineWeight > 0 Then
+                        Dim s As String = name.ToUpper
                         If Not added.ContainsKey(s) Then
-                            users(added.Count).name = Tn(i)
-
-                            If printmsg Then
-                                MsgBox("нужно обновить таблицу на сайте и переделать под нее парсер")
-                                printmsg = False
-                            End If
-
-                            users(added.Count).unit = GenDefaultValues.emptyItem
+                            users(added.Count).name = name
+                            users(added.Count).unit = ""
                             added.Add(s, added.Count)
                         End If
-                        users(added.Item(s)).weight += Tw(i)
+                        users(added.Item(s)).weight = Math.Max(users(added.Item(s)).weight, lineWeight)
+                        If users(added.Item(s)).unit = "" Or users(added.Item(s)).unit.ToUpper = GenDefaultValues.emptyItem.ToUpper Then users(added.Item(s)).unit = prefID
                     End If
                 Next i
-                ReDim Preserve users(added.Count - 1)
+                If UBound(users) > added.Count - 1 Then ReDim Preserve users(added.Count - 1)
+                Dim wsum As Double = 0
+                For i As Integer = 0 To UBound(users) Step 1
+                    wsum += users(i).weight
+                Next i
+                For i As Integer = 0 To UBound(users) Step 1
+                    users(i).weight /= wsum
+                Next i
+                LordMinWeight = lordDonationThreshold / wsum
             End If
         Catch ex As Exception
             Console.WriteLine(ex.Message)
