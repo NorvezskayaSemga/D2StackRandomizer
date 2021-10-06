@@ -31,9 +31,9 @@ Public Class RandStack
         ''' <summary>Положение столиц (угол с наименьшей координатой по X и Y)</summary>
         Public CapitalPos() As Point = Nothing
         '''<summary>Список лордов на карте. Юниты из веток развития соответствующих рас добавляться в отряды не будут, 
-        ''' если AddUnitsFromBranchesToStacks = True или MapLords = Nothing.</summary>
+        ''' если AddUnitsFromBranchesToStacks = False и MapLords != Nothing.</summary>
         Public MapLords() As String = Nothing
-        ''' <summary>Если True, генератор не будет добавлять в отряды юнитов из веток развития, если столица их расы есть на каврте. По умолчанию False</summary>
+        ''' <summary>Если False, генератор не будет добавлять в отряды юнитов из веток развития, если столица их расы есть на карте. По умолчанию False</summary>
         Public AddUnitsFromBranchesToStacks As Boolean
     End Class
 
@@ -65,9 +65,10 @@ Public Class RandStack
     
     ''' <summary>Положение столиц (угол с наименьшей координатой по X и Y)</summary>
     Public CapitalPos() As Point
-    '''<summary>Список лордов на карте. Юниты из веток развития соответствующих рас добавляться в отряды не будут.</summary>
-    Public MapLords() As String
-    ''' <summary>Если True, генератор не будет добавлять в отряды юнитов из веток развития, если столица их расы есть на каврте. По умолчанию False</summary>
+    '''<summary>Список лордов на карте. Юниты из веток развития соответствующих рас добавляться в отряды не будут, 
+    ''' если AddUnitsFromBranchesToStacks = False и MapLords != Nothing.</summary>
+    Public MapLords() As String = Nothing
+    ''' <summary>Если False, генератор не будет добавлять в отряды юнитов из веток развития, если столица их расы есть на карте. По умолчанию False</summary>
     Public AddUnitsFromBranchesToStacks As Boolean
 
     Private AddedItems As New Dictionary(Of Integer, Dictionary(Of Integer, List(Of AllDataStructues.Item)))
@@ -4144,7 +4145,7 @@ Public Class GenDefaultValues
         Next i
     End Sub
 
-    Public Const myVersion As String = "21.09.2021.20.51"
+    Public Const myVersion As String = "06.10.2021.20.08"
 
     Public Shared Function PrintVersion() As String
         Return "Semga's DLL version: " & myVersion
