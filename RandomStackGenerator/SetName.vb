@@ -326,6 +326,10 @@
                 stack(i).name = SetName(stack(i).pos(stack(i).leaderPos).ToUpper, R, wMultiplier, LogID)
                 skip(i) = True
             End If
+            If stack(i).leaderPos > -1 AndAlso IsNothing(stack(i).name) OrElse stack(i).name = "" Then
+                Dim u As AllDataStructues.Unit = R.FindUnitStats(stack(i).pos(stack(i).leaderPos))
+                stack(i).name = u.name
+            End If
         Next k
     End Sub
     Private Function SetName(ByRef leaderID As String, ByRef R As RandStack, _
