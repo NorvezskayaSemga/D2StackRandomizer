@@ -253,7 +253,7 @@ Public Class RandStackTest
                      GroundTile = True
                  End If
                  Dim gs As New AllDataStructues.CommonStackCreationSettings With {.StackStats = item, .deltaLeadership = 0, .GroundTile = GroundTile, _
-                                                                                  .NoLeader = False, .pos = New Point(1, 1), .MapLords = Nothing, _
+                                                                                  .NoLeader = False, .pos = New Point(1, 1), _
                                                                                   .ApplyStrictTypesFilter = True}
                  Dim stack As AllDataStructues.Stack = target.Gen(gs)
                  locOk = TestStack(stack, target)
@@ -387,7 +387,7 @@ Public Class RandStackTest
 
         For i As Integer = 0 To 1000 Step 1
             Dim gs As New AllDataStructues.CommonStackCreationSettings With {.StackStats = stats, .deltaLeadership = 0, .GroundTile = True, _
-                                                                             .NoLeader = False, .pos = New Point(1, 1), .MapLords = Nothing, _
+                                                                             .NoLeader = False, .pos = New Point(1, 1), _
                                                                              .ApplyStrictTypesFilter = True}
             Dim stack As AllDataStructues.Stack = target.Gen(gs)
             ok = TestStack(stack, target, races, raceokL, raceokF)
@@ -500,7 +500,7 @@ Public Class RandStackTest
 
             For i As Integer = 0 To 1000 Step 1
                 Dim gs As New AllDataStructues.CommonStackCreationSettings With {.StackStats = stats, .deltaLeadership = 0, .GroundTile = True, _
-                                                                                 .NoLeader = False, .pos = New Point(1, 1), .MapLords = Nothing, _
+                                                                                 .NoLeader = False, .pos = New Point(1, 1), _
                                                                                  .ApplyStrictTypesFilter = True}
                 Dim stack As AllDataStructues.Stack = target.Gen(gs)
                 ok = TestStack(stack, target, races, raceokL, raceokF)
@@ -533,7 +533,7 @@ Public Class RandStackTest
         Dim c As Integer
         For i As Integer = 0 To 1000 Step 1
             Dim gs As New AllDataStructues.CommonStackCreationSettings With {.StackStats = stats, .deltaLeadership = 0, .GroundTile = True, _
-                                                                             .NoLeader = False, .pos = New Point(1, 1), .MapLords = Nothing, _
+                                                                             .NoLeader = False, .pos = New Point(1, 1), _
                                                                              .ApplyStrictTypesFilter = True}
             Dim stack As AllDataStructues.Stack = target.Gen(gs)
             c = 0
@@ -566,7 +566,7 @@ Public Class RandStackTest
         Dim c As Integer
         For i As Integer = 0 To 1000 Step 1
             Dim gs As New AllDataStructues.CommonStackCreationSettings With {.StackStats = stats, .deltaLeadership = 0, .GroundTile = True, _
-                                                                             .NoLeader = True, .pos = New Point(1, 1), .MapLords = Nothing, _
+                                                                             .NoLeader = True, .pos = New Point(1, 1), _
                                                                              .ApplyStrictTypesFilter = True}
             Dim stack As AllDataStructues.Stack = target.Gen(gs)
             c = 0
@@ -656,12 +656,12 @@ Public Class RandStackTest
                 Dim stack As AllDataStructues.Stack
                 If TestOverload1 Then
                     Dim gs As New AllDataStructues.CommonStackCreationSettings With {.StackStats = stats, .deltaLeadership = 0, .GroundTile = True, _
-                                                                                     .NoLeader = noLeader, .pos = New Point(1, 1), .MapLords = Nothing, _
+                                                                                     .NoLeader = noLeader, .pos = New Point(1, 1), _
                                                                                      .ApplyStrictTypesFilter = True}
                     stack = target.Gen(gs)
                 Else
                     Dim gs As New AllDataStructues.CommonStackCreationSettings With {.StackStats = stats, .deltaLeadership = 0, .GroundTile = True, _
-                                                                                     .NoLeader = False, .pos = New Point(1, 1), .MapLords = Nothing, _
+                                                                                     .NoLeader = False, .pos = New Point(1, 1), _
                                                                                      .ApplyStrictTypesFilter = True}
                     stack = target.Gen(gs)
                 End If
@@ -816,7 +816,7 @@ Public Class RandStackTest
                                                                 .JewelItems = New AllDataStructues.ItemGenSettings With {.exclude = True, .costPart = 0.9}}
 
         Dim gs As New AllDataStructues.CommonStackCreationSettings With {.StackStats = stats, .deltaLeadership = 0, .GroundTile = True, _
-                                                                         .NoLeader = False, .pos = New Point(1, 1), .MapLords = Nothing, _
+                                                                         .NoLeader = False, .pos = New Point(1, 1), _
                                                                          .ApplyStrictTypesFilter = True}
 
         overlevelLog.Add("level" & vbTab & "exp_killed" & vbTab & "unit_id")

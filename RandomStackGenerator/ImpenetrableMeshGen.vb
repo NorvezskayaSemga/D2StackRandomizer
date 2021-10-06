@@ -5559,6 +5559,8 @@ Public Class shortMapFormat
                 lordsList(i) = raceToLord.Item(m.Loc(i).Race)
             Next i
         End If
+        objContent.randStack.MapLords = lordsList
+
         For y As Integer = 0 To UBound(m.board, 2) Step 1
             For x As Integer = 0 To UBound(m.board, 1) Step 1
                 If m.board(x, y).mapObject.objectID = DefMapObjects.Types.Mine Then
@@ -5634,7 +5636,6 @@ Public Class shortMapFormat
                                                                                          .GroundTile = True, _
                                                                                          .NoLeader = False, _
                                                                                          .pos = pos, _
-                                                                                         .MapLords = lordsList, _
                                                                                          .ApplyStrictTypesFilter = ApplyStrictTypesFilter}
                         stackExter = objContent.randStack.Gen(gs)
                     End If
@@ -5645,7 +5646,6 @@ Public Class shortMapFormat
                                                                                          .GroundTile = True, _
                                                                                          .NoLeader = True, _
                                                                                          .pos = pos, _
-                                                                                         .MapLords = lordsList, _
                                                                                          .ApplyStrictTypesFilter = ApplyStrictTypesFilter}
                         stackInter = objContent.randStack.Gen(gs)
                     End If
@@ -5673,7 +5673,6 @@ Public Class shortMapFormat
                            .GroundTile = Not m.board(x, y).surface.isWater, _
                            .NoLeader = True, _
                            .pos = pos, _
-                           .MapLords = lordsList, _
                            .ApplyStrictTypesFilter = ApplyStrictTypesFilter}
                     Dim stack As AllDataStructues.Stack = objContent.randStack.Gen(gs)
                     Dim itemCost As Integer = objContent.randStack.rndgen.RndInt(CInt(0.25 * desiredStats.LootCost), desiredStats.LootCost, True)
@@ -5705,7 +5704,6 @@ Public Class shortMapFormat
                                                                                  .GroundTile = isGround, _
                                                                                  .NoLeader = False, _
                                                                                  .pos = New Point(x, y), _
-                                                                                 .MapLords = lordsList, _
                                                                                  .ApplyStrictTypesFilter = ApplyStrictTypesFilter}
                 Dim stack As AllDataStructues.Stack = objContent.randStack.Gen(gs)
                 If isGround Then

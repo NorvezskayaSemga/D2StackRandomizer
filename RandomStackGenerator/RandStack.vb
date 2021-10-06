@@ -28,6 +28,13 @@ Public Class RandStack
         Public ignoreUnitRace As Boolean
         ''' <summary>Если True, генератор не будет добавлять в отряды юнитов, связнных с лором. По умолчанию False</summary>
         Public ExcludeLoreUnits As Boolean
+        ''' <summary>Положение столиц (угол с наименьшей координатой по X и Y)</summary>
+        Public CapitalPos() As Point = Nothing
+        '''<summary>Список лордов на карте. Юниты из веток развития соответствующих рас добавляться в отряды не будут, 
+        ''' если AddUnitsFromBranchesToStacks = True или MapLords = Nothing.</summary>
+        Public MapLords() As String = Nothing
+        ''' <summary>Если True, генератор не будет добавлять в отряды юнитов из веток развития, если столица их расы есть на каврте. По умолчанию False</summary>
+        Public AddUnitsFromBranchesToStacks As Boolean
     End Class
 
     Private busytransfer() As Integer = New Integer() {1, -1, 3, -1, 5, -1}
@@ -55,12 +62,18 @@ Public Class RandStack
     Friend ItemCostSum(), multiplierItemsWeight() As Double
     Private minItemGoldCost As Integer
     Private bak_multiplierItemsWeight() As Double
+    
+    ''' <summary>Положение столиц (угол с наименьшей координатой по X и Y)</summary>
+    Public CapitalPos() As Point
+    '''<summary>Список лордов на карте. Юниты из веток развития соответствующих рас добавляться в отряды не будут.</summary>
+    Public MapLords() As String
+    ''' <summary>Если True, генератор не будет добавлять в отряды юнитов из веток развития, если столица их расы есть на каврте. По умолчанию False</summary>
+    Public AddUnitsFromBranchesToStacks As Boolean
 
     Private AddedItems As New Dictionary(Of Integer, Dictionary(Of Integer, List(Of AllDataStructues.Item)))
 
     ''' <summary>Сюда генератор пишет лог</summary>
     Public log As Log
-
 
     Public Sub New(ByRef data As ConstructorInput)
         comm = New Common(data.modName) With {.onExcludedListChanged = AddressOf ResetExclusions}
@@ -77,6 +90,10 @@ Public Class RandStack
         Call comm.ReadSoleUnits()
         Call comm.ReadBigStackUnits()
         Call comm.ReadPreservedItemsList()
+
+        CapitalPos = data.CapitalPos
+        MapLords = data.MapLords
+        AddUnitsFromBranchesToStacks = data.AddUnitsFromBranchesToStacks
 
         Dim PlayableSubraces As New List(Of Integer)
         For Each item As String In comm.TxtSplit(comm.defValues.PlayableSubraces)
@@ -602,14 +619,13 @@ Public Class RandStack
     End Function
     ''' <summary>Генерирует набор предметов. В принципе может вернуть пустой список</summary>
     ''' <param name="GenSettings">Общие настройки</param>
-    ''' <param name="CapPos">Положение столиц (угол с наименьшей координатой по X и Y)</param>
     ''' <param name="LootCostMultiplier">Множитель стоимости предметов</param>
     ''' <param name="LogID">Номер задачи. От 0 до Size-1. Если меньше 0, запись будет сделана в общий лог</param>
     Public Function ItemsGen(ByVal GenSettings As AllDataStructues.CommonLootCreationSettings, _
-                             ByRef CapPos() As Point, ByVal LootCostMultiplier As Double, _
+                             ByVal LootCostMultiplier As Double, _
                              Optional ByVal LogID As Integer = -1) As List(Of String)
         Dim s As AllDataStructues.CommonLootCreationSettings = AllDataStructues.CommonLootCreationSettings.Copy(GenSettings)
-        Dim lcm As Double = RecalculateMultiplier(GenSettings.pos, CapPos, LootCostMultiplier)
+        Dim lcm As Double = RecalculateMultiplier(GenSettings.pos, LootCostMultiplier)
         s.IGen.lootCostMultiplier = lcm
         s.GoldCost = CInt(s.GoldCost * lcm)
         Return ItemsGen(s, LogID)
@@ -723,13 +739,12 @@ Public Class RandStack
     End Function
     ''' <summary>Генерирует один предмет. Если не получится выбрать подходящий предмет, вернет пустую строку</summary>
     ''' <param name="GenSettings">Общие настройки</param>
-    ''' <param name="CapPos">Положение столиц (угол с наименьшей координатой по X и Y)</param>
     ''' <param name="LootCostMultiplier">Множитель стоимости предметов</param>
     ''' <param name="LogID">Номер задачи. От 0 до Size-1. Если меньше 0, запись будет сделана в общий лог</param>
     Public Function ThingGen(ByVal GenSettings As AllDataStructues.CommonLootCreationSettings, _
-                             ByRef CapPos() As Point, ByVal LootCostMultiplier As Double, _
+                             ByVal LootCostMultiplier As Double, _
                              Optional ByVal LogID As Integer = -1) As String
-        Dim lcm As Double = RecalculateMultiplier(GenSettings.pos, CapPos, LootCostMultiplier)
+        Dim lcm As Double = RecalculateMultiplier(GenSettings.pos, LootCostMultiplier)
         Dim gs As AllDataStructues.CommonLootCreationSettings = AllDataStructues.CommonLootCreationSettings.Copy(GenSettings)
         gs.IGen.lootCostMultiplier = lcm
         gs.GoldCost = CInt(gs.GoldCost * lcm)
@@ -1054,7 +1069,7 @@ Public Class RandStack
 
         If GenSettings.StackStats.StackSize > 0 Then
             result = GenStackMultithread(GenSettings.StackStats, DynStackStats, GenSettings.deltaLeadership, _
-                                         GenSettings.GroundTile, GenSettings.NoLeader, GenSettings.MapLords)
+                                         GenSettings.GroundTile, GenSettings.NoLeader)
         Else
             result.leaderPos = -1
             ReDim result.pos(UBound(busytransfer)), result.level(UBound(busytransfer))
@@ -1076,14 +1091,12 @@ Public Class RandStack
     End Function
     ''' <summary>Создаст отряд  в соответствие с желаемыми параметрами. Не нужно пытаться создать отряд водных жителей на земле</summary>
     ''' <param name="GenSettings">Общие настройки</param>
-    ''' <param name="CapPos">Положение столиц (угол с наименьшей координатой по X и Y)</param>
     ''' <param name="StackStrengthMultiplier">Множитель силы отряда: изменяем опыт за убийство и среднюю планку опыта</param>
     ''' <param name="LootCostMultiplier">Множитель стоимости предметов</param>
     Public Function Gen(ByRef GenSettings As AllDataStructues.CommonStackCreationSettings, _
-                        ByRef CapPos() As Point, _
                         ByVal StackStrengthMultiplier As Double, ByVal LootCostMultiplier As Double) As AllDataStructues.Stack
-        Dim ssm As Double = RecalculateMultiplier(GenSettings.pos, CapPos, StackStrengthMultiplier)
-        Dim lcm As Double = RecalculateMultiplier(GenSettings.pos, CapPos, LootCostMultiplier)
+        Dim ssm As Double = RecalculateMultiplier(GenSettings.pos, StackStrengthMultiplier)
+        Dim lcm As Double = RecalculateMultiplier(GenSettings.pos, LootCostMultiplier)
 
         Dim g As AllDataStructues.CommonStackCreationSettings = AllDataStructues.CommonStackCreationSettings.Copy(GenSettings)
         g.StackStats.ExpStackKilled = Math.Max(CInt(g.StackStats.ExpStackKilled * ssm), 5)
@@ -1124,12 +1137,12 @@ Public Class RandStack
     Private Function SigmaMultiplier(ByRef stat As AllDataStructues.DesiredStats) As Double
         Return comm.defValues.defaultSigma * (CDbl(stat.StackSize) + 1.25 * CDbl(stat.StackSize * stat.StackSize - 1) + 0.2 * CDbl(stat.MaxGiants))
     End Function
-    Private Function RecalculateMultiplier(ByRef pos As Point, ByRef CapPos() As Point, ByRef inValue As Double) As Double
+    Private Function RecalculateMultiplier(ByRef pos As Point, ByRef inValue As Double) As Double
         If inValue <= 1 Or IsNothing(pos) Then Return inValue
         Dim r As Double = Double.MaxValue
         Dim halfCapitalSize As Integer = 2
-        For i As Integer = 0 To UBound(CapPos) Step 1
-            r = Math.Min(r, pos.SqDist(New Point(CapPos(i).X + halfCapitalSize, CapPos(i).Y + halfCapitalSize)))
+        For i As Integer = 0 To UBound(CapitalPos) Step 1
+            r = Math.Min(r, pos.SqDist(New Point(CapitalPos(i).X + halfCapitalSize, CapitalPos(i).Y + halfCapitalSize)))
         Next i
         Dim maxR As Double = comm.defValues.weakerUnitsRadius
         If r < maxR * maxR Then
@@ -1184,14 +1197,14 @@ Public Class RandStack
     Private Function GenStackMultithread(ByVal StackStats As AllDataStructues.DesiredStats, _
                                          ByVal BakDynStackStats As AllDataStructues.DesiredStats, _
                                          ByVal deltaLeadership As Integer, ByVal GroundTile As Boolean, _
-                                         ByVal NoLeader As Boolean, ByRef MapLords() As String) As AllDataStructues.Stack
+                                         ByVal NoLeader As Boolean) As AllDataStructues.Stack
 
         Dim units(11)() As AllDataStructues.Unit
         Dim DynStackStats(UBound(units)) As AllDataStructues.DesiredStats
         Call log.MRedim(units.Length)
         Dim leaderExpKilled() As Integer = Nothing
         Dim MapLordsRaces As New List(Of Integer)
-        If Not IsNothing(MapLords) Then
+        If Not IsNothing(MapLords) And Not AddUnitsFromBranchesToStacks Then
             For i As Integer = 0 To UBound(MapLords) Step 1
                 MapLordsRaces.Add(comm.LordsRace(MapLords(i).ToUpper))
             Next i
@@ -3575,8 +3588,6 @@ Public Class AllDataStructues
         Public GroundTile As Boolean
         '''<summary>True, если стэк находится внутри руин или города</summary>
         Public NoLeader As Boolean
-        '''<summary>Список лордов на карте. Юниты из веток развития соответствующих рас добавляться в отряды не будут. Передавай Nothing для игнорирования этого фильтра</summary>
-        Public MapLords() As String
 
         Public Shared Function Copy(ByVal v As CommonStackCreationSettings) As CommonStackCreationSettings
             Return New CommonStackCreationSettings With {.StackStats = DesiredStats.Copy(v.StackStats), _
@@ -3584,7 +3595,6 @@ Public Class AllDataStructues
                                                          .GroundTile = v.GroundTile, _
                                                          .NoLeader = v.NoLeader, _
                                                          .pos = New Point(v.pos.X, v.pos.Y), _
-                                                         .MapLords = CType(v.MapLords.Clone, String()), _
                                                          .ApplyStrictTypesFilter = v.ApplyStrictTypesFilter}
         End Function
     End Class
