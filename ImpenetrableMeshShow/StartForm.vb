@@ -90,8 +90,6 @@ Friend Class StartForm
 
         Dim param() As TemplateForge.Parameter = TemplateForge.GetPermissibleParametersRange(GenDefaultValues.TextLanguage.Rus)
 
-        Dim def() As String = {"%default%"}
-
         Dim treesAmount() As Integer = {0, 20, 20, 20, 20, 20, 0, 0, 0, 0, 0, 0, 0, 0, 20}
 
         Dim rstack As New RandStack(DefaultGenData)
@@ -103,10 +101,10 @@ Friend Class StartForm
         'Dim dds As AllDataStructues.DesiredStats = AllDataStructues.DesiredStats.Copy(ds)
         'Call rstack.GenFingters(ds, dds, 3, -1, True, 6, True, New List(Of Integer), 0, 0.5, -1)
 
-        Call comm.ReadExcludedObjectsList(def)
+        Call comm.ReadExcludedObjectsList(False)
         Dim objSizeArray() As ImpenetrableObjects.GlobalMapDecoration = ReadObjSize()
 
-        Dim objplace As New ImpenetrableObjects(objSizeArray, def, def, def, ReadSpells, comm)
+        Dim objplace As New ImpenetrableObjects(objSizeArray, False, ReadSpells, comm)
 
         Dim grid As Map
         Dim genTimeLimit As Integer = 10000

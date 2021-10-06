@@ -16,42 +16,6 @@ Public Class RandStack
         ''' </summary>
         Public AllSpellsList() As AllDataStructues.Spell
         ''' <summary>
-        ''' Файлы со списками исключенных объектов. Записи в них могут повторяться. 
-        ''' Допускается передача неинициализитрованного массива.
-        ''' Для чтения из дефолтного листа в массив нужно добавить строчку %default% (наличие этого ключевого в файле запустит чтение дефолтного файла)
-        ''' </summary>
-        Public ExcludeLists() As String = {My.Resources.readDefaultFileKeyword}
-        ''' <summary>
-        ''' Файлы с множителями шанса появления определенных предметов.
-        ''' Допускается передача неинициализитрованного массива.
-        ''' Для чтения из дефолтного листа в массив нужно добавить строчку %default% (наличие этого ключевого в файле запустит чтение дефолтного файла)
-        ''' </summary>
-        Public LootChanceMultiplierLists() As String = {My.Resources.readDefaultFileKeyword}
-        ''' <summary>
-        ''' Файлы со списками рас юнитов. Записи в них могут повторяться, но записи с повторяющимся ID будут перезаписываться. 
-        ''' Допускается передача неинициализитрованного массива.
-        ''' Для чтения из дефолтного листа в массив нужно добавить строчку %default% (наличие этого ключевого в файле запустит чтение дефолтного файла)
-        ''' </summary>
-        Public CustomUnitRace() As String = {My.Resources.readDefaultFileKeyword}
-        ''' <summary>
-        ''' Файлы со списками юнитов, которые должны находиться в отряде в единственном экземпляре. Записи в них могут повторяться, но записи с повторяющимся ID будут перезаписываться. 
-        ''' Допускается передача неинициализитрованного массива.
-        ''' Для чтения из дефолтного листа в массив нужно добавить строчку %default% (наличие этого ключевого в файле запустит чтение дефолтного файла)
-        ''' </summary>
-        Public SoleUnitsList() As String = {My.Resources.readDefaultFileKeyword}
-        ''' <summary>
-        ''' Файлы со списками юнитов, которые могут находиться в отряде начиная с заданного количества слотов. Записи в них могут повторяться, но записи с повторяющимся ID будут перезаписываться. 
-        ''' Допускается передача неинициализитрованного массива.
-        ''' Для чтения из дефолтного листа в массив нужно добавить строчку %default% (наличие этого ключевого в файле запустит чтение дефолтного файла)
-        ''' </summary>
-        Public BigStackUnits() As String = {My.Resources.readDefaultFileKeyword}
-        ''' <summary>
-        ''' Файлы со списками предметов, которые нельзя перегенерировать. Записи в них могут повторяться. 
-        ''' Допускается передача неинициализитрованного массива.
-        ''' Для чтения из дефолтного листа в массив нужно добавить строчку %default% (наличие этого ключевого в файле запустит чтение дефолтного файла)
-        ''' </summary>
-        Public PreservedItemsList() As String = {My.Resources.readDefaultFileKeyword}
-        ''' <summary>
         ''' Количество использований талисманов
         ''' </summary>
         Public TalismanChargesDefaultAmount As Integer = 5
@@ -62,6 +26,8 @@ Public Class RandStack
         Public modName As String
         ''' <summary>Если True, генератор будет игнорировать ограничения по расе при создании отрядов. По умолчанию False</summary>
         Public ignoreUnitRace As Boolean
+        ''' <summary>Если True, генератор не будет добавлять в отряды юнитов, связнных с лором. По умолчанию False</summary>
+        Public ExcludeLoreUnits As Boolean
     End Class
 
     Private busytransfer() As Integer = New Integer() {1, -1, 3, -1, 5, -1}
@@ -70,6 +36,7 @@ Public Class RandStack
     Private Const itemGenSigma As Double = 0.5
     Private Const multiItemGenSigmaMultiplier As Double = 1.5
     Private IgnoreUnitRace As Boolean
+    Private ExcludeLoreUnits As Boolean
 
     Private UnitsArrayPos As New Dictionary(Of String, Integer)
     Friend AllUnits() As AllDataStructues.Unit
@@ -104,12 +71,12 @@ Public Class RandStack
         If data.TalismanChargesDefaultAmount < 1 Then Throw New Exception("Unexpected TalismanChargesDefaultAmount")
         IgnoreUnitRace = data.ignoreUnitRace
 
-        Call comm.ReadExcludedObjectsList(data.ExcludeLists)
-        Call comm.ReadCustomUnitRace(data.CustomUnitRace)
-        Call comm.ReadLootItemChanceMultiplier(data.LootChanceMultiplierLists)
-        Call comm.ReadSoleUnits(data.SoleUnitsList)
-        Call comm.ReadBigStackUnits(data.BigStackUnits)
-        Call comm.ReadPreservedItemsList(data.PreservedItemsList)
+        Call comm.ReadExcludedObjectsList(data.ExcludeLoreUnits)
+        Call comm.ReadCustomUnitRace()
+        Call comm.ReadLootItemChanceMultiplier()
+        Call comm.ReadSoleUnits()
+        Call comm.ReadBigStackUnits()
+        Call comm.ReadPreservedItemsList()
 
         Dim PlayableSubraces As New List(Of Integer)
         For Each item As String In comm.TxtSplit(comm.defValues.PlayableSubraces)
@@ -2590,20 +2557,26 @@ Public Class Common
         Return Math.Exp(-0.5 * ((X - avX) / (sigma * avX)) ^ 2)
     End Function
 
-    Delegate Sub readFunction(ByRef paths() As String)
+    Private Enum ReadMode
+        ExcludedObjects = 1
+        CustomUnitRace = 2
+        CustomBuildingRace = 3
+        PlateauConstructionDescription = 4
+        LootItemChanceMultiplier = 5
+        SoleUnits = 6
+        BigStackUnits = 7
+        PreservedItemsList = 8
+    End Enum
     ''' <summary>Читает список юнитов, предметов и заклинаний, которые не должен использовать генератор</summary>
-    ''' <param name="ExcludeLists">Файлы со списками исключенных объектов. Записи в них могут повторяться. 
-    ''' Допускается передача неинициализитрованного массива.
-    ''' Для чтения из дефолтного листа в массив нужно добавить строчку %default% (наличие этого ключевого в файле запустит чтение дефолтного файла).
-    ''' Для чтения из листа сюжетных юнитов из Ванили в массив нужно добавить строчку %novanillalore% (наличие этого ключевого в файле запустит чтение дефолтного файла).
-    ''' Для чтения из листа сюжетных юнитов из Мода в массив нужно добавить строчку %nomodlore% (наличие этого ключевого в файле запустит чтение дефолтного файла).</param>
-    Public Sub ReadExcludedObjectsList(ByRef ExcludeLists() As String)
-        If IsNothing(ExcludeLists) Then Exit Sub
-        Dim s() As String
-        For i As Integer = 0 To UBound(ExcludeLists) Step 1
-            s = prepareToFileRead(ExcludeLists(i), Nothing, Nothing)
-            Call ReadFile(1, s, ExcludeLists(i), AddressOf ReadExcludedObjectsList, Nothing)
-        Next i
+    ''' <param name="AddLoreUnitsToExcluded">Добавлять ли лорных юнитов в список исключенных</param>
+    Public Sub ReadExcludedObjectsList(ByVal AddLoreUnitsToExcluded As Boolean)
+        Dim s() As String = Nothing
+        s = SettingsFileSplit(defValues.ExcludedIDs)
+        Call ReadFile(ReadMode.ExcludedObjects, s)
+        If AddLoreUnitsToExcluded Then
+            s = SettingsFileSplit(defValues.ExcludedIDs_ModLore)
+            Call ReadFile(ReadMode.ExcludedObjects, s)
+        End If
         If Not IsNothing(onExcludedListChanged) Then Call onExcludedListChanged()
     End Sub
     ''' <summary>Читает список юнитов, предметов и заклинаний, которые не должен использовать генератор</summary>
@@ -2611,259 +2584,153 @@ Public Class Common
     ''' Допускается передача неинициализитрованного массива.
     ''' Не воспринимает ключевые слова</param>
     Public Sub ReadExcludedObjectsList(ByRef ExcludeLists As List(Of String))
-        If IsNothing(ExcludeLists) Then Exit Sub
-        Dim s() As String = ExcludeLists.ToArray
-        Call ReadFile(1, s, "", Nothing, Nothing)
+        Call ReadFile(ReadMode.ExcludedObjects, ExcludeLists)
         If Not IsNothing(onExcludedListChanged) Then Call onExcludedListChanged()
     End Sub
     ''' <summary>Читает множители шанса выпадения для отдельных предметов</summary>
-    ''' <param name="MultipliersList">Файлы с множителями шанса появления определенных предметов.
-    ''' Допускается передача неинициализитрованного массива.
-    ''' Для чтения из дефолтного листа в массив нужно добавить строчку %default% (наличие этого ключевого в файле запустит чтение дефолтного файла)</param>
-    Protected Friend Sub ReadLootItemChanceMultiplier(ByRef MultipliersList() As String)
-        If IsNothing(MultipliersList) Then Exit Sub
-        Dim s() As String
-        Dim defaultKeys() As String = New String() {My.Resources.readDefaultFileKeyword}
-        Dim defaultVals() As String = New String() {defValues.LootItemChanceMultiplier}
-        For i As Integer = 0 To UBound(MultipliersList) Step 1
-            s = prepareToFileRead(MultipliersList(i), defaultKeys, defaultVals)
-            Call ReadFile(5, s, MultipliersList(i), AddressOf ReadLootItemChanceMultiplier, defaultKeys)
-        Next i
+    Protected Friend Sub ReadLootItemChanceMultiplier()
+        Dim s() As String = SettingsFileSplit(defValues.LootItemChanceMultiplier)
+        Call ReadFile(ReadMode.LootItemChanceMultiplier, s)
     End Sub
     ''' <summary>Читает множители шанса выпадения для отдельных предметов</summary>
     ''' <param name="MultipliersList">Множители шанса появления определенных предметов.
     ''' Допускается передача неинициализитрованного массива.
     ''' Не воспринимает ключевые слова</param>
     Protected Friend Sub ReadLootItemChanceMultiplier(ByRef MultipliersList As List(Of String))
-        If IsNothing(MultipliersList) Then Exit Sub
-        Dim s() As String = MultipliersList.ToArray
-        Call ReadFile(5, s, "", Nothing, Nothing)
+        Call ReadFile(ReadMode.LootItemChanceMultiplier, MultipliersList)
     End Sub
     ''' <summary>Читает список, переопределяющий расы нужных юнитов</summary>
-    ''' <param name="CustomUnitRace">Файлы со списками рас юнитов. Записи в них могут повторяться, но записи с повторяющимся ID будут перезаписываться. 
-    ''' Допускается передача неинициализитрованного массива.
-    ''' Для чтения из дефолтного листа в массив нужно добавить строчку %default% (наличие этого ключевого в файле запустит чтение дефолтного файла)</param>
-    Protected Friend Sub ReadCustomUnitRace(ByRef CustomUnitRace() As String)
-        If IsNothing(CustomUnitRace) Then Exit Sub
-        Dim s() As String
-        Dim defaultKeys() As String = New String() {My.Resources.readDefaultFileKeyword}
-        Dim defaultVals() As String = New String() {defValues.UnitRace}
-        For i As Integer = 0 To UBound(CustomUnitRace) Step 1
-            s = prepareToFileRead(CustomUnitRace(i), defaultKeys, defaultVals)
-            Call ReadFile(2, s, CustomUnitRace(i), AddressOf ReadCustomUnitRace, defaultKeys)
-        Next i
+    Protected Friend Sub ReadCustomUnitRace()
+        Dim s() As String = SettingsFileSplit(defValues.UnitRace)
+        Call ReadFile(ReadMode.CustomUnitRace, s)
     End Sub
     ''' <summary>Читает список, переопределяющий расы нужных юнитов</summary>
     ''' <param name="CustomUnitRace">Список рас юнитов. Записи в них могут повторяться, но записи с повторяющимся ID будут перезаписываться. 
     ''' Допускается передача неинициализитрованного списка.
     ''' Не воспринимает ключевые слова</param>
     Protected Friend Sub ReadCustomUnitRace(ByRef CustomUnitRace As List(Of String))
-        If IsNothing(CustomUnitRace) Then Exit Sub
-        Dim s() As String = CustomUnitRace.ToArray
-        Call ReadFile(2, s, "", Nothing, Nothing)
+        Call ReadFile(ReadMode.CustomUnitRace, CustomUnitRace)
     End Sub
     ''' <summary>Читает список юнитов, которые должны находиться в отряде в единственном экземпляре</summary>
-    ''' <param name="SoleUnitsList">Файлы со списками юнитов. Записи в них могут повторяться, но записи с повторяющимся ID будут перезаписываться. 
-    ''' Допускается передача неинициализитрованного массива.
-    ''' Для чтения из дефолтного листа в массив нужно добавить строчку %default% (наличие этого ключевого в файле запустит чтение дефолтного файла)</param>
-    Protected Friend Sub ReadSoleUnits(ByRef SoleUnitsList() As String)
-        If IsNothing(SoleUnitsList) Then Exit Sub
-        Dim s() As String
-        Dim defaultKeys() As String = New String() {My.Resources.readDefaultFileKeyword}
-        Dim defaultVals() As String = New String() {defValues.SingleUnits}
-        For i As Integer = 0 To UBound(SoleUnitsList) Step 1
-            s = prepareToFileRead(SoleUnitsList(i), defaultKeys, defaultVals)
-            Call ReadFile(6, s, SoleUnitsList(i), AddressOf ReadSoleUnits, defaultKeys)
-        Next i
+    Protected Friend Sub ReadSoleUnits()
+        Dim s() As String = SettingsFileSplit(defValues.SingleUnits)
+        Call ReadFile(ReadMode.SoleUnits, s)
     End Sub
     ''' <summary>Читает список юнитов, которые должны находиться в отряде в единственном экземпляре</summary>
     ''' <param name="SoleUnitsList">Cписок юнитов. Записи в них могут повторяться, но записи с повторяющимся ID будут перезаписываться. 
     ''' Допускается передача неинициализитрованного списка.
     ''' Не воспринимает ключевые слова</param>
     Protected Friend Sub ReadSoleUnits(ByRef SoleUnitsList As List(Of String))
-        If IsNothing(SoleUnitsList) Then Exit Sub
-        Dim s() As String = SoleUnitsList.ToArray
-        Call ReadFile(6, s, "", Nothing, Nothing)
+        Call ReadFile(ReadMode.SoleUnits, SoleUnitsList)
     End Sub
     ''' <summary>Читает список юнитов, которые могут находиться в отряде начиная с заданного количества слотов</summary>
-    ''' <param name="BigStackUnitsList">Файлы со списками юнитов. Записи в них могут повторяться, но записи с повторяющимся ID будут перезаписываться.
-    ''' Допускается передача неинициализитрованного массива.
-    ''' Для чтения из дефолтного листа в массив нужно добавить строчку %default% (наличие этого ключевого в файле запустит чтение дефолтного файла)</param>
-    Protected Friend Sub ReadBigStackUnits(ByRef BigStackUnitsList() As String)
-        If IsNothing(BigStackUnitsList) Then Exit Sub
-        Dim s() As String
-        Dim defaultKeys() As String = New String() {My.Resources.readDefaultFileKeyword}
-        Dim defaultVals() As String = New String() {defValues.BigStackUnits}
-        For i As Integer = 0 To UBound(BigStackUnitsList) Step 1
-            s = prepareToFileRead(BigStackUnitsList(i), defaultKeys, defaultVals)
-            Call ReadFile(7, s, BigStackUnitsList(i), AddressOf ReadBigStackUnits, defaultKeys)
-        Next i
+    Protected Friend Sub ReadBigStackUnits()
+        Dim s() As String = SettingsFileSplit(defValues.BigStackUnits)
+        Call ReadFile(ReadMode.BigStackUnits, s)
     End Sub
     ''' <summary>Читает список юнитов, которые могут находиться в отряде начиная с заданного количества слотов</summary>
     ''' <param name="BigStackUnitsList">Список юнитов. Записи в них могут повторяться, но записи с повторяющимся ID будут перезаписываться.
     ''' Допускается передача неинициализитрованного списка.
     ''' Не воспринимает ключевые слова</param>
     Protected Friend Sub ReadBigStackUnits(ByRef BigStackUnitsList As List(Of String))
-        If IsNothing(BigStackUnitsList) Then Exit Sub
-        Dim s() As String = BigStackUnitsList.ToArray
-        Call ReadFile(7, s, "", Nothing, Nothing)
+        Call ReadFile(ReadMode.BigStackUnits, BigStackUnitsList)
     End Sub
     ''' <summary>Читает список, определяющий принадлежность непроходимых объектов</summary>
-    ''' <param name="CustomBuildingRace">Файлы со списками рас и положений зданий. Записи в них могут повторяться, но записи с повторяющимся ID будут перезаписываться. 
-    ''' Допускается передача неинициализитрованного массива (будет прочтен дефолтный).
-    ''' Для чтения из дефолтного листа в массив нужно добавить строчку %default% (наличие этого ключевого в файле запустит чтение дефолтного файла)</param>
-    Protected Friend Sub ReadCustomBuildingRace(ByRef CustomBuildingRace() As String)
-        If IsNothing(CustomBuildingRace) Then
-            Call ReadCustomBuildingRace(New String() {My.Resources.readDefaultFileKeyword})
-            Exit Sub
-        End If
-        Dim s() As String
-        Dim defaultKeys() As String = New String() {My.Resources.readDefaultFileKeyword}
-        Dim defaultVals() As String = New String() {defValues.MapObjectRace}
-        For i As Integer = 0 To UBound(CustomBuildingRace) Step 1
-            s = prepareToFileRead(CustomBuildingRace(i), defaultKeys, defaultVals)
-            Call ReadFile(3, s, CustomBuildingRace(i), AddressOf ReadCustomBuildingRace, defaultKeys)
-        Next i
+    Protected Friend Sub ReadCustomBuildingRace()
+        Dim s() As String = SettingsFileSplit(defValues.MapObjectRace)
+        Call ReadFile(ReadMode.CustomBuildingRace, s)
     End Sub
     ''' <summary>Читает список, определяющий принадлежность непроходимых объектов</summary>
     ''' <param name="CustomBuildingRace">Список рас и положений зданий. Записи в них могут повторяться, но записи с повторяющимся ID будут перезаписываться. 
     ''' Допускается передача неинициализитрованного списка (будет прочтен дефолтный).
     ''' Не воспринимает ключевые слова</param>
     Protected Friend Sub ReadCustomBuildingRace(ByRef CustomBuildingRace As List(Of String))
-        If IsNothing(CustomBuildingRace) Then
-            Call ReadCustomBuildingRace(New String() {My.Resources.readDefaultFileKeyword})
-            Exit Sub
-        End If
-        Dim s() As String = CustomBuildingRace.ToArray
-        Call ReadFile(3, s, "", Nothing, Nothing)
+        Call ReadFile(ReadMode.CustomBuildingRace, CustomBuildingRace)
     End Sub
     ''' <summary>Читает описание того, как цеплять друг к другу "Плато" и "Водопады"</summary>
-    ''' <param name="PlateauConstructionDescription">Файлы с описаниями.
-    ''' Допускается передача неинициализитрованного массива (будет прочтен дефолтный).
-    ''' Для чтения из дефолтного листа в массив нужно добавить строчку %default% (наличие этого ключевого в файле запустит чтение дефолтного файла)</param>
-    Protected Friend Sub ReadPlateauConstructionDescription(ByRef PlateauConstructionDescription() As String)
-        If IsNothing(PlateauConstructionDescription) Then
-            Call ReadPlateauConstructionDescription(New String() {My.Resources.readDefaultFileKeyword})
-            Exit Sub
-        End If
-        Dim s() As String
-        Dim defaultKeys() As String = New String() {My.Resources.readDefaultFileKeyword}
-        Dim defaultVals() As String = New String() {defValues.PlateauConstructor}
-        For i As Integer = 0 To UBound(PlateauConstructionDescription) Step 1
-            s = prepareToFileRead(PlateauConstructionDescription(i), defaultKeys, defaultVals)
-            Call ReadFile(4, s, PlateauConstructionDescription(i), AddressOf ReadPlateauConstructionDescription, defaultKeys)
-        Next i
+    Protected Friend Sub ReadPlateauConstructionDescription()
+        Dim s() As String = SettingsFileSplit(defValues.PlateauConstructor)
+        Call ReadFile(ReadMode.PlateauConstructionDescription, s)
     End Sub
     ''' <summary>Читает описание того, как цеплять друг к другу "Плато" и "Водопады"</summary>
     ''' <param name="PlateauConstructionDescription">Описания.
     ''' Допускается передача неинициализитрованного списка (будет прочтен дефолтный).
     ''' Не воспринимает ключевые слова</param>
     Protected Friend Sub ReadPlateauConstructionDescription(ByRef PlateauConstructionDescription As List(Of String))
-        If IsNothing(PlateauConstructionDescription) Then
-            Call ReadPlateauConstructionDescription(New String() {My.Resources.readDefaultFileKeyword})
-            Exit Sub
-        End If
-        Dim s() As String = PlateauConstructionDescription.ToArray
-        Call ReadFile(4, s, "", Nothing, Nothing)
+        Call ReadFile(ReadMode.PlateauConstructionDescription, PlateauConstructionDescription)
     End Sub
     ''' <summary>Читает список юнитов, предметов и заклинаний, которые не должен использовать генератор</summary>
-    ''' <param name="PreservedLists">Файлы со списками предметов, которые нельзя перегенерировать. Записи в них могут повторяться. 
-    ''' Допускается передача неинициализитрованного массива.
-    ''' Для чтения из дефолтного листа в массив нужно добавить строчку %default% (наличие этого ключевого в файле запустит чтение дефолтного файла)</param>
-    Public Sub ReadPreservedItemsList(ByRef PreservedLists() As String)
-        If IsNothing(PreservedLists) Then Exit Sub
-        Dim s() As String
-        Dim defaultKeys() As String = New String() {My.Resources.readDefaultFileKeyword}
-        Dim defaultVals() As String = New String() {defValues.PreservedItems}
-        For i As Integer = 0 To UBound(PreservedLists) Step 1
-            s = prepareToFileRead(PreservedLists(i), defaultKeys, defaultVals)
-            Call ReadFile(8, s, PreservedLists(i), AddressOf ReadPreservedItemsList, defaultKeys)
-        Next i
+    Public Sub ReadPreservedItemsList()
+        Dim s() As String = SettingsFileSplit(defValues.PreservedItems)
+        Call ReadFile(ReadMode.PreservedItemsList, s)
     End Sub
     ''' <summary>Читает список юнитов, предметов и заклинаний, которые не должен использовать генератор</summary>
     ''' <param name="PreservedLists">Файлы со списками предметов, которые нельзя перегенерировать. Записи в них могут повторяться. 
     ''' Допускается передача неинициализитрованного массива.
     ''' Не воспринимает ключевые слова</param>
     Public Sub ReadPreservedItemsList(ByRef PreservedLists As List(Of String))
-        If IsNothing(PreservedLists) Then Exit Sub
-        Dim s() As String = PreservedLists.ToArray
-        Call ReadFile(8, s, "", Nothing, Nothing)
+        Call ReadFile(ReadMode.PreservedItemsList, PreservedLists)
     End Sub
-    Private Function prepareToFileRead(ByRef filePath As String, ByRef defaultKeywords() As String, ByRef defaultValues() As String) As String()
-        If Not IsNothing(defaultKeywords) Then
-            For i As Integer = 0 To UBound(defaultKeywords) Step 1
-                If filePath.ToLower = defaultKeywords(i).ToLower Then Return TxtSplit(RecursiveReadFile(defaultValues(i).Split(CChar(vbNewLine))))
-            Next i
-        End If
-        If IO.File.Exists(filePath) Then
-            Return TxtSplit(RecursiveReadFile(filePath))
-        Else
-            Return Nothing
-        End If
+    Private Function SettingsFileSplit(ByRef fileContent As String) As String()
+        If IsNothing(fileContent) Then Return Nothing
+        If fileContent = "" Then Return Nothing
+        Return TxtSplit(fileContent)
     End Function
-    Private Sub ReadFile(ByRef mode As Integer, ByRef s() As String, ByRef filepath As String, _
-                         ByRef f As readFunction, ByRef defaultKeys() As String)
+    Private Sub ReadFile(ByRef mode As ReadMode, ByRef t As List(Of String))
+        If IsNothing(t) Then Exit Sub
+        Dim s() As String = t.ToArray
+        Call ReadFile(mode, s)
+    End Sub
+    Private Sub ReadFile(ByRef mode As ReadMode, ByRef s() As String)
         If IsNothing(s) Then Exit Sub
         Dim srow(), r As String
-        Dim isKey As Boolean
         For j As Integer = 0 To UBound(s) Step 1
             srow = s(j).Split(CChar(" "))
-            isKey = False
-            If Not IsNothing(defaultKeys) AndAlso Not IsNothing(f) Then
-                For Each key As String In defaultKeys
-                    If srow(0).ToLower = key.ToLower And Not filepath.ToLower = key.ToLower Then
-                        Call f(New String() {key.ToLower})
-                        isKey = True
-                        Exit For
-                    End If
-                Next key
-            End If
-            If Not isKey Then
-                If mode = 1 Then
-                    If Not excludedObjects.Contains(srow(0).ToUpper) Then excludedObjects.Add(srow(0).ToUpper)
-                ElseIf mode = 2 Then
-                    If srow.Length > 2 Then
-                        If customRace.ContainsKey(srow(0).ToUpper) Then customRace.Remove(srow(0).ToUpper)
-                        customRace.Add(srow(0).ToUpper, srow(2).ToUpper)
-                    End If
-                ElseIf mode = 3 Then
-                    If srow.Length > 1 Then
-                        If objectRace.ContainsKey(srow(0).ToUpper) Then objectRace.Remove(srow(0).ToUpper)
-                        objectRace.Add(srow(0).ToUpper, New DecorationPlacingProperties(srow, Me))
-                    End If
-                ElseIf mode = 4 Then
-                    If srow.Length > 1 Then
-                        If PlateauConstruction.ContainsKey(srow(0).ToUpper) Then PlateauConstruction.Remove(srow(0).ToUpper)
-                        r = ""
-                        For i As Integer = 1 To UBound(srow) Step 1
-                            If i > 1 Then r &= " "
-                            r &= srow(i)
-                        Next i
-                        PlateauConstruction.Add(srow(0).ToUpper, r.ToUpper)
-                    End If
-                ElseIf mode = 5 Then
-                    If srow.Length > 1 Then
-                        If LootItemChanceMultiplier.ContainsKey(srow(0).ToUpper) Then LootItemChanceMultiplier.Remove(srow(0).ToUpper)
-                        LootItemChanceMultiplier.Add(srow(0).ToUpper, ValueConverter.StrToDbl(srow(1)))
-                    End If
-                ElseIf mode = 6 Then
-                    For i As Integer = 0 To UBound(srow) Step 1
-                        If SoleUnits.ContainsKey(srow(i).ToUpper) Then SoleUnits.Remove(srow(i).ToUpper)
-                        SoleUnits.Add(srow(i).ToUpper, New List(Of String))
-                        For k As Integer = 0 To UBound(srow) Step 1
-                            SoleUnits.Item(srow(i).ToUpper).Add(srow(k).ToUpper)
-                        Next k
-                    Next i
-                ElseIf mode = 7 Then
-                    If srow.Length > 1 Then
-                        If BigStackUnits.ContainsKey(srow(0).ToUpper) Then BigStackUnits.Remove(srow(0).ToUpper)
-                        BigStackUnits.Add(srow(0).ToUpper, CInt(srow(1)))
-                    End If
-                ElseIf mode = 8 Then
-                    If Not preservedItems.Contains(srow(0).ToUpper) Then preservedItems.Add(srow(0).ToUpper)
-                Else
-                    Throw New Exception("Invalid read mode: " & mode)
+
+            If mode = ReadMode.ExcludedObjects Then
+                If Not excludedObjects.Contains(srow(0).ToUpper) Then excludedObjects.Add(srow(0).ToUpper)
+            ElseIf mode = ReadMode.CustomUnitRace Then
+                If srow.Length > 2 Then
+                    If customRace.ContainsKey(srow(0).ToUpper) Then customRace.Remove(srow(0).ToUpper)
+                    customRace.Add(srow(0).ToUpper, srow(2).ToUpper)
                 End If
+            ElseIf mode = ReadMode.CustomBuildingRace Then
+                If srow.Length > 1 Then
+                    If objectRace.ContainsKey(srow(0).ToUpper) Then objectRace.Remove(srow(0).ToUpper)
+                    objectRace.Add(srow(0).ToUpper, New DecorationPlacingProperties(srow, Me))
+                End If
+            ElseIf mode = ReadMode.PlateauConstructionDescription Then
+                If srow.Length > 1 Then
+                    If PlateauConstruction.ContainsKey(srow(0).ToUpper) Then PlateauConstruction.Remove(srow(0).ToUpper)
+                    r = ""
+                    For i As Integer = 1 To UBound(srow) Step 1
+                        If i > 1 Then r &= " "
+                        r &= srow(i)
+                    Next i
+                    PlateauConstruction.Add(srow(0).ToUpper, r.ToUpper)
+                End If
+            ElseIf mode = ReadMode.LootItemChanceMultiplier Then
+                If srow.Length > 1 Then
+                    If LootItemChanceMultiplier.ContainsKey(srow(0).ToUpper) Then LootItemChanceMultiplier.Remove(srow(0).ToUpper)
+                    LootItemChanceMultiplier.Add(srow(0).ToUpper, ValueConverter.StrToDbl(srow(1)))
+                End If
+            ElseIf mode = ReadMode.SoleUnits Then
+                For i As Integer = 0 To UBound(srow) Step 1
+                    If SoleUnits.ContainsKey(srow(i).ToUpper) Then SoleUnits.Remove(srow(i).ToUpper)
+                    SoleUnits.Add(srow(i).ToUpper, New List(Of String))
+                    For k As Integer = 0 To UBound(srow) Step 1
+                        SoleUnits.Item(srow(i).ToUpper).Add(srow(k).ToUpper)
+                    Next k
+                Next i
+            ElseIf mode = ReadMode.BigStackUnits Then
+                If srow.Length > 1 Then
+                    If BigStackUnits.ContainsKey(srow(0).ToUpper) Then BigStackUnits.Remove(srow(0).ToUpper)
+                    BigStackUnits.Add(srow(0).ToUpper, CInt(srow(1)))
+                End If
+            ElseIf mode = ReadMode.PreservedItemsList Then
+                If Not preservedItems.Contains(srow(0).ToUpper) Then preservedItems.Add(srow(0).ToUpper)
+            Else
+                Throw New Exception("Invalid read mode: " & mode.ToString)
             End If
         Next j
     End Sub
@@ -4353,12 +4220,6 @@ Public Class GenDefaultValues
     End Function
     Public Shared Function wObjKeyTown() As String
         Return My.Resources.objKeyTown
-    End Function
-    Public Shared Function wReadDefaultFileKeyword() As String
-        Return My.Resources.readDefaultFileKeyword
-    End Function
-    Public Shared Function wReadModLoreFileKeyword() As String
-        Return My.Resources.readMLoreFileKeyword
     End Function
     Public Shared Function wTemplate_CreationKeyword() As String
         Return My.Resources.template_creation

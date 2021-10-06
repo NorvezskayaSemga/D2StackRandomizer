@@ -8336,7 +8336,7 @@ Public Class WaterGen
         End If
 
         comm = m.comm
-        Call comm.ReadCustomBuildingRace(CustomBuildingRace)
+        Call comm.ReadCustomBuildingRace()
         imp = impMG
 
         Dim t0 As Integer = Environment.TickCount
@@ -9378,22 +9378,13 @@ Public Class ImpenetrableObjects
     End Structure
 
     ''' <param name="ObjectsSize">Размеры всех объектов местности</param>
-    ''' <param name="ExcludeLists">Файлы со списками исключенных объектов. Записи в них могут повторяться. 
-    ''' Допускается передача неинициализитрованного массива.
-    ''' Для чтения из дефолтного листа в массив нужно добавить строчку %default% (наличие этого ключевого в файле запустит чтение дефолтного файла)</param>
-    ''' <param name="CustomBuildingRace">Файлы со списками рас объектов. Записи в них могут повторяться, но записи с повторяющимся ID будут перезаписываться. 
-    ''' Допускается передача неинициализитрованного массива (тогда прочтем дефолтный файл).
-    ''' Для чтения из дефолтного листа в массив нужно добавить строчку %default% (наличие этого ключевого в файле запустит чтение дефолтного файла)</param>
-    ''' <param name="PlateauConstructionDescription">Файлы с описаниями.
-    ''' Допускается передача неинициализитрованного массива (будет прочтен дефолтный).
-    ''' Для чтения из дефолтного листа в массив нужно добавить строчку %default% (наличие этого ключевого в файле запустит чтение дефолтного файла)</param>
+    ''' <param name="AddLoreUnitsToExcluded">Добавлять ли лорных юнитов в список исключенных</param>
     ''' <param name="spells">Все заклинания в игре</param>
-    Public Sub New(ByRef ObjectsSize() As GlobalMapDecoration, ByRef ExcludeLists() As String, ByRef CustomBuildingRace() As String, _
-                   ByRef PlateauConstructionDescription() As String, ByRef spells() As AllDataStructues.Spell, ByRef c As Common)
+    Public Sub New(ByRef ObjectsSize() As GlobalMapDecoration, ByRef AddLoreUnitsToExcluded As Boolean, ByRef spells() As AllDataStructues.Spell, ByRef c As Common)
         comm = c
-        Call comm.ReadExcludedObjectsList(ExcludeLists)
-        Call comm.ReadCustomBuildingRace(CustomBuildingRace)
-        Call comm.ReadPlateauConstructionDescription(PlateauConstructionDescription)
+        Call comm.ReadExcludedObjectsList(AddLoreUnitsToExcluded)
+        Call comm.ReadCustomBuildingRace()
+        Call comm.ReadPlateauConstructionDescription()
 
         raceSpells = spells
 
@@ -11646,8 +11637,9 @@ Public Class VanillaSagaContentReplace
     ''' <param name="RStack">Инициализированный класс</param>
     Public Sub New(ByRef RStack As RandStack)
         RndStack = RStack
-        RStack.comm.ReadExcludedObjectsList(New String() {".\Resources\mod_settings_Vanilla\ExcludeIDs_ModLore.txt"})
-        VanillaLoreUnits = RStack.comm.excludedObjects
+        'RStack.comm.ReadExcludedObjectsList(New String() {".\Resources\mod_settings_Vanilla\ExcludeIDs_ModLore.txt"})
+        'VanillaLoreUnits = RStack.comm.excludedObjects
+        MsgBox("Если вдруг класс понадобится, нужно сделать чтение файла с лорными юнитами ванили")
     End Sub
 
     Public Function ReplaceItem(ByRef ID As String) As String

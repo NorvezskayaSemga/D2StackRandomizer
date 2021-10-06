@@ -87,19 +87,6 @@ Public Class RandStackTest
 "g000000000", "g000000000", "g000000000", "g000000000", "g000000000", "g000000000", "g000000000", "g000000000", "g000000000", "g000000000", "g000000000", "g000000000",
 "g000uu8040", "g000uu8013", "g000uu8009", "g000uu8011", "g000uu8251", "g000uu8012", "g000uu8014", "g000uu8018", "g000uu8025", "g000uu8031", "g000uu8029", "g003uu8037"}
 
-    Friend excludeList() As String = New String() {RandomStackGenerator.My.Resources.readDefaultFileKeyword, _
-                                                   RandomStackGenerator.My.Resources.readDefaultFileKeyword}
-    Friend customRaceList() As String = New String() {RandomStackGenerator.My.Resources.readDefaultFileKeyword, _
-                                                      RandomStackGenerator.My.Resources.readDefaultFileKeyword}
-    Friend customLootChanceList() As String = New String() {RandomStackGenerator.My.Resources.readDefaultFileKeyword, _
-                                                            RandomStackGenerator.My.Resources.readDefaultFileKeyword}
-    Friend soleUnitsList() As String = New String() {RandomStackGenerator.My.Resources.readDefaultFileKeyword, _
-                                                     RandomStackGenerator.My.Resources.readDefaultFileKeyword}
-    Friend bigStackUnitsList() As String = New String() {RandomStackGenerator.My.Resources.readDefaultFileKeyword, _
-                                                         RandomStackGenerator.My.Resources.readDefaultFileKeyword}
-
-    Friend preservedItemsList() As String = New String() {RandomStackGenerator.My.Resources.readDefaultFileKeyword, _
-                                                          RandomStackGenerator.My.Resources.readDefaultFileKeyword}
     Friend UnitsList() As AllDataStructues.Unit = Nothing
     Friend ItemsList() As AllDataStructues.Item = Nothing
     Friend AllSpells() As AllDataStructues.Spell = Nothing
@@ -808,8 +795,7 @@ Public Class RandStackTest
 
         Call CreateRandStack_Accessor()
         Dim target As RandStack = CreateRandStack()
-        target.comm.ReadExcludedObjectsList({RandomStackGenerator.My.Resources.readDefaultFileKeyword, _
-                                             RandomStackGenerator.My.Resources.readMLoreFileKeyword})
+        target.comm.ReadExcludedObjectsList(False)
 
         Dim ok As Boolean = True
 

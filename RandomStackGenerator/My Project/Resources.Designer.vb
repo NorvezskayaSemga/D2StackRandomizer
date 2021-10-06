@@ -674,24 +674,6 @@ Namespace My.Resources
         End Property
         
         '''<summary>
-        '''  Looks up a localized string similar to %default%.
-        '''</summary>
-        Friend ReadOnly Property readDefaultFileKeyword() As String
-            Get
-                Return ResourceManager.GetString("readDefaultFileKeyword", resourceCulture)
-            End Get
-        End Property
-        
-        '''<summary>
-        '''  Looks up a localized string similar to %nomodlore%.
-        '''</summary>
-        Friend ReadOnly Property readMLoreFileKeyword() As String
-            Get
-                Return ResourceManager.GetString("readMLoreFileKeyword", resourceCulture)
-            End Get
-        End Property
-        
-        '''<summary>
         '''  Looks up a localized string similar to R.
         '''</summary>
         Friend ReadOnly Property spellRandomRace() As String
