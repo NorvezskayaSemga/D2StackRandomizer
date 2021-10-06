@@ -31,7 +31,7 @@ Public Class RandStack
         ''' <summary>Положение столиц (угол с наименьшей координатой по X и Y)</summary>
         Public CapitalPos() As Point = Nothing
         '''<summary>Список лордов на карте. Юниты из веток развития соответствующих рас добавляться в отряды не будут, 
-        ''' если AddUnitsFromBranchesToStacks = False или MapLords = Nothing.</summary>
+        ''' если AddUnitsFromBranchesToStacks = False и MapLords != Nothing.</summary>
         Public MapLords() As String = Nothing
         ''' <summary>Если False, генератор не будет добавлять в отряды юнитов из веток развития, если столица их расы есть на каврте. По умолчанию False</summary>
         Public AddUnitsFromBranchesToStacks As Boolean
@@ -66,7 +66,7 @@ Public Class RandStack
     ''' <summary>Положение столиц (угол с наименьшей координатой по X и Y)</summary>
     Public CapitalPos() As Point
     '''<summary>Список лордов на карте. Юниты из веток развития соответствующих рас добавляться в отряды не будут, 
-    ''' если AddUnitsFromBranchesToStacks = False или MapLords = Nothing.</summary>
+    ''' если AddUnitsFromBranchesToStacks = False и MapLords != Nothing.</summary>
     Public MapLords() As String = Nothing
     ''' <summary>Если False, генератор не будет добавлять в отряды юнитов из веток развития, если столица их расы есть на каврте. По умолчанию False</summary>
     Public AddUnitsFromBranchesToStacks As Boolean
