@@ -368,7 +368,7 @@ Class StackStatsGen
                                                        .LootCost = CInt(LootCost), _
                                                        .LocationName = "Loc_" & groupID, _
                                                        .ExpBarAverage = Math.Max(eBar, 50), _
-                                                       .IGen = New AllDataStructues.LootGenSettings}
+                                                       .IGen = New AllDataStructues.LootGenSettings(False)}
     End Function
 
 End Class

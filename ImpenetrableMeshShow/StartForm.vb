@@ -323,11 +323,10 @@ Friend Class StartForm
 
         Dim lcost As AllDataStructues.Cost = r.LootCost(items)
         Dim igen As AllDataStructues.LootGenSettings = r.GetItemsGenSettings(items, False)
-        Dim sett As New AllDataStructues.CommonLootCreationSettings With {.GoldCost = AllDataStructues.Cost.Sum(lcost), _
-                                                                          .IGen = igen, _
-                                                                          .pos = New Point(0, 0), _
-                                                                          .TypeCostRestriction = Nothing, _
-                                                                          .ApplyStrictTypesFilter = True}
+        Dim sett As New AllDataStructues.CommonLootCreationSettings(True) With {.GoldCost = AllDataStructues.Cost.Sum(lcost), _
+                                                                                .IGen = igen, _
+                                                                                .pos = New Point(0, 0), _
+                                                                                .TypeCostRestriction = Nothing}
         Dim result As List(Of String) = r.ItemsGen(sett)
     End Sub
 
@@ -336,7 +335,7 @@ Friend Class StartForm
         r.AllUnitsList = ReadTestUnits(GenDefaultValues.DefaultMod)
         r.AllItemsList = ReadTestItems(GenDefaultValues.DefaultMod)
         r.AllSpellsList = ReadSpells()
-        r.modName = GenDefaultValues.DefaultMod
+        r.settings.modName = GenDefaultValues.DefaultMod
         Return r
     End Function
 

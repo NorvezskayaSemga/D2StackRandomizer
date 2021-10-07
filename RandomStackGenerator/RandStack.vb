@@ -16,25 +16,69 @@ Public Class RandStack
         ''' </summary>
         Public AllSpellsList() As AllDataStructues.Spell
         ''' <summary>
-        ''' Количество использований талисманов
+        ''' Настройки генерации
         ''' </summary>
-        Public TalismanChargesDefaultAmount As Integer = 5
+        Public settings As New SettingsInfo
         ''' <summary>
-        ''' Название мода, на котором происходит генерация.
-        ''' Ваианты можно получить из GenDefaultValues.GetSupportedMods
+        ''' Информация о карте
         ''' </summary>
-        Public modName As String
-        ''' <summary>Если True, генератор будет игнорировать ограничения по расе при создании отрядов. По умолчанию False</summary>
-        Public ignoreUnitRace As Boolean
-        ''' <summary>Если True, генератор не будет добавлять в отряды юнитов, связнных с лором. По умолчанию False</summary>
-        Public ExcludeLoreUnits As Boolean
-        ''' <summary>Положение столиц (угол с наименьшей координатой по X и Y)</summary>
-        Public CapitalPos() As Point = Nothing
-        '''<summary>Список лордов на карте. Юниты из веток развития соответствующих рас добавляться в отряды не будут, 
-        ''' если AddUnitsFromBranchesToStacks = False и MapLords != Nothing.</summary>
-        Public MapLords() As String = Nothing
-        ''' <summary>Если False, генератор не будет добавлять в отряды юнитов из веток развития, если столица их расы есть на карте. По умолчанию False</summary>
-        Public AddUnitsFromBranchesToStacks As Boolean
+        Public mapData As New MapInfo
+
+        Public Class MapInfo
+            ''' <summary>Положение столиц (угол с наименьшей координатой по X и Y)</summary>
+            Public capitalPos() As Point = Nothing
+            '''<summary>Список лордов на карте. Юниты из веток развития соответствующих рас добавляться в отряды не будут, 
+            ''' если SettingsInfo.AddUnitsFromBranchesToStacks = False и MapLords != Nothing.</summary>
+            Public mapLords() As String = Nothing
+            ''' <summary>
+            ''' Количество рудников на карте. По умолчанию всех по одному
+            ''' </summary>
+            Public minesAmount As New AllDataStructues.Cost With {.Black = 1, _
+                                                                  .Blue = 1, _
+                                                                  .Gold = 1, _
+                                                                  .Green = 1, _
+                                                                  .Red = 1, _
+                                                                  .White = 1}
+        End Class
+        Public Class SettingsInfo
+            ''' <summary>
+            ''' Название мода, на котором происходит генерация.
+            ''' Ваианты можно получить из GenDefaultValues.GetSupportedMods
+            ''' </summary>
+            Public modName As String
+
+            ''' <summary>
+            ''' Количество использований талисманов. По умолчанию пять
+            ''' </summary>
+            Public talismanChargesDefaultAmount As Integer = 5
+
+            ''' <summary>Если True, генератор будет игнорировать ограничения по расе при создании отрядов. По умолчанию False</summary>
+            Public ignoreUnitRace As Boolean
+            ''' <summary>Если True, генератор не будет добавлять в отряды юнитов, связнных с лором. По умолчанию False</summary>
+            Public excludeLoreUnits As Boolean
+            ''' <summary>Если False, генератор не будет добавлять в отряды юнитов из веток развития, если столица их расы есть на карте. По умолчанию False</summary>
+            Public addUnitsFromBranchesToStacks As Boolean
+            ''' <summary>
+            ''' Если True, не будет учитывать оверлевелы при расчете опыта за убийство и планок опыта. Вместо этого добавит оверлевелы новому отряду. По умолчанию False
+            ''' </summary>
+            Public preserveUnitsOverlevel As Boolean
+
+            ''' <summary>
+            ''' Шанс сконвертировать часть золота в ману (от 0 до 1)
+            ''' </summary>
+            Public manaToGoldConversionChance As Double
+            ''' <summary>
+            ''' Какую часть золота сконвертировать (от 0 до 1)
+            ''' </summary>
+            Public manaToGoldConversionAmount As Double
+
+            '''<summary>
+            ''' При перегенерации предметов если в луте было знамя, то и после перегенерации будет какое-то знамя. 
+            ''' Если были сапоги - будут какие-нибудь сапоги.
+            ''' </summary>
+            Public ApplyStrictTypesFilter As Boolean
+        End Class
+
     End Class
 
     Private busytransfer() As Integer = New Integer() {1, -1, 3, -1, 5, -1}
@@ -42,8 +86,6 @@ Public Class RandStack
     Private secondrow() As Integer = New Integer() {1, 3, 5}
     Private Const itemGenSigma As Double = 0.5
     Private Const multiItemGenSigmaMultiplier As Double = 1.5
-    Private IgnoreUnitRace As Boolean
-    Private ExcludeLoreUnits As Boolean
 
     Private UnitsArrayPos As New Dictionary(Of String, Integer)
     Friend AllUnits() As AllDataStructues.Unit
@@ -62,14 +104,15 @@ Public Class RandStack
     Friend ItemCostSum(), multiplierItemsWeight() As Double
     Private minItemGoldCost As Integer
     Private bak_multiplierItemsWeight() As Double
-    
-    ''' <summary>Положение столиц (угол с наименьшей координатой по X и Y)</summary>
-    Public CapitalPos() As Point
-    '''<summary>Список лордов на карте. Юниты из веток развития соответствующих рас добавляться в отряды не будут, 
-    ''' если AddUnitsFromBranchesToStacks = False и MapLords != Nothing.</summary>
-    Public MapLords() As String = Nothing
-    ''' <summary>Если False, генератор не будет добавлять в отряды юнитов из веток развития, если столица их расы есть на карте. По умолчанию False</summary>
-    Public AddUnitsFromBranchesToStacks As Boolean
+
+    ''' <summary>
+    ''' Настройки генерации
+    ''' </summary>
+    Public settings As ConstructorInput.SettingsInfo
+    ''' <summary>
+    ''' Информация о карте
+    ''' </summary>
+    Public mapData As ConstructorInput.MapInfo
 
     Private AddedItems As New Dictionary(Of Integer, Dictionary(Of Integer, List(Of AllDataStructues.Item)))
 
@@ -77,24 +120,22 @@ Public Class RandStack
     Public log As Log
 
     Public Sub New(ByRef data As ConstructorInput)
-        comm = New Common(data.modName) With {.onExcludedListChanged = AddressOf ResetExclusions}
+        comm = New Common(data.settings.modName) With {.onExcludedListChanged = AddressOf ResetExclusions}
         rndgen = comm.rndgen
         log = New Log(comm)
+        settings = data.settings
+        mapData = data.mapData
+
         If IsNothing(data.AllUnitsList) Or IsNothing(data.AllItemsList) Then Exit Sub
 
-        If data.TalismanChargesDefaultAmount < 1 Then Throw New Exception("Unexpected TalismanChargesDefaultAmount")
-        IgnoreUnitRace = data.ignoreUnitRace
+        If settings.talismanChargesDefaultAmount < 1 Then Throw New Exception("Unexpected TalismanChargesDefaultAmount")
 
-        Call comm.ReadExcludedObjectsList(data.ExcludeLoreUnits)
+        Call comm.ReadExcludedObjectsList(settings.excludeLoreUnits)
         Call comm.ReadCustomUnitRace()
         Call comm.ReadLootItemChanceMultiplier()
         Call comm.ReadSoleUnits()
         Call comm.ReadBigStackUnits()
         Call comm.ReadPreservedItemsList()
-
-        CapitalPos = data.CapitalPos
-        MapLords = data.MapLords
-        AddUnitsFromBranchesToStacks = data.AddUnitsFromBranchesToStacks
 
         Dim PlayableSubraces As New List(Of Integer)
         For Each item As String In comm.TxtSplit(comm.defValues.PlayableSubraces)
@@ -141,7 +182,7 @@ Public Class RandStack
         For i As Integer = 0 To UBound(AllItems) Step 1
             AllItems(i) = AllDataStructues.Item.Copy(data.AllItemsList(i))
             If AllItems(i).type = GenDefaultValues.ItemTypes.talisman Then
-                AllItems(i).itemCost *= data.TalismanChargesDefaultAmount
+                AllItems(i).itemCost *= data.settings.talismanChargesDefaultAmount
             End If
             ItemsArrayPos.Add(AllItems(i).itemID.ToUpper, i)
 
@@ -239,6 +280,7 @@ Public Class RandStack
         'End If
     End Sub
 
+#Region "Find stats"
     ''' <summary>Найдет статы юнита по ID (нечувствительно к регистру)</summary>
     ''' <param name="ID">GxxxUUxxxx</param>
     Public Function FindUnitStats(ByVal ID As String) As AllDataStructues.Unit
@@ -269,17 +311,76 @@ Public Class RandStack
             Return Nothing
         End If
     End Function
+#End Region
 
+    ''' <summary>Может быть преобразует часть золота в ману. Результат будет кратен 25</summary>
+    ''' <param name="input">Начальные ресурсы. При конвертации начальная мана не пропадет</param>
+    Public Function GoldToMana(ByRef input As AllDataStructues.Cost) As AllDataStructues.Cost
+        Dim output As AllDataStructues.Cost = AllDataStructues.Cost.Copy(input)
+        If settings.manaToGoldConversionChance > 0 AndAlso AllDataStructues.Cost.Sum(mapData.minesAmount) - mapData.minesAmount.Gold > 0 AndAlso rndgen.Rand(0, 1, True) <= settings.manaToGoldConversionChance Then
+            Dim relationships As New AllDataStructues.Cost
+            Do While AllDataStructues.Cost.Sum(relationships) = 0
+                If mapData.minesAmount.Black > 0 Then relationships.Black = rndgen.RndInt(0, mapData.minesAmount.Black, True)
+                If mapData.minesAmount.Blue > 0 Then relationships.Blue = rndgen.RndInt(0, mapData.minesAmount.Blue, True)
+                If mapData.minesAmount.Green > 0 Then relationships.Green = rndgen.RndInt(0, mapData.minesAmount.Green, True)
+                If mapData.minesAmount.Red > 0 Then relationships.Red = rndgen.RndInt(0, mapData.minesAmount.Red, True)
+                If mapData.minesAmount.White > 0 Then relationships.White = rndgen.RndInt(0, mapData.minesAmount.White, True)
+            Loop
+
+            Dim manaPiece As Double = input.Gold * Math.Max(Math.Min(settings.manaToGoldConversionAmount, 1), 0) / AllDataStructues.Cost.Sum(relationships)
+
+            Dim roundBy As Integer = 25
+            Dim dGold As Double = 0
+
+            Dim order() As Integer = New Integer() {0, 1, 2, 3, 4}
+            For n As Integer = 1 To UBound(order) Step 1
+                Dim r As Integer = rndgen.RndPos(order.Length, True) - 1
+                Dim t As Integer = order(r)
+                order(r) = order(0)
+                order(0) = t
+            Next n
+            For n As Integer = 0 To UBound(order) Step 1
+                If order(n) = 0 Then
+                    Call GoldToManaRound(relationships.Black * manaPiece, roundBy, output, output.Black, dGold)
+                ElseIf order(n) = 1 Then
+                    Call GoldToManaRound(relationships.Blue * manaPiece, roundBy, output, output.Blue, dGold)
+                ElseIf order(n) = 2 Then
+                    Call GoldToManaRound(relationships.Green * manaPiece, roundBy, output, output.Green, dGold)
+                ElseIf order(n) = 3 Then
+                    Call GoldToManaRound(relationships.Red * manaPiece, roundBy, output, output.Red, dGold)
+                Else
+                    Call GoldToManaRound(relationships.White * manaPiece, roundBy, output, output.White, dGold)
+                End If
+            Next n
+        End If
+        Return output
+    End Function
+    Private Sub GoldToManaRound(ByRef input As Double, ByRef roundBy As Integer, ByRef output As AllDataStructues.Cost, ByRef field As Integer, ByRef dGold As Double)
+        If input <= 0 Then Exit Sub
+        input = Math.Min(input, output.Gold)
+        Dim modulo As Double = input Mod roundBy
+        Dim convet As Integer = CInt(input - modulo)
+        output.Gold -= convet
+        field += convet
+        dGold += modulo
+        If dGold > 0 And output.Gold >= roundBy Then
+            Dim r As Double = rndgen.Rand(0, CDbl(roundBy), True)
+            If r < dGold Then
+                output.Gold -= roundBy
+                field += roundBy
+                dGold -= roundBy
+            End If
+        End If
+    End Sub
+
+#Region "Creation of gen settings"
     ''' <summary>Вычисляет параметры отряда по составу. Цена предмета в мане прибавится к стоимости лута в золоте</summary>
     ''' <param name="stack">ID юнитов и предметов отряда</param>
     ''' <param name="isSettingsForRuins"> Опция для перегенератора карт.
     ''' Для руин в любом случае генератор лута не будет обязан добавлять предмет в качестве награды (True).
     ''' Для остальных объектов (False) генератор будет обязан добавить хоть какой-то предмет, если
     ''' до перегенерации в награде были предметы, не входящие в список PreservedItems.txt</param>
-    ''' <param name="preserveUnitsOverlevel">Если True, не будет учитывать оверлевелы 
-    ''' при расчете опыта за убийство и планок опыта. Вместо этого добавит оверлевелы новому отряду</param>
-    Public Function StackStats(ByRef stack As AllDataStructues.Stack, ByVal isSettingsForRuins As Boolean, _
-                               ByVal preserveUnitsOverlevel As Boolean) As AllDataStructues.DesiredStats
+    Public Function StackStats(ByRef stack As AllDataStructues.Stack, ByVal isSettingsForRuins As Boolean) As AllDataStructues.DesiredStats
         Dim result As New AllDataStructues.DesiredStats With {.Race = New List(Of Integer)}
         Dim unit As AllDataStructues.Unit
         Dim expKilledSum As Double
@@ -299,7 +400,7 @@ Public Class RandStack
                 End If
                 If Not unit.small Or unit.reach = GenDefaultValues.UnitAttackReach.melee Then result.MeleeCount += 1
                 currentUnitLevel = Math.Max(stack.level(i), unit.level)
-                If Not preserveUnitsOverlevel Then
+                If Not settings.preserveUnitsOverlevel Then
                     result.ExpStackKilled += unit.GetExpKilledOverlevel(currentUnitLevel)
                     result.ExpBarAverage += unit.GetExpNextOverlevel(currentUnitLevel)
                 Else
@@ -325,8 +426,8 @@ Public Class RandStack
     ''' Для остальных объектов (False) генератор будет обязан добавить хоть какой-то предмет, если
     ''' до перегенерации в награде были предметы, не входящие в список PreservedItems.txt</param>
     Public Function GetItemsGenSettings(ByRef items As List(Of String), ByVal isSettingsForRuins As Boolean) As AllDataStructues.LootGenSettings
-        If IsNothing(items) Then Return New AllDataStructues.LootGenSettings
-        Dim result As New AllDataStructues.LootGenSettings With { _
+        If IsNothing(items) Then Return New AllDataStructues.LootGenSettings(settings.ApplyStrictTypesFilter)
+        Dim result As New AllDataStructues.LootGenSettings(settings.ApplyStrictTypesFilter) With { _
             .ConsumableItems = New AllDataStructues.ItemGenSettings With {.exclude = True}, _
             .NonconsumableItems = New AllDataStructues.ItemGenSettings With {.exclude = True}, _
             .JewelItems = New AllDataStructues.ItemGenSettings With {.exclude = True}}
@@ -349,7 +450,7 @@ Public Class RandStack
                     result.JewelItems.amount += 1
                     result.JewelItems.costPart += AllDataStructues.Cost.Sum(LootCost(item))
                 End If
-                result.typesAmount(item.type) += 1
+                Call result.IncreaseTypeAmount(item)
             Else
                 If IsNothing(result.PreserveItems) Then result.PreserveItems = New List(Of String)
                 result.PreserveItems.Add(item.itemID.ToUpper)
@@ -364,7 +465,9 @@ Public Class RandStack
         End If
         Return result
     End Function
+#End Region
 
+#Region "Loot info"
     ''' <summary>Определяет суммарную ценность предметов</summary>
     ''' <param name="items">Список предметов</param>
     Public Function LootCost(ByRef items As List(Of AllDataStructues.Item)) As AllDataStructues.Cost
@@ -417,71 +520,9 @@ Public Class RandStack
         If m.itemID = "" Then Throw New Exception("Неизвестный id предмета: " & item)
         Return LootCost(m)
     End Function
+#End Region
 
-    ''' <summary>Может быть преобразует часть золота в ману. Результат будет кратен 25</summary>
-    ''' <param name="input">Начальные ресурсы. При конвертации начальная мана не пропадет</param>
-    ''' <param name="conversionChance">Шанс сконвертировать (от 0 до 1)</param>
-    ''' <param name="conversionAmount">Какую часть золота сконвертировать (от 0 до 1)</param>
-    ''' <param name="outputManaRelationsips">Соотношение, в котором золото будет преобразовано в разные типы маны (поле gold игнорируется)</param>
-    Public Function GoldToMana(ByRef input As AllDataStructues.Cost, ByVal conversionChance As Double, _
-                               ByVal conversionAmount As Double, ByRef outputManaRelationsips As AllDataStructues.Cost) As AllDataStructues.Cost
-        Dim output As AllDataStructues.Cost = AllDataStructues.Cost.Copy(input)
-        If conversionChance > 0 AndAlso AllDataStructues.Cost.Sum(outputManaRelationsips) - outputManaRelationsips.Gold > 0 AndAlso rndgen.Rand(0, 1, True) <= conversionChance Then
-            Dim relationships As New AllDataStructues.Cost
-            Do While AllDataStructues.Cost.Sum(relationships) = 0
-                If outputManaRelationsips.Black > 0 Then relationships.Black = rndgen.RndInt(0, outputManaRelationsips.Black, True)
-                If outputManaRelationsips.Blue > 0 Then relationships.Blue = rndgen.RndInt(0, outputManaRelationsips.Blue, True)
-                If outputManaRelationsips.Green > 0 Then relationships.Green = rndgen.RndInt(0, outputManaRelationsips.Green, True)
-                If outputManaRelationsips.Red > 0 Then relationships.Red = rndgen.RndInt(0, outputManaRelationsips.Red, True)
-                If outputManaRelationsips.White > 0 Then relationships.White = rndgen.RndInt(0, outputManaRelationsips.White, True)
-            Loop
-
-            Dim manaPiece As Double = input.Gold * Math.Max(Math.Min(conversionAmount, 1), 0) / AllDataStructues.Cost.Sum(relationships)
-
-            Dim roundBy As Integer = 25
-            Dim dGold As Double = 0
-
-            Dim order() As Integer = New Integer() {0, 1, 2, 3, 4}
-            For n As Integer = 1 To UBound(order) Step 1
-                Dim r As Integer = rndgen.RndPos(order.Length, True) - 1
-                Dim t As Integer = order(r)
-                order(r) = order(0)
-                order(0) = t
-            Next n
-            For n As Integer = 0 To UBound(order) Step 1
-                If order(n) = 0 Then
-                    Call GoldToManaRound(relationships.Black * manaPiece, roundBy, output, output.Black, dGold)
-                ElseIf order(n) = 1 Then
-                    Call GoldToManaRound(relationships.Blue * manaPiece, roundBy, output, output.Blue, dGold)
-                ElseIf order(n) = 2 Then
-                    Call GoldToManaRound(relationships.Green * manaPiece, roundBy, output, output.Green, dGold)
-                ElseIf order(n) = 3 Then
-                    Call GoldToManaRound(relationships.Red * manaPiece, roundBy, output, output.Red, dGold)
-                Else
-                    Call GoldToManaRound(relationships.White * manaPiece, roundBy, output, output.White, dGold)
-                End If
-            Next n
-        End If
-        Return output
-    End Function
-    Private Sub GoldToManaRound(ByRef input As Double, ByRef roundBy As Integer, ByRef output As AllDataStructues.Cost, ByRef field As Integer, ByRef dGold As Double)
-        If input <= 0 Then Exit Sub
-        input = Math.Min(input, output.Gold)
-        Dim modulo As Double = input Mod roundBy
-        Dim convet As Integer = CInt(input - modulo)
-        output.Gold -= convet
-        field += convet
-        dGold += modulo
-        If dGold > 0 And output.Gold >= roundBy Then
-            Dim r As Double = rndgen.Rand(0, CDbl(roundBy), True)
-            If r < dGold Then
-                output.Gold -= roundBy
-                field += roundBy
-                dGold -= roundBy
-            End If
-        End If
-    End Sub
-
+#Region "Logging"
     Private Sub AddToLog(ByRef LogID As Integer, ByRef Msg As String)
         If LogID > -1 Then
             Call log.MAdd(LogID, Msg)
@@ -510,7 +551,9 @@ Public Class RandStack
             Call log.Add(contString, v, i)
         End If
     End Sub
+#End Region
 
+#Region "Loot creation"
     ''' <summary>Генерирует набор предметов. В принципе может вернуть пустой список</summary>
     ''' <param name="GenSettings">Общие настройки</param>
     ''' <param name="LogID">Номер задачи. От 0 до Size-1. Если меньше 0, запись будет сделана в общий лог</param>
@@ -534,7 +577,7 @@ Public Class RandStack
         Dim Local_SameItemCount() As Integer = SameItemsCounter(GenSettings.pos)
         Dim DynSameItemWeightMultiplier() As Double = SameItemDynWeight(GenSettings.pos, Local_SameItemCount)
 
-        Dim dynAppStrictF, again As Boolean
+        Dim forceStrictFilterDisable, again As Boolean
 
         Do While DynCost >= minItemGoldCost
             maxCost = GenItemMaxCost(DynIGen, DynCost)
@@ -543,12 +586,12 @@ Public Class RandStack
                                  " Selected cost bar:" & costBar(0) & "|" & costBar(1) & "|" & costBar(2) & _
                                  " max item cost:" & maxCost(0) & "|" & maxCost(1) & "|" & maxCost(2))
             IDs.Clear()
+            forceStrictFilterDisable = False
             again = True
-            dynAppStrictF = GenSettings.ApplyStrictTypesFilter
             Do While again
                 For i As Integer = 0 To UBound(AllItems) Step 1
                     'new filter
-                    If ItemFilter(GenSettings.IGen, AllItems(i), dynAppStrictF) AndAlso ItemFilter(GenSettings.TypeCostRestriction, AllItems(i)) AndAlso ItemFilter(DynIGen, AllItems(i), DynCost) Then
+                    If ItemFilter(GenSettings.IGen, AllItems(i), forceStrictFilterDisable) AndAlso ItemFilter(GenSettings.TypeCostRestriction, AllItems(i)) AndAlso ItemFilter(DynIGen, AllItems(i), DynCost) Then
                         IDs.Add(i)
                         weight(i) = GenItemWeight(AllItems(i), costBar) * multiplierItemsWeight(i) * DynTypeWeightMultiplier(AllItems(i).type) * DynSameItemWeightMultiplier(i)
                         If Not ItemFilter(DynIGen, AllItems(i), costBar) Then weight(i) *= 0.001
@@ -575,8 +618,8 @@ Public Class RandStack
                 If IDs.Count > 0 Then
                     again = False
                 Else
-                    If dynAppStrictF Then
-                        dynAppStrictF = False
+                    If Not forceStrictFilterDisable Then
+                        forceStrictFilterDisable = True
                     Else
                         again = False
                     End If
@@ -704,7 +747,7 @@ Public Class RandStack
         DynTypeWeightMultiplier = ItemTypeDynWeight(GenSettings.pos)
         DynSameItemWeightMultiplier = SameItemDynWeight(GenSettings.pos, SameItemsCounter(GenSettings.pos))
 
-        Dim dynAppStrictF As Boolean = GenSettings.ApplyStrictTypesFilter
+        Dim forceStrictFilterDisable As Boolean = False
         Dim again As Boolean = True
 
         IDs.Clear()
@@ -712,14 +755,14 @@ Public Class RandStack
         Do While again
             For i As Integer = 0 To UBound(AllItems) Step 1
                 DynItemWeightMultiplier(i) = multiplierItemsWeight(i) * DynTypeWeightMultiplier(AllItems(i).type) * DynSameItemWeightMultiplier(i)
-                If ItemCostSum(i) <= GenSettings.GoldCost AndAlso ItemCostSum(i) >= minGoldCost AndAlso ItemFilter(GenSettings.IGen, AllItems(i), dynAppStrictF) _
+                If ItemCostSum(i) <= GenSettings.GoldCost AndAlso ItemCostSum(i) >= minGoldCost AndAlso ItemFilter(GenSettings.IGen, AllItems(i), forceStrictFilterDisable) _
                 AndAlso ItemFilter(GenSettings.TypeCostRestriction, AllItems(i)) Then IDs.Add(i)
             Next i
             If IDs.Count > 0 Then
                 again = False
             Else
-                If dynAppStrictF Then
-                    dynAppStrictF = False
+                If Not forceStrictFilterDisable Then
+                    forceStrictFilterDisable = True
                 Else
                     again = False
                 End If
@@ -958,7 +1001,7 @@ Public Class RandStack
 
     ''' <summary>Фильтр предметов по типу и назначению: расходники, надеваемые артефакты или драгоценности</summary>
     Friend Function ItemFilter(ByRef IGen As AllDataStructues.LootGenSettings, ByRef item As AllDataStructues.Item, _
-                               ByVal ApplyStrictTypesFilter As Boolean) As Boolean
+                               ByVal ForceDisableStrictTypesFilter As Boolean) As Boolean
         If Not comm.IsAppropriateItem(item) Then Return False
         Dim settings() As AllDataStructues.ItemGenSettings = AllDataStructues.LootGenSettings.ToArray(IGen)
         For i As Integer = 0 To UBound(settings) Step 1
@@ -970,7 +1013,7 @@ Public Class RandStack
                 End If
             End If
         Next i
-        If ApplyStrictTypesFilter AndAlso Not IGen.Filter(item) Then Return False
+        If Not ForceDisableStrictTypesFilter AndAlso Not IGen.Filter(item) Then Return False
         Return True
     End Function
     ''' <summary>Фильтр предметов по стоимости (стоимость не выше заданного значения)</summary>
@@ -1021,7 +1064,9 @@ Public Class RandStack
             Return False
         End If
     End Function
+#End Region
 
+#Region "Stack creation"
     ''' <summary>Затычка: вернет отряд из двух сквайров и трех лучников. Лидер - паладин. С зельем воскрешения</summary>
     Public Function GenGag() As AllDataStructues.Stack
         Dim result As New AllDataStructues.Stack
@@ -1080,11 +1125,11 @@ Public Class RandStack
         End If
         Call ApplyOverlevel(result, GenSettings)
 
-        result.items = ItemsGen(New AllDataStructues.CommonLootCreationSettings With {.GoldCost = DynStackStats.LootCost, _
-                                                                                      .IGen = DynStackStats.IGen, _
-                                                                                      .TypeCostRestriction = Nothing, _
-                                                                                      .pos = GenSettings.pos, _
-                                                                                      .ApplyStrictTypesFilter = GenSettings.ApplyStrictTypesFilter})
+        result.items = ItemsGen(New AllDataStructues.CommonLootCreationSettings(GenSettings.ApplyStrictTypesFilter) _
+                                With {.GoldCost = DynStackStats.LootCost, _
+                                      .IGen = DynStackStats.IGen, _
+                                      .TypeCostRestriction = Nothing, _
+                                      .pos = GenSettings.pos})
 
         Call log.Add("----Stack creation ended----")
 
@@ -1107,6 +1152,7 @@ Public Class RandStack
 
         Return Gen(g)
     End Function
+
     Private Function SelectPossibleLeader(ByRef leaderID As Integer, ByRef Tolerance As Double, _
                                           ByRef StackStats As AllDataStructues.DesiredStats, ByRef GroundTile As Boolean, _
                                           ByRef MapLordsRaces As List(Of Integer)) As Boolean
@@ -1114,7 +1160,7 @@ Public Class RandStack
 
         If AllUnits(leaderID).fromRaceBranch AndAlso MapLordsRaces.Contains(AllUnits(leaderID).race) Then Return False
 
-        If Not IgnoreUnitRace Then
+        If Not settings.ignoreUnitRace Then
             If Not StackStats.Race.Contains(AllUnits(leaderID).race) Then Return False
         End If
 
@@ -1137,21 +1183,6 @@ Public Class RandStack
     End Function
     Private Function SigmaMultiplier(ByRef stat As AllDataStructues.DesiredStats) As Double
         Return comm.defValues.defaultSigma * (CDbl(stat.StackSize) + 1.25 * CDbl(stat.StackSize * stat.StackSize - 1) + 0.2 * CDbl(stat.MaxGiants))
-    End Function
-    Private Function RecalculateMultiplier(ByRef pos As Point, ByRef inValue As Double) As Double
-        If inValue <= 1 Or IsNothing(pos) Then Return inValue
-        Dim r As Double = Double.MaxValue
-        Dim halfCapitalSize As Integer = 2
-        For i As Integer = 0 To UBound(CapitalPos) Step 1
-            r = Math.Min(r, pos.SqDist(New Point(CapitalPos(i).X + halfCapitalSize, CapitalPos(i).Y + halfCapitalSize)))
-        Next i
-        Dim maxR As Double = comm.defValues.weakerUnitsRadius
-        If r < maxR * maxR Then
-            r = Math.Sqrt(r)
-            Return 1 + (inValue - 1) * r / maxR
-        Else
-            Return inValue
-        End If
     End Function
     Private Sub ApplyOverlevel(ByRef stack As AllDataStructues.Stack, ByRef GenSettings As AllDataStructues.CommonStackCreationSettings)
         If GenSettings.StackStats.WeightedOverlevel <= 0 Then Exit Sub
@@ -1205,9 +1236,9 @@ Public Class RandStack
         Call log.MRedim(units.Length)
         Dim leaderExpKilled() As Integer = Nothing
         Dim MapLordsRaces As New List(Of Integer)
-        If Not IsNothing(MapLords) And Not AddUnitsFromBranchesToStacks Then
-            For i As Integer = 0 To UBound(MapLords) Step 1
-                MapLordsRaces.Add(comm.LordsRace(MapLords(i).ToUpper))
+        If Not IsNothing(mapData.mapLords) And Not settings.addUnitsFromBranchesToStacks Then
+            For i As Integer = 0 To UBound(mapData.mapLords) Step 1
+                MapLordsRaces.Add(comm.LordsRace(mapData.mapLords(i).ToUpper))
             Next i
         End If
 
@@ -1611,7 +1642,7 @@ Public Class RandStack
             Next id
         End If
 
-        If Not IgnoreUnitRace Then
+        If Not settings.ignoreUnitRace Then
             If Not DynStackStats.Race.Contains(AllUnits(fighterID).race) Then Return False
         End If
 
@@ -1747,7 +1778,23 @@ Public Class RandStack
         Call AddToLog(LogID, "Unit added: " & List(id).name & " id: " & List(id).unitID)
         Call AddToLog(LogID, DynStackStats, True)
     End Sub
+#End Region
 
+    Private Function RecalculateMultiplier(ByRef pos As Point, ByRef inValue As Double) As Double
+        If inValue <= 1 Or IsNothing(pos) Then Return inValue
+        Dim r As Double = Double.MaxValue
+        Dim halfCapitalSize As Integer = 2
+        For i As Integer = 0 To UBound(mapData.capitalPos) Step 1
+            r = Math.Min(r, pos.SqDist(New Point(mapData.capitalPos(i).X + halfCapitalSize, mapData.capitalPos(i).Y + halfCapitalSize)))
+        Next i
+        Dim maxR As Double = comm.defValues.weakerUnitsRadius
+        If r < maxR * maxR Then
+            r = Math.Sqrt(r)
+            Return 1 + (inValue - 1) * r / maxR
+        Else
+            Return inValue
+        End If
+    End Function
 End Class
 
 Public Class RndValueGen
@@ -2230,6 +2277,7 @@ Public Class Common
 
     End Sub
 
+#Region "Object usage check"
     Friend Function IsAppropriateFighter(ByRef unit As AllDataStructues.Unit) As Boolean
         If unit.useState = GenDefaultValues.ExclusionState.unknown Then
             If IsExcluded(unit) Then Return False
@@ -2290,6 +2338,7 @@ Public Class Common
         If preservedItems.Contains(spell.spellID.ToUpper) Then Return True
         Return False
     End Function
+#End Region
 
     ''' <summary>Передаст в лог содержимое excludedObjects, customRace, objectRace, LootItemChanceMultiplier, SoleUnits</summary>
     ''' <param name="log">Сюда будем писать данные</param>
@@ -2371,109 +2420,6 @@ Public Class Common
 
     End Sub
 
-    '  ''' <summary>Читает и парсит файл с параметрами генерируемых отрядов.
-    '  ''' Не важен порядок полей и регистр.
-    '  ''' Не проверяет корректность данных по типу</summary>
-    '  ''' <param name="path">Путь к файлу. Не проверяет, существует ли файл.
-    '  ''' Если path=%testfile%, то распарсит теастовый файл.
-    '  ''' Если path=%default%, то вернет значения, устанавливаемые для пропущенных полей.</param>
-    '  Public Function ParseDesiredStackStatsFile(ByRef path As String) As AllDataStructues.DesiredStats()
-    '      Dim txt(), s(), r(), fu As String
-    '      Dim defaultStats As New AllDataStructues.DesiredStats With {.ExpBarAverage = 200, .ExpStackKilled = 75, _
-    '                                                                  .MeleeCount = 2, .Race = New List(Of Integer), .StackSize = 2, _
-    '                                                                  .shopContent = Nothing}
-    '      defaultStats.Race.Add(1)
-    '      If Not path = My.Resources.testFileKeyword.ToLower Then
-    '          txt = TxtSplit(IO.File.ReadAllText(path).Replace("=", vbTab))
-    '      ElseIf path = My.Resources.readDefaultFileKeyword.ToLower Then
-    '          Return New AllDataStructues.DesiredStats() {defaultStats}
-    '      Else
-    '          txt = TxtSplit(My.Resources.TestStackStats.Replace("=", vbTab))
-    '      End If
-    '      Dim addedLabels As New List(Of String)
-    '      Dim result(UBound(txt)) As AllDataStructues.DesiredStats
-    '      For i As Integer = 0 To UBound(txt) Step 1
-    '          s = txt(i).Split(CChar(" "))
-    '          result(i) = AllDataStructues.DesiredStats.Copy(defaultStats)
-    '          For f As Integer = 0 To UBound(s) Step 2
-    '              fu = s(f).ToUpper
-    '              For k As Integer = 0 To UBound(StatFields) Step 1
-    '                  If fu = StatFields(k).name.ToUpper Then
-    '                      If k = 0 Then
-    '                          result(i).LocationName = s(f + 1) 'ID
-    '                          If Not addedLabels.Contains(result(i).LocationName) Then
-    '                              addedLabels.Add(result(i).LocationName)
-    '                          Else
-    '                              Throw New Exception("В файле с параметрами отрядов есть повторяющееся имя локации: " & result(i).LocationName)
-    '                          End If
-    '                      ElseIf k = 1 Then
-    '                          result(i).ExpBarAverage = Math.Max(ValueConverter.StrToInt(s(f + 1), txt(i), s(f)), 10) 'AverageExpBar
-    '                      ElseIf k = 2 Then
-    '                          result(i).ExpStackKilled = Math.Max(ValueConverter.StrToInt(s(f + 1), txt(i), s(f)), 5) 'ExpStackKilled
-    '                      ElseIf k = 3 Then
-    '                          Dim rid As Integer
-    '                          r = s(f + 1).Split(CChar("+")) 'Race
-    '                          result(i).Race.Clear()
-    '                          For n As Integer = 0 To UBound(r) Step 1
-    '                              rid = RaceIdentifierToSubrace(r(n))
-    '                              If Not result(i).Race.Contains(rid) Then result(i).Race.Add(rid)
-    '                          Next n
-    '                      ElseIf k = 4 Then
-    '                          result(i).StackSize = Math.Max(ValueConverter.StrToInt(s(f + 1), txt(i), s(f)), 1) 'StackSize
-    '                      ElseIf k = 5 Then
-    '                          result(i).MaxGiants = Math.Max(ValueConverter.StrToInt(s(f + 1), txt(i), s(f)), 0) 'MaxGiants
-    '                      ElseIf k = 6 Then
-    '                          result(i).MeleeCount = Math.Max(ValueConverter.StrToInt(s(f + 1), txt(i), s(f)), 0) 'MeleeSlots
-    '                      ElseIf k = 7 Then
-    '                          result(i).LootCost = Math.Max(ValueConverter.StrToInt(s(f + 1), txt(i), s(f)), 0) 'LootCost
-    '                      ElseIf k = 8 Then
-    '                          result(i).IGen.ConsumableItems = AllDataStructues.ItemGenSettings.Read(s(f + 1)) 'CItemsGen
-    '                      ElseIf k = 9 Then
-    '                          result(i).IGen.NonconsumableItems = AllDataStructues.ItemGenSettings.Read(s(f + 1)) 'NItemsGen
-    '                      ElseIf k = 10 Then
-    '                          result(i).IGen.JewelItems = AllDataStructues.ItemGenSettings.Read(s(f + 1)) 'JItemsGen
-    '                      ElseIf k = 11 Then
-    '                          If Not s(f + 1).ToUpper = "NO" Then
-    '                              result(i).IGen.PreserveItems = DelimitedStringToList(s(f + 1), CChar("+"))  'PreservedItems
-    '                          End If
-    '                      ElseIf k = 12 Then
-    '                          result(i).shopContent = DelimitedStringToList(s(f + 1), CChar("+")) 'ShopContent
-    '                      ElseIf k = 13 Then
-    '                          result(i).isInternalCityGuard = ValueConverter.StrToBool(s(f + 1)) 'IsInternalCityGuard
-    '                      End If
-    '                  End If
-    '              Next k
-    '          Next f
-    '      Next i
-    '      Return result
-    '  End Function
-    '  Private Function DelimitedStringToList(ByRef s As String, ByRef delimiter As Char) As List(Of String)
-    '      Dim r() As String = s.Split(delimiter)
-    '      Dim result As New List(Of String)
-    '      For n As Integer = 0 To UBound(r) Step 1
-    '          result.Add(r(n).ToUpper)
-    '      Next n
-    '      Return result
-    '  End Function
-    '
-    '  ''' <summary>Сохраняет в файл параметры генерируемых отрядов</summary>
-    '  ''' <param name="path">Путь к файлу</param>
-    '  ''' <param name="content">Параметры</param>
-    '  Public Sub WriteDesiredStackStats(ByRef path As String, ByRef content() As AllDataStructues.DesiredStats)
-    '      Dim s(UBound(content)) As String
-    '      For i As Integer = 0 To UBound(s) Step 1
-    '          s(i) = TxtSplit(AllDataStructues.DesiredStats.Print(content(i), defValues.RaceNumberToRaceChar).Replace(vbNewLine, vbTab))(0)
-    '      Next i
-    '      If Not path = My.Resources.testFileKeyword Then
-    '          IO.File.WriteAllLines(path, s)
-    '      Else
-    '          path = ""
-    '          For i As Integer = 0 To UBound(s) Step 1
-    '              path &= s(i) & vbNewLine
-    '          Next i
-    '      End If
-    '  End Sub
-
     ''' <summary>Возвращает ID расы, соответствующее файлам игры. Если не найдет, то вернет -1</summary>
     ''' <param name="ID">Идентификатор расы (файл races.txt)</param>
     Public Function RaceIdentifierToSubrace(ByVal ID As String, Optional ByVal ThrowExceptionIfUnknownID As Boolean = True) As Integer
@@ -2491,6 +2437,7 @@ Public Class Common
         Return RaceIdentifierToSubrace(ID.ToString)
     End Function
 
+#Region "TxtSplit"
     ''' <summary>Разбивает на строки текст по разделителям Chr(10) и Chr(13). Заменяет все табы на пробелы, удаляет повторяющиеся подряд пробелы, удаляет пробелы в начале и конце строки. Не добавляет в выходной массив строки, начинающиеся с #</summary>
     ''' <param name="TXT">Какой-нибудь текст</param>
     Public Function TxtSplit(ByVal TXT As String) As String()
@@ -2513,7 +2460,9 @@ Public Class Common
     Public Function TxtSplit(ByVal TXT() As String, ByRef transferChar As String) As String()
         Return ValueConverter.TxtSplit(TXT, transferChar)
     End Function
+#End Region
 
+#Region "RandomSelection"
     ''' <summary>Dыбирает случайным образом запись из списка</summary>
     ''' <param name="IDs">Список намеров записей, из которых делается выбор.
     ''' Если массивы Stats (v) и DesiredStats (d) инициализированы, то каждой записи на их основании будет присвоен стат. вес в соответствие с распределением Гаусса g(v,d).
@@ -2565,12 +2514,14 @@ Public Class Common
                                     ByVal serial As Boolean, Optional ByVal fastMode As Boolean = False) As Integer
         Return rndgen.RandomSelection(IDs, Weight, serial, fastMode)
     End Function
+#End Region
 
     ''' <summary>e^(-0.5 * ((X - avX) / (sigma * avX)) ^ 2)</summary>
     Public Shared Function Gauss(ByVal X As Double, ByVal avX As Double, ByVal sigma As Double) As Double
         Return Math.Exp(-0.5 * ((X - avX) / (sigma * avX)) ^ 2)
     End Function
 
+#Region "Reader"
     Private Enum ReadMode
         ExcludedObjects = 1
         CustomUnitRace = 2
@@ -2748,31 +2699,8 @@ Public Class Common
             End If
         Next j
     End Sub
-
-    ''' <summary>Вернет нижнюю границу сучайного числа</summary>
-    ''' <param name="ratio">Отношение значения верхней границы к значению нижней</param>
-    ''' <param name="average">Среднее значение</param>
-    Friend Shared Function ValueLowerBound(ByRef ratio As Double, ByRef average As Double) As Double
-        If ratio < 1 Then Throw New Exception("Invalid ratio between max and min value: " & ratio & "(<1)")
-        'max=ratio*min
-        'max+min=2*average
-        Return 2 * average / (ratio + 1)
-    End Function
-    ''' <summary>Вернет верхнюю границу сучайного числа</summary>
-    ''' <param name="ratio">Отношение значения верхней границы к значению нижней</param>
-    ''' <param name="average">Среднее значение</param>
-    Friend Shared Function ValueUpperBound(ByRef ratio As Double, ByRef average As Double) As Double
-        Return Common.ValueLowerBound(ratio, average) * ratio
-    End Function
-
-    Friend Function ItemTypeCostModify(ByRef item As AllDataStructues.Item) As AllDataStructues.Cost
-        If itemType.Item(item.type) = "JEWEL" Then
-            Return item.itemCost / defValues.JewelItemsCostDevider
-        Else
-            Return item.itemCost / defValues.NonJewelItemsCostDevider
-        End If
-    End Function
-
+#End Region
+#Region "RecursiveReadFile"
     ''' <summary>Прочитает файл и если встретит в нем ReadFromFile, прочитает и из указанного файла, 
     ''' разместив результат в том месте, где встретилось это ключевое слово</summary>
     ''' <param name="path">Путь к файлу</param>
@@ -2810,6 +2738,31 @@ Public Class Common
         Next i
         If UBound(output) > n Then ReDim Preserve output(n)
         Return output
+    End Function
+#End Region
+
+    ''' <summary>Вернет нижнюю границу сучайного числа</summary>
+    ''' <param name="ratio">Отношение значения верхней границы к значению нижней</param>
+    ''' <param name="average">Среднее значение</param>
+    Friend Shared Function ValueLowerBound(ByRef ratio As Double, ByRef average As Double) As Double
+        If ratio < 1 Then Throw New Exception("Invalid ratio between max and min value: " & ratio & "(<1)")
+        'max=ratio*min
+        'max+min=2*average
+        Return 2 * average / (ratio + 1)
+    End Function
+    ''' <summary>Вернет верхнюю границу сучайного числа</summary>
+    ''' <param name="ratio">Отношение значения верхней границы к значению нижней</param>
+    ''' <param name="average">Среднее значение</param>
+    Friend Shared Function ValueUpperBound(ByRef ratio As Double, ByRef average As Double) As Double
+        Return Common.ValueLowerBound(ratio, average) * ratio
+    End Function
+
+    Friend Function ItemTypeCostModify(ByRef item As AllDataStructues.Item) As AllDataStructues.Cost
+        If itemType.Item(item.type) = "JEWEL" Then
+            Return item.itemCost / defValues.JewelItemsCostDevider
+        Else
+            Return item.itemCost / defValues.NonJewelItemsCostDevider
+        End If
     End Function
 
 End Class
@@ -3361,21 +3314,21 @@ Public Class AllDataStructues
         End Function
     End Structure
 
-    Public Structure LootGenSettings
+    Public Class LootGenSettings
         ''' <summary>Cферы, талисманы и свитки</summary>
-        Dim ConsumableItems As ItemGenSettings
+        Public ConsumableItems As ItemGenSettings
         ''' <summary>Надеваемые предметы и посохи</summary>
-        Dim NonconsumableItems As ItemGenSettings
+        Public NonconsumableItems As ItemGenSettings
         ''' <summary>Драгоценности</summary>
-        Dim JewelItems As ItemGenSettings
+        Public JewelItems As ItemGenSettings
         ''' <summary>Добавит эти предметы в любом случае</summary>
-        Dim PreserveItems As List(Of String)
+        Public PreserveItems As List(Of String)
         ''' <summary>Установит стоимость добавляемого лута на 1.2*RandStack.minItemGoldCost, если LootCost меньше RandStack.minItemGoldCost</summary>
-        Dim addLootAnyway As Boolean
+        Public addLootAnyway As Boolean
         ''' <summary>Множитель цены лута</summary>
         Friend lootCostMultiplier As Double
         ''' <summary>Строгий фильтр по типам</summary>
-        Dim typesFilter As StrictTypesFilter
+        Private typesFilter As StrictTypesFilter
 
         Public Class StrictTypesFilter
             ''' <summary>Количество, которое можно добавить по типу</summary>
@@ -3387,7 +3340,7 @@ Public Class AllDataStructues
             Private tAmountAddedAllInAll As Integer
 
             ''' <param name="tAmount">Количество предметов каждого типа</param>
-            Sub New(Optional ByRef tAmount() As Integer = Nothing)
+            Public Sub SetTypesAmountArray(Optional ByRef tAmount() As Integer = Nothing)
                 If Not IsNothing(tAmount) Then
                     typesAmount = CType(tAmount.Clone, Integer())
                 Else
@@ -3408,7 +3361,6 @@ Public Class AllDataStructues
                 End If
                 tAmountAddedAllInAll = 0
             End Sub
-
             ''' <summary>Вернет True, если предмет подходит</summary>
             ''' <param name="item">Предмет</param>
             Public Function Filter(ByRef item As Item) As Boolean
@@ -3417,14 +3369,34 @@ Public Class AllDataStructues
                 If typesAmountAdded(item.type) >= typesAmount(item.type) Then Return False
                 Return True
             End Function
-
             ''' <summary>Вызываем, когда предмет добвавлен</summary>
             ''' <param name="item">Предмет</param>
             Public Sub Added(ByRef item As Item)
                 If Not IsNothing(typesAmountAdded) Then typesAmountAdded(item.type) += 1
                 tAmountAddedAllInAll += 1
             End Sub
+            ''' <summary>Вызываем, когда считаем количество предметов в луте</summary>
+            ''' <param name="item">Предмет</param>
+            Public Sub IncreaseTypeAmount(ByRef item As Item)
+                If IsNothing(typesAmount) Then Exit Sub
+                typesAmount(item.type) += 1
+            End Sub
+
+
+            Public Shared Function Copy(ByVal v As StrictTypesFilter) As StrictTypesFilter
+                Return New StrictTypesFilter With {.tAmountAddedAllInAll = v.tAmountAddedAllInAll, _
+                                                   .tAmountAllInAll = v.tAmountAllInAll, _
+                                                   .typesAmount = CType(v.typesAmount.Clone, Integer()), _
+                                                   .typesAmountAdded = CType(v.typesAmountAdded.Clone, Integer())}
+            End Function
         End Class
+
+        ''' <param name="useStrictFilter">Генератор предметов постарается создать предметы заданного типа</param>
+        Public Sub New(ByVal useStrictFilter As Boolean)
+            If useStrictFilter Then
+                typesFilter = New StrictTypesFilter
+            End If
+        End Sub
 
         Public Shared Function Copy(ByVal v As LootGenSettings) As LootGenSettings
             Dim P As List(Of String) = Nothing
@@ -3434,11 +3406,14 @@ Public Class AllDataStructues
                     P.Add(Item.ToUpper)
                 Next Item
             End If
-            Return New LootGenSettings With {.ConsumableItems = AllDataStructues.ItemGenSettings.Copy(v.ConsumableItems), _
-                                             .NonconsumableItems = AllDataStructues.ItemGenSettings.Copy(v.NonconsumableItems), _
-                                             .JewelItems = AllDataStructues.ItemGenSettings.Copy(v.JewelItems), _
-                                             .PreserveItems = P, _
-                                             .lootCostMultiplier = v.lootCostMultiplier}
+            Dim r As New LootGenSettings(False) _
+                With {.ConsumableItems = AllDataStructues.ItemGenSettings.Copy(v.ConsumableItems), _
+                      .NonconsumableItems = AllDataStructues.ItemGenSettings.Copy(v.NonconsumableItems), _
+                      .JewelItems = AllDataStructues.ItemGenSettings.Copy(v.JewelItems), _
+                      .PreserveItems = P, _
+                      .lootCostMultiplier = v.lootCostMultiplier}
+            If Not IsNothing(v.typesFilter) Then r.typesFilter = StrictTypesFilter.Copy(v.typesFilter)
+            Return r
         End Function
         Public Shared Function Print(ByVal v As LootGenSettings) As String
             Dim p As String = ""
@@ -3451,9 +3426,9 @@ Public Class AllDataStructues
                 p = "no"
             End If
             Dim f As String = ""
-            If Not IsNothing(v.typesAmount) Then
-                For i As Integer = 0 To UBound(v.typesAmount) Step 1
-                    f &= v.typesAmount(i) & " "
+            If Not IsNothing(v.typesFilter.typesAmount) Then
+                For i As Integer = 0 To UBound(v.typesFilter.typesAmount) Step 1
+                    f &= v.typesFilter.typesAmount(i) & " "
                 Next i
                 f = f.Remove(f.Length - 1)
             Else
@@ -3472,55 +3447,38 @@ Public Class AllDataStructues
             Return New ItemGenSettings() {v.ConsumableItems, v.NonconsumableItems, v.JewelItems}
         End Function
 
-
-        ''' <summary>Количество, которое можно добавить по типу</summary>
-        Public typesAmount() As Integer
-        ''' <summary>Количество добавленных по типу</summary>
-        Public typesAmountAdded() As Integer
-
-        Private tAmountAllInAll As Integer
-        Private tAmountAddedAllInAll As Integer
-
+#Region "Strict filter interface"
         ''' <param name="tAmount">Количество предметов каждого типа</param>
         Sub SetTypesAmountArray(Optional ByRef tAmount() As Integer = Nothing)
-            If Not IsNothing(tAmount) Then
-                typesAmount = CType(tAmount.Clone, Integer())
-            Else
-                ReDim typesAmount([Enum].GetValues(GetType(GenDefaultValues.ItemTypes)).Cast(Of Integer).Max)
-            End If
-            Call Initialize()
+            If IsNothing(typesFilter) Then Exit Sub
+            Call typesFilter.SetTypesAmountArray(tAmount)
         End Sub
-
         ''' <summary>Перед использованием в создании предметов вызываем эту процедуру</summary>
         Public Sub Initialize()
-            typesAmountAdded = Nothing
-            tAmountAllInAll = 0
-            If Not IsNothing(typesAmount) Then
-                ReDim typesAmountAdded(UBound(typesAmount))
-                For i As Integer = 0 To UBound(typesAmount) Step 1
-                    tAmountAllInAll += 1
-                Next i
-            End If
-            tAmountAddedAllInAll = 0
+            If IsNothing(typesFilter) Then Exit Sub
+            Call typesFilter.Initialize()
         End Sub
-
         ''' <summary>Вернет True, если предмет подходит</summary>
         ''' <param name="item">Предмет</param>
         Public Function Filter(ByRef item As Item) As Boolean
-            If IsNothing(typesAmount) Then Return True
-            If tAmountAddedAllInAll >= tAmountAllInAll Then Return True
-            If typesAmountAdded(item.type) >= typesAmount(item.type) Then Return False
-            Return True
+            If IsNothing(typesFilter) Then Return True
+            Return typesFilter.Filter(item)
         End Function
-
         ''' <summary>Вызываем, когда предмет добвавлен</summary>
         ''' <param name="item">Предмет</param>
         Public Sub Added(ByRef item As Item)
-            If Not IsNothing(typesAmountAdded) Then typesAmountAdded(item.type) += 1
-            tAmountAddedAllInAll += 1
+            If IsNothing(typesFilter) Then Exit Sub
+            Call typesFilter.Added(item)
         End Sub
+        ''' <summary>Вызываем, когда считаем количество предметов в луте</summary>
+        ''' <param name="item">Предмет</param>
+        Public Sub IncreaseTypeAmount(ByRef item As Item)
+            If IsNothing(typesFilter) Then Exit Sub
+            Call typesFilter.IncreaseTypeAmount(item)
+        End Sub
+#End Region
 
-    End Structure
+    End Class
 
     Public Structure ItemGenSettings
         ''' <summary>Не генерировать</summary>
@@ -3573,10 +3531,15 @@ Public Class AllDataStructues
     End Structure
 
     Public MustInherit Class CommonCreationSettings
-        '''<summary>Точка на карте, в которую добавляются предметы</summary>
+        '''<summary>Точка на карте, в которую добавляются предметы или отряд</summary>
         Public pos As Point
         '''<summary>Генератор предметов постарается создать предметы заданного типа</summary>
         Public ApplyStrictTypesFilter As Boolean
+
+        ''' <param name="useStrictFilter">Генератор предметов постарается создать предметы заданного типа</param>
+        Public Sub New(ByVal useStrictFilter As Boolean)
+            ApplyStrictTypesFilter = useStrictFilter
+        End Sub
     End Class
     Public Class CommonStackCreationSettings
         Inherits CommonCreationSettings
@@ -3590,13 +3553,17 @@ Public Class AllDataStructues
         '''<summary>True, если стэк находится внутри руин или города</summary>
         Public NoLeader As Boolean
 
+        ''' <param name="useStrictFilter">Генератор предметов постарается создать предметы заданного типа</param>
+        Public Sub New(ByVal useStrictFilter As Boolean)
+            MyBase.New(useStrictFilter)
+        End Sub
+
         Public Shared Function Copy(ByVal v As CommonStackCreationSettings) As CommonStackCreationSettings
-            Return New CommonStackCreationSettings With {.StackStats = DesiredStats.Copy(v.StackStats), _
-                                                         .deltaLeadership = v.deltaLeadership, _
-                                                         .GroundTile = v.GroundTile, _
-                                                         .NoLeader = v.NoLeader, _
-                                                         .pos = New Point(v.pos.X, v.pos.Y), _
-                                                         .ApplyStrictTypesFilter = v.ApplyStrictTypesFilter}
+            Return New CommonStackCreationSettings(v.ApplyStrictTypesFilter) With {.StackStats = DesiredStats.Copy(v.StackStats), _
+                                                                                   .deltaLeadership = v.deltaLeadership, _
+                                                                                   .GroundTile = v.GroundTile, _
+                                                                                   .NoLeader = v.NoLeader, _
+                                                                                   .pos = New Point(v.pos.X, v.pos.Y)}
         End Function
     End Class
     Public Class CommonLootCreationSettings
@@ -3609,6 +3576,11 @@ Public Class AllDataStructues
         '''<summary>Ключ - тип предмета, Значение - ограничение стоимости. Игнорируется, если массив неинициализирован</summary>
         Public TypeCostRestriction As Dictionary(Of Integer, AllDataStructues.Restriction)
 
+        ''' <param name="useStrictFilter">Генератор предметов постарается создать предметы заданного типа</param>
+        Public Sub New(ByVal useStrictFilter As Boolean)
+            MyBase.New(useStrictFilter)
+        End Sub
+
         Public Shared Function Copy(ByVal v As CommonLootCreationSettings) As CommonLootCreationSettings
             Dim t As Dictionary(Of Integer, AllDataStructues.Restriction) = Nothing
             If Not IsNothing(v.TypeCostRestriction) Then
@@ -3617,11 +3589,10 @@ Public Class AllDataStructues
                     t.Add(k, Restriction.Copy(v.TypeCostRestriction.Item(k)))
                 Next k
             End If
-            Return New CommonLootCreationSettings With {.ApplyStrictTypesFilter = v.ApplyStrictTypesFilter, _
-                                                        .GoldCost = v.GoldCost, _
-                                                        .IGen = LootGenSettings.Copy(v.IGen), _
-                                                        .pos = New Point(v.pos.X, v.pos.Y), _
-                                                        .TypeCostRestriction = t}
+            Return New CommonLootCreationSettings(v.ApplyStrictTypesFilter) With {.GoldCost = v.GoldCost, _
+                                                                                  .IGen = LootGenSettings.Copy(v.IGen), _
+                                                                                  .pos = New Point(v.pos.X, v.pos.Y), _
+                                                                                  .TypeCostRestriction = t}
         End Function
     End Class
 
@@ -3802,6 +3773,11 @@ End Class
 Public Class GenDefaultValues
 
     Public Const DefaultMod As String = "MNS"
+    Public Const myVersion As String = "06.10.2021.20.08"
+
+    Public Shared Function PrintVersion() As String
+        Return "Semga's generator DLL version: " & myVersion
+    End Function
 
     ''' <summary>Название выбранного мода</summary>
     ''' <remarks></remarks>
@@ -3926,6 +3902,7 @@ Public Class GenDefaultValues
         Return f
     End Function
 
+#Region "Resources parsing"
     Private Function PrintItemsSettings(ByRef name As String, ByRef settings() As String, ByRef spaces As String) As String
         Dim result As String = name & " ="
         For Each i As String In settings
@@ -4121,6 +4098,7 @@ Public Class GenDefaultValues
             Throw New Exception("Unexpected variable type")
         End If
     End Sub
+#End Region
 
     Protected Friend Sub ParseRaces(ByRef outRaces As Dictionary(Of String, Integer), _
                                     ByRef outRaceNumberToRaceChar As Dictionary(Of Integer, String))
@@ -4145,11 +4123,6 @@ Public Class GenDefaultValues
         Next i
     End Sub
 
-    Public Const myVersion As String = "06.10.2021.20.08"
-
-    Public Shared Function PrintVersion() As String
-        Return "Semga's DLL version: " & myVersion
-    End Function
 
     Enum TextLanguage
         Rus = 1
@@ -4198,6 +4171,7 @@ Public Class GenDefaultValues
     Public ReadOnly StackRaceChance As Double()
     Public Const randomRaceID As Integer = -10001
 
+#Region "Keywords"
     'ключевые слова
     Public Shared Function wMineTypeGold() As String
         Return My.Resources.mineTypeGold
@@ -4253,6 +4227,7 @@ Public Class GenDefaultValues
     Public Shared Function wTemplate_RandomRaceLongKeyword() As String
         Return My.Resources.template_RandomRaceLongKeyword
     End Function
+#End Region
 
     Public Enum ItemTypes As Integer
         nonattack_artifact = 0
@@ -4296,6 +4271,7 @@ Public Class GenDefaultValues
         canUse = 1
     End Enum
 
+#Region "Resources reading"
     'default files
     Private Function ReadResources(ByRef name As String, ByRef defaultValue As String, ByVal modSpecific As Boolean) As String
         Dim path As String = Environment.CurrentDirectory & "\Resources\"
@@ -4399,6 +4375,7 @@ Public Class GenDefaultValues
     Public Function WaterBlocksUnacceptable() As String
         Return ReadResources("WaterBlocksUnacceptable", My.Resources.WaterBlocksUnacceptable, False)
     End Function
+#End Region
 
     Public Class MapObjectsText
         ''' <summary>ID лорда, список имен</summary>
