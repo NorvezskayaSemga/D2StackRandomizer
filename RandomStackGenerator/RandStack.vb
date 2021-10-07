@@ -1125,7 +1125,7 @@ Public Class RandStack
         End If
         Call ApplyOverlevel(result, GenSettings)
 
-        result.items = ItemsGen(New AllDataStructues.CommonLootCreationSettings(GenSettings.ApplyStrictTypesFilter) _
+        result.items = ItemsGen(New AllDataStructues.CommonLootCreationSettings _
                                 With {.GoldCost = DynStackStats.LootCost, _
                                       .IGen = DynStackStats.IGen, _
                                       .TypeCostRestriction = Nothing, _
@@ -3533,13 +3533,6 @@ Public Class AllDataStructues
     Public MustInherit Class CommonCreationSettings
         '''<summary>Точка на карте, в которую добавляются предметы или отряд</summary>
         Public pos As Point
-        '''<summary>Генератор предметов постарается создать предметы заданного типа</summary>
-        Public ApplyStrictTypesFilter As Boolean
-
-        ''' <param name="useStrictFilter">Генератор предметов постарается создать предметы заданного типа</param>
-        Public Sub New(ByVal useStrictFilter As Boolean)
-            ApplyStrictTypesFilter = useStrictFilter
-        End Sub
     End Class
     Public Class CommonStackCreationSettings
         Inherits CommonCreationSettings
@@ -3553,17 +3546,12 @@ Public Class AllDataStructues
         '''<summary>True, если стэк находится внутри руин или города</summary>
         Public NoLeader As Boolean
 
-        ''' <param name="useStrictFilter">Генератор предметов постарается создать предметы заданного типа</param>
-        Public Sub New(ByVal useStrictFilter As Boolean)
-            MyBase.New(useStrictFilter)
-        End Sub
-
         Public Shared Function Copy(ByVal v As CommonStackCreationSettings) As CommonStackCreationSettings
-            Return New CommonStackCreationSettings(v.ApplyStrictTypesFilter) With {.StackStats = DesiredStats.Copy(v.StackStats), _
-                                                                                   .deltaLeadership = v.deltaLeadership, _
-                                                                                   .GroundTile = v.GroundTile, _
-                                                                                   .NoLeader = v.NoLeader, _
-                                                                                   .pos = New Point(v.pos.X, v.pos.Y)}
+            Return New CommonStackCreationSettings With {.StackStats = DesiredStats.Copy(v.StackStats), _
+                                                         .deltaLeadership = v.deltaLeadership, _
+                                                         .GroundTile = v.GroundTile, _
+                                                         .NoLeader = v.NoLeader, _
+                                                         .pos = New Point(v.pos.X, v.pos.Y)}
         End Function
     End Class
     Public Class CommonLootCreationSettings
@@ -3576,11 +3564,6 @@ Public Class AllDataStructues
         '''<summary>Ключ - тип предмета, Значение - ограничение стоимости. Игнорируется, если массив неинициализирован</summary>
         Public TypeCostRestriction As Dictionary(Of Integer, AllDataStructues.Restriction)
 
-        ''' <param name="useStrictFilter">Генератор предметов постарается создать предметы заданного типа</param>
-        Public Sub New(ByVal useStrictFilter As Boolean)
-            MyBase.New(useStrictFilter)
-        End Sub
-
         Public Shared Function Copy(ByVal v As CommonLootCreationSettings) As CommonLootCreationSettings
             Dim t As Dictionary(Of Integer, AllDataStructues.Restriction) = Nothing
             If Not IsNothing(v.TypeCostRestriction) Then
@@ -3589,10 +3572,10 @@ Public Class AllDataStructues
                     t.Add(k, Restriction.Copy(v.TypeCostRestriction.Item(k)))
                 Next k
             End If
-            Return New CommonLootCreationSettings(v.ApplyStrictTypesFilter) With {.GoldCost = v.GoldCost, _
-                                                                                  .IGen = LootGenSettings.Copy(v.IGen), _
-                                                                                  .pos = New Point(v.pos.X, v.pos.Y), _
-                                                                                  .TypeCostRestriction = t}
+            Return New CommonLootCreationSettings With {.GoldCost = v.GoldCost, _
+                                                        .IGen = LootGenSettings.Copy(v.IGen), _
+                                                        .pos = New Point(v.pos.X, v.pos.Y), _
+                                                        .TypeCostRestriction = t}
         End Function
     End Class
 

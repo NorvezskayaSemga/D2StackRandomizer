@@ -55,15 +55,12 @@ Public Class ObjectsContentSetTest
 
     Dim rndtest As New RandStackTest
 
+
     '''<summary>
     '''A test for SetMineType
     '''</summary>
     <TestMethod()> _
     Public Sub SetMineTypeTest()
-
-        If IsNothing(rndtest.UnitsList) Then rndtest.ReadTestUnits()
-        If IsNothing(rndtest.ItemsList) Then rndtest.ReadTestItems()
-        If IsNothing(rndtest.AllSpells) Then rndtest.ReadTestSpells()
 
         Dim rStack As RandStack = rndtest.CreateRandStack
 
@@ -96,10 +93,6 @@ Public Class ObjectsContentSetTest
     '''</summary>
     <TestMethod()> _
     Public Sub MakeSpellsListTest()
-
-        If IsNothing(rndtest.UnitsList) Then rndtest.ReadTestUnits()
-        If IsNothing(rndtest.ItemsList) Then rndtest.ReadTestItems()
-        If IsNothing(rndtest.AllSpells) Then rndtest.ReadTestSpells()
 
         Dim rStack As RandStack = rndtest.CreateRandStack
 
@@ -160,10 +153,6 @@ Public Class ObjectsContentSetTest
     <TestMethod()> _
     Public Sub MakeMercenariesListTest()
 
-        If IsNothing(rndtest.UnitsList) Then rndtest.ReadTestUnits()
-        If IsNothing(rndtest.ItemsList) Then rndtest.ReadTestItems()
-        If IsNothing(rndtest.AllSpells) Then rndtest.ReadTestSpells()
-
         Dim rStack As RandStack = rndtest.CreateRandStack
 
         Dim target As New ObjectsContentSet(rStack)
@@ -192,10 +181,6 @@ Public Class ObjectsContentSetTest
     '''</summary>
     <TestMethod()> _
     Public Sub MakeMerchItemsListTest()
-
-        If IsNothing(rndtest.UnitsList) Then rndtest.ReadTestUnits()
-        If IsNothing(rndtest.ItemsList) Then rndtest.ReadTestItems()
-        If IsNothing(rndtest.AllSpells) Then rndtest.ReadTestSpells()
 
         Dim rStack As RandStack = rndtest.CreateRandStack
 
@@ -226,10 +211,6 @@ Public Class ObjectsContentSetTest
     '''</summary>
     <TestMethod()> _
     Public Sub GenModesTest()
-
-        If IsNothing(rndtest.UnitsList) Then rndtest.ReadTestUnits()
-        If IsNothing(rndtest.ItemsList) Then rndtest.ReadTestItems()
-        If IsNothing(rndtest.AllSpells) Then rndtest.ReadTestSpells()
 
         Dim rStack As RandStack = rndtest.CreateRandStack
 
