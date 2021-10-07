@@ -63,15 +63,6 @@ Public Class RandStack
             ''' </summary>
             Public preserveUnitsOverlevel As Boolean
 
-            ''' <summary>
-            ''' Шанс сконвертировать часть золота в ману (от 0 до 1)
-            ''' </summary>
-            Public manaToGoldConversionChance As Double
-            ''' <summary>
-            ''' Какую часть золота сконвертировать (от 0 до 1)
-            ''' </summary>
-            Public manaToGoldConversionAmount As Double
-
             '''<summary>
             ''' При перегенерации предметов если в луте было знамя, то и после перегенерации будет какое-то знамя. 
             ''' Если были сапоги - будут какие-нибудь сапоги.
@@ -313,11 +304,14 @@ Public Class RandStack
     End Function
 #End Region
 
+
     ''' <summary>Может быть преобразует часть золота в ману. Результат будет кратен 25</summary>
     ''' <param name="input">Начальные ресурсы. При конвертации начальная мана не пропадет</param>
-    Public Function GoldToMana(ByRef input As AllDataStructues.Cost) As AllDataStructues.Cost
+    ''' <param name="conversionChance">Шанс сконвертировать часть золота в ману (от 0 до 1)</param>
+    ''' <param name="conversionAmount">Какую часть золота сконвертировать (от 0 до 1)</param>
+    Public Function GoldToMana(ByRef input As AllDataStructues.Cost, ByVal conversionChance As Double, ByVal conversionAmount As Double) As AllDataStructues.Cost
         Dim output As AllDataStructues.Cost = AllDataStructues.Cost.Copy(input)
-        If settings.manaToGoldConversionChance > 0 AndAlso AllDataStructues.Cost.Sum(mapData.minesAmount) - mapData.minesAmount.Gold > 0 AndAlso rndgen.Rand(0, 1, True) <= settings.manaToGoldConversionChance Then
+        If conversionChance > 0 AndAlso AllDataStructues.Cost.Sum(mapData.minesAmount) - mapData.minesAmount.Gold > 0 AndAlso rndgen.Rand(0, 1, True) <= conversionChance Then
             Dim relationships As New AllDataStructues.Cost
             Do While AllDataStructues.Cost.Sum(relationships) = 0
                 If mapData.minesAmount.Black > 0 Then relationships.Black = rndgen.RndInt(0, mapData.minesAmount.Black, True)
@@ -327,7 +321,7 @@ Public Class RandStack
                 If mapData.minesAmount.White > 0 Then relationships.White = rndgen.RndInt(0, mapData.minesAmount.White, True)
             Loop
 
-            Dim manaPiece As Double = input.Gold * Math.Max(Math.Min(settings.manaToGoldConversionAmount, 1), 0) / AllDataStructues.Cost.Sum(relationships)
+            Dim manaPiece As Double = input.Gold * Math.Max(Math.Min(conversionAmount, 1), 0) / AllDataStructues.Cost.Sum(relationships)
 
             Dim roundBy As Integer = 25
             Dim dGold As Double = 0
