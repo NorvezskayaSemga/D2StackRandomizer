@@ -180,6 +180,7 @@ Public Class CommonTest
     '''</summary>
     <TestMethod()> _
     Public Sub RandomSelectionTest1()
+        Call RandStackTest.CopyResources()
         Dim target As Common = New Common(GenDefaultValues.DefaultMod)
         Dim IDs As New List(Of Integer)
         IDs.AddRange(idArray)
@@ -284,6 +285,7 @@ Public Class CommonTest
     <TestMethod(), _
      DeploymentItem("RandomStackGenerator.dll")> _
     Public Sub ReadIntFieldTest()
+        Call RandStackTest.CopyResources()
         Dim target As Common_Accessor = New Common_Accessor(GenDefaultValues.DefaultMod)
         Dim ok As Boolean = True
         For i As Integer = 0 To 1000 Step 1
