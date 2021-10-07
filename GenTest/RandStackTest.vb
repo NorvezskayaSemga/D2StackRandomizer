@@ -59,9 +59,7 @@ Public Class RandStackTest
     Private def() As String = {"%default%"}
 
     Friend Function CreateRandStack_Accessor() As RandStack_Accessor
-        If IsNothing(UnitsList) Then Call ReadTestUnits()
-        If IsNothing(ItemsList) Then Call ReadTestItems()
-        If IsNothing(AllSpells) Then Call ReadTestSpells()
+        Call PrepareToTest()
         Dim rstackData As New RandStack.ConstructorInput With {.AllUnitsList = UnitsList, _
                                                                .AllItemsList = ItemsList, _
                                                                .AllSpellsList = AllSpells}
@@ -69,16 +67,19 @@ Public Class RandStackTest
         Return New RandStack_Accessor(rstackData)
     End Function
     Friend Function CreateRandStack() As RandStack
-        If IsNothing(UnitsList) Then Call ReadTestUnits()
-        If IsNothing(ItemsList) Then Call ReadTestItems()
-        If IsNothing(AllSpells) Then Call ReadTestSpells()
+        Call PrepareToTest()
         Dim rstackData As New RandStack.ConstructorInput With {.AllUnitsList = UnitsList, _
                                                                .AllItemsList = ItemsList, _
                                                                .AllSpellsList = AllSpells}
         rstackData.settings.modName = GenDefaultValues.DefaultMod
         Return New RandStack(rstackData)
     End Function
-    
+    Friend Sub PrepareToTest()
+        If IsNothing(UnitsList) Then Call ReadTestUnits()
+        If IsNothing(ItemsList) Then Call ReadTestItems()
+        If IsNothing(AllSpells) Then Call ReadTestSpells()
+    End Sub
+
     Friend T1Units() As String = {
 "g000uu3001", "g000uu0023", "g000uu0019", "g000uu0020", "g000uu8248", "g000uu0022", "g000uu0001", "g000uu0006", "g000uu0008", "g000uu0011", "g000uu0018", "g003uu5001",
 "g000uu3002", "g000uu0048", "g000uu0044", "g000uu0045", "g000uu8249", "g000uu0047", "g000uu0036", "g000uu0026", "g000uu0033", "g000uu0029", "g000uu0043", "g004uu5039",
@@ -102,7 +103,7 @@ Public Class RandStackTest
     End Sub
 
     Private Function TestGenSettings(ByRef d As AllDataStructues.DesiredStats, Optional ByVal GroundTile As Boolean = True) As AllDataStructues.CommonStackCreationSettings
-        Return New AllDataStructues.CommonStackCreationSettings(True) _
+        Return New AllDataStructues.CommonStackCreationSettings _
             With {.StackStats = d, _
                   .deltaLeadership = 0, _
                   .GroundTile = GroundTile, _
@@ -170,8 +171,7 @@ Public Class RandStackTest
     <TestMethod(), _
      DeploymentItem("RandomStackGenerator.dll")> _
     Public Sub RandTest()
-        If IsNothing(UnitsList) Then Call ReadTestUnits()
-        If IsNothing(ItemsList) Then Call ReadTestItems()
+        Call PrepareToTest()
         Dim target As Common_Accessor = New Common_Accessor(GenDefaultValues.DefaultMod)
         Dim maxval As Integer = 10000
         Dim ok, g(maxval / 10), tmpok As Boolean
@@ -363,8 +363,8 @@ Public Class RandStackTest
         Dim genitems As List(Of String)
         For i As Integer = 0 To 100 Step 1
             cost = target.minItemGoldCost + i * 125
-            Dim gi As New AllDataStructues.CommonLootCreationSettings(True) With {.GoldCost = cost, .IGen = New AllDataStructues.LootGenSettings(False), _
-                                                                                  .TypeCostRestriction = Nothing, .pos = New Point(1, 1)}
+            Dim gi As New AllDataStructues.CommonLootCreationSettings With {.GoldCost = cost, .IGen = New AllDataStructues.LootGenSettings(False), _
+                                                                            .TypeCostRestriction = Nothing, .pos = New Point(1, 1)}
             genitems = target.ItemsGen(gi)
             sum = target.LootCost(genitems).Gold
             'If sum > cost Then ok = False
@@ -622,8 +622,7 @@ Public Class RandStackTest
         If Not ok Then Assert.Inconclusive("Verify the correctness of this test method.")
     End Sub
     Private Function TestGoblinsGenStats(ByRef target As RandStack_Accessor, ByRef twogoblins As Boolean) As AllDataStructues.DesiredStats
-        If IsNothing(UnitsList) Then Call ReadTestUnits()
-        If IsNothing(ItemsList) Then Call ReadTestItems()
+        Call PrepareToTest()
         target = CreateRandStack_Accessor()
         Call target.ResetExclusions()
         target.log.Disable()
