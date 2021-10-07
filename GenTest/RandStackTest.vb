@@ -75,9 +75,31 @@ Public Class RandStackTest
         Return New RandStack(rstackData)
     End Function
     Friend Sub PrepareToTest()
+        Call CopyResources()
         If IsNothing(UnitsList) Then Call ReadTestUnits()
         If IsNothing(ItemsList) Then Call ReadTestItems()
         If IsNothing(AllSpells) Then Call ReadTestSpells()
+    End Sub
+    Public Shared Sub CopyResources()
+        If Not IO.Directory.Exists("Resources") Then
+            Dim projectDir As String = Environment.CurrentDirectory
+            For i As Integer = 1 To 3 Step 1
+                projectDir = IO.Path.GetDirectoryName(projectDir)
+            Next i
+            Dim source As String = IO.Path.Combine(projectDir, "RandomStackGenerator\Resources")
+            Dim destination As String = IO.Path.Combine(Environment.CurrentDirectory, "Resources")
+            Call RecursiveCopy(New IO.DirectoryInfo(source), New IO.DirectoryInfo(destination))
+        End If
+    End Sub
+    Public Shared Sub RecursiveCopy(source As IO.DirectoryInfo, target As IO.DirectoryInfo)
+        ' Recursively call the DeepCopy Method for each Directory
+        For Each dir As IO.DirectoryInfo In source.GetDirectories()
+            RecursiveCopy(dir, target.CreateSubdirectory(dir.Name))
+        Next dir
+        ' Go ahead and copy each file in "source" to the "target" directory
+        For Each file As IO.FileInfo In source.GetFiles()
+            file.CopyTo(IO.Path.Combine(target.FullName, file.Name))
+        Next file
     End Sub
 
     Friend T1Units() As String = {
@@ -239,7 +261,8 @@ Public Class RandStackTest
                                 statsList.Add(New AllDataStructues.DesiredStats With { _
                                                    .ExpBarAverage = ExpBarAverage, .ExpStackKilled = ExpStackKilled, _
                                                    .MaxGiants = MaxGiants, .MeleeCount = MeleeCount, _
-                                                   .Race = New List(Of Integer), .StackSize = StackSize})
+                                                   .Race = New List(Of Integer), .StackSize = StackSize, _
+                                                   .IGen = New AllDataStructues.LootGenSettings(False)})
                                 statsList.Item(statsList.Count - 1).Race.Add(target.comm.RaceIdentifierToSubrace(races(r)))
                             Next StackSize
                         Next MeleeCount
@@ -386,7 +409,8 @@ Public Class RandStackTest
         Dim ok As Boolean = True
 
         Dim stats As New AllDataStructues.DesiredStats With {.ExpBarAverage = 1450, .ExpStackKilled = 1000, .Race = New List(Of Integer), _
-                                                             .StackSize = 3, .MaxGiants = 1, .MeleeCount = 3, .LootCost = 1200}
+                                                             .StackSize = 3, .MaxGiants = 1, .MeleeCount = 3, .LootCost = 1200, _
+                                                             .IGen = New AllDataStructues.LootGenSettings(False)}
         Dim races() As Integer = New Integer() {1, 2}
         Dim raceokL(UBound(races)), raceokF(UBound(races)) As Boolean
         stats.Race.AddRange(races)
@@ -487,7 +511,8 @@ Public Class RandStackTest
         Dim tstats As AllDataStructues.DesiredStats = target.StackStats(s, False)
 
         Dim stats As New AllDataStructues.DesiredStats With {.ExpBarAverage = 950, .ExpStackKilled = 120, .Race = New List(Of Integer), _
-                                                             .StackSize = 1, .MaxGiants = 0, .MeleeCount = 1, .LootCost = 0}
+                                                             .StackSize = 1, .MaxGiants = 0, .MeleeCount = 1, .LootCost = 0, _
+                                                             .IGen = New AllDataStructues.LootGenSettings(False)}
         Dim races() As Integer = New Integer() {10}
         stats.Race.AddRange(races)
 

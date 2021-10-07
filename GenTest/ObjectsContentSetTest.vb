@@ -194,7 +194,7 @@ Public Class ObjectsContentSetTest
         For i As Integer = 100 To 10000 Step 100
             'input.Clear()
             input.Add(i)
-            actual = target.MakeMerchantItemsList(New AllDataStructues.DesiredStats With {.shopContent = input}, Nothing, log, -1)
+            actual = target.MakeMerchantItemsList(New AllDataStructues.DesiredStats With {.shopContent = input, .IGen = New AllDataStructues.LootGenSettings(False)}, Nothing, log, -1)
             If actual.Count = 0 Then ok = False
         Next i
 
@@ -228,46 +228,47 @@ Public Class ObjectsContentSetTest
         Call log.Enable()
 
         Dim mode() As Integer = {3, 4}
+        Dim igen As New AllDataStructues.LootGenSettings(False)
 
         input.Clear()
         For Each unit As AllDataStructues.Unit In rStack.AllUnits
             input.Add(unit.unitID)
         Next unit
         Dim s As List(Of String) = target.GetMercenariesListSettings(-1, input)
-        Call target.MakeMercenariesList(New AllDataStructues.DesiredStats With {.shopContent = s}, log)
+        Call target.MakeMercenariesList(New AllDataStructues.DesiredStats With {.shopContent = s, .IGen = igen}, log)
         input.Clear()
         For Each item As AllDataStructues.Item In rStack.AllItems
             input.Add(item.itemID)
         Next item
         s = target.GetMerchantListSettings(-1, input)
-        Call target.MakeMerchantItemsList(New AllDataStructues.DesiredStats With {.shopContent = s}, Nothing, log)
+        Call target.MakeMerchantItemsList(New AllDataStructues.DesiredStats With {.shopContent = s, .IGen = igen}, Nothing, log)
         input.Clear()
         For Each spell As AllDataStructues.Spell In rndtest.AllSpells
             input.Add(spell.spellID)
         Next spell
         s = target.GetSpellsListSettings(-1, input)
-        Call target.MakeSpellsList(New AllDataStructues.DesiredStats With {.shopContent = s}, mana, log)
+        Call target.MakeSpellsList(New AllDataStructues.DesiredStats With {.shopContent = s, .IGen = igen}, mana, log)
         log.Disable()
 
         For i As Integer = 0 To 1 Step 1
             For Each m As Integer In mode
                 For Each unit As AllDataStructues.Unit In rStack.AllUnits
                     Dim r As List(Of String) = target.GetMercenariesListSettings(m, {unit.unitID})
-                    Dim L As List(Of String) = target.MakeMercenariesList(New AllDataStructues.DesiredStats With {.shopContent = r}, log)
+                    Dim L As List(Of String) = target.MakeMercenariesList(New AllDataStructues.DesiredStats With {.shopContent = r, .IGen = igen}, log)
                     Dim result As String = l.Item(0)
                     If Not unit.race = rStack.FindUnitStats(result).race Then ok = False
                 Next unit
                 For Each item As AllDataStructues.Item In rStack.AllItems
                     If item.itemCost.Gold > 0 Then
                         Dim r As List(Of String) = target.GetMerchantListSettings(m, {item.itemID})
-                        Dim L As List(Of String) = target.MakeMerchantItemsList(New AllDataStructues.DesiredStats With {.shopContent = r}, Nothing, log)
+                        Dim L As List(Of String) = target.MakeMerchantItemsList(New AllDataStructues.DesiredStats With {.shopContent = r, .IGen = igen}, Nothing, log)
                         Dim result As String = L.Item(0)
                         If Not item.type = rStack.FindItemStats(result).type Then ok = False
                     End If
                 Next item
                 For Each spell As AllDataStructues.Spell In rndtest.AllSpells
                     Dim r As List(Of String) = target.GetSpellsListSettings(m, {spell.spellID})
-                    Dim result As List(Of String) = target.MakeSpellsList(New AllDataStructues.DesiredStats With {.shopContent = r}, mana, log)
+                    Dim result As List(Of String) = target.MakeSpellsList(New AllDataStructues.DesiredStats With {.shopContent = r, .IGen = igen}, mana, log)
                     If result.Count > 0 Then
                         Dim item As String = result.Item(0)
                         For Each k As AllDataStructues.Spell In rndtest.AllSpells
