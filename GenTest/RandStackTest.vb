@@ -776,6 +776,7 @@ Public Class RandStackTest
                             mana.Green = m3
                             mana.Red = m4
                             mana.White = m5
+                            target.mapData.minesAmount = mana
                             For j As Integer = 0 To 11 Step 1
                                 For i As Integer = 0 To 1000 Step 10
                                     input = New AllDataStructues.Cost With {.Gold = i, _
@@ -784,11 +785,7 @@ Public Class RandStackTest
                                                                             .Green = target.rndgen.RndPos(1001, True) - 1, _
                                                                             .Red = target.rndgen.RndPos(1001, True) - 1, _
                                                                             .White = target.rndgen.RndPos(1001, True) - 1}
-                                    target.settings.manaToGoldConversionChance = 1
-                                    target.settings.manaToGoldConversionAmount = 0.1 * CDbl(j)
-                                    target.mapData.minesAmount = mana
-
-                                    result = target.GoldToMana(input)
+                                    result = target.GoldToMana(input, 1, 0.1 * CDbl(j))
                                     s1 = AllDataStructues.Cost.Sum(input)
                                     s2 = AllDataStructues.Cost.Sum(result)
                                     If result.Gold < 0 Then ok = False
