@@ -3426,7 +3426,7 @@ Public Class AllDataStructues
                 p = "no"
             End If
             Dim f As String = ""
-            If Not IsNothing(v.typesFilter.typesAmount) Then
+            If Not IsNothing(v.typesFilter) AndAlso Not IsNothing(v.typesFilter.typesAmount) Then
                 For i As Integer = 0 To UBound(v.typesFilter.typesAmount) Step 1
                     f &= v.typesFilter.typesAmount(i) & " "
                 Next i
