@@ -29,6 +29,7 @@
 
     ''' <summary>Сюда генератор пишет лог</summary>
     Public log As Log
+    Private initializationLog As String
 
     Private Structure Donater
         Dim name As String
@@ -78,6 +79,7 @@
         users(NoneNameId).weight *= NoneWeightMultiplier()
 
         Call AddToLog(-1, "-----Names creator initialization ended-----")
+        If Not IsNothing(log) Then initializationLog = log.PrintAll
     End Sub
     Private Shared Function NoneWeightMultiplier() As Double
         Return 1 / chanceToAddNameToStack - 1
@@ -466,6 +468,7 @@
     Friend Sub ResetNames(ByRef newMapGen As Boolean, ByRef LogID As Integer)
         If newMapGen Then
             Call ClearLog(LogID)
+            Call AddToLog(LogID, initializationLog)
             Call calcUWeigt(Nothing)
             Call ResetUsedStackNames(LogID)
             Call ResetLordsNames(LogID)
