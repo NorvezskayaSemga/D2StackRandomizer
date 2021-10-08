@@ -1108,8 +1108,7 @@ Public Class RandStack
         Call log.Add(DynStackStats, False)
 
         If GenSettings.StackStats.StackSize > 0 Then
-            result = GenStackMultithread(GenSettings.StackStats, DynStackStats, GenSettings.deltaLeadership, _
-                                         GenSettings.GroundTile, GenSettings.NoLeader)
+            result = GenStackMultithread(GenSettings, DynStackStats)
         Else
             result.leaderPos = -1
             ReDim result.pos(UBound(busytransfer)), result.level(UBound(busytransfer))
@@ -1220,10 +1219,8 @@ Public Class RandStack
         Loop
     End Sub
 
-    Private Function GenStackMultithread(ByVal StackStats As AllDataStructues.DesiredStats, _
-                                         ByVal BakDynStackStats As AllDataStructues.DesiredStats, _
-                                         ByVal deltaLeadership As Integer, ByVal GroundTile As Boolean, _
-                                         ByVal NoLeader As Boolean) As AllDataStructues.Stack
+    Private Function GenStackMultithread(ByVal GenSettings As AllDataStructues.CommonStackCreationSettings, _
+                                         ByVal BakDynStackStats As AllDataStructues.DesiredStats) As AllDataStructues.Stack
 
         Dim units(11)() As AllDataStructues.Unit
         Dim DynStackStats(UBound(units)) As AllDataStructues.DesiredStats
@@ -1236,7 +1233,7 @@ Public Class RandStack
             Next i
         End If
 
-        If Not NoLeader Then ReDim leaderExpKilled(UBound(units))
+        If Not GenSettings.NoLeader Then ReDim leaderExpKilled(UBound(units))
 
         Parallel.For(0, units.Length, _
          Sub(jobID As Integer)
@@ -1244,10 +1241,10 @@ Public Class RandStack
              Dim FreeMeleeSlots As Integer = 3
              Dim BaseStackSize As Integer
              DynStackStats(jobID) = AllDataStructues.DesiredStats.Copy(BakDynStackStats)
-             Dim SelectedLeader As Integer = GenLeader(StackStats, DynStackStats(jobID), FreeMeleeSlots, deltaLeadership, _
-                                                       GroundTile, NoLeader, MapLordsRaces, CDbl(jobID / units.Length), jobID)
+             Dim SelectedLeader As Integer = GenLeader(GenSettings, DynStackStats(jobID), FreeMeleeSlots, _
+                                                       MapLordsRaces, CDbl(jobID / units.Length), jobID)
              BaseStackSize = DynStackStats(jobID).StackSize
-             If Not NoLeader Then
+             If Not GenSettings.NoLeader Then
                  If AllUnits(SelectedLeader).small Then
                      BaseStackSize += 1
                  Else
@@ -1256,16 +1253,16 @@ Public Class RandStack
              End If
 
              Dim deltaExpKilled As Integer = 0
-             Dim SelectedFighters As List(Of Integer) = GenFingters(StackStats, DynStackStats(jobID), FreeMeleeSlots, _
-                                                                    SelectedLeader, GroundTile, BaseStackSize, NoLeader, _
+             Dim SelectedFighters As List(Of Integer) = GenFingters(GenSettings, DynStackStats(jobID), FreeMeleeSlots, _
+                                                                    SelectedLeader, BaseStackSize, _
                                                                     MapLordsRaces, deltaExpKilled, _
                                                                     CDbl(jobID / units.Length), jobID)
-             units(jobID) = GenUnitsList(SelectedFighters, SelectedLeader, NoLeader)
+             units(jobID) = GenUnitsList(SelectedFighters, SelectedLeader, GenSettings.NoLeader)
 
              DynStackStats(jobID).LootCost = CInt(CDbl(DynStackStats(jobID).LootCost) _
-                                                  * (1 + CDbl(deltaExpKilled) / StackStats.ExpStackKilled))
+                                                  * (1 + CDbl(deltaExpKilled) / GenSettings.StackStats.ExpStackKilled))
 
-             If Not NoLeader Then leaderExpKilled(jobID) = AllUnits(SelectedLeader).EXPkilled
+             If Not GenSettings.NoLeader Then leaderExpKilled(jobID) = AllUnits(SelectedLeader).EXPkilled
 
              log.MAdd(jobID, "--------Attempt " & jobID + 1 & " ended--------")
          End Sub)
@@ -1273,7 +1270,7 @@ Public Class RandStack
         Call log.Add(log.MPrintAll())
         Call log.MRedim(0)
 
-        Dim selected As Integer = SelectStack(StackStats, DynStackStats, leaderExpKilled)
+        Dim selected As Integer = SelectStack(GenSettings, DynStackStats, leaderExpKilled)
 
         If log.IsEnabled Then
             Dim txt As String = ""
@@ -1283,14 +1280,14 @@ Public Class RandStack
             Call log.Add("--------Selected Stack--------" & txt)
         End If
 
-        Return GenPositions(StackStats, DynStackStats(selected), units(selected))
+        Return GenPositions(GenSettings, DynStackStats(selected), units(selected))
     End Function
-    Private Function GenLeader(ByRef StackStats As AllDataStructues.DesiredStats, ByRef DynStackStats As AllDataStructues.DesiredStats, _
+    Private Function GenLeader(ByRef GenSettings As AllDataStructues.CommonStackCreationSettings, _
+                               ByRef DynStackStats As AllDataStructues.DesiredStats, _
                                ByRef FreeMeleeSlots As Integer, _
-                               ByRef deltaLeadership As Integer, ByRef GroundTile As Boolean, ByRef NoLeader As Boolean, _
                                ByRef MapLordsRaces As List(Of Integer), _
                                ByRef Bias As Double, ByRef LogID As Integer) As Integer
-        If NoLeader Then Return -1
+        If GenSettings.NoLeader Then Return -1
 
         Dim serialExecution As Boolean = (LogID < 0)
         Dim PossibleLeaders As New List(Of Integer)
@@ -1315,7 +1312,7 @@ Public Class RandStack
         Do While PossibleLeaders.Count < 3
             PossibleLeaders.Clear()
             For i As Integer = 0 To UBound(AllUnits) Step 1
-                If SelectPossibleLeader(i, Tolerance, DynStackStats, GroundTile, MapLordsRaces) Then PossibleLeaders.Add(i)
+                If SelectPossibleLeader(i, Tolerance, DynStackStats, GenSettings.GroundTile, MapLordsRaces) Then PossibleLeaders.Add(i)
             Next i
             If Tolerance > 2 And PossibleLeaders.Count > 0 Then Exit Do
 
@@ -1326,11 +1323,8 @@ Public Class RandStack
                     Tolerance = 0.02 * (DynStackStats.StackSize - 1)
                 Else
                     If PossibleLeaders.Count > 0 Then Exit Do
-                    Throw New Exception("Something is wrong with the choice of possible stack leaders" & vbNewLine & _
-                                        "Location name: " & StackStats.LocationName & vbNewLine & _
-                                        "Is ground: " & GroundTile & vbNewLine & _
-                                        "StackStats:" & vbNewLine & AllDataStructues.DesiredStats.Print(StackStats, comm.defValues.RaceNumberToRaceChar) & vbNewLine & _
-                                        "DynStackStats:" & vbNewLine & AllDataStructues.DesiredStats.Print(DynStackStats, comm.defValues.RaceNumberToRaceChar))
+                    Call ThrowStackCreationException("Something is wrong with the choice of possible stack leaders", _
+                                                     GenSettings, DynStackStats)
                 End If
             End If
             Tolerance += 0.2
@@ -1342,16 +1336,13 @@ Public Class RandStack
                                               multiplierUnitDesiredStats, SigmaMultiplier(DynStackStats), serialExecution)
 
         If SelectedLeader = -1 Then
-            Throw New Exception("Possibly an endless loop in a random selection from an array of possible leaders" & vbNewLine & _
-                                "Location name: " & StackStats.LocationName & vbNewLine & _
-                                "Is ground: " & GroundTile & vbNewLine & _
-                                "StackStats:" & vbNewLine & AllDataStructues.DesiredStats.Print(StackStats, comm.defValues.RaceNumberToRaceChar) & vbNewLine & _
-                                "DynStackStats:" & vbNewLine & AllDataStructues.DesiredStats.Print(DynStackStats, comm.defValues.RaceNumberToRaceChar))
+            Call ThrowStackCreationException("Possibly an endless loop in a random selection from an array of possible leaders", _
+                                             GenSettings, DynStackStats)
         End If
 
         'теперь нужно добрать воинов в отряд
         Dim R As Double = rndgen.Rand(0, 1, serialExecution)
-        Dim leadershipCap As Integer = Math.Min(AllUnits(SelectedLeader).leadership + deltaLeadership, 6)
+        Dim leadershipCap As Integer = Math.Min(AllUnits(SelectedLeader).leadership + GenSettings.deltaLeadership, 6)
         If AllUnits(SelectedLeader).small Then
             leadershipCap = Math.Max(leadershipCap, 1)
         Else
@@ -1377,17 +1368,17 @@ Public Class RandStack
         DynStackStats.StackSize = Math.Min(DynStackStats.StackSize, leadershipCap)
         DynStackStats.MeleeCount = Math.Min(DynStackStats.MeleeCount, 3)
         DynStackStats.MaxGiants = Math.Min(DynStackStats.MaxGiants, 3)
-        DynStackStats.ExpBarAverage = CInt((DynStackStats.ExpBarAverage * StackStats.StackSize) / DynStackStats.StackSize)
+        DynStackStats.ExpBarAverage = CInt((DynStackStats.ExpBarAverage * GenSettings.StackStats.StackSize) / DynStackStats.StackSize)
 
         Call ChangeLimit(AllUnits, SelectedLeader, DynStackStats, FreeMeleeSlots, LogID)
 
         Return SelectedLeader
     End Function
-    Private Function GenFingters(ByRef StackStats As AllDataStructues.DesiredStats, _
+    Private Function GenFingters(ByRef GenSettings As AllDataStructues.CommonStackCreationSettings, _
                                  ByRef DynStackStats As AllDataStructues.DesiredStats, _
                                  ByRef FreeMeleeSlots As Integer, ByRef SelectedLeader As Integer, _
-                                 ByRef GroundTile As Boolean, ByRef BaseStackSize As Integer, _
-                                 ByVal NoLeader As Boolean, ByRef MapLordsRaces As List(Of Integer), _
+                                 ByRef BaseStackSize As Integer, _
+                                 ByRef MapLordsRaces As List(Of Integer), _
                                  ByRef output_delta_expKilled As Integer, _
                                  ByRef Bias As Double, ByRef LogID As Integer) As List(Of Integer)
         Dim SelectedFighters As New List(Of Integer)
@@ -1412,17 +1403,14 @@ Public Class RandStack
                         Exit Do
                     End If
                 ElseIf fighter = -2 Then
-                    Throw New Exception("Possibly an endless loop in a random selection from an array of possible fighters" & vbNewLine & _
-                                        "Location name: " & StackStats.LocationName & vbNewLine & _
-                                        "Is ground: " & GroundTile & vbNewLine & _
-                                        "StackStats:" & vbNewLine & AllDataStructues.DesiredStats.Print(StackStats, comm.defValues.RaceNumberToRaceChar) & vbNewLine & _
-                                        "DynStackStats:" & vbNewLine & AllDataStructues.DesiredStats.Print(DynStackStats, comm.defValues.RaceNumberToRaceChar))
+                    Call ThrowStackCreationException("Possibly an endless loop in a random selection from an array of possible fighters", _
+                                                     GenSettings, DynStackStats)
                 Else
                     SelectedFighters.Add(fighter)
                 End If
                 If resetStackSettings And SelectedFighters.Count > 0 Then Exit Do
             Loop
-            If NoLeader Then
+            If GenSettings.NoLeader Then
                 If SelectedFighters.Count = 0 Then
                     output_delta_expKilled += deltaExpKilledIncrement
                     DynStackStats.ExpStackKilled += deltaExpKilledIncrement
@@ -1463,7 +1451,7 @@ Public Class RandStack
         Next i
         Return SelectedUnits
     End Function
-    Private Function GenPositions(ByRef StackStats As AllDataStructues.DesiredStats, _
+    Private Function GenPositions(ByRef GenSettings As AllDataStructues.CommonStackCreationSettings, _
                                   ByRef DynStackStats As AllDataStructues.DesiredStats, _
                                   ByRef SelectedUnits() As AllDataStructues.Unit) As AllDataStructues.Stack
         Dim result As New AllDataStructues.Stack With {.leaderPos = -1}
@@ -1493,10 +1481,8 @@ Public Class RandStack
             End If
         Next i
         For i As Integer = 0 To UBound(unitIsUsed) Step 1
-            If Not unitIsUsed(i) Then Throw New Exception("Something wrong in the units placer" & vbNewLine & _
-                                                          "Location name: " & StackStats.LocationName & vbNewLine & _
-                                                          "StackStats:" & vbNewLine & AllDataStructues.DesiredStats.Print(StackStats, comm.defValues.RaceNumberToRaceChar) & vbNewLine & _
-                                                          "DynStackStats:" & vbNewLine & AllDataStructues.DesiredStats.Print(DynStackStats, comm.defValues.RaceNumberToRaceChar))
+            If Not unitIsUsed(i) Then Call ThrowStackCreationException("Something wrong in the units placer", _
+                                                                        GenSettings, DynStackStats)
         Next i
         For i As Integer = 0 To UBound(result.pos) Step 1
             If result.pos(i) = "" Then result.pos(i) = GenDefaultValues.emptyItem
@@ -1533,7 +1519,7 @@ Public Class RandStack
         Next i
         Return result
     End Function
-    Private Function SelectStack(ByRef StackStats As AllDataStructues.DesiredStats, _
+    Private Function SelectStack(ByRef GenSettings As AllDataStructues.CommonStackCreationSettings, _
                                  ByRef DynStackStats() As AllDataStructues.DesiredStats, _
                                  ByRef leaderExpKilled() As Integer) As Integer
         Dim possible1, possible2 As New List(Of Integer)
@@ -1550,7 +1536,7 @@ Public Class RandStack
             possible2.Clear()
             ExpTolerance += 0.05
             For Each i As Integer In possible1
-                If Math.Abs(DynStackStats(i).ExpStackKilled) <= ExpTolerance * StackStats.ExpStackKilled Then possible2.Add(i)
+                If Math.Abs(DynStackStats(i).ExpStackKilled) <= ExpTolerance * GenSettings.StackStats.ExpStackKilled Then possible2.Add(i)
             Next i
             If possible2.Count >= 0.2 * DynStackStats.Length Then Exit Do
             If possible2.Count > 0 And ExpTolerance >= 0.1 Then Exit Do
@@ -1580,6 +1566,22 @@ Public Class RandStack
         Dim selected As Integer = comm.RandomSelection(possible2, weight, False)
         Return selected
     End Function
+    Private Sub ThrowStackCreationException(ByRef comment As String, _
+                                            ByRef GenSettings As AllDataStructues.CommonStackCreationSettings, _
+                                            ByRef DynStackStats As AllDataStructues.DesiredStats)
+        Dim p As String
+        If IsNothing(GenSettings.pos) Then
+            p = "unknown"
+        Else
+            p = "X = " & GenSettings.pos.X & "  Y = " & GenSettings.pos.Y
+        End If
+        Throw New Exception(comment & vbNewLine & _
+                            "Location name: " & GenSettings.StackStats.LocationName & vbNewLine & _
+                            "Is ground: " & GenSettings.GroundTile & vbNewLine & _
+                            "Position: " & vbNewLine & _
+                            "StackStats:" & vbNewLine & AllDataStructues.DesiredStats.Print(GenSettings.StackStats, comm.defValues.RaceNumberToRaceChar) & vbNewLine & _
+                            "DynStackStats:" & vbNewLine & AllDataStructues.DesiredStats.Print(DynStackStats, comm.defValues.RaceNumberToRaceChar))
+    End Sub
 
     Private Function SelectFighters(ByRef skipfilter1 As Boolean, ByRef skipfilter2 As Boolean, _
                                     ByRef DynStackStats As AllDataStructues.DesiredStats, ByRef FreeMeleeSlots As Integer, _
