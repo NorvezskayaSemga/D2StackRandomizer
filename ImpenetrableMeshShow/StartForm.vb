@@ -101,7 +101,7 @@ Friend Class StartForm
         'Dim dds As AllDataStructues.DesiredStats = AllDataStructues.DesiredStats.Copy(ds)
         'Call rstack.GenFingters(ds, dds, 3, -1, True, 6, True, New List(Of Integer), 0, 0.5, -1)
 
-        Call comm.ReadExcludedObjectsList(False)
+        Call comm.ReadExcludedObjectsList()
         Dim objSizeArray() As ImpenetrableObjects.GlobalMapDecoration = ReadObjSize()
 
         Dim objplace As New ImpenetrableObjects(objSizeArray, False, ReadSpells, comm)

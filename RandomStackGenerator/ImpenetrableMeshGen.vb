@@ -9382,7 +9382,8 @@ Public Class ImpenetrableObjects
     ''' <param name="spells">Все заклинания в игре</param>
     Public Sub New(ByRef ObjectsSize() As GlobalMapDecoration, ByRef AddLoreUnitsToExcluded As Boolean, ByRef spells() As AllDataStructues.Spell, ByRef c As Common)
         comm = c
-        Call comm.ReadExcludedObjectsList(AddLoreUnitsToExcluded)
+        If AddLoreUnitsToExcluded Then Call comm.ReadExcludedLoreObjectsList()
+        Call comm.ReadExcludedObjectsList()
         Call comm.ReadCustomBuildingRace()
         Call comm.ReadPlateauConstructionDescription()
 
