@@ -445,6 +445,7 @@ Public Class RandStack
                     result.WeightedOverlevel += (currentUnitLevel - unit.level) * unit.EXPkilled * m
                     expKilledSum += unit.EXPkilled
                 End If
+                If unit.unitBranch = GenDefaultValues.UnitClass.leader Then result.WaterOnly = unit.waterOnly
             End If
         Next i
         If result.StackSize > 0 Then result.ExpBarAverage = CInt(result.ExpBarAverage / result.StackSize)
@@ -1142,7 +1143,7 @@ Public Class RandStack
         Next i
 
         Call log.Add(vbNewLine & "----Stack creation started----")
-        Call log.Add("DeltaLeadership: " & GenSettings.deltaLeadership & " GroundTile: " & GenSettings.GroundTile & " NoLeader: " & GenSettings.NoLeader)
+        Call log.Add("DeltaLeadership: " & GenSettings.deltaLeadership & " GroundTile: " & GenSettings.groundTile & " NoLeader: " & GenSettings.noLeader)
         If Not IsNothing(GenSettings.pos) Then
             Call log.Add("Position: " & GenSettings.pos.X & " " & GenSettings.pos.Y)
         Else
@@ -1160,6 +1161,7 @@ Public Class RandStack
             Next i
         End If
         Call ApplyOverlevel(result, GenSettings)
+        result.order = GenSettings.order
 
         result.items = ItemsGen(New AllDataStructues.CommonLootCreationSettings _
                                 With {.GoldCost = DynStackStats.LootCost, _
@@ -1190,21 +1192,27 @@ Public Class RandStack
     End Function
 
     Private Function SelectPossibleLeader(ByRef leaderID As Integer, ByRef Tolerance As Double, _
-                                          ByRef StackStats As AllDataStructues.DesiredStats, ByRef GroundTile As Boolean, _
+                                          ByRef GenSettings As AllDataStructues.CommonStackCreationSettings, _
+                                          ByRef DynStackStats As AllDataStructues.DesiredStats, _
                                           ByRef MapLordsRaces As List(Of Integer)) As Boolean
         If Not comm.IsAppropriateLeader(AllUnits(leaderID)) Then Return False
 
         If AllUnits(leaderID).fromRaceBranch AndAlso MapLordsRaces.Contains(AllUnits(leaderID).race) Then Return False
 
         If Not settings.ignoreUnitRace Then
-            If Not StackStats.Race.Contains(AllUnits(leaderID).race) Then Return False
+            If Not DynStackStats.Race.Contains(AllUnits(leaderID).race) Then Return False
         End If
 
-        If Not AllUnits(leaderID).small And StackStats.MaxGiants = 0 Then Return False
-        If AllUnits(leaderID).waterOnly And GroundTile Then Return False
+        If Not AllUnits(leaderID).small And DynStackStats.MaxGiants = 0 Then Return False
+        If AllUnits(leaderID).waterOnly And GenSettings.groundTile Then Return False
 
         If comm.BigStackUnits.ContainsKey(AllUnits(leaderID).unitID) _
-        AndAlso StackStats.StackSize < comm.BigStackUnits.Item(AllUnits(leaderID).unitID) Then Return False
+        AndAlso DynStackStats.StackSize < comm.BigStackUnits.Item(AllUnits(leaderID).unitID) Then Return False
+
+        If Not GenSettings.order = "" Then
+            MsgBox("нужен текст с названием приказа")
+            If Not GenSettings.StackStats.WaterOnly = AllUnits(leaderID).waterOnly Then Return False
+        End If
 
         'Dim mult As Double
         'If AllLeaders(leaderID).small Then
@@ -1214,7 +1222,7 @@ Public Class RandStack
         'End If
         'If Math.Abs(AllLeaders(leaderID).EXPnext - mult * StackStats.ExpBarAverage) _
         '    > mult * Tolerance * StackStats.ExpBarAverage Then Return False
-        If AllUnits(leaderID).EXPkilled > (1 + Tolerance) * StackStats.ExpStackKilled Then Return False
+        If AllUnits(leaderID).EXPkilled > (1 + Tolerance) * DynStackStats.ExpStackKilled Then Return False
         Return True
     End Function
     Private Function SigmaMultiplier(ByRef stat As AllDataStructues.DesiredStats) As Double
@@ -1276,7 +1284,7 @@ Public Class RandStack
             Next i
         End If
 
-        If Not GenSettings.NoLeader Then ReDim leaderExpKilled(UBound(units))
+        If Not GenSettings.noLeader Then ReDim leaderExpKilled(UBound(units))
 
         Parallel.For(0, units.Length, _
          Sub(jobID As Integer)
@@ -1287,7 +1295,7 @@ Public Class RandStack
              Dim SelectedLeader As Integer = GenLeader(GenSettings, DynStackStats(jobID), FreeMeleeSlots, _
                                                        MapLordsRaces, CDbl(jobID / units.Length), jobID)
              BaseStackSize = DynStackStats(jobID).StackSize
-             If Not GenSettings.NoLeader Then
+             If Not GenSettings.noLeader Then
                  If AllUnits(SelectedLeader).small Then
                      BaseStackSize += 1
                  Else
@@ -1300,12 +1308,12 @@ Public Class RandStack
                                                                     SelectedLeader, BaseStackSize, _
                                                                     MapLordsRaces, deltaExpKilled, _
                                                                     CDbl(jobID / units.Length), jobID)
-             units(jobID) = GenUnitsList(SelectedFighters, SelectedLeader, GenSettings.NoLeader)
+             units(jobID) = GenUnitsList(SelectedFighters, SelectedLeader, GenSettings.noLeader)
 
              DynStackStats(jobID).LootCost = CInt(CDbl(DynStackStats(jobID).LootCost) _
                                                   * (1 + CDbl(deltaExpKilled) / GenSettings.StackStats.ExpStackKilled))
 
-             If Not GenSettings.NoLeader Then leaderExpKilled(jobID) = AllUnits(SelectedLeader).EXPkilled
+             If Not GenSettings.noLeader Then leaderExpKilled(jobID) = AllUnits(SelectedLeader).EXPkilled
 
              log.MAdd(jobID, "--------Attempt " & jobID + 1 & " ended--------")
          End Sub)
@@ -1330,7 +1338,7 @@ Public Class RandStack
                                ByRef FreeMeleeSlots As Integer, _
                                ByRef MapLordsRaces As List(Of Integer), _
                                ByRef Bias As Double, ByRef LogID As Integer) As Integer
-        If GenSettings.NoLeader Then Return -1
+        If GenSettings.noLeader Then Return -1
 
         Dim serialExecution As Boolean = (LogID < 0)
         Dim PossibleLeaders As New List(Of Integer)
@@ -1355,7 +1363,7 @@ Public Class RandStack
         Do While PossibleLeaders.Count < 3
             PossibleLeaders.Clear()
             For i As Integer = 0 To UBound(AllUnits) Step 1
-                If SelectPossibleLeader(i, Tolerance, DynStackStats, GenSettings.GroundTile, MapLordsRaces) Then PossibleLeaders.Add(i)
+                If SelectPossibleLeader(i, Tolerance, GenSettings, DynStackStats, MapLordsRaces) Then PossibleLeaders.Add(i)
             Next i
             If Tolerance > 2 And PossibleLeaders.Count > 0 Then Exit Do
 
@@ -1453,7 +1461,7 @@ Public Class RandStack
                 End If
                 If resetStackSettings And SelectedFighters.Count > 0 Then Exit Do
             Loop
-            If GenSettings.NoLeader Then
+            If GenSettings.noLeader Then
                 If SelectedFighters.Count = 0 Then
                     output_delta_expKilled += deltaExpKilledIncrement
                     DynStackStats.ExpStackKilled += deltaExpKilledIncrement
@@ -1620,7 +1628,9 @@ Public Class RandStack
         End If
         Throw New Exception(comment & vbNewLine & _
                             "Location name: " & GenSettings.StackStats.LocationName & vbNewLine & _
-                            "Is ground: " & GenSettings.GroundTile & vbNewLine & _
+                            "Is ground: " & GenSettings.groundTile & vbNewLine & _
+                            "Is template: " & GenSettings.isTemplate & vbNewLine & _
+                            "Orfder: " & GenSettings.order & vbNewLine & _
                             "Position: " & p & vbNewLine & _
                             "StackStats:" & vbNewLine & AllDataStructues.DesiredStats.Print(GenSettings.StackStats, comm.defValues.RaceNumberToRaceChar) & vbNewLine & _
                             "DynStackStats:" & vbNewLine & AllDataStructues.DesiredStats.Print(DynStackStats, comm.defValues.RaceNumberToRaceChar))
@@ -2877,6 +2887,9 @@ Public Class AllDataStructues
         Dim IGen As LootGenSettings
         ''' <summary>Суммарный оверлевел в отряде с учетом силы юнитов</summary>
         Dim WeightedOverlevel As Double
+        ''' <summary>Если у отряда приказ отличный от "стоять",
+        ''' лидер для создаваемого отряда будет строго соответствовать этой настройке</summary>
+        Dim WaterOnly As Boolean
 
         ''' <summary>Не nothing только для торговцев предметами и магией, а также лагеря наемников.
         ''' Список идентификаторов содержимого лавки с предметами/заклинаниями/наемниками, 
@@ -2967,15 +2980,17 @@ Public Class AllDataStructues
 
     Public Structure Stack
         ''' <summary>ID юнита для каждой позиции</summary>
-        Dim pos() As String
+        Public pos() As String
         ''' <summary>Уровень юнита для каждой позиции</summary>
-        Dim level() As Integer
+        Public level() As Integer
         ''' <summary>В какой позиции находится лидер</summary>
-        Dim leaderPos As Integer
+        Public leaderPos As Integer
         ''' <summary>Предметы отряда. GxxxIGxxxx</summary>
-        Dim items As List(Of String)
+        Public items As List(Of String)
         ''' <summary>Имя отряда</summary>
-        Dim name As String
+        Public name As String
+        '''<summary>Приказ отряда</summary>
+        Public order As String
     End Structure
 
     Public Structure Unit
@@ -3581,15 +3596,19 @@ Public Class AllDataStructues
         '''<summary>Изменение лидерства за счет модификаторов</summary>
         Public deltaLeadership As Integer
         '''<summary>True, если на клетку нельзя ставить водных лидеров. Водной считается клетка с водой, окруженная со всех сторон клетками с водой</summary>
-        Public GroundTile As Boolean
+        Public groundTile As Boolean
         '''<summary>True, если стэк находится внутри руин или города</summary>
-        Public NoLeader As Boolean
+        Public noLeader As Boolean
+        '''<summary>True, если создаем шаблон отряда</summary>
+        Public isTemplate As Boolean
+        '''<summary>Приказ отряда</summary>
+        Public order As String
 
         Public Shared Function Copy(ByVal v As CommonStackCreationSettings) As CommonStackCreationSettings
             Return New CommonStackCreationSettings With {.StackStats = DesiredStats.Copy(v.StackStats), _
                                                          .deltaLeadership = v.deltaLeadership, _
-                                                         .GroundTile = v.GroundTile, _
-                                                         .NoLeader = v.NoLeader, _
+                                                         .groundTile = v.groundTile, _
+                                                         .noLeader = v.noLeader, _
                                                          .pos = New Point(v.pos.X, v.pos.Y)}
         End Function
     End Class
