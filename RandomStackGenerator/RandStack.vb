@@ -23,6 +23,10 @@ Public Class RandStack
         ''' Информация о карте
         ''' </summary>
         Public mapData As New MapInfo
+        ''' <summary>
+        ''' Кастомная информация о моде
+        ''' </summary>
+        Public modData As New CustomModSettings
 
         Public Class MapInfo
             ''' <summary>Положение столиц (угол с наименьшей координатой по X и Y)</summary>
@@ -68,6 +72,32 @@ Public Class RandStack
             ''' Если были сапоги - будут какие-нибудь сапоги.
             ''' </summary>
             Public ApplyStrictTypesFilter As Boolean
+        End Class
+        Public Class CustomModSettings
+            ''' <summary>
+            ''' ID исключенных юнитов, предметов и заклинаний.
+            ''' Если Nothing - будут использованы стандартные настройки для мода
+            ''' </summary>
+            Public ExcludedObjects As List(Of String) = Nothing
+            ''' <summary>
+            ''' Ключ - идентификатор предмета, Значение - число, на которое дополнительно умножается шанс появления предмета.
+            ''' Если Nothing - будут использованы стандартные настройки для мода
+            ''' </summary>
+            Public LootItemChanceMultiplier As Dictionary(Of String, Double) = Nothing
+            ''' <summary>
+            ''' ID предметов, которые генератор должен оставлять на месте.
+            ''' Если Nothing - будут использованы стандартные настройки для мода
+            ''' </summary>
+            Public PreservedItems As List(Of String) = Nothing
+
+            Friend Shared Function ToList(ByRef d As Dictionary(Of String, Double)) As List(Of String)
+                Dim result As New List(Of String)
+                Dim keys As List(Of String) = d.Keys.ToList
+                For Each k As String In keys
+                    result.Add(k & " " & d.Item(k))
+                Next k
+                Return result
+            End Function
         End Class
 
     End Class
@@ -121,12 +151,25 @@ Public Class RandStack
 
         If settings.talismanChargesDefaultAmount < 1 Then Throw New Exception("Unexpected TalismanChargesDefaultAmount")
 
-        Call comm.ReadExcludedObjectsList(settings.excludeLoreUnits)
+        If settings.excludeLoreUnits Then Call comm.ReadExcludedLoreObjectsList()
+        If IsNothing(data.modData.ExcludedObjects) Then
+            Call comm.ReadExcludedObjectsList()
+        Else
+            Call comm.ReadExcludedObjectsList(data.modData.ExcludedObjects)
+        End If
+        If IsNothing(data.modData.PreservedItems) Then
+            Call comm.ReadPreservedItemsList()
+        Else
+            Call comm.ReadPreservedItemsList(data.modData.PreservedItems)
+        End If
+        If IsNothing(data.modData.LootItemChanceMultiplier) Then
+            Call comm.ReadLootItemChanceMultiplier()
+        Else
+            Call comm.ReadLootItemChanceMultiplier(ConstructorInput.CustomModSettings.ToList(data.modData.LootItemChanceMultiplier))
+        End If
         Call comm.ReadCustomUnitRace()
-        Call comm.ReadLootItemChanceMultiplier()
         Call comm.ReadSoleUnits()
         Call comm.ReadBigStackUnits()
-        Call comm.ReadPreservedItemsList()
 
         Dim PlayableSubraces As New List(Of Integer)
         For Each item As String In comm.TxtSplit(comm.defValues.PlayableSubraces)
@@ -2529,22 +2572,22 @@ Public Class Common
         PreservedItemsList = 8
     End Enum
     ''' <summary>Читает список юнитов, предметов и заклинаний, которые не должен использовать генератор</summary>
-    ''' <param name="AddLoreUnitsToExcluded">Добавлять ли лорных юнитов в список исключенных</param>
-    Public Sub ReadExcludedObjectsList(ByVal AddLoreUnitsToExcluded As Boolean)
-        Dim s() As String = Nothing
-        s = SettingsFileSplit(defValues.ExcludedIDs)
+    Public Sub ReadExcludedObjectsList()
+        Dim s() As String = SettingsFileSplit(defValues.ExcludedIDs)
         Call ReadFile(ReadMode.ExcludedObjects, s)
-        If AddLoreUnitsToExcluded Then
-            s = SettingsFileSplit(defValues.ExcludedIDs_ModLore)
-            Call ReadFile(ReadMode.ExcludedObjects, s)
-        End If
+        If Not IsNothing(onExcludedListChanged) Then Call onExcludedListChanged()
+    End Sub
+    ''' <summary>Читает список лорных юнитов, предметов и заклинаний, которые не должен использовать генератор</summary>
+    Public Sub ReadExcludedLoreObjectsList()
+        Dim s() As String = SettingsFileSplit(defValues.ExcludedIDs_ModLore)
+        Call ReadFile(ReadMode.ExcludedObjects, s)
         If Not IsNothing(onExcludedListChanged) Then Call onExcludedListChanged()
     End Sub
     ''' <summary>Читает список юнитов, предметов и заклинаний, которые не должен использовать генератор</summary>
     ''' <param name="ExcludeLists">Файлы со списками исключенных объектов. Записи в них могут повторяться. 
     ''' Допускается передача неинициализитрованного массива.
     ''' Не воспринимает ключевые слова</param>
-    Public Sub ReadExcludedObjectsList(ByRef ExcludeLists As List(Of String))
+    Friend Sub ReadExcludedObjectsList(ByRef ExcludeLists As List(Of String))
         Call ReadFile(ReadMode.ExcludedObjects, ExcludeLists)
         If Not IsNothing(onExcludedListChanged) Then Call onExcludedListChanged()
     End Sub
@@ -2621,7 +2664,7 @@ Public Class Common
         Call ReadFile(ReadMode.PlateauConstructionDescription, PlateauConstructionDescription)
     End Sub
     ''' <summary>Читает список юнитов, предметов и заклинаний, которые не должен использовать генератор</summary>
-    Public Sub ReadPreservedItemsList()
+    Protected Friend Sub ReadPreservedItemsList()
         Dim s() As String = SettingsFileSplit(defValues.PreservedItems)
         Call ReadFile(ReadMode.PreservedItemsList, s)
     End Sub
@@ -2629,7 +2672,7 @@ Public Class Common
     ''' <param name="PreservedLists">Файлы со списками предметов, которые нельзя перегенерировать. Записи в них могут повторяться. 
     ''' Допускается передача неинициализитрованного массива.
     ''' Не воспринимает ключевые слова</param>
-    Public Sub ReadPreservedItemsList(ByRef PreservedLists As List(Of String))
+    Protected Friend Sub ReadPreservedItemsList(ByRef PreservedLists As List(Of String))
         Call ReadFile(ReadMode.PreservedItemsList, PreservedLists)
     End Sub
     Private Function SettingsFileSplit(ByRef fileContent As String) As String()
