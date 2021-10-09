@@ -1405,6 +1405,7 @@ clearandexit:
         Return selectedSymmetryClass
     End Function
 
+#Region "Place locations"
     Public Function PlaceLocationsByTemplate(ByRef settGen As GenSettings, ByRef symmID As Integer, ByRef previousLogText As String) As Map
         Dim res As New Map(settGen.common_settMap.xSize, settGen.common_settMap.ySize, symmID, comm)
         Call res.log.Add(previousLogText)
@@ -1874,7 +1875,9 @@ clearandexit:
     Friend Function MinimalSqDistanceForLocationsObtainedBySymmetry(ByRef loc As Location) As Integer
         Return CInt((0.9 * Math.Min(loc.gASize, loc.gBSize)) ^ 2)
     End Function
+#End Region
 
+#Region "Set locations ID to tiles"
     ''' <summary>В зависимости от расположения и параметров локаций присвоит тайлам ID локаци</summary>
     ''' <param name="m">Хранилище данных о карте. К этому моменту должны быть 
     ''' присвоены значения переменным .xSize и .ySize (например, для карты 96x48 значения 95 и 47, соответственно)
@@ -2057,7 +2060,9 @@ clearandexit:
         Dim selectedLoc As Integer = comm.RandomSelection(locs, weight(selectedPointID), True)
         Return New Integer() {selectedPointID, selectedLoc}
     End Function
+#End Region
 
+#Region "Create location borders and passages"
     ''' <summary>Выполняется после SetLocIdToCells. В зависимости от того, какие ID локаци присвоены тайлам, расставит проходы стенки между локациями</summary>
     ''' <param name="m">Хранилище данных о карте. К этому моменту должны быть 
     ''' присвоены значения переменным .xSize и .ySize (например, для карты 96x48 значения 95 и 47, соответственно)
@@ -2764,7 +2769,9 @@ clearandexit:
         Next i
 
     End Sub
+#End Region
 
+#Region "Place active objects: capitals, towns, ruins, mines and merchants"
     Class ActiveObjectsPlacer
 
         Private ReadOnly ActiveObjects() As AttendedObject
@@ -4073,7 +4080,9 @@ exitfunction:
         Dim LocID As Integer
         Dim ok As Boolean
     End Structure
+#End Region
 
+#Region "Add impenetrable tiles inside locations"
     ''' <summary>Запускаем сразу после PlaceActiveObjects. После выполнения идем как в примере</summary>
     Public Sub MakeLabyrinth(ByRef m As Map, ByVal settMap As Map.SettingsMap, ByVal settLoc() As Map.SettingsLoc, _
                              ByRef Term As TerminationCondition)
@@ -4501,7 +4510,7 @@ exitfunction:
         Next y
         Return True
     End Function
-
+#End Region
 End Class
 
 Public Class SymmetryOperations
@@ -4527,6 +4536,7 @@ Public Class SymmetryOperations
         xy1Mxy2M = 2
     End Enum
 
+#Region "Rotation"
     ''' <summary>Возвращает точку, повернутую на 180 градусов вокруг оси, находящейся в центре карты</summary>
     Public Function L2(ByRef p As Point, ByRef mapXSize As Integer, ByRef mapYSize As Integer) As Point
         Return New Point(mapXSize - p.X, mapYSize - p.Y)
@@ -4557,6 +4567,8 @@ Public Class SymmetryOperations
         r.IsObtainedBySymmery = True
         Return r
     End Function
+#End Region
+#Region "Reflection"
     ''' <summary>Возвращает точку, отраженную в плоскости, параллельной оси Ox, и проходящей через центр карты</summary>
     Public Function xM(ByRef p As Point, ByRef mapXSize As Integer, ByRef mapYSize As Integer) As Point
         Return New Point(p.X, mapYSize - p.Y)
@@ -4617,6 +4629,7 @@ Public Class SymmetryOperations
         r.IsObtainedBySymmery = True
         Return r
     End Function
+#End Region
 
     ''' <summary>Применяет одну из операций симметрии, разрешенную для двух игроков</summary>
     ''' <param name="ID">id операции</param>
@@ -6586,6 +6599,7 @@ Public Class Map
 
     End Class
 
+#Region "Reader"
     ''' <param name="fileContent">Содержимое файла после ValueConverter.TxtSplit</param>
     ''' <param name="blockType">Тип блока</param>
     ''' <param name="blockNumber">Номер блока > 0</param>
@@ -6798,6 +6812,7 @@ Public Class Map
         Next k
         Return result
     End Function
+#End Region
 
     ''' <summary>Вернет True, если все нормально, иначе стоит перегенерировать</summary>
     Public Function TestMap() As String
@@ -9716,6 +9731,7 @@ Public Class ImpenetrableObjects
         Return IDs
     End Function
 
+#Region "MayPlace"
     Private Function MayPlace(ByRef m As Map, ByRef x As Integer, ByRef y As Integer, _
                               ByRef free(,) As Boolean, ByRef obj As MapObject) As Boolean
         Return MayPlace(m, x, y, free, obj.xSize, obj.ySize, obj.ground, obj.water, obj.race)
@@ -9799,7 +9815,53 @@ Public Class ImpenetrableObjects
         Next r
         Return False
     End Function
+#End Region
+#Region "Place objects tools"
+    Private Sub PlaceObject(ByRef free(,) As Boolean, ByRef x As Integer, ByRef y As Integer, ByRef obj As MapObject)
+        Call PlaceObject(free, x, y, obj.xSize, obj.ySize, False)
+    End Sub
+    Private Sub PlaceObject(ByRef free(,) As Boolean, ByRef x As Integer, ByRef y As Integer, ByRef obj As Landmark)
+        Call PlaceObject(free, x, y, obj.xSize, obj.ySize, False)
+    End Sub
+    Private Sub PlaceObject(ByRef free(,) As Boolean, ByRef x As Integer, ByRef y As Integer, ByRef obj As PlateauObject, ByRef connectors(,) As Integer)
+        Call PlaceObject(free, x, y, obj, connectors, 1)
+        Call PlaceObject(free, x, y, obj.xSize, obj.ySize, False)
+    End Sub
+    Private Sub PlaceObject(ByRef free(,) As Boolean, _
+                          ByRef x As Integer, ByRef y As Integer, _
+                          ByRef obj As PlateauObject, ByRef connectors(,) As Integer, _
+                          ByRef whatAdd As Integer)
+        Dim xx, yy As Integer
+        For i As Integer = 0 To UBound(obj.connectors) Step 1
+            For j As Integer = 0 To UBound(obj.connectors(i)) Step 1
+                Call connectorPos(xx, yy, x, y, obj.connectors(i)(j))
+                connectors(xx, yy) += whatAdd
+            Next j
+        Next i
+    End Sub
 
+    Private Sub PlaceObject(ByRef free(,) As Boolean, _
+                            ByRef x As Integer, ByRef y As Integer, _
+                            ByRef xSize As Integer, ByRef ySize As Integer, _
+                            ByRef whatSet As Boolean)
+        Dim x1 As Integer = x + xSize - 1
+        Dim y1 As Integer = y + ySize - 1
+        For j As Integer = y To y1 Step 1
+            For i As Integer = x To x1 Step 1
+                free(i, j) = whatSet
+            Next i
+        Next j
+    End Sub
+  
+    Private Sub RemoveObject(ByRef free(,) As Boolean, ByRef x As Integer, ByRef y As Integer, ByRef obj As MapObject)
+        Call PlaceObject(free, x, y, obj.xSize, obj.ySize, True)
+    End Sub
+    Private Sub RemoveObject(ByRef free(,) As Boolean, ByRef x As Integer, ByRef y As Integer, ByRef obj As PlateauObject, ByRef connectors(,) As Integer)
+        Call PlaceObject(free, x, y, obj.xSize, obj.ySize, True)
+        Call PlaceObject(free, x, y, obj, connectors, -1)
+    End Sub
+#End Region
+#Region "ObjectWeight"
     Private Function ObjectWeight(ByRef m As Map, ByRef obj As MapObject, _
                                   ByRef x As Integer, ByRef y As Integer) As Double
         Return ObjectWeight(m, obj.name, x, y, obj.xSize * obj.ySize)
@@ -9829,6 +9891,7 @@ Public Class ImpenetrableObjects
         Next p
         Return w
     End Function
+#End Region
 
     Private Sub PlaceAttendedObjects(ByRef m As Map)
         Dim objList() As MapObject
@@ -9871,6 +9934,7 @@ Public Class ImpenetrableObjects
             Next x
         Next y
     End Sub
+#Region "Place towns"
     Private Sub PlaceCities(ByRef m As Map, ByRef settMap As Map.SettingsMap)
         Dim cityGroup As Dictionary(Of Integer, List(Of Point)) = MakeCityGroupsList(m)
         Dim locRace As New Dictionary(Of Integer, String)
@@ -9964,6 +10028,8 @@ Public Class ImpenetrableObjects
             End If
         Next g
     End Sub
+#End Region
+#Region "Place mines"
     Private Sub PlaceMines(ByRef m As Map, ByRef settMap As Map.SettingsMap, _
                            ByRef settLoc() As Map.SettingsLoc)
         Dim mineType(m.xSize, m.ySize) As String
@@ -10196,7 +10262,8 @@ Public Class ImpenetrableObjects
         Next i
         Return res
     End Function
-
+#End Region
+#Region "Place plateau"
     Private Sub PlacePlateau(ByRef m As Map, ByRef free(,) As Boolean)
         Dim connectors(m.xSize, m.ySize) As Integer
         Dim IDs As List(Of Integer)
@@ -10247,48 +10314,6 @@ Public Class ImpenetrableObjects
         Loop
         Return False
     End Function
-
-    Private Sub PlaceObject(ByRef free(,) As Boolean, ByRef x As Integer, ByRef y As Integer, ByRef obj As MapObject)
-        Call PlaceObject(free, x, y, obj.xSize, obj.ySize, False)
-    End Sub
-    Private Sub PlaceObject(ByRef free(,) As Boolean, ByRef x As Integer, ByRef y As Integer, ByRef obj As Landmark)
-        Call PlaceObject(free, x, y, obj.xSize, obj.ySize, False)
-    End Sub
-    Private Sub PlaceObject(ByRef free(,) As Boolean, ByRef x As Integer, ByRef y As Integer, ByRef obj As PlateauObject, ByRef connectors(,) As Integer)
-        Call PlaceObject(free, x, y, obj, connectors, 1)
-        Call PlaceObject(free, x, y, obj.xSize, obj.ySize, False)
-    End Sub
-    Private Sub RemoveObject(ByRef free(,) As Boolean, ByRef x As Integer, ByRef y As Integer, ByRef obj As MapObject)
-        Call PlaceObject(free, x, y, obj.xSize, obj.ySize, True)
-    End Sub
-    Private Sub RemoveObject(ByRef free(,) As Boolean, ByRef x As Integer, ByRef y As Integer, ByRef obj As PlateauObject, ByRef connectors(,) As Integer)
-        Call PlaceObject(free, x, y, obj.xSize, obj.ySize, True)
-        Call PlaceObject(free, x, y, obj, connectors, -1)
-    End Sub
-    Private Sub PlaceObject(ByRef free(,) As Boolean, _
-                            ByRef x As Integer, ByRef y As Integer, _
-                            ByRef xSize As Integer, ByRef ySize As Integer, _
-                            ByRef whatSet As Boolean)
-        Dim x1 As Integer = x + xSize - 1
-        Dim y1 As Integer = y + ySize - 1
-        For j As Integer = y To y1 Step 1
-            For i As Integer = x To x1 Step 1
-                free(i, j) = whatSet
-            Next i
-        Next j
-    End Sub
-    Private Sub PlaceObject(ByRef free(,) As Boolean, _
-                            ByRef x As Integer, ByRef y As Integer, _
-                            ByRef obj As PlateauObject, ByRef connectors(,) As Integer, _
-                            ByRef whatAdd As Integer)
-        Dim xx, yy As Integer
-        For i As Integer = 0 To UBound(obj.connectors) Step 1
-            For j As Integer = 0 To UBound(obj.connectors(i)) Step 1
-                Call connectorPos(xx, yy, x, y, obj.connectors(i)(j))
-                connectors(xx, yy) += whatAdd
-            Next j
-        Next i
-    End Sub
     Private Sub connectorPos(ByRef xOut As Integer, ByRef yOut As Integer, ByRef x As Integer, ByRef y As Integer, _
                              ByRef connectorRelativePos As Point)
         xOut = x + connectorRelativePos.X
@@ -10358,7 +10383,8 @@ Public Class ImpenetrableObjects
         res.n -= 1
         Return False
     End Function
-
+#End Region
+#Region "Place mountains"
     Private Sub PlaceMouintains(ByRef m As Map, ByRef free(,) As Boolean)
 
         Dim Tmp(,) As Integer
@@ -10631,7 +10657,8 @@ Public Class ImpenetrableObjects
         Dim selected As Integer = comm.RandomSelection(IDs, weight, True)
         m.board(x, y).mapObject.objectName = mountains(selected).name
     End Sub
-
+#End Region
+#Region "Place other objects: houses, towers, obelisks, breaches etc."
     Private Sub PlaceOtherObjects(ByRef m As Map, ByRef free(,) As Boolean)
         Dim IDs As New List(Of Integer)
         Dim weight(UBound(objects)) As Double
@@ -10684,8 +10711,9 @@ Public Class ImpenetrableObjects
         free = f
         m = tmpm
     End Sub
+#End Region
 
-#Region "Старые версии генераторов контента толрговцев"
+#Region "Старые версии генераторов контента торговцев"
     'Private Sub AddSpells(ByRef m As Map, ByRef settMap As Map.SettingsMap, ByRef settLoc() As Map.SettingsLoc)
     '    Dim maxGroupID As Integer = ImpenetrableMeshGen.GetMaxGroupID(m)
     '    Dim objList As Dictionary(Of Integer, List(Of Point)) = FindGroupsOfObjects(m, 5)
@@ -10878,6 +10906,8 @@ Public Class ObjectsContentSet
         End If
     End Function
 
+#Region "Object content creation"
+#Region "Mage merchant"
     ''' <summary>Создаст список заклинаний</summary>
     ''' <param name="d">Желаемые параметры доступных заклинаний. Имеет значение только .shopContent</param>
     ''' <param name="AllManaSources">Список источников маны на карте (см. DefMapObjects)</param>
@@ -11049,7 +11079,8 @@ Public Class ObjectsContentSet
         End If
         Return True
     End Function
-
+#End Region
+#Region "Units merchant"
     ''' <summary>Создаст список наемников</summary>
     ''' <param name="d">Желаемые параметры доступных наемников. Имеет значение только .shopContent</param>
     ''' <param name="log">Лог для записей результатов</param>
@@ -11165,7 +11196,8 @@ Public Class ObjectsContentSet
             Return -1
         End If
     End Function
-
+#End Region
+#Region "Units merchant"
     ''' <summary>Создаст список предметов</summary>
     ''' <param name="d">Желаемые параметры доступных предметов. Имеет значение только .shopContent и .IGen.
     ''' IGen используется только при генерации по цене</param>
@@ -11297,7 +11329,10 @@ Public Class ObjectsContentSet
             Return -1
         End If
     End Function
+#End Region
+#End Region
 
+#Region "Content settings creation"
     Private Function GetSettingsCommon(ByRef input As List(Of String)) As List(Of String)
         Dim output As New List(Of String)
         For Each item In input
@@ -11336,6 +11371,7 @@ Public Class ObjectsContentSet
         Return CInt(Math.Max(minRange, Math.Min(maxRange, p0 + p1)))
     End Function
 
+#Region "Mage merchant"
     ''' <summary>Вернет настройки генерации заклинаний</summary>
     ''' <param name="mode">-1 - случайный мод в каждой строчке, 1 - вернет ID, 2 - УровеньРасаМассовость, 3 - Тип, 4 - Тип#УровеньРасаМассовость</param>
     ''' <param name="input">ID заклинаний</param>
@@ -11426,7 +11462,8 @@ Public Class ObjectsContentSet
         Next i
         Return res
     End Function
-
+#End Region
+#Region "Units merchant"
     ''' <summary>Вернет настройки генерации предметов</summary>
     ''' <param name="mode">-1 - случайный мод в каждой строчке, 1 - вернет ID, 2 - Цена, 3 - Тип, 4 - Тип#Цена</param>
     ''' <param name="input">ID заклинаний</param>
@@ -11532,7 +11569,8 @@ Public Class ObjectsContentSet
         Loop
         Return res
     End Function
-
+#End Region
+#Region "Units merchant"
     ''' <summary>Вернет настройки генерации наемников</summary>
     ''' <param name="mode">-1 - случайный мод в каждой строчке, 1 - вернет ID, 2 - Планка опыта, 3 - Раса, 4 - Раса#Планка опыта</param>
     ''' <param name="input">ID юнитов</param>
@@ -11603,7 +11641,10 @@ Public Class ObjectsContentSet
         Next i
         Return res
     End Function
+#End Region
+#End Region
 
+#Region "Lord creation"
     ''' <summary>Вернет ID случайного лорда, соответствующего расе</summary>
     ''' <param name="race">Раса</param>
     ''' <param name="isGameRace">True - раса в виде G000RR0000, False - раса обозначена символом, используемым генератором</param>
@@ -11626,7 +11667,7 @@ Public Class ObjectsContentSet
         Dim selected As Integer = randStack.comm.RandomSelection(ids, True)
         Return lords(selected)
     End Function
-
+#End Region
 End Class
 
 Public Class VanillaSagaContentReplace
