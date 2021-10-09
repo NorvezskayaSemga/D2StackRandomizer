@@ -24,6 +24,7 @@
 
     End Sub
 
+#Region "Roads"
     Private Sub GenRoads(ByRef m As Map, ByRef settMap As Map.SettingsMap, ByRef mustBeFree(,) As Boolean)
 
         Dim possible(m.xSize, m.ySize) As Boolean
@@ -160,7 +161,8 @@
         Next y
         Return n
     End Function
-
+#End Region
+#Region "Forest"
     Private Sub GenForest(ByRef m As Map, ByRef settMap As Map.SettingsMap, ByRef mustBeFree(,) As Boolean)
         For y As Integer = 0 To m.ySize Step 1
             For x As Integer = 0 To m.xSize Step 1
@@ -177,6 +179,7 @@
             Next x
         Next y
     End Sub
+#End Region
 
     Private Function FunctionMakeMustBeFree(ByRef m As Map, ByRef settMap As Map.SettingsMap) As Boolean(,)
         Dim mustBeFree(m.xSize, m.ySize) As Boolean

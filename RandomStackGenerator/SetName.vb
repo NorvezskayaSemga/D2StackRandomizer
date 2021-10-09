@@ -41,6 +41,7 @@
         Dim unitsCount As Integer
     End Structure
 
+#Region "Constructor"
     Public Sub New(ByVal lang As GenDefaultValues.TextLanguage, ByVal modName As String)
         comm = New Common(modName)
         log = New Log(comm)
@@ -267,7 +268,25 @@
             AddToLog(-1, "Exclusions reader: " & ex.Message)
         End Try
     End Sub
+#End Region
+#Region "Logging"
+    Private Sub AddToLog(ByRef LogID As Integer, ByRef Msg As String)
+        If LogID > -1 Then
+            Call log.MAdd(LogID, Msg)
+        Else
+            Call log.Add(Msg)
+        End If
+    End Sub
+    Private Sub ClearLog(ByRef LogID As Integer)
+        If LogID > -1 Then
+            Call log.MClear(LogID)
+        Else
+            Call log.Clear()
+        End If
+    End Sub
+#End Region
 
+#Region "Stacks"
     '''<summary>Присвоит имя отрядам</summary>
     ''' <param name="stack">Уже сгенерированные стэки</param>
     ''' <param name="R">Инициализированный класс</param>
@@ -363,7 +382,8 @@
             Return input
         End If
     End Function
-
+#End Region
+#Region "Lords"
     '''<summary>Присвоит имя лорду</summary>
     ''' <param name="RaceID">ID расы лорда</param>
     ''' <param name="newMapGen">True, если это первый вызов этой функции при генерации новой карты</param>
@@ -436,7 +456,8 @@
             End If
         Next i
     End Sub
-
+#End Region
+#Region "Objects"
     Public Function CityName(ByRef ID As String, ByRef RaceID As Integer) As String
         If comm.defValues.capitalToGeneratorRace.ContainsKey(ID.ToUpper) Then
             Return customObjectsNames.GetCapitalName(comm.defValues.generatorRaceToCapitalID(comm.defValues.RaceNumberToRaceChar(RaceID)))
@@ -464,7 +485,8 @@
     Public Function ObjectDescription(ByRef ID As String) As String
         Return customObjectsNames.GetDescription(ID)
     End Function
-
+#End Region
+#Region "Reset available names"
     Friend Sub ResetNames(ByRef newMapGen As Boolean, ByRef LogID As Integer)
         If newMapGen Then
             Call ClearLog(LogID)
@@ -503,20 +525,5 @@
             End If
         Next i
     End Sub
-
-    Private Sub AddToLog(ByRef LogID As Integer, ByRef Msg As String)
-        If LogID > -1 Then
-            Call log.MAdd(LogID, Msg)
-        Else
-            Call log.Add(Msg)
-        End If
-    End Sub
-    Private Sub ClearLog(ByRef LogID As Integer)
-        If LogID > -1 Then
-            Call log.MClear(LogID)
-        Else
-            Call log.Clear()
-        End If
-    End Sub
-
+#End Region
 End Class
