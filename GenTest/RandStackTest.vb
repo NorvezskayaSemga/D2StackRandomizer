@@ -128,8 +128,8 @@ Public Class RandStackTest
         Return New AllDataStructues.CommonStackCreationSettings _
             With {.StackStats = d, _
                   .deltaLeadership = 0, _
-                  .GroundTile = GroundTile, _
-                  .NoLeader = False, .pos = New Point(1, 1)}
+                  .groundTile = GroundTile, _
+                  .noLeader = False, .pos = New Point(1, 1)}
     End Function
 
     '''<summary>
@@ -591,7 +591,7 @@ Public Class RandStackTest
         Dim c As Integer
         For i As Integer = 0 To 1000 Step 1
             Dim gs As AllDataStructues.CommonStackCreationSettings = TestGenSettings(stats)
-            gs.NoLeader = True
+            gs.noLeader = True
             Dim stack As AllDataStructues.Stack = target.Gen(gs)
             c = 0
             For Each item As String In stack.pos
@@ -679,7 +679,7 @@ Public Class RandStackTest
                 Dim stack As AllDataStructues.Stack
                 If TestOverload1 Then
                     Dim gs As AllDataStructues.CommonStackCreationSettings = TestGenSettings(stats)
-                    gs.NoLeader = noLeader
+                    gs.noLeader = noLeader
                     stack = target.Gen(gs)
                 Else
                     Dim gs As AllDataStructues.CommonStackCreationSettings = TestGenSettings(stats)

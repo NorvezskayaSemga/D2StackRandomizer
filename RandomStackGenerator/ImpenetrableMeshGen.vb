@@ -5647,8 +5647,8 @@ Public Class shortMapFormat
                         Dim gs As New AllDataStructues.CommonStackCreationSettings _
                             With {.StackStats = desiredStatsExter, _
                                   .deltaLeadership = 0, _
-                                  .GroundTile = True, _
-                                  .NoLeader = False, _
+                                  .groundTile = True, _
+                                  .noLeader = False, _
                                   .pos = pos}
                         stackExter = objContent.randStack.Gen(gs)
                     End If
@@ -5657,8 +5657,8 @@ Public Class shortMapFormat
                         Dim gs As New AllDataStructues.CommonStackCreationSettings _
                             With {.StackStats = desiredStatsInter, _
                                   .deltaLeadership = 0, _
-                                  .GroundTile = True, _
-                                  .NoLeader = True, _
+                                  .groundTile = True, _
+                                  .noLeader = True, _
                                   .pos = pos}
                         stackInter = objContent.randStack.Gen(gs)
                     End If
@@ -5683,8 +5683,8 @@ Public Class shortMapFormat
                     Dim gs As New AllDataStructues.CommonStackCreationSettings _
                      With {.StackStats = desiredStats, _
                            .deltaLeadership = 0, _
-                           .GroundTile = Not m.board(x, y).surface.isWater, _
-                           .NoLeader = True, _
+                           .groundTile = Not m.board(x, y).surface.isWater, _
+                           .noLeader = True, _
                            .pos = pos}
                     Dim stack As AllDataStructues.Stack = objContent.randStack.Gen(gs)
                     Dim itemCost As Integer = objContent.randStack.rndgen.RndInt(CInt(0.25 * desiredStats.LootCost), desiredStats.LootCost, True)
@@ -5717,8 +5717,8 @@ Public Class shortMapFormat
                 Dim gs As New AllDataStructues.CommonStackCreationSettings _
                     With {.StackStats = desiredStats, _
                           .deltaLeadership = 0, _
-                          .GroundTile = isGround, _
-                          .NoLeader = False, _
+                          .groundTile = isGround, _
+                          .noLeader = False, _
                           .pos = New Point(x, y)}
                 Dim stack As AllDataStructues.Stack = objContent.randStack.Gen(gs)
                 If isGround Then
