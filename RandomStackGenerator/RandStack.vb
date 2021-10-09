@@ -1621,7 +1621,7 @@ Public Class RandStack
         Throw New Exception(comment & vbNewLine & _
                             "Location name: " & GenSettings.StackStats.LocationName & vbNewLine & _
                             "Is ground: " & GenSettings.GroundTile & vbNewLine & _
-                            "Position: " & vbNewLine & _
+                            "Position: " & p & vbNewLine & _
                             "StackStats:" & vbNewLine & AllDataStructues.DesiredStats.Print(GenSettings.StackStats, comm.defValues.RaceNumberToRaceChar) & vbNewLine & _
                             "DynStackStats:" & vbNewLine & AllDataStructues.DesiredStats.Print(DynStackStats, comm.defValues.RaceNumberToRaceChar))
     End Sub
