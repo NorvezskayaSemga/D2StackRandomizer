@@ -301,15 +301,15 @@ Public Class RandStackTest
         Dim firstrow() As Integer = New Integer() {0, 2, 4}
         Dim secondrow() As Integer = New Integer() {1, 3, 5}
         Dim unit As AllDataStructues.Unit
-        If stack.leaderPos < 0 Or IsNothing(stack.pos) Then Return False
-        If stack.pos(stack.leaderPos) = GenDefaultValues.emptyItem Then Return False
-        For i As Integer = 0 To UBound(stack.pos) Step 1
-            If stack.pos(i) = "" Then
+        If stack.leaderPos < 0 Or IsNothing(stack.units) Then Return False
+        If stack.units(stack.leaderPos).unit.unitID = GenDefaultValues.emptyItem Then Return False
+        For i As Integer = 0 To UBound(stack.units) Step 1
+            If stack.units(i).unit.unitID = "" Then
                 Return False
-            ElseIf Not stack.pos(i) = GenDefaultValues.emptyItem Then
-                unit = target.FindUnitStats(stack.pos(i))
+            ElseIf Not stack.units(i).unit.unitID = GenDefaultValues.emptyItem Then
+                unit = target.FindUnitStats(stack.units(i).unit.unitID)
                 If (unit.unitBranch = GenDefaultValues.UnitClass.leader And Not i = stack.leaderPos) Or (Not unit.unitBranch = GenDefaultValues.UnitClass.leader And i = stack.leaderPos) Then Return False
-                If Not unit.small AndAlso (busytransfer(i) = -1 Or Not stack.pos(busytransfer(i)) = GenDefaultValues.emptyItem) Then Return False
+                If Not unit.small AndAlso (busytransfer(i) = -1 Or Not stack.units(busytransfer(i)).unit.unitID = GenDefaultValues.emptyItem) Then Return False
                 If unit.reach = GenDefaultValues.UnitAttackReach.melee Then
                     For j As Integer = 0 To UBound(secondrow) Step 1
                         If i = secondrow(j) Then Return False
@@ -340,10 +340,12 @@ Public Class RandStackTest
         Call target.ResetExclusions()
         target.log.Disable()
 
-        Dim s As New AllDataStructues.Stack With {.pos = New String() {"G000UU5356", "G000UU0174", "G005UU6111", _
-                                                                       "G000000000", "G000UU0162", "G000UU0162"}, _
-                                                  .level = New Integer() {1, 1, 1, 0, 1, 1}, _
-                                                  .items = New List(Of String)}
+        Dim s As New AllDataStructues.Stack With {.items = New List(Of String)}
+        s.units = AllDataStructues.Stack.UnitInfo.CreateArray(New String() {"G000UU5356", "G000UU0174", "G005UU6111", _
+                                                                            "G000000000", "G000UU0162", "G000UU0162"}, _
+                                                              New Integer() {1, 1, 1, 0, 1, 1}, _
+                                                              Nothing, _
+                                                              CreateRandStack())
         s.items.AddRange(New String() {"G000IG0011", "G000IG0012", "G000IG0013", "G000IG0014", _
                                        "G000IG0015", "G000IG0016", "G000IG1001", "G000IG1002"})
         Dim expected As New AllDataStructues.DesiredStats With {.Race = New List(Of Integer), _
@@ -434,30 +436,42 @@ Public Class RandStackTest
     <TestMethod()> _
     Public Sub GenGagTest()
         Dim target As RandStack_Accessor = CreateRandStack_Accessor()
+        Dim RS As RandStack = CreateRandStack()
         Call target.ResetExclusions()
         target.log.Disable()
 
         Dim ok As Boolean = True
         Dim UnapropriateStacks() As AllDataStructues.Stack = New AllDataStructues.Stack() { _
-            New AllDataStructues.Stack With {.leaderPos = -1, .pos = Nothing, .level = Nothing}, _
-            New AllDataStructues.Stack With {.leaderPos = -1, .pos = New String() {"G000UU0001", "G000UU0000", "G000UU0000", "G000UU0000", "G000UU0000", "G000UU0000"}, _
-                                             .level = New Integer() {1, 1, 1, 1, 1, 1}}, _
-            New AllDataStructues.Stack With {.leaderPos = 0, .pos = New String() {"G000UU0001", "G000UU0000", "G000UU0000", "G000UU0000", "G000UU0000", "G000UU0000"}, _
-                                             .level = New Integer() {1, 1, 1, 1, 1, 1}}, _
-            New AllDataStructues.Stack With {.leaderPos = 1, .pos = New String() {"G000UU5201", "G000UU0000", "G000UU0000", "G000UU0000", "G000UU0000", "G000UU0000"}, _
-                                             .level = New Integer() {1, 1, 1, 1, 1, 1}}, _
-            New AllDataStructues.Stack With {.leaderPos = 0, .pos = New String() {"G000UU5201", "G000UU5201", "G000UU0000", "G000UU0000", "G000UU0000", "G000UU0000"}, _
-                                             .level = New Integer() {1, 1, 1, 1, 1, 1}}, _
-            New AllDataStructues.Stack With {.leaderPos = 1, .pos = New String() {"G000UU5201", "G000UU0006", "G000UU5201", "G000UU0000", "G000UU0000", "G000UU0000"}, _
-                                             .level = New Integer() {1, 1, 1, 1, 1, 1}}, _
-            New AllDataStructues.Stack With {.leaderPos = 0, .pos = New String() {"G000UU5230", "G000UU0006", "G000UU0000", "G000UU0000", "G000UU0000", "G000UU0000"}, _
-                                             .level = New Integer() {1, 1, 1, 1, 1, 1}}, _
-            New AllDataStructues.Stack With {.leaderPos = 0, .pos = New String() {"G000UU0001", "G000UU0006", "G000UU0000", "G000UU0000", "G000UU0000", "G000UU0000"}, _
-                                             .level = New Integer() {1, 1, 1, 1, 1, 1}}, _
-            New AllDataStructues.Stack With {.leaderPos = 1, .pos = New String() {"G000UU0000", "G000UU5230", "G000UU0000", "G000UU0000", "G000UU0000", "G000UU0000"}, _
-                                             .level = New Integer() {1, 1, 1, 1, 1, 1}}, _
-            New AllDataStructues.Stack With {.leaderPos = 1, .pos = New String() {"G000UU0000", "G000UU5201", "G000UU0000", "G000UU0000", "G000UU0000", "G000UU0000"}, _
-                                             .level = New Integer() {1, 1, 1, 1, 1, 1}}}
+            New AllDataStructues.Stack With {.leaderPos = -1, .units = Nothing}, _
+            New AllDataStructues.Stack With {.leaderPos = -1, _
+                                             .units = AllDataStructues.Stack.UnitInfo.CreateArray( _
+                                                 New String() {"G000UU0001", "G000UU0000", "G000UU0000", "G000UU0000", "G000UU0000", "G000UU0000"}, _
+                                                 New Integer() {1, 1, 1, 1, 1, 1}, Nothing, RS)}, _
+            New AllDataStructues.Stack With {.leaderPos = 0, _
+                                             .units = AllDataStructues.Stack.UnitInfo.CreateArray( _
+                                                 New String() {"G000UU0001", "G000UU0000", "G000UU0000", "G000UU0000", "G000UU0000", "G000UU0000"}, _
+                                                 New Integer() {1, 1, 1, 1, 1, 1}, Nothing, RS)}, _
+            New AllDataStructues.Stack With {.leaderPos = 1, .units = AllDataStructues.Stack.UnitInfo.CreateArray( _
+                                                 New String() {"G000UU5201", "G000UU0000", "G000UU0000", "G000UU0000", "G000UU0000", "G000UU0000"}, _
+                                                 New Integer() {1, 1, 1, 1, 1, 1}, Nothing, RS)}, _
+            New AllDataStructues.Stack With {.leaderPos = 0, .units = AllDataStructues.Stack.UnitInfo.CreateArray( _
+                                                 New String() {"G000UU5201", "G000UU5201", "G000UU0000", "G000UU0000", "G000UU0000", "G000UU0000"}, _
+                                                 New Integer() {1, 1, 1, 1, 1, 1}, Nothing, RS)}, _
+            New AllDataStructues.Stack With {.leaderPos = 1, .units = AllDataStructues.Stack.UnitInfo.CreateArray( _
+                                                 New String() {"G000UU5201", "G000UU0006", "G000UU5201", "G000UU0000", "G000UU0000", "G000UU0000"}, _
+                                                 New Integer() {1, 1, 1, 1, 1, 1}, Nothing, RS)}, _
+            New AllDataStructues.Stack With {.leaderPos = 0, .units = AllDataStructues.Stack.UnitInfo.CreateArray( _
+                                                 New String() {"G000UU5230", "G000UU0006", "G000UU0000", "G000UU0000", "G000UU0000", "G000UU0000"}, _
+                                                 New Integer() {1, 1, 1, 1, 1, 1}, Nothing, RS)}, _
+            New AllDataStructues.Stack With {.leaderPos = 0, .units = AllDataStructues.Stack.UnitInfo.CreateArray( _
+                                                 New String() {"G000UU0001", "G000UU0006", "G000UU0000", "G000UU0000", "G000UU0000", "G000UU0000"}, _
+                                                 New Integer() {1, 1, 1, 1, 1, 1}, Nothing, RS)}, _
+            New AllDataStructues.Stack With {.leaderPos = 1, .units = AllDataStructues.Stack.UnitInfo.CreateArray( _
+                                                 New String() {"G000UU0000", "G000UU5230", "G000UU0000", "G000UU0000", "G000UU0000", "G000UU0000"}, _
+                                                 New Integer() {1, 1, 1, 1, 1, 1}, Nothing, RS)}, _
+            New AllDataStructues.Stack With {.leaderPos = 1, .units = AllDataStructues.Stack.UnitInfo.CreateArray( _
+                                                 New String() {"G000UU0000", "G000UU5201", "G000UU0000", "G000UU0000", "G000UU0000", "G000UU0000"}, _
+                                                 New Integer() {1, 1, 1, 1, 1, 1}, Nothing, RS)}}
 
         For Each item As AllDataStructues.Stack In UnapropriateStacks
             If TestStack(item, target) Then
@@ -475,12 +489,14 @@ Public Class RandStackTest
     <TestMethod()> _
     Public Sub StackStatsTest2()
         Dim target As RandStack_Accessor = CreateRandStack_Accessor()
+        Dim RS As RandStack = CreateRandStack()
         Call target.ResetExclusions()
         target.log.Disable()
 
-        Dim s As New AllDataStructues.Stack With {.pos = New String() {"g000uu5130", "G000000000", "G000000000", _
-                                                                      "G000000000", "G000000000", "g000uu5130"}, _
-                                                  .level = New Integer() {1, 0, 0, 0, 0, 1}, _
+        Dim s As New AllDataStructues.Stack With {.units = AllDataStructues.Stack.UnitInfo.CreateArray( _
+                                                     New String() {"g000uu5130", "G000000000", "G000000000", _
+                                                                   "G000000000", "G000000000", "g000uu5130"}, _
+                                                     New Integer() {1, 0, 0, 0, 0, 1}, Nothing, RS), _
                                                   .items = New List(Of String)}
         Dim res As AllDataStructues.DesiredStats = target.StackStats(s, False)
         Dim ok As Boolean = True
@@ -499,14 +515,16 @@ Public Class RandStackTest
     <TestMethod()> _
     Public Sub GenTest3()
         Dim target As RandStack_Accessor = CreateRandStack_Accessor()
+        Dim RS As RandStack = CreateRandStack()
         Call target.ResetExclusions()
         target.log.Disable()
 
         Dim ok As Boolean = True
 
-        Dim s As New AllDataStructues.Stack With {.pos = New String() {"g000uu5124", "G000000000", "G000000000", _
-                                                                       "G000000000", "G000000000", "G000000000"}, _
-                                                  .level = New Integer() {1, 0, 0, 0, 0, 0}, _
+        Dim s As New AllDataStructues.Stack With {.units = AllDataStructues.Stack.UnitInfo.CreateArray( _
+                                                     New String() {"g000uu5124", "G000000000", "G000000000", _
+                                                                   "G000000000", "G000000000", "G000000000"}, _
+                                                     New Integer() {1, 0, 0, 0, 0, 0}, Nothing, RS), _
                                                   .items = New List(Of String)}
         Dim tstats As AllDataStructues.DesiredStats = target.StackStats(s, False)
 
@@ -546,14 +564,16 @@ Public Class RandStackTest
     <TestMethod()> _
     Public Sub GenTest4()
         Dim target As RandStack_Accessor = CreateRandStack_Accessor()
+        Dim RS As RandStack = CreateRandStack()
         Call target.ResetExclusions()
         target.log.Disable()
 
         Dim ok As Boolean = True
 
-        Dim s As New AllDataStructues.Stack With {.pos = New String() {"g000uu5119", "G000000000", "G000000000", _
-                                                                       "G000000000", "G000000000", "G000000000"}, _
-                                                  .level = New Integer() {1, 0, 0, 0, 0, 0}, _
+        Dim s As New AllDataStructues.Stack With {.units = AllDataStructues.Stack.UnitInfo.CreateArray( _
+                                                     New String() {"g000uu5119", "G000000000", "G000000000", _
+                                                                   "G000000000", "G000000000", "G000000000"}, _
+                                                     New Integer() {1, 0, 0, 0, 0, 0}, Nothing, RS), _
                                                   .items = New List(Of String)}
         Dim stats As AllDataStructues.DesiredStats = target.StackStats(s, False)
 
@@ -562,8 +582,8 @@ Public Class RandStackTest
             Dim gs As AllDataStructues.CommonStackCreationSettings = TestGenSettings(stats)
             Dim stack As AllDataStructues.Stack = target.Gen(gs)
             c = 0
-            For Each item As String In stack.pos
-                If Not item = GenDefaultValues.emptyItem Then c += 1
+            For Each item As AllDataStructues.Stack.UnitInfo In stack.units
+                If Not item.unit.unitID = GenDefaultValues.emptyItem Then c += 1
             Next item
             If c > 1 Then ok = False
         Next i
@@ -577,14 +597,16 @@ Public Class RandStackTest
     <TestMethod()> _
     Public Sub GenTest5()
         Dim target As RandStack_Accessor = CreateRandStack_Accessor()
+        Dim RS As RandStack = CreateRandStack()
         Call target.ResetExclusions()
         target.log.Disable()
 
         Dim ok As Boolean = True
 
-        Dim s As New AllDataStructues.Stack With {.pos = New String() {"g000uu5130", "g000uu5030", "G000000000", _
-                                                                       "G000000000", "G000000000", "G000000000"}, _
-                                                  .level = New Integer() {1, 1, 0, 0, 0, 0}, _
+        Dim s As New AllDataStructues.Stack With {.units = AllDataStructues.Stack.UnitInfo.CreateArray( _
+                                                     New String() {"g000uu5130", "g000uu5030", "G000000000", _
+                                                                    "G000000000", "G000000000", "G000000000"}, _
+                                                     New Integer() {1, 1, 0, 0, 0, 0}, Nothing, rs), _
                                                   .items = New List(Of String)}
         Dim stats As AllDataStructues.DesiredStats = target.StackStats(s, False)
 
@@ -594,10 +616,10 @@ Public Class RandStackTest
             gs.noLeader = True
             Dim stack As AllDataStructues.Stack = target.Gen(gs)
             c = 0
-            For Each item As String In stack.pos
-                If Not item = GenDefaultValues.emptyItem Then
+            For Each item As AllDataStructues.Stack.UnitInfo In stack.units
+                If Not item.unit.unitID = GenDefaultValues.emptyItem Then
                     c += 1
-                    If target.FindUnitStats(item).unitBranch = GenDefaultValues.UnitClass.leader Then ok = False
+                    If item.unit.unitBranch = GenDefaultValues.UnitClass.leader Then ok = False
                 End If
             Next item
             If c > 3 Then ok = False
@@ -652,15 +674,18 @@ Public Class RandStackTest
         Call target.ResetExclusions()
         target.log.Disable()
         Dim s As AllDataStructues.Stack
+        Dim RS As RandStack = CreateRandStack()
         If twogoblins Then
-            s = New AllDataStructues.Stack With {.pos = New String() {"g000uu5117", "g000uu5018", "g000000000", _
-                                                                      "g000000000", "g000000000", "G000000000"}, _
-                                                 .level = New Integer() {1, 1, 0, 0, 0, 0}, _
+            s = New AllDataStructues.Stack With {.units = AllDataStructues.Stack.UnitInfo.CreateArray( _
+                                                     New String() {"g000uu5117", "g000uu5018", "g000000000", _
+                                                                   "g000000000", "g000000000", "G000000000"}, _
+                                                     New Integer() {1, 1, 0, 0, 0, 0}, Nothing, RS), _
                                                  .items = New List(Of String)}
         Else
-            s = New AllDataStructues.Stack With {.pos = New String() {"g000uu5117", "g000uu5018", "g000uu5017", _
-                                                                      "g000uu5017", "g000uu5018", "G000000000"}, _
-                                                 .level = New Integer() {1, 1, 1, 1, 1, 0}, _
+            s = New AllDataStructues.Stack With {.units = AllDataStructues.Stack.UnitInfo.CreateArray( _
+                                                     New String() {"g000uu5117", "g000uu5018", "g000uu5017", _
+                                                                   "g000uu5017", "g000uu5018", "G000000000"}, _
+                                                     New Integer() {1, 1, 1, 1, 1, 0}, Nothing, RS), _
                                                  .items = New List(Of String)}
         End If
         Return target.StackStats(s, False)
@@ -685,8 +710,8 @@ Public Class RandStackTest
                     Dim gs As AllDataStructues.CommonStackCreationSettings = TestGenSettings(stats)
                     stack = target.Gen(gs)
                 End If
-                For Each item As String In stack.pos
-                    If Not expected.Contains(item.ToLower) Then ok = False
+                For Each item As AllDataStructues.Stack.UnitInfo In stack.units
+                    If Not expected.Contains(item.unit.unitID.ToLower) Then ok = False
                 Next item
                 If Not ok Then Exit For
             Next i
@@ -703,6 +728,7 @@ Public Class RandStackTest
     Public Sub StackStatsTest()
 
         Dim target As RandStack_Accessor = CreateRandStack_Accessor()
+        Dim RS As RandStack = CreateRandStack()
         target.AllUnits = New AllDataStructues.Unit() { _
             New AllDataStructues.Unit With {.dynUpgrade1 = New AllDataStructues.DynUpgrade With {.EXPkilled = 10, .EXPnext = 100}, _
                                             .dynUpgrade2 = New AllDataStructues.DynUpgrade With {.EXPkilled = 1, .EXPnext = 10}, _
@@ -719,9 +745,6 @@ Public Class RandStackTest
                                             .unitCost = New AllDataStructues.Cost With {.Gold = 1000}, _
                                             .unitID = "g000uu0001", _
                                             .waterOnly = False}}
-        Dim ExcludeLists() As String = New String() {"%defailt%"}
-        Dim CustomUnitRace() As String = New String() {"%defailt%"}
-        Dim CustomLootChance() As String = New String() {"%defailt%"}
 
         Call target.ResetExclusions()
         Dim ok As Boolean = True
@@ -729,15 +752,15 @@ Public Class RandStackTest
         Dim expectedEbar() As Integer = New Integer() {100, 200, 300, 400, 500, 600, 700, 800, 900, 1000, 1010, 1020, 1030, 1040, 1050, 1060, 1070, 1080, 1090, 1100}
 
         Dim s As New AllDataStructues.Stack With {.leaderPos = 0, .items = New List(Of String)}
-        ReDim s.pos(5), s.level(5)
-        For i As Integer = 1 To UBound(s.pos) Step 1
-            s.pos(i) = GenDefaultValues.emptyItem
+        ReDim s.units(5)
+        For i As Integer = 1 To UBound(s.units) Step 1
+            s.units(i) = AllDataStructues.Stack.UnitInfo.CreateEmpty
         Next i
-        s.pos(0) = target.AllUnits(0).unitID.ToUpper
+        s.units(0) = New AllDataStructues.Stack.UnitInfo(target.AllUnits(0).unitID, 0, Nothing, RS)
         For unitBaseLevel As Integer = 1 To 5 Step 1
             target.AllUnits(0).level = unitBaseLevel
             For i As Integer = unitBaseLevel To expectedEkill.Length Step 1
-                s.level(0) = i
+                s.units(0).level = i
                 Dim stats As AllDataStructues.DesiredStats = target.StackStats(s, False)
                 If Not stats.ExpStackKilled = expectedEkill(i - 1) Then ok = False
                 If Not stats.ExpBarAverage = expectedEbar(i - 1) Then ok = False
@@ -827,9 +850,10 @@ Public Class RandStackTest
         Dim overlevelLog As New Log(target.comm)
         overlevelLog.Enable()
 
-        Dim s As New AllDataStructues.Stack With {.pos = New String() {"g000uu5017", "g000uu5117", "g000uu5018", _
-                                                                       "g000uu5018", "G000000000", "g000uu5018"}, _
-                                                  .level = New Integer() {1, 1, 5, 1, 0, 10}, _
+        Dim s As New AllDataStructues.Stack With {.units = AllDataStructues.Stack.UnitInfo.CreateArray( _
+                                                     New String() {"g000uu5017", "g000uu5117", "g000uu5018", _
+                                                                   "g000uu5018", "G000000000", "g000uu5018"}, _
+                                                     New Integer() {1, 1, 5, 1, 0, 10}, Nothing, target), _
                                                   .items = New List(Of String)}
         Dim stats As AllDataStructues.DesiredStats = target.StackStats(s, False)
         stats.LootCost = 2000
@@ -840,10 +864,9 @@ Public Class RandStackTest
         Dim gs As AllDataStructues.CommonStackCreationSettings = TestGenSettings(stats)
 
         overlevelLog.Add("level" & vbTab & "exp_killed" & vbTab & "unit_id")
-        For k As Integer = 0 To UBound(s.pos) Step 1
-            If Not s.pos(k).ToUpper = GenDefaultValues.emptyItem Then
-                Dim u As AllDataStructues.Unit = target.FindUnitStats(s.pos(k))
-                overlevelLog.Add(Math.Max(u.level, s.level(k)) & vbTab & u.EXPkilled & vbTab & u.unitID)
+        For k As Integer = 0 To UBound(s.units) Step 1
+            If Not s.units(k).unit.unitID.ToUpper = GenDefaultValues.emptyItem Then
+                overlevelLog.Add(Math.Max(s.units(k).unit.level, s.units(k).level) & vbTab & s.units(k).unit.EXPkilled & vbTab & s.units(k).unit.unitID)
             End If
         Next k
         overlevelLog.Add("----------")
@@ -851,10 +874,10 @@ Public Class RandStackTest
         Dim stack As AllDataStructues.Stack
         For i As Integer = 1 To 20 Step 1
             stack = target.Gen(gs)
-            For k As Integer = 0 To UBound(s.pos) Step 1
-                If Not stack.pos(k).ToUpper = GenDefaultValues.emptyItem Then
-                    Dim u As AllDataStructues.Unit = target.FindUnitStats(stack.pos(k))
-                    overlevelLog.Add(stack.level(k) & vbTab & u.EXPkilled & vbTab & u.unitID)
+            For k As Integer = 0 To UBound(s.units) Step 1
+                If Not stack.units(k).unit.unitID.ToUpper = GenDefaultValues.emptyItem Then
+                    Dim u As AllDataStructues.Unit = target.FindUnitStats(stack.units(k).unit.unitID)
+                    overlevelLog.Add(stack.units(k).level & vbTab & u.EXPkilled & vbTab & u.unitID)
                 End If
             Next k
             overlevelLog.Add("----------")

@@ -5722,7 +5722,7 @@ Public Class shortMapFormat
                           .pos = New Point(x, y)}
                 Dim stack As AllDataStructues.Stack = objContent.randStack.Gen(gs)
                 If isGround Then
-                    Dim leader As AllDataStructues.Unit = objContent.randStack.FindUnitStats(stack.pos(stack.leaderPos))
+                    Dim leader As AllDataStructues.Unit = objContent.randStack.FindUnitStats(stack.units(stack.leaderPos).unit.unitID)
                     If leader.waterOnly Then
                         Dim txt As String = "Water only leader on ground! Pos: " & x & " " & y
                         Console.WriteLine(txt)
@@ -11371,7 +11371,7 @@ Public Class ObjectsContentSet
         Return CInt(Math.Max(minRange, Math.Min(maxRange, p0 + p1)))
     End Function
 
-#Region "Mage merchant"
+#Region "Spells merchant"
     ''' <summary>Вернет настройки генерации заклинаний</summary>
     ''' <param name="mode">-1 - случайный мод в каждой строчке, 1 - вернет ID, 2 - УровеньРасаМассовость, 3 - Тип, 4 - Тип#УровеньРасаМассовость</param>
     ''' <param name="input">ID заклинаний</param>
@@ -11463,7 +11463,7 @@ Public Class ObjectsContentSet
         Return res
     End Function
 #End Region
-#Region "Units merchant"
+#Region "Items merchant"
     ''' <summary>Вернет настройки генерации предметов</summary>
     ''' <param name="mode">-1 - случайный мод в каждой строчке, 1 - вернет ID, 2 - Цена, 3 - Тип, 4 - Тип#Цена</param>
     ''' <param name="input">ID заклинаний</param>

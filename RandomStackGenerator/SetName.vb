@@ -310,8 +310,8 @@
         For k As Integer = 0 To UBound(stack) Step 1
             i = ids(k)
             If Not IsNothing(stack(i)) Then
-                If stack(i).leaderPos > -1 AndAlso Not IsNothing(stack(i).pos) Then
-                    Dim unitID As String = stack(i).pos(stack(i).leaderPos).ToUpper
+                If stack(i).leaderPos > -1 AndAlso Not IsNothing(stack(i).units) Then
+                    Dim unitID As String = stack(i).units(stack(i).leaderPos).unit.unitID.ToUpper
                     If Not uCount.ContainsKey(unitID) Then uCount.Add(unitID, New Integer() {0})
                     uCount.Item(unitID)(0) += 1
                 Else
@@ -327,10 +327,9 @@
             i = ids(k)
             If Not skip(i) Then
                 totalNonskipped += 1
-                Dim u As AllDataStructues.Unit = R.FindUnitStats(stack(i).pos(stack(i).leaderPos))
                 SkippedByUnitType(i) = True
                 For Each id As Integer In commonIDs
-                    If Not SkipUnit(id, u) Then
+                    If Not SkipUnit(id, stack(i).units(stack(i).leaderPos).unit) Then
                         SkippedByUnitType(i) = False
                         totalNonskippedByUnitType += 1
                         Exit For
@@ -344,23 +343,21 @@
         For k As Integer = 0 To UBound(stack) Step 1
             i = ids(k)
             If Not skip(i) And Not SkippedByUnitType(i) Then
-                stack(i).name = SetName(stack(i).pos(stack(i).leaderPos).ToUpper, R, wMultiplier, LogID)
+                stack(i).name = SetName(stack(i).units(stack(i).leaderPos).unit, wMultiplier, LogID)
                 skip(i) = True
             End If
             If stack(i).leaderPos > -1 AndAlso IsNothing(stack(i).name) OrElse stack(i).name = "" Then
-                Dim u As AllDataStructues.Unit = R.FindUnitStats(stack(i).pos(stack(i).leaderPos))
-                stack(i).name = u.name
+                stack(i).name = stack(i).units(stack(i).leaderPos).unit.name
             End If
         Next k
     End Sub
-    Private Function SetName(ByRef leaderID As String, ByRef R As RandStack, _
+    Private Function SetName(ByRef leader As AllDataStructues.Unit, _
                              ByVal UserWeightMultiplier As Double, ByRef LogID As Integer) As String
-        Dim u As AllDataStructues.Unit = R.FindUnitStats(leaderID)
-        Dim res As String = u.name
-        Dim i As Integer = comm.RandomSelection(commonIDs, WeightArray(UserWeightMultiplier, u.unitID), True)
+        Dim res As String = leader.name
+        Dim i As Integer = comm.RandomSelection(commonIDs, WeightArray(UserWeightMultiplier, leader.unitID), True)
         If i = NoneNameId Then Return res
 
-        If SkipUnit(i, u) Then Return res
+        If SkipUnit(i, leader) Then Return res
 
         commonIDs.Remove(i)
         res &= " " & users(i).name
