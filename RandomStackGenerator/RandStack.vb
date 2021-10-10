@@ -60,6 +60,8 @@ Public Class RandStack
             Public ignoreUnitRace As Boolean
             ''' <summary>Если True, генератор не будет добавлять в отряды юнитов, связнных с лором. По умолчанию False</summary>
             Public excludeLoreUnits As Boolean
+            ''' <summary>Если True, генератор будет сохранять в отрядах юнитов, связнных с лором. По умолчанию False</summary>
+            Public preserveLoreUnits As Boolean
             ''' <summary>Если False, генератор не будет добавлять в отряды юнитов из веток развития, если столица их расы есть на карте. По умолчанию False</summary>
             Public addUnitsFromBranchesToStacks As Boolean
             ''' <summary>
@@ -152,6 +154,7 @@ Public Class RandStack
         If settings.talismanChargesDefaultAmount < 1 Then Throw New Exception("Unexpected TalismanChargesDefaultAmount")
 
         If settings.excludeLoreUnits Then Call comm.ReadExcludedLoreObjectsList()
+        If settings.preserveLoreUnits Then Call comm.ReadLoreUnitsToPreservedObjects()
         If IsNothing(data.modData.ExcludedObjects) Then
             Call comm.ReadExcludedObjectsList()
         Else
@@ -2722,6 +2725,11 @@ Public Class Common
     ''' <summary>Читает список предметов, юнитов и заклинаний, которые генератор должен оставлять на месте</summary>
     Protected Friend Sub ReadPreservedObjects()
         Dim s() As String = SettingsFileSplit(defValues.PreservedItems)
+        Call ReadFile(ReadMode.ReadPreservedObjects, s)
+    End Sub
+    ''' <summary>Добавляет лорных юнитов а список объектов, которые генератор должен оставлять на месте</summary>
+    Protected Friend Sub ReadLoreUnitsToPreservedObjects()
+        Dim s() As String = SettingsFileSplit(defValues.ExcludedIDs_ModLore)
         Call ReadFile(ReadMode.ReadPreservedObjects, s)
     End Sub
     ''' <summary>Читает список предметов, юнитов и заклинаний, которые генератор должен оставлять на месте</summary>
