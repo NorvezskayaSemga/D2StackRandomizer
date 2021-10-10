@@ -58,7 +58,7 @@ Public Class RndValueGenTest
     '''A test for RndIntFast
     '''</summary>
     <TestMethod()> _
-    Public Sub RndIntFastTest()
+    Public Sub RndIntFastTest1()
         Dim size As Integer = 1000
         Dim m As Integer = 123
         Dim generated() As Boolean
@@ -74,6 +74,24 @@ Public Class RndValueGenTest
                     If Not generated(i) Then ok = False
                 Next i
             Next seed
+            If Not ok Then Exit For
+        Next min
+        If Not ok Then Assert.Inconclusive("Verify the correctness of this test method.")
+    End Sub
+
+    '''<summary>
+    '''A test for RndIntFast
+    '''</summary>
+    <TestMethod()> _
+    Public Sub RndIntFastTest2()
+        Dim target As RndValueGen = New RndValueGen()
+        Dim ok As Boolean = True
+        For min As Integer = 0 To 100 Step 1
+            For max As Integer = min To 100 Step 1
+                Dim r As Integer = target.RndIntFast(min, max)
+                If r < min Then ok = False
+                If r > max Then ok = False
+            Next max
             If Not ok Then Exit For
         Next min
         If Not ok Then Assert.Inconclusive("Verify the correctness of this test method.")
@@ -100,4 +118,18 @@ Public Class RndValueGenTest
         Next min
         If Not ok Then Assert.Inconclusive("Verify the correctness of this test method.")
     End Sub
+
+    '''<summary>
+    '''A test for Shuffle
+    '''</summary>
+    <TestMethod()> _
+    Public Sub ShuffleTest()
+        Dim target As RndValueGen = New RndValueGen()
+        Dim n() As Integer
+        For i As Integer = -1 To 100 Step 1
+            ReDim n(i)
+            Call target.Shuffle(n)
+        Next i
+    End Sub
+
 End Class
