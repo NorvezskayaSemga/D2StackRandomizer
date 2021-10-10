@@ -729,7 +729,7 @@ Public Class RandStackTest
         Dim expectedEbar() As Integer = New Integer() {100, 200, 300, 400, 500, 600, 700, 800, 900, 1000, 1010, 1020, 1030, 1040, 1050, 1060, 1070, 1080, 1090, 1100}
 
         Dim s As New AllDataStructues.Stack With {.leaderPos = 0, .items = New List(Of String)}
-        ReDim s.pos(5), s.level(5)
+        ReDim s.pos(5), s.level(5), s.modificator(5)
         For i As Integer = 1 To UBound(s.pos) Step 1
             s.pos(i) = GenDefaultValues.emptyItem
         Next i

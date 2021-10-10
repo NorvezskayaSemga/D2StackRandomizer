@@ -145,7 +145,7 @@
     <Content Include="Resources\mod_settings_SMNS\PlateauConstructor.txt">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>
-    <Content Include="Resources\mod_settings_SMNS\PreservedItems.txt">
+    <Content Include="Resources\mod_settings_SMNS\PreservedObjects.txt">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>
     <Content Include="Resources\mod_settings_SMNS\Races.txt">
@@ -184,7 +184,7 @@
     <Content Include="Resources\mod_settings_Vanilla\PlateauConstructor.txt">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>
-    <Content Include="Resources\mod_settings_Vanilla\PreservedItems.txt">
+    <Content Include="Resources\mod_settings_Vanilla\PreservedObjects.txt">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>
     <Content Include="Resources\mod_settings_Vanilla\Races.txt">
@@ -232,7 +232,7 @@
     <Content Include="Resources\common_game_data\GenParametersDescription_Rus.txt">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>
-    <Content Include="Resources\mod_settings_MNS\PreservedItems.txt">
+    <Content Include="Resources\mod_settings_MNS\PreservedObjects.txt">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>
     <Content Include="Resources\mod_settings_MNS\ExcludeIDs.txt">

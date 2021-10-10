@@ -214,9 +214,6 @@
   <data name="PlateauConstructor" type="System.Resources.ResXFileRef, System.Windows.Forms">
     <value>..\resources\mod_settings_mns\plateauconstructor.txt;System.String, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089;windows-1251</value>
   </data>
-  <data name="PreservedItems" type="System.Resources.ResXFileRef, System.Windows.Forms">
-    <value>..\resources\mod_settings_mns\preserveditems.txt;System.String, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089;windows-1251</value>
-  </data>
   <data name="Races" type="System.Resources.ResXFileRef, System.Windows.Forms">
     <value>..\resources\mod_settings_mns\races.txt;System.String, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089;windows-1251</value>
   </data>
@@ -261,5 +258,8 @@
   </data>
   <data name="WaterBlocksUnacceptable" type="System.Resources.ResXFileRef, System.Windows.Forms">
     <value>..\resources\common_game_data\waterblocksunacceptable.txt;System.String, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089;utf-8</value>
+  </data>
+  <data name="PreservedObjects" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\resources\mod_settings_mns\preservedobjects.txt;System.String, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089;windows-1251</value>
   </data>
 </root>

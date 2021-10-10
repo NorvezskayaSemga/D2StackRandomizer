@@ -98,6 +98,7 @@ Namespace My.Resources
         
         '''<summary>
         '''  Looks up a localized string similar to #строка, начинающаяся с решетки, игнорируется
+        '''#с помощью ReadFromFile &apos;пробел&apos; &apos;путь к файлу&apos; можно прочитать данные из другого файла.
         '''#файл, определяющий константы, используемые генератором
         '''#Параметр (без пробелов), значение (без пробелов), разделитель таб или пробел
         '''#слэш - перенос строки
@@ -110,12 +111,7 @@ Namespace My.Resources
         '''#Clans              C
         '''#Elves              E
         '''#Neutral            N
-        '''#Greenskins         G
-        '''#Dragons            D
-        '''#Swamp              S
-        '''#Water              W
-        '''#Barbarians         B
-        '''#Animals  [rest of string was truncated]&quot;;.
+        '''#Greenskins      [rest of string was truncated]&quot;;.
         '''</summary>
         Friend ReadOnly Property Constants() As String
             Get
@@ -286,10 +282,7 @@ Namespace My.Resources
         '''#крестьянин
         '''g000uu5001
         '''g000uu5101
-        '''#толстый бес
-        '''g000uu6004
-        '''g000uu6104
-        '''#ведьмино от [rest of string was truncated]&quot;;.
+        '''#тол [rest of string was truncated]&quot;;.
         '''</summary>
         Friend ReadOnly Property ExcludeIDsForNames() As String
             Get
@@ -331,9 +324,7 @@ Namespace My.Resources
         '''
         '''SpellsMaxLevel	[Common_map_settings]	[Integer]	1	5
         '''
-        '''ApplySymmetry	[Common_map_settings]	[Boolean]	False	True
-        '''
-        '''SymmetryClass [rest of string was truncated]&quot;;.
+        '''ApplySymmetry	[Common_map_settings]	[Boolean]	False	True [rest of string was truncated]&quot;;.
         '''</summary>
         Friend ReadOnly Property GenParametersRange() As String
             Get
@@ -393,8 +384,9 @@ Namespace My.Resources
         
         '''<summary>
         '''  Looks up a localized string similar to #ЯРПНЙЮ, МЮВХМЮЧЫЮЪЯЪ Я ПЕЬЕРЙХ, ХЦМНПХПСЕРЯЪ
+        '''#Я ОНЛНЫЭЧ ReadFromFile &apos;ОПНАЕК&apos; &apos;ОСРЭ Й ТЮИКС&apos; ЛНФМН ОПНВХРЮРЭ ДЮММШЕ ХГ ДПСЦНЦН ТЮИКЮ.
         '''#оЕПБШИ ЯРНКАЕЖ - ХДЕМРХТХЙЮРНПШ НАЗЕЙРНБ.
-        '''#б НЯРЮКЭМШУ - ДНОСЯРХЛШЕ ЛЕЯРЮ ПЮЯЯРЮМНБЙХ НАЗЕЙРНБ Х ПЮЯШ
+        '''#б НЯРЮКЭМШУ - ДНОСЯРХЛШЕ ЛЕЯРЮ ПЮЯЯРЮМНБЙХ НАЗЕЙРНБ (G - ГЕЛКЪ, W - БНДЮ) Х ПЮЯШ
         '''# Б РЕЦЕ НАЪГЮРЕКЕМ ГМЮЙ %
         '''
         '''#ГДЮМХЪ
@@ -405,13 +397,7 @@ Namespace My.Resources
         '''g000mg0005	G	L				%building% %natural%
         '''
         '''#БНДНОЮДШ
-        '''#g000mg0006	G	H L C U E N S
-        '''#g000mg0007	G	H L C U E N S
-        '''
-        '''#ОКЮРН
-        '''#g000mg0008	G	H L C U E N S
-        '''#g000mg0009	G	H L C U E N S
-        '''#g000mg0010 [rest of string was truncated]&quot;;.
+        '''#g000m [rest of string was truncated]&quot;;.
         '''</summary>
         Friend ReadOnly Property MapObjectRace() As String
             Get
@@ -466,6 +452,7 @@ Namespace My.Resources
         
         '''<summary>
         '''  Looks up a localized string similar to #строка, начинающаяся с решетки, игнорируется
+        '''#с помощью ReadFromFile &apos;пробел&apos; &apos;путь к файлу&apos; можно прочитать данные из другого файла.
         '''#ID объекта, в остальных столбцах возможные названия
         '''#разделитель - _
         '''
@@ -474,9 +461,7 @@ Namespace My.Resources
         '''g000LR0002_Алексис_Лотай_Келли_Моар_Дориа
         '''g000LR0003_Алексис_Лотай_Келли_Моар_Дориа
         '''g000LR0004_Орхтар_Дархорд_Фуррт_Бордольт_Неромт
-        '''g000LR0005_Орхтар_Дархорд_Фуррт_Бордольт_Неромт
-        '''g000LR0006_Орхтар_Дархорд_Фуррт_Бордольт_Неромт
-        '''g000L [rest of string was truncated]&quot;;.
+        '''g0 [rest of string was truncated]&quot;;.
         '''</summary>
         Friend ReadOnly Property ObjectsText_Eng() As String
             Get
@@ -486,16 +471,14 @@ Namespace My.Resources
         
         '''<summary>
         '''  Looks up a localized string similar to #строка, начинающаяся с решетки, игнорируется
+        '''#с помощью ReadFromFile &apos;пробел&apos; &apos;путь к файлу&apos; можно прочитать данные из другого файла.
         '''#ID объекта, в остальных столбцах возможные названия
         '''#разделитель - _
         '''
         '''ReadFromFile .\Resources\mod_settings_Vanilla\ObjectsText_Rus.txt
         '''
         '''#руины (названия такие, чтобы можно было их использовать безотносительно того, кто сидит внитри. При этом названия разные. Вероятно, это понадобится при добавлении квестов)
-        '''G000RU0000011_Врата Бездны_Пылающий разлом_Огненное капище_Адская расщелина_Разлом Хаоса
-        '''G000RU0000012_Стойбище
-        '''G000RU0000013_Шахта
-        '''G000RU0000014_Форт на в [rest of string was truncated]&quot;;.
+        '''G000RU0000011_Врата Бездны_Пылающий разлом_Огненное капище [rest of string was truncated]&quot;;.
         '''</summary>
         Friend ReadOnly Property ObjectsText_Rus() As String
             Get
@@ -568,6 +551,7 @@ Namespace My.Resources
         
         '''<summary>
         '''  Looks up a localized string similar to #строка, начинающаяся с решетки, игнорируется
+        '''#с помощью ReadFromFile &apos;пробел&apos; &apos;путь к файлу&apos; можно прочитать данные из другого файла.
         '''#Первый столбец - идентификаторы объектов.
         '''#В остальных - как скреплять объекты
         '''#U = 1/-1 1/0
@@ -614,20 +598,37 @@ Namespace My.Resources
         
         '''<summary>
         '''  Looks up a localized string similar to #строка, начинающаяся с решетки, игнорируется
+        '''#с помощью ReadFromFile &apos;пробел&apos; &apos;путь к файлу&apos; можно прочитать данные из другого файла.
         '''#ID предметов, которые генератор должен оставлять на месте
         '''
-        '''ReadFromFile .\Resources\mod_settings_Vanilla\PreservedItems.txt
+        '''#Ржавые кандалы
+        '''G000IG2007
         '''
+        '''#Лютня очарования
+        '''G000IG3022
+        '''
+        '''#Тиара чистоты
+        '''G000IG2006
+        '''
+        '''#Книга войны
+        '''G000IG4005
+        '''
+        '''#Книга тайного знания
+        '''G000IG4007
+        '''
+        '''#типы предметов
+        '''special
         '''.
         '''</summary>
-        Friend ReadOnly Property PreservedItems() As String
+        Friend ReadOnly Property PreservedObjects() As String
             Get
-                Return ResourceManager.GetString("PreservedItems", resourceCulture)
+                Return ResourceManager.GetString("PreservedObjects", resourceCulture)
             End Get
         End Property
         
         '''<summary>
         '''  Looks up a localized string similar to #строка, начинающаяся с решетки, игнорируется
+        '''#с помощью ReadFromFile &apos;пробел&apos; &apos;путь к файлу&apos; можно прочитать данные из другого файла.
         '''#Идентификаторы рас.
         '''#В конце каждой строки ID, на который будут заменяться все остальные ID строки
         '''Humans			H	6	1
@@ -656,6 +657,7 @@ Namespace My.Resources
         
         '''<summary>
         '''  Looks up a localized string similar to #строка, начинающаяся с решетки, игнорируется
+        '''#с помощью ReadFromFile &apos;пробел&apos; &apos;путь к файлу&apos; можно прочитать данные из другого файла.
         '''#Идентификаторы рас. список возможных тэгов, через : - радиус подзоны
         '''# в теге обязателен знак %
         '''
@@ -664,8 +666,7 @@ Namespace My.Resources
         '''C %natural%:4 %building%:4 %religious%:2
         '''U %natural%:4 %building%:4							 %graveyard%:4					%undbuilding%:4 %undelfbuilding%:4
         '''E %natural%:4 %building%:4
-        '''N %natural%:4 %building%:4 %religious%:3 %marshes%:4 %graveyard%:3
-        '''S %natural%:4 %building%:3 %religio [rest of string was truncated]&quot;;.
+        '''N % [rest of string was truncated]&quot;;.
         '''</summary>
         Friend ReadOnly Property RaceSublocations() As String
             Get
@@ -792,7 +793,7 @@ Namespace My.Resources
         '''# GGW   WWW    WW
         '''# WWW , GGW  и WG можно считать одинаковыми
         '''#              WG
-        '''#Делать блок нужно с учетом того, что объект будет в центр [rest of string was truncated]&quot;;.
+        '''#Делать блок нужно с учетом того, что объект буде [rest of string was truncated]&quot;;.
         '''</summary>
         Friend ReadOnly Property WaterBlocks3x3Objects() As String
             Get
