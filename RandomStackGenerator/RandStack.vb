@@ -3609,7 +3609,9 @@ Public Class AllDataStructues
                                                          .deltaLeadership = v.deltaLeadership, _
                                                          .groundTile = v.groundTile, _
                                                          .noLeader = v.noLeader, _
-                                                         .pos = New Point(v.pos.X, v.pos.Y)}
+                                                         .pos = New Point(v.pos.X, v.pos.Y), _
+                                                         .isTemplate = v.isTemplate, _
+                                                         .order = v.order}
         End Function
     End Class
     Public Class CommonLootCreationSettings
