@@ -1722,13 +1722,11 @@ Public Class RandStack
                                             PossibleFighters, {ExpBar, ExpKilled}, Bias)
             Dim selectedID As Integer = comm.RandomSelection(PossibleFighters, {ExpBar, ExpKilled}, _
                                                              bar, multiplierUnitDesiredStats, SigmaMultiplier(DynStackStats), serialExecution)
-            If selectedID > -1 Then
-                SelectedFighter = New AllDataStructues.Stack.UnitInfo(AllUnits(selectedID).unitID, AllUnits(selectedID).level, Nothing, Me)
-            End If
-            If IsNothing(SelectedFighter) Then
+            If selectedID = -1 Then
                 Call ThrowStackCreationException("Possibly an endless loop in a random selection from an array of possible fighters", _
                                                  GenSettings, DynStackStats)
             End If
+            SelectedFighter = New AllDataStructues.Stack.UnitInfo(AllUnits(selectedID).unitID, AllUnits(selectedID).level, Nothing, Me)
             Call ChangeLimit(SelectedFighter.unit, DynStackStats, FreeMeleeSlots, LogID)
         Else
             SelectedFighter = Nothing
