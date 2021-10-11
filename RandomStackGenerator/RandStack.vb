@@ -3648,13 +3648,11 @@ Public Class AllDataStructues
         End Function
         ''' <summary>Return {ConsumableItems,NonconsumableItems,JewelItems}</summary>
         Public Shared Function ToArray(ByVal v As LootGenSettings) As ItemGenSettings()
-            Dim res() As ItemGenSettings
             If Not IsNothing(v) Then
-                res = New ItemGenSettings() {v.ConsumableItems, v.NonconsumableItems, v.JewelItems}
+                Return New ItemGenSettings() {v.ConsumableItems, v.NonconsumableItems, v.JewelItems}
             Else
-                ReDim res(2)
+                Return ToArray(New AllDataStructues.LootGenSettings(False))
             End If
-            Return res
         End Function
 
 #Region "Strict filter interface"
