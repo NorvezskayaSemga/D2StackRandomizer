@@ -109,6 +109,7 @@ Public Class RandStack
     Private secondrow() As Integer = New Integer() {1, 3, 5}
     Private Const itemGenSigma As Double = 0.5
     Private Const multiItemGenSigmaMultiplier As Double = 1.5
+    Private ReadOnly maxStackSize As Integer = firstrow.Length + secondrow.Length
 
     Private UnitsArrayPos As New Dictionary(Of String, Integer)
     Friend AllUnits() As AllDataStructues.Unit
@@ -454,7 +455,9 @@ Public Class RandStack
                         expKilledSum += unit.EXPkilled
                     End If
                 Else
-                    result.preservedUnits.Add(stack.units(i))
+                    Dim c As AllDataStructues.Stack.UnitInfo = AllDataStructues.Stack.UnitInfo.Copy(stack.units(i))
+                    c.isPreserved = True
+                    result.preservedUnits.Add(c)
                 End If
             End If
         Next i
@@ -1195,15 +1198,17 @@ Public Class RandStack
         Dim g As AllDataStructues.CommonStackCreationSettings = AllDataStructues.CommonStackCreationSettings.Copy(GenSettings)
 
         If Not IsNothing(g.StackStats.preservedUnits) AndAlso g.StackStats.preservedUnits.Count > 0 Then
-            Dim pExpKilled, pExpBarAverage, pDeltaLeadership As Integer
+            Dim pExpKilled, pExpBarAverage As Integer
             Dim hasLeader As Boolean
             For Each u As AllDataStructues.Stack.UnitInfo In g.StackStats.preservedUnits
                 pExpKilled += u.unit.EXPkilled
                 pExpBarAverage += u.unit.EXPnext
                 If u.unit.unitBranch = GenDefaultValues.UnitClass.leader Then hasLeader = True
             Next u
-            If GenSettings.StackStats.StackSize = 0 And ssm > 1 Then pDeltaLeadership = 1
-            g.deltaLeadership += pDeltaLeadership
+            If GenSettings.StackStats.StackSize = 0 And ssm > 1 Then
+                g.deltaLeadership += 1
+                If ssm > 2 Then g.deltaLeadership += 1
+            End If
 
             pExpKilled = CInt(g.StackStats.ExpStackKilled * ssm + pExpKilled * (ssm - 1))
             pExpBarAverage = CInt(g.StackStats.ExpBarAverage * ssm + pExpBarAverage * (ssm - 1))
@@ -1227,7 +1232,8 @@ Public Class RandStack
     Private Function SelectPossibleLeader(ByRef leaderID As Integer, ByRef Tolerance As Double, _
                                           ByRef GenSettings As AllDataStructues.CommonStackCreationSettings, _
                                           ByRef DynStackStats As AllDataStructues.DesiredStats, _
-                                          ByRef MapLordsRaces As List(Of Integer)) As Boolean
+                                          ByRef MapLordsRaces As List(Of Integer), _
+                                          ByRef preservedSlotsCount As Integer) As Boolean
         If Not comm.IsAppropriateLeader(AllUnits(leaderID)) Then Return False
 
         If AllUnits(leaderID).fromRaceBranch AndAlso MapLordsRaces.Contains(AllUnits(leaderID).race) Then Return False
@@ -1241,6 +1247,12 @@ Public Class RandStack
 
         If comm.BigStackUnits.ContainsKey(AllUnits(leaderID).unitID) _
         AndAlso DynStackStats.StackSize < comm.BigStackUnits.Item(AllUnits(leaderID).unitID) Then Return False
+
+        If AllUnits(leaderID).small Then
+            If preservedSlotsCount + 1 > maxStackSize Then Return False
+        Else
+            If preservedSlotsCount + 2 > maxStackSize Then Return False
+        End If
 
         If Not GenSettings.order = "" Then
             MsgBox("нужен текст с названием приказа")
@@ -1270,12 +1282,14 @@ Public Class RandStack
         Dim overlevel As Double = GenSettings.StackStats.WeightedOverlevel
         minUnitOverlevelCost = Double.MaxValue
         For i As Integer = 0 To UBound(stack.units) Step 1
-            If Not stack.units(i).unit.unitID.ToUpper = GenDefaultValues.emptyItem Then
+            If Not stack.units(i).unit.unitID.ToUpper = GenDefaultValues.emptyItem _
+               And Not stack.units(i).isPreserved Then
                 u += 1
                 order(u) = i
                 unitOverlevelCost(i) = (stack.units(i).unit.EXPnext + stack.units(i).unit.GetExpNextOverlevel(stack.units(i).unit.level + 1)) / stack.units(i).unit.EXPnext
             End If
         Next i
+        If u < 0 Then Exit Sub
         ReDim Preserve order(u)
         Dim m As Double = GenSettings.StackStats.StackSize / GenSettings.StackStats.ExpStackKilled
         For i As Integer = 0 To u Step 1
@@ -1317,43 +1331,66 @@ Public Class RandStack
         If Not GenSettings.noLeader Then ReDim leaderExpKilled(UBound(units))
 
         Parallel.For(0, units.Length, _
-         Sub(jobID As Integer)
-             'For jobID As Integer = 0 To UBound(units) Step 1
-             log.MAdd(jobID, "--------Attempt " & jobID + 1 & " started--------")
-             Dim FreeMeleeSlots As Integer = 3
-             Dim BaseStackSize As Integer
-             DynStackStats(jobID) = AllDataStructues.DesiredStats.Copy(BakDynStackStats)
-             Dim SelectedLeader As AllDataStructues.Stack.UnitInfo = GenLeader( _
-                    GenSettings, DynStackStats(jobID), FreeMeleeSlots, _
-                    MapLordsRaces, CDbl(jobID / units.Length), jobID)
-             BaseStackSize = DynStackStats(jobID).StackSize
-             If Not GenSettings.noLeader And Not GenSettings.StackStats.HasPreservedLeader Then
-                 If SelectedLeader.unit.small Then
-                     BaseStackSize += 1
-                 Else
-                     BaseStackSize += 2
-                 End If
-             End If
-             If BaseStackSize + GenSettings.StackStats.PreservedSlots > SelectedLeader.unit.leadership Then
-                 BaseStackSize = SelectedLeader.unit.leadership - GenSettings.StackStats.PreservedSlots
-             End If
+        Sub(jobID As Integer)
+            'For jobID As Integer = 0 To UBound(units) Step 1
+            log.MAdd(jobID, "--------Attempt " & jobID + 1 & " started--------")
+            Dim FreeMeleeSlots As Integer = 3
+            Dim BaseStackSize As Integer
+            Dim preservedSlots As Integer = GenSettings.StackStats.PreservedSlots
+            DynStackStats(jobID) = AllDataStructues.DesiredStats.Copy(BakDynStackStats)
 
-             Dim deltaExpKilled As Integer = 0
-             Dim SelectedFighters As List(Of AllDataStructues.Stack.UnitInfo) _
-                 = GenFingters(GenSettings, DynStackStats(jobID), FreeMeleeSlots, _
-                               SelectedLeader, BaseStackSize, _
-                               MapLordsRaces, deltaExpKilled, _
-                               CDbl(jobID / units.Length), jobID)
-             units(jobID) = GenUnitsList(SelectedFighters, SelectedLeader)
+            Dim SelectedLeader As AllDataStructues.Stack.UnitInfo = GenLeader( _
+                   GenSettings, DynStackStats(jobID), FreeMeleeSlots, _
+                   MapLordsRaces, CDbl(jobID / units.Length), jobID)
+            BaseStackSize = DynStackStats(jobID).StackSize
 
-             DynStackStats(jobID).LootCost = CInt(CDbl(DynStackStats(jobID).LootCost) _
-                                                  * (1 + CDbl(deltaExpKilled) / GenSettings.StackStats.ExpStackKilled))
+            If Not GenSettings.noLeader And Not GenSettings.StackStats.HasPreservedLeader Then
+                If SelectedLeader.unit.small Then
+                    BaseStackSize += 1
+                Else
+                    BaseStackSize += 2
+                End If
+            End If
 
-             If Not GenSettings.noLeader Then leaderExpKilled(jobID) = SelectedLeader.unit.EXPkilled
+            If BaseStackSize + preservedSlots > maxStackSize Then
+                Dim dL As Integer = BaseStackSize + preservedSlots - maxStackSize
+                BaseStackSize = Math.Max(BaseStackSize - dL, 0)
+                DynStackStats(jobID).StackSize = Math.Max(DynStackStats(jobID).StackSize - dL, 0)
+            End If
+            If DynStackStats(jobID).StackSize + preservedSlots > maxStackSize Then
+                Dim dL As Integer = DynStackStats(jobID).StackSize + preservedSlots - maxStackSize
+                BaseStackSize = Math.Max(BaseStackSize - dL, 0)
+                DynStackStats(jobID).StackSize = Math.Max(DynStackStats(jobID).StackSize - dL, 0)
+            End If
 
-             log.MAdd(jobID, "--------Attempt " & jobID + 1 & " ended--------")
-             'Next jobID
-         End Sub)
+            Dim deltaExpKilled As Integer = 0
+            Dim SelectedFighters As List(Of AllDataStructues.Stack.UnitInfo) _
+                = GenFingters(GenSettings, DynStackStats(jobID), FreeMeleeSlots, _
+                              SelectedLeader, BaseStackSize, _
+                              MapLordsRaces, deltaExpKilled, _
+                              CDbl(jobID / units.Length), jobID)
+            units(jobID) = GenUnitsList(SelectedFighters, SelectedLeader)
+
+            Dim slotsInUse As Integer = 0
+            For Each u As AllDataStructues.Stack.UnitInfo In units(jobID)
+                If u.unit.small Then
+                    slotsInUse += 1
+                Else
+                    slotsInUse += 2
+                End If
+            Next u
+            If slotsInUse > maxStackSize Then ThrowStackCreationException("Unexpected slots used: " & slotsInUse, _
+                                                                          GenSettings, DynStackStats(jobID))
+            If Not GenSettings.StackStats.ExpStackKilled = 0 Then
+                DynStackStats(jobID).LootCost = CInt(CDbl(DynStackStats(jobID).LootCost) _
+                                                     * (1 + CDbl(deltaExpKilled) / GenSettings.StackStats.ExpStackKilled))
+            End If
+
+            If Not GenSettings.noLeader Then leaderExpKilled(jobID) = SelectedLeader.unit.EXPkilled
+
+            log.MAdd(jobID, "--------Attempt " & jobID + 1 & " ended--------")
+            'Next jobID
+        End Sub)
 
         Call log.Add(log.MPrintAll())
         Call log.MRedim(0)
@@ -1377,7 +1414,7 @@ Public Class RandStack
                                ByRef Bias As Double, ByRef LogID As Integer) As AllDataStructues.Stack.UnitInfo
         If GenSettings.noLeader Then Return Nothing
 
-        'здесь проверяем, есть ли пресохраненный лидер
+        'здесь проверяем, есть ли сохраненный лидер
         If GenSettings.StackStats.HasPreservedLeader Then
             Dim removeAt As Integer = -1
             For i As Integer = 0 To DynStackStats.preservedUnits.Count - 1 Step 1
@@ -1410,11 +1447,12 @@ Public Class RandStack
         Dim maxExpStrackKilled As Double = Math.Max(10000, 2 * DynStackStats.ExpStackKilled)
 
         'создаем список лидеров, которых вообще можем использовать
+        Dim preservedSlots As Integer = GenSettings.StackStats.PreservedSlots
         Dim Tolerance As Double = 0.02 * (DynStackStats.StackSize - 1)
         Do While PossibleLeaders.Count < 3
             PossibleLeaders.Clear()
             For i As Integer = 0 To UBound(AllUnits) Step 1
-                If SelectPossibleLeader(i, Tolerance, GenSettings, DynStackStats, MapLordsRaces) Then PossibleLeaders.Add(i)
+                If SelectPossibleLeader(i, Tolerance, GenSettings, DynStackStats, MapLordsRaces, preservedSlots) Then PossibleLeaders.Add(i)
             Next i
             If Tolerance > 2 And PossibleLeaders.Count > 0 Then Exit Do
 
@@ -1444,7 +1482,7 @@ Public Class RandStack
 
         'теперь нужно добрать воинов в отряд
         Dim R As Double = rndgen.Rand(0, 1, serialExecution)
-        Dim leadershipCap As Integer = Math.Min(AllUnits(SelectedLeader).leadership + GenSettings.deltaLeadership, 6)
+        Dim leadershipCap As Integer = Math.Min(AllUnits(SelectedLeader).leadership + GenSettings.deltaLeadership, maxStackSize)
         If AllUnits(SelectedLeader).small Then
             leadershipCap = Math.Max(leadershipCap, 1)
         Else
@@ -1536,7 +1574,7 @@ Public Class RandStack
         Loop
         If Not IsNothing(DynStackStats.preservedUnits) AndAlso DynStackStats.preservedUnits.Count > 0 Then
             For Each u As AllDataStructues.Stack.UnitInfo In DynStackStats.preservedUnits
-                SelectedFighters.Add(u)
+                SelectedFighters.Add(AllDataStructues.Stack.UnitInfo.Copy(u))
             Next u
         End If
         Return SelectedFighters
@@ -1806,7 +1844,7 @@ Public Class RandStack
         Dim t As Integer
         Dim m As Integer = 0
         For k As Integer = 0 To UBound(firstrow) Step 1
-            If Not units(i).unit.small Or units(i).unit.reach = GenDefaultValues.UnitAttackReach.melee Then
+            If (Not units(i).unit.small Or units(i).unit.reach = GenDefaultValues.UnitAttackReach.melee) And Not AnySlot Then
                 If IsNothing(result.units(firstrow(k))) Then
                     m += 1
                     If m = n1 Then
@@ -1863,7 +1901,7 @@ Public Class RandStack
     End Function
     Private Sub SetUnitPos(ByRef result As AllDataStructues.Stack, ByRef pos As Integer, _
                            ByRef unit As AllDataStructues.Stack.UnitInfo)
-        result.units(pos) = New AllDataStructues.Stack.UnitInfo(unit.unit.unitID, unit.level, unit.modificators, Me)
+        result.units(pos) = AllDataStructues.Stack.UnitInfo.Copy(unit)
     End Sub
 
     Private Sub ChangeLimit(ByRef unit As AllDataStructues.Unit, _
@@ -2925,7 +2963,7 @@ Public Class AllDataStructues
         Dim Race As List(Of Integer)
         ''' <summary>Примерный опыт за убийство стэка</summary>
         Dim ExpStackKilled As Integer
-        ''' <summary>Количество свободных ячеек под отряд. Есть 10% шанс на +1 слот и 10% неа -1 слот</summary>
+        ''' <summary>Количество свободных ячеек под отряд. Есть 10% шанс на +1 слот и 10% на -1 слот</summary>
         Dim StackSize As Integer
         ''' <summary>Максимальное количество больших воинов в отряде</summary>
         Dim MaxGiants As Integer
@@ -2975,7 +3013,7 @@ Public Class AllDataStructues
             Return False
         End Function
         ''' <summary>
-        ''' Количество смлотов под пресохраненных юнитов
+        ''' Количество слотов под сохраненных юнитов
         ''' </summary>
         Public Function PreservedSlots() As Integer
             If IsNothing(preservedUnits) Then Return 0
@@ -3056,6 +3094,10 @@ Public Class AllDataStructues
             Public modificators As List(Of String)
             ''' <summary>Базовые статы юнита</summary>
             Public unit As Unit
+            ''' <summary>
+            ''' True, если юнит является сохраненным. У него не будет изменен уровень или модификаторы
+            ''' </summary>
+            Protected Friend isPreserved As Boolean
 
             Public Sub New(ByRef _id As String, ByRef _level As Integer, ByRef _modificators As List(Of String), _
                            ByRef RandStack As RandStack)
@@ -3074,7 +3116,8 @@ Public Class AllDataStructues
                     modificators = _modificators
                 End If
             End Sub
-            Private Sub New(ByRef _unit As Unit, ByRef _level As Integer, ByRef _modificators As List(Of String))
+            Private Sub New(ByRef _unit As Unit, ByRef _level As Integer, ByRef _modificators As List(Of String), _
+                            ByRef _isPreserved As Boolean)
                 level = _level
                 If IsNothing(_modificators) Then
                     modificators = New List(Of String)
@@ -3082,6 +3125,7 @@ Public Class AllDataStructues
                     modificators = _modificators
                 End If
                 unit = _unit
+                isPreserved = _isPreserved
             End Sub
 
             Public Shared Function CreateEmpty() As UnitInfo
@@ -3111,7 +3155,8 @@ Public Class AllDataStructues
             Public Shared Function Copy(ByVal v As UnitInfo) As UnitInfo
                 Return New UnitInfo(AllDataStructues.Unit.Copy(v.unit), _
                                     v.level, _
-                                    CopyList(v.modificators))
+                                    CopyList(v.modificators), _
+                                    v.isPreserved)
             End Function
             Public Shared Function Print(ByVal v As UnitInfo) As String
                 Return "ID" & vbTab & v.unit.unitID & vbNewLine & _
@@ -3603,7 +3648,13 @@ Public Class AllDataStructues
         End Function
         ''' <summary>Return {ConsumableItems,NonconsumableItems,JewelItems}</summary>
         Public Shared Function ToArray(ByVal v As LootGenSettings) As ItemGenSettings()
-            Return New ItemGenSettings() {v.ConsumableItems, v.NonconsumableItems, v.JewelItems}
+            Dim res() As ItemGenSettings
+            If Not IsNothing(v) Then
+                res = New ItemGenSettings() {v.ConsumableItems, v.NonconsumableItems, v.JewelItems}
+            Else
+                ReDim res(2)
+            End If
+            Return res
         End Function
 
 #Region "Strict filter interface"
