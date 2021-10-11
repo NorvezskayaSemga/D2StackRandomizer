@@ -5722,8 +5722,7 @@ Public Class shortMapFormat
                           .pos = New Point(x, y)}
                 Dim stack As AllDataStructues.Stack = objContent.randStack.Gen(gs)
                 If isGround Then
-                    Dim leader As AllDataStructues.Unit = objContent.randStack.FindUnitStats(stack.units(stack.leaderPos).unit.unitID)
-                    If leader.waterOnly Then
+                    If stack.units(stack.leaderPos).unit.waterOnly Then
                         Dim txt As String = "Water only leader on ground! Pos: " & x & " " & y
                         Console.WriteLine(txt)
                         Call m.log.Add(txt)

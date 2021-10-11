@@ -936,8 +936,7 @@ Public Class RandStackTest
             stack = target.Gen(gs)
             For k As Integer = 0 To UBound(s.units) Step 1
                 If Not stack.units(k).unit.unitID.ToUpper = GenDefaultValues.emptyItem Then
-                    Dim u As AllDataStructues.Unit = target.FindUnitStats(stack.units(k).unit.unitID)
-                    overlevelLog.Add(stack.units(k).level & vbTab & u.EXPkilled & vbTab & u.unitID)
+                    overlevelLog.Add(stack.units(k).level & vbTab & stack.units(k).unit.EXPkilled & vbTab & stack.units(k).unit.unitID)
                 End If
             Next k
             overlevelLog.Add("----------")
