@@ -64,6 +64,7 @@ Public Class RandStackTest
                                                                .AllItemsList = ItemsList, _
                                                                .AllSpellsList = AllSpells}
         rstackData.settings.modName = GenDefaultValues.DefaultMod
+        rstackData.mapData.capitalPos = {New Point(10, 10)}
         Return New RandStack_Accessor(rstackData)
     End Function
     Friend Function CreateRandStack() As RandStack
@@ -72,6 +73,7 @@ Public Class RandStackTest
                                                                .AllItemsList = ItemsList, _
                                                                .AllSpellsList = AllSpells}
         rstackData.settings.modName = GenDefaultValues.DefaultMod
+        rstackData.mapData.capitalPos = {New Point(10, 10)}
         Return New RandStack(rstackData)
     End Function
     Friend Sub PrepareToTest()
@@ -102,14 +104,6 @@ Public Class RandStackTest
         Next file
     End Sub
 
-    Friend T1Units() As String = {
-"g000uu3001", "g000uu0023", "g000uu0019", "g000uu0020", "g000uu8248", "g000uu0022", "g000uu0001", "g000uu0006", "g000uu0008", "g000uu0011", "g000uu0018", "g003uu5001",
-"g000uu3002", "g000uu0048", "g000uu0044", "g000uu0045", "g000uu8249", "g000uu0047", "g000uu0036", "g000uu0026", "g000uu0033", "g000uu0029", "g000uu0043", "g004uu5039",
-"g000uu3003", "g000uu0074", "g000uu0070", "g000uu0071", "g000uu8250", "g000uu0073", "g000uu0052", "g000uu0055", "g000uu0062", "g000uu0057", "g000uu0069", "g004uu6120",
-"g000uu3004", "g000uu0100", "g000uu0096", "g000uu8252", "g000uu8253", "g000uu0099", "g000uu0086", "g000uu0078", "g000uu0080", "g000uu0093", "g000uu0092", "g001uu7539",
-"g000000000", "g000000000", "g000000000", "g000000000", "g000000000", "g000000000", "g000000000", "g000000000", "g000000000", "g000000000", "g000000000", "g000000000",
-"g000uu8040", "g000uu8013", "g000uu8009", "g000uu8011", "g000uu8251", "g000uu8012", "g000uu8014", "g000uu8018", "g000uu8025", "g000uu8031", "g000uu8029", "g003uu8037"}
-
     Friend UnitsList() As AllDataStructues.Unit = Nothing
     Friend ItemsList() As AllDataStructues.Item = Nothing
     Friend AllSpells() As AllDataStructues.Spell = Nothing
@@ -129,7 +123,9 @@ Public Class RandStackTest
             With {.StackStats = d, _
                   .deltaLeadership = 0, _
                   .groundTile = GroundTile, _
-                  .noLeader = False, .pos = New Point(1, 1)}
+                  .noLeader = False, _
+                  .pos = New Point(1, 1), _
+                  .order = ""}
     End Function
 
     '''<summary>
@@ -720,6 +716,71 @@ Public Class RandStackTest
         Return ok
     End Function
 
+    '''<summary>
+    '''A test for Gen
+    '''</summary>
+    <TestMethod()> _
+    Public Sub GenTest_with_UnitsPreservation()
+        Dim target As RandStack_Accessor = CreateRandStack_Accessor()
+        target.settings.preserveUnitsOverlevel = True
+        Call target.ResetExclusions()
+        target.log.Disable()
+
+        Dim preservedUnits, expectedUnit_Level As New List(Of String)
+        Dim stats As AllDataStructues.DesiredStats
+        Dim level() As Integer = New Integer() {2, 4, 8, 7, 9, 3}
+        Dim s As New AllDataStructues.Stack With {.units = AllDataStructues.Stack.UnitInfo.CreateArray( _
+                                                     New String() {"g000uu0001", "g000uu0002", "g000uu0012", _
+                                                                   "g000uu5117", "g000uu0001", "g000uu0020"}, _
+                                                     level, Nothing, CreateRandStack()), _
+                                                  .items = New List(Of String)}
+        For j As Integer = 0 To UBound(s.units) Step 1
+            If Not s.units(j).level = level(j) Or s.units(j).level < s.units(j).unit.level Then
+                Throw New Exception("Unexpected level")
+            End If
+        Next j
+
+        Dim p1() As String = New String() {"g000uu0001"}
+        Dim p2() As String = New String() {"g000uu0001", "g000uu0002"}
+        Dim p3() As String = New String() {"g000uu5117"}
+        Dim p4() As String = New String() {"g000uu0001", "g000uu0020"}
+        Dim p5() As String = New String() {"g000uu5117", "g000uu0001", "g000uu0020"}
+        Dim p6() As String = New String() {"g000uu0002", "g000uu0012"}
+        Dim p7() As String = New String() {"g000uu0001", "g000uu0002", "g000uu0012"}
+        Dim p8() As String = New String() {"g000uu0001", "g000uu0002", "g000uu0012", "g000uu5117", "g000uu0020"}
+        Dim p9() As String = New String() {"g000uu0002", "g000uu0012", "g000uu5117", "g000uu0001"}
+        Dim p()() As String = {p1, p2, p3, p4, p5, p6, p7, p8, p9}
+        Dim ok As Boolean = True
+
+        For i As Integer = 0 To UBound(p) Step 1
+            preservedUnits.Clear()
+            preservedUnits.AddRange(p(i))
+            target.comm.preservedItems.Clear()
+            target.comm.ReadPreservedObjects(preservedUnits)
+            stats = target.StackStats(s, False)
+            expectedUnit_Level.Clear()
+            For j As Integer = 0 To UBound(s.units) Step 1
+                If preservedUnits.Contains(s.units(j).unit.unitID.ToLower) Then
+                    expectedUnit_Level.Add(s.units(j).unit.unitID.ToLower & "#" & s.units(j).level)
+                End If
+            Next j
+            For m As Integer = 1 To 15 Step 1
+                Dim gs As AllDataStructues.CommonStackCreationSettings = TestGenSettings(stats)
+                Dim res As AllDataStructues.Stack = target.Gen(gs, 0.1 * CDbl(m), 1)
+                For Each e As String In expectedUnit_Level
+                    For k As Integer = 0 To UBound(res.units) Step 1
+                        If e = res.units(k).unit.unitID.ToLower & "#" & res.units(k).level Then Exit For
+                        If k = UBound(res.units) Then ok = False
+                    Next k
+                    If Not ok Then Exit For
+                Next e
+                If Not ok Then Exit For
+            Next m
+            If Not ok Then Exit For
+        Next i
+
+        If Not ok Then Assert.Inconclusive("Verify the correctness of this test method.")
+    End Sub
 
     '''<summary>
     '''A test for StackStats
@@ -773,7 +834,6 @@ Public Class RandStackTest
 
         If Not ok Then Assert.Inconclusive("Verify the correctness of this test method.")
     End Sub
-
 
     '''<summary>
     '''A test for GoldToMana
