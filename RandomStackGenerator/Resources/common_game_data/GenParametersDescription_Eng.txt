@@ -70,6 +70,11 @@ maxMages Number of mage towers per location
 maxTrainers Number of trainers per location
 maxRuins Number of ruins per location
 
+randomAttendedObject Number of additional random objects to visit in the location: merchant, mage tower, mercenary camp, trainer, or ruins
+
+nonMineObjectValueGold When a non-integer number of objects in the location is specified, the integer part is the amount that will definitely be placed with enough free space, the non-integer part is the chance to place one more object. If the chance does not work, its value multiplied by nonMineObjectValueGold will be added to the number of gold mines in the location
+nonMineObjectValueMana When a non-integer number of objects in the location is given, the integer part is the amount that will definitely be placed with enough free space, the non-integer part is the chance to place one more object. If the chance does not work, its value multiplied by nonMineObjectValueMana will be added to the number of mana sources in the location 
+
 minStackToStackDist Minimum distance between squads
 
 expAmount Approximate amount of experience for killing all units in the location

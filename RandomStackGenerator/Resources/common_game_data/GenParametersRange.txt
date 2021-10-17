@@ -54,12 +54,17 @@ maxRadiusDispersion			[Location]	[Double]	0.0	0.99
 
 maxGoldMines			[Location]	[Double]	0.0	20.0
 maxManaSources			[Location]	[Double]	0.0	20.0
-maxCities				[Location]	[Double]	0.0	5.0
-maxVendors				[Location]	[Double]	0.0	5.0
-maxMercenaries			[Location]	[Double]	0.0	5.0
-maxMages				[Location]	[Double]	0.0	5.0
-maxTrainers				[Location]	[Double]	0.0	5.0
-maxRuins				[Location]	[Double]	0.0	5.0
+maxCities				[Location]	[Double]	0.0	10.0
+maxVendors				[Location]	[Double]	0.0	10.0
+maxMercenaries			[Location]	[Double]	0.0	10.0
+maxMages				[Location]	[Double]	0.0	10.0
+maxTrainers				[Location]	[Double]	0.0	10.0
+maxRuins				[Location]	[Double]	0.0	10.0
+
+randomAttendedObject	[Location]	[Double]	0.0	20.0
+
+nonMineObjectValueGold	[Location]	[Double]	0.0	10.0
+nonMineObjectValueMana	[Location]	[Double]	0.0	10.0
 
 minStackToStackDist		[Location]	[Double]	2.0	10.0
 expAmount				[Location]	[Double]	1.0	1000000.0

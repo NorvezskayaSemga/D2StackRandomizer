@@ -953,6 +953,9 @@ Public Class ImpenetrableMeshGen
                 res.maxMages = RandomValue(min.maxMages, max.maxMages, randomizer)
                 res.maxTrainers = RandomValue(min.maxTrainers, max.maxTrainers, randomizer)
                 res.maxRuins = RandomValue(min.maxRuins, max.maxRuins, randomizer)
+                res.randomAttendedObject = RandomValue(min.randomAttendedObject, max.randomAttendedObject, randomizer)
+                res.nonMineObjectValueGold = RandomValue(min.nonMineObjectValueGold, max.nonMineObjectValueGold, randomizer)
+                res.nonMineObjectValueMana = RandomValue(min.nonMineObjectValueMana, max.nonMineObjectValueMana, randomizer)
                 res.minStackToStackDist = RandomValue(min.minStackToStackDist, max.minStackToStackDist, randomizer)
                 res.expAmount = RandomValue(min.expAmount, max.expAmount, randomizer)
                 res.mageSpellsMaxLevel = RandomValue(min.mageSpellsMaxLevel, max.mageSpellsMaxLevel, randomizer)
@@ -3660,8 +3663,35 @@ clearandexit:
                                                 sett.maxRuins, _
                                                 sett.maxGoldMines, _
                                                 sett.maxManaSources}
+        'распределяем случайные объекты
+        If sett.randomAttendedObject > 0 Then
+            Dim dest() As Integer = {DefMapObjects.Types.Vendor, _
+                                     DefMapObjects.Types.Mercenary, _
+                                     DefMapObjects.Types.Mage, _
+                                     DefMapObjects.Types.Trainer, _
+                                     DefMapObjects.Types.Ruins}
+            Dim rObjCount As Double = sett.randomAttendedObject
+            Dim i As Integer
+            Do While rObjCount > 0
+                i = dest(rndgen.RndInt(0, UBound(dest), False))
+                If rObjCount >= 1 Then
+                    DblnObj(i) += 1
+                    rObjCount -= 1
+                Else
+                    DblnObj(i) += rObjCount
+                    rObjCount = 0
+                End If
+            Loop
+        End If
+
         'определяем количество объектов
+        'DblnObj - количество объектов, заданное в шаблоне
+        'nObj - целое количество объектов, в которое преобразовано нецелое количество
         Dim nObj(UBound(DblnObj) - 1) As Integer
+        Dim goldMineTypeID As Integer = DefMapObjects.Types.Mine
+        Dim manaMineTypeID As Integer = DefMapObjects.Types.Mine + 1
+        Dim additionalGoldMines As Double = 0
+        Dim additionalManaMines As Double = 0
         For i As Integer = 0 To UBound(DblnObj) Step 1
             Dim m As Double = DblnObj(i)
             If i > 1 Then m *= mult
@@ -3674,18 +3704,24 @@ clearandexit:
                 Dim d As Double = m - CDbl(n1)
                 If rndgen.PRand(0, 1) > d Then
                     r = n1
-                    If Not i = 8 And Not i = 9 Then DblnObj(8) += d
+                    If Not i = goldMineTypeID And Not i = manaMineTypeID Then
+                        additionalGoldMines += d * sett.nonMineObjectValueGold
+                        additionalManaMines += d * sett.nonMineObjectValueMana
+                    End If
                 Else
                     r = n2
                 End If
             End If
-            If i = 8 Or i = 9 Then
-                nObj(8) += r
+            If i = goldMineTypeID Or i = manaMineTypeID Then
+                nObj(goldMineTypeID) += r
             Else
                 nObj(i) = r
             End If
         Next i
-        nObj(8) = Math.Max(nObj(8), 1)
+        DblnObj(goldMineTypeID) += additionalGoldMines
+        DblnObj(manaMineTypeID) += additionalManaMines
+
+        nObj(goldMineTypeID) = Math.Max(nObj(goldMineTypeID), 1)
 
         Dim sum As Integer = -1
         For i As Integer = 0 To UBound(nObj) Step 1
@@ -6133,6 +6169,23 @@ Public Class Map
         '''<summary>Количество руин на локацию</summary>
         Public maxRuins As Double
 
+        '''<summary>Количество дополнительных случайных объектов на локации: 
+        ''' торговец, башня мага, лагерь наемников, тренер или руины</summary>
+        Public randomAttendedObject As Double
+
+        '''<summary>Когда задано нецелое число объектов в локации,
+        ''' целая часть - количество, которое точно будет размещено при достаточном количестве свободного места,
+        ''' нецелая часть - шанс разместить на один объект больше.
+        ''' Если шанс не сработал, его величина, умноженная на nonMineObjectValueGold, 
+        ''' будет прибавлена к количеству золотых шахт в локации</summary>
+        Public nonMineObjectValueGold As Double
+        '''<summary>Когда задано нецелое число объектов в локации,
+        ''' целая часть - количество, которое точно будет размещено при достаточном количестве свободного места,
+        ''' нецелая часть - шанс разместить на один объект больше.
+        ''' Если шанс не сработал, его величина, умноженная на nonMineObjectValueMana, 
+        ''' будет прибавлена к количеству источников маны в локации</summary>
+        Public nonMineObjectValueMana As Double
+
         '''<summary>Минимальное расстояние между отрядами</summary>
         Public minStackToStackDist As Double
 
@@ -6308,6 +6361,9 @@ Public Class Map
             .maxMages = v.maxMages, _
             .maxTrainers = v.maxTrainers, _
             .maxRuins = v.maxRuins, _
+            .RandomAttendedObject = v.RandomAttendedObject, _
+            .nonMineObjectValueGold = v.nonMineObjectValueGold, _
+            .nonMineObjectValueMana = v.nonMineObjectValueMana, _
             .minStackToStackDist = v.minStackToStackDist, _
             .expAmount = v.expAmount, _
             .mageSpellsMaxLevel = v.mageSpellsMaxLevel, _
@@ -6319,8 +6375,8 @@ Public Class Map
             .mercenariesCount = v.mercenariesCount, _
             .merchMaxConsumableItemCost = v.merchMaxConsumableItemCost, _
             .merchMinConsumableItemCost = v.merchMinConsumableItemCost, _
-            .merchMaxNonConsumableItemCost = v.merchMaxNonconsumableItemCost, _
-            .merchMinNonConsumableItemCost = v.merchMinNonconsumableItemCost, _
+            .merchMaxNonconsumableItemCost = v.merchMaxNonconsumableItemCost, _
+            .merchMinNonconsumableItemCost = v.merchMinNonconsumableItemCost, _
             .merchItemsCost = v.merchItemsCost, _
             .scaleContent = v.scaleContent, _
             .possibleRaces = r, _

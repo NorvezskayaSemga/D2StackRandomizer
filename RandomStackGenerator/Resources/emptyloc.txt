@@ -15,12 +15,16 @@ DecorationsAmount		0.75
 
 maxGoldMines			0	0
 maxManaSources			0	0
-maxCities			0
-maxVendors			0
-maxMercenaries		0
-maxMages			0
-maxTrainers			0
-maxRuins			0
+maxCities				0
+maxVendors				0
+maxMercenaries			0
+maxMages				0
+maxTrainers				0
+maxRuins				0
+RandomAttendedObject	0
+
+nonMineObjectValueGold	1.0
+nonMineObjectValueMana	0.0
 
 minStackToStackDist		5.0
 
