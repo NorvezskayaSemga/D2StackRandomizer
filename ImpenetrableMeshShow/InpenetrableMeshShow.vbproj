@@ -126,16 +126,19 @@
     </ProjectReference>
   </ItemGroup>
   <ItemGroup>
-    <Resource Include="Resources\randGeneratorData.binary">
+    <None Include="Resources\TestSpellsRace.txt">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-    </Resource>
-    <None Include="Resources\TestSpellsRace.txt" />
+    </None>
   </ItemGroup>
   <ItemGroup>
-    <None Include="Resources\TestSpells.txt" />
+    <None Include="Resources\TestSpells.txt">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
   </ItemGroup>
   <ItemGroup>
-    <None Include="Resources\TestObjectSize.txt" />
+    <None Include="Resources\TestObjectSize.txt">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
   </ItemGroup>
   <ItemGroup>
     <None Include="Resources\TestUnitsTable.txt">
@@ -144,6 +147,26 @@
   </ItemGroup>
   <ItemGroup>
     <None Include="Resources\TestItemsTable.txt">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="Resources\TestAttacksTable.txt">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+    <None Include="Resources\TestDynUpgr.txt">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+    <None Include="Resources\TestGImmuCTable.txt">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+    <None Include="Resources\TestGImmuTable.txt">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+    <None Include="Resources\TestGModif.txt">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+    <None Include="Resources\TestGModifL.txt">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
   </ItemGroup>

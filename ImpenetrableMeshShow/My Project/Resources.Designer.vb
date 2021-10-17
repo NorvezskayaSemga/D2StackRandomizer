@@ -61,6 +61,171 @@ Namespace My.Resources
         End Property
         
         '''<summary>
+        '''  Looks up a localized string similar to ATT_ID	NAME_TXT	DESC_TXT	INITIATIVE	SOURCE	CLASS	POWER	REACH	QTY_HEAL	QTY_DAM	LEVEL	ALT_ATTACK	INFINITE	QTY_WARDS	WARD1	WARD2	WARD3	WARD4	CRIT_HIT
+        '''g000aa0001	x000tg5001	x000tg5001	50	0	1	80	3	0	25	0	g000000000	False	0	g000000000	g000000000	g000000000	g000000000	False
+        '''g000aa0002	x000tg5002	x000tg5002	50	0	1	80	3	0	50	0	g000000000	False	0	g000000000	g000000000	g000000000	g000000000	False
+        '''g000aa0003	x000tg5003	x000tg5003	50	0	1	80	3	0	75	0	g000000000	False	0	g000000000	g000000000	g000000000	g000000000	False [rest of string was truncated]&quot;;.
+        '''</summary>
+        Friend ReadOnly Property TestAttacksTable() As String
+            Get
+                Return ResourceManager.GetString("TestAttacksTable", resourceCulture)
+            End Get
+        End Property
+        
+        '''<summary>
+        '''  Looks up a localized string similar to .
+        '''</summary>
+        Friend ReadOnly Property TestDynUpgr() As String
+            Get
+                Return ResourceManager.GetString("TestDynUpgr", resourceCulture)
+            End Get
+        End Property
+        
+        '''<summary>
+        '''  Looks up a localized string similar to UNIT_ID	IMMUNITY	IMMUNECAT
+        '''g000uu0024	12	2
+        '''g000uu8015	25	2
+        '''g000uu0154	12	2
+        '''g000uu5354	12	2
+        '''g000uu8020	12	2
+        '''g000uu5352	25	2
+        '''g000uu5367	25	2
+        '''g000uu0167	25	2
+        '''g000uu5024	25	2
+        '''g000uu5124	25	2
+        '''g000uu0155	11	2
+        '''g000uu0169	11	3
+        '''g000uu0097	11	2
+        '''g001uu0097	11	2
+        '''g000uu8020	11	2
+        '''g000uu6002	3	3
+        '''g000uu6002	9	3
+        '''g000uu6102	3	3
+        '''g000uu6102	9	3
+        '''g000uu6002	22	3
+        '''g000uu6102	22	3
+        '''g000uu8001	3	3
+        '''g000uu8101	9	3
+        '''g000uu8101	3	3
+        '''g000uu8001	9	3
+        '''g000uu8001	22	3
+        '''g000uu8101	22	3
+        '''g000uu8002	3	3
+        '''g000uu8102	9	3
+        '''g [rest of string was truncated]&quot;;.
+        '''</summary>
+        Friend ReadOnly Property TestGImmuCTable() As String
+            Get
+                Return ResourceManager.GetString("TestGImmuCTable", resourceCulture)
+            End Get
+        End Property
+        
+        '''<summary>
+        '''  Looks up a localized string similar to UNIT_ID	IMMUNITY	IMMUNECAT
+        '''g000uu0000	0	2
+        '''g000uu0024	1	2
+        '''g000uu0025	6	3
+        '''g000uu0085	0	2
+        '''g000uu0078	3	2
+        '''g000uu0079	3	2
+        '''g000uu0082	3	2
+        '''g000uu0083	3	2
+        '''g000uu0084	3	2
+        '''g000uu0087	3	2
+        '''g000uu0088	3	2
+        '''g000uu0089	3	2
+        '''g000uu0091	4	2
+        '''g000uu0095	3	2
+        '''g000uu0096	3	2
+        '''g000uu0098	3	2
+        '''g000uu0099	3	2
+        '''g000uu0101	3	2
+        '''g000uu0103	3	2
+        '''g000uu0104	3	2
+        '''g000uu0092	0	2
+        '''g000uu0097	3	2
+        '''g000uu0004	1	2
+        '''g000uu0005	1	2
+        '''g000uu5033	3	2
+        '''g000uu0090	4	2
+        '''g000uu0090	5	2
+        '''g000uu0090	6	2
+        '''g000uu0090	7	2
+        '''g000uu0091	5	2
+        '''g000 [rest of string was truncated]&quot;;.
+        '''</summary>
+        Friend ReadOnly Property TestGImmuTable() As String
+            Get
+                Return ResourceManager.GetString("TestGImmuTable", resourceCulture)
+            End Get
+        End Property
+        
+        '''<summary>
+        '''  Looks up a localized string similar to MODIF_ID	SOURCE
+        '''g000um0001	0
+        '''g000um0002	3
+        '''g000um0003	3
+        '''g000um0005	0
+        '''g111um9035	0
+        '''g000um0011	0
+        '''g000um0012	0
+        '''g000um0013	3
+        '''g000um0016	0
+        '''g000um0017	3
+        '''g000um0010	0
+        '''g000um0018	0
+        '''g000um0021	0
+        '''g000um0034	3
+        '''g000um0023	3
+        '''g000um0026	3
+        '''g000um0027	1
+        '''g000um0022	1
+        '''g000um0035	0
+        '''g000um0036	3
+        '''g000um0039	1
+        '''g000um0040	3
+        '''g000um0045	0
+        '''g000um0053	1
+        '''g000um0049	3
+        '''g000um0055	3
+        '''g000um0050	3
+        '''g000um0064	3
+        '''g000um0065	0
+        '''g000um0069	3
+        '''g000um0073	3
+        '''g000um0076	3
+        '''g000um0075	3
+        '''g000um0079	0
+        '''g000um2002	0
+        '''g000u [rest of string was truncated]&quot;;.
+        '''</summary>
+        Friend ReadOnly Property TestGModif() As String
+            Get
+                Return ResourceManager.GetString("TestGModif", resourceCulture)
+            End Get
+        End Property
+        
+        '''<summary>
+        '''  Looks up a localized string similar to BELONGS_TO	DESC	TYPE	PERCENT	NUMBER	ABILITY	IMMUNITY	IMMUNECAT	MOVE	IMMUNITYC	IMMUNECATC
+        '''g000um0001	x000tgc001	12	0	0	0	7	2	0	0	0
+        '''g000um0002	x000tgc002	9	10	0	0	0	2	0	0	0
+        '''g000um0003	x000tgc003	4	10	0	0	0	2	0	0	0
+        '''g000um0004	x000tgc004	12	0	0	0	7	2	0	0	0
+        '''g000um0005	x000tgc005	12	0	0	0	5	2	0	0	0
+        '''g000um0008	x000tgc008	12	0	0	0	5	2	0	0	0
+        '''g000um0010	x000tgc010	12	0	0	0	6	2	0	0	0
+        '''g000um0012	x000tgc012	5	0	20	0	0	2	0	0	0
+        '''g000um0014	x000tgc014	12	0	0	0	1	2	0	0	0
+        '''g000um0015	x000tgc015	12	0	0	0	1	2	0	0	0
+        '''g0 [rest of string was truncated]&quot;;.
+        '''</summary>
+        Friend ReadOnly Property TestGModifL() As String
+            Get
+                Return ResourceManager.GetString("TestGModifL", resourceCulture)
+            End Get
+        End Property
+        
+        '''<summary>
         '''  Looks up a localized string similar to ITEM_CAT	ITEM_ID	VALUE
         '''6	G000IG0001	g0400:r0000:y0000:e0000:w0000
         '''4	G000IG0002	g0200:r0000:y0000:e0000:w0000
@@ -161,15 +326,8 @@ Namespace My.Resources
         End Property
         
         '''<summary>
-        '''  Looks up a localized string similar to UNIT_ID	UNIT_CAT	LEVEL	SUBRACE	BRANCH	SIZE_SMALL	ATTACK_ID	XP_KILLED	XP_NEXT	LEADERSHIP	WATER_ONLY	REACH
-        '''g000uu0001	0	1	1	0	True	g000aa0001	20	80	0	False	3
-        '''g000uu0002	0	2	1	0	True	g000aa0002	60	475	0	False	3
-        '''g000uu0003	0	3	1	0	True	g000aa0003	120	950	0	False	3
-        '''g000uu0004	0	2	1	0	True	g000aa0004	60	475	0	False	3
-        '''g000uu0005	0	3	1	0	True	g000aa0005	115	950	0	False	3
-        '''g000uu0006	0	1	1	1	True	g000aa0006	20	70	0	False	2
-        '''g000uu0007	0	2	1	1	True	g000aa0007	60	500	0	False	2
-        '''g000uu0008	0	1	1	2	True	g000aa0008	 [rest of string was truncated]&quot;;.
+        '''  Looks up a localized string similar to UNIT_ID	UNIT_CAT	LEVEL	PREV_ID	RACE_ID	SUBRACE	BRANCH	SIZE_SMALL	SEX_M	ENROLL_C	ENROLL_B	NAME_TXT	DESC_TXT	ABIL_TXT	ATTACK_ID	ATTACK2_ID	ATCK_TWICE	HIT_POINT	BASE_UNIT	ARMOR	REGEN	REVIVE_C	HEAL_C	TRAINING_C	XP_KILLED	UPGRADE_B	XP_NEXT	MOVE	SCOUT	LIFE_TIME	LEADERSHIP	NEGOTIATE	LEADER_CAT	DYN_UPG1	DYN_UPG_LV	DYN_UPG2	WATER_ONLY	DEATH_ANIM
+        '''g000uu0001	0	1	g000000000	g000rr0000	1	0	True	True	g0050:r0000:y0000:e0000:w0000	g000000000	x000tg2001	x000tg2501	x000tgb006	g000aa0001	g000000000	False	110	G000000000	0	5	 [rest of string was truncated]&quot;;.
         '''</summary>
         Friend ReadOnly Property TestUnitsTable() As String
             Get

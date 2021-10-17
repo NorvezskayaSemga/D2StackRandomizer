@@ -30,7 +30,6 @@ Partial Class StartForm
         Me.sel1 = New System.Windows.Forms.RadioButton()
         Me.SymmCheckBox = New System.Windows.Forms.CheckBox()
         Me.GenManyButton = New System.Windows.Forms.Button()
-        Me.RndTestButton = New System.Windows.Forms.Button()
         Me.UseTemplateCheckBox = New System.Windows.Forms.CheckBox()
         Me.LogTextBox = New System.Windows.Forms.TextBox()
         CType(Me.PictureBox1, System.ComponentModel.ISupportInitialize).BeginInit()
@@ -117,15 +116,6 @@ Partial Class StartForm
         Me.GenManyButton.Text = "Generate many"
         Me.GenManyButton.UseVisualStyleBackColor = True
         '
-        'RndTestButton
-        '
-        Me.RndTestButton.Location = New System.Drawing.Point(612, 365)
-        Me.RndTestButton.Name = "RndTestButton"
-        Me.RndTestButton.Size = New System.Drawing.Size(124, 46)
-        Me.RndTestButton.TabIndex = 5
-        Me.RndTestButton.Text = "TestRandomizer"
-        Me.RndTestButton.UseVisualStyleBackColor = True
-        '
         'UseTemplateCheckBox
         '
         Me.UseTemplateCheckBox.AutoSize = True
@@ -154,7 +144,6 @@ Partial Class StartForm
         Me.ClientSize = New System.Drawing.Size(1142, 606)
         Me.Controls.Add(Me.LogTextBox)
         Me.Controls.Add(Me.UseTemplateCheckBox)
-        Me.Controls.Add(Me.RndTestButton)
         Me.Controls.Add(Me.GenManyButton)
         Me.Controls.Add(Me.SymmCheckBox)
         Me.Controls.Add(Me.Panel1)
@@ -177,7 +166,6 @@ Partial Class StartForm
     Friend WithEvents sel1 As System.Windows.Forms.RadioButton
     Friend WithEvents SymmCheckBox As System.Windows.Forms.CheckBox
     Friend WithEvents GenManyButton As System.Windows.Forms.Button
-    Friend WithEvents RndTestButton As System.Windows.Forms.Button
     Friend WithEvents UseTemplateCheckBox As System.Windows.Forms.CheckBox
     Friend WithEvents LogTextBox As System.Windows.Forms.TextBox
 

@@ -16,6 +16,10 @@ Public Class RandStack
         ''' </summary>
         Public AllSpellsList() As AllDataStructues.Spell
         ''' <summary>
+        ''' Все модификаторы в игре
+        ''' </summary>
+        Public AllModificatorsList() As AllDataStructues.Modificator
+        ''' <summary>
         ''' Настройки генерации
         ''' </summary>
         Public settings As New SettingsInfo
@@ -119,6 +123,8 @@ Public Class RandStack
 
     Private SpellsArrayPos As New Dictionary(Of String, Integer)
     Friend AllSpells() As AllDataStructues.Spell
+
+    Friend AllModificators As New Dictionary(Of String, AllDataStructues.Modificator)
 
     Public rndgen As RndValueGen
     Public comm As Common
@@ -240,6 +246,12 @@ Public Class RandStack
             SpellsArrayPos.Add(AllSpells(i).spellID.ToUpper, i)
         Next i
 
+        If Not IsNothing(data.AllModificatorsList) Then
+            For i As Integer = 0 To UBound(data.AllModificatorsList) Step 1
+                AllModificators.Add(data.AllModificatorsList(i).id.ToUpper, data.AllModificatorsList(i))
+            Next i
+        End If
+
         Call ResetExclusions()
     End Sub
     Private Function ItemTypeWeight(ByRef wList As Dictionary(Of String, String), ByRef itemType As String, ByRef cost As Double) As Double
@@ -349,6 +361,16 @@ Public Class RandStack
             Return Nothing
         End If
     End Function
+    ''' <summary>Найдет модификатор по ID (нечувствительно к регистру)</summary>
+    ''' <param name="ID">GxxUMxxxx</param>
+    Public Function FindModificatorStats(ByVal ID As String) As AllDataStructues.Modificator
+        Dim f As String = ID.ToUpper
+        If AllModificators.ContainsKey(f) Then
+            Return AllModificators.Item(f)
+        Else
+            Return Nothing
+        End If
+    End Function
 #End Region
 
 #Region "Resources conversion"
@@ -425,7 +447,10 @@ Public Class RandStack
     Public Function StackStats(ByRef stack As AllDataStructues.Stack, ByVal isSettingsForRuins As Boolean) As AllDataStructues.DesiredStats
         Dim result As New AllDataStructues.DesiredStats _
             With {.Race = New List(Of Integer), _
-                  .preservedUnits = New List(Of AllDataStructues.Stack.UnitInfo)}
+                  .preservedUnits = New List(Of AllDataStructues.Stack.UnitInfo), _
+                  .LeaderModificators = New List(Of String), _
+                  .UnitsModificators = New List(Of String), _
+                  .ModificatorsEffect = 1}
         Dim unit As AllDataStructues.Unit
         Dim expKilledSum As Double
         Dim currentUnitLevel As Integer
@@ -462,6 +487,30 @@ Public Class RandStack
             End If
         Next i
         If result.StackSize > 0 Then result.ExpBarAverage = CInt(result.ExpBarAverage / result.StackSize)
+
+        For i As Integer = 0 To UBound(stack.units) Step 1
+            If Not stack.units(i).unit.unitID = GenDefaultValues.emptyItem Then
+                unit = FindUnitStats(stack.units(i).unit.unitID)
+                If Not comm.IsPreserved(unit) Then
+                    If Not IsNothing(stack.units(i).modificators) Then
+                        For Each m As String In stack.units(i).modificators
+                            If unit.unitBranch = GenDefaultValues.UnitClass.leader Then
+                                result.LeaderModificators.Add(m)
+                            Else
+                                result.UnitsModificators.Add(m)
+                            End If
+                        Next m
+                        Dim weightSum As Double = result.ExpStackKilled
+                        If weightSum > 0 Then
+                            Dim modEffect As Double = AllDataStructues.Modificator.UnitPowerChange(stack.units(i), Me)
+                            currentUnitLevel = Math.Max(stack.units(i).level, unit.level)
+                            Dim weight As Double = unit.EXPkilled + unit.GetExpKilledOverlevel(currentUnitLevel)
+                            Call AddModificatorEffect(result.ModificatorsEffect, modEffect, weight, weightSum)
+                        End If
+                    End If
+                End If
+            End If
+        Next i
 
         Dim LCost As AllDataStructues.Cost = LootCost(stack.items)
         result.LootCost = AllDataStructues.Cost.Sum(LCost)
@@ -532,6 +581,10 @@ Public Class RandStack
             Return inValue
         End If
     End Function
+    Private Sub AddModificatorEffect(ByRef addTo As Double, ByRef effect As Double, _
+                                     ByRef weight As Double, ByRef weightSum As Double)
+        addTo *= 1 + (effect - 1) * weight / weightSum
+    End Sub
 #End Region
 
 #Region "Loot info"
@@ -1174,6 +1227,7 @@ Public Class RandStack
             Next i
         End If
         Call ApplyOverlevel(result, GenSettings)
+        Call ApplyModificators(result, GenSettings)
         result.order = GenSettings.order
 
         result.items = ItemsGen(New AllDataStructues.CommonLootCreationSettings _
@@ -1312,6 +1366,299 @@ Public Class RandStack
             If 2 * overlevel < minUnitOverlevelCost Then Exit Do
             If overlevel < minUnitOverlevelCost AndAlso minUnitOverlevelCost * rndgen.RndDblFast(0, 1) > overlevel Then overlevel = 0
         Loop
+    End Sub
+    Private Sub ApplyModificators(ByRef stack As AllDataStructues.Stack, ByRef GenSettings As AllDataStructues.CommonStackCreationSettings)
+        If stack.leaderPos > -1 And GenSettings.StackStats.LeaderModificators.Count > 0 Then
+            For Each m As String In GenSettings.StackStats.LeaderModificators
+                stack.units(stack.leaderPos).modificators.Add(m)
+            Next m
+        End If
+        If GenSettings.StackStats.UnitsModificators.Count > 0 Then
+            Dim preservedUnit, notPreservedUnit As New List(Of Integer)
+            For i As Integer = 0 To UBound(stack.units) Step 1
+                If Not stack.units(i).unit.unitID.ToUpper = GenDefaultValues.emptyItem Then
+                    If Not stack.units(i).unit.unitBranch = GenDefaultValues.UnitClass.leader Then
+                        If stack.units(i).isPreserved Then
+                            preservedUnit.Add(i)
+                        Else
+                            notPreservedUnit.Add(i)
+                        End If
+                    End If
+                End If
+            Next i
+            If preservedUnit.Count + notPreservedUnit.Count > 0 Then
+                Dim rData As New RecursiveApplyModificatorsData(stack, GenSettings, Me, preservedUnit, notPreservedUnit)
+                'Dim t0 As Integer = Environment.TickCount
+                Call RecursiveApplyModificators(rData, 0)
+                'Dim t1 As Integer = Environment.TickCount - t0
+                'Dim attempts As Integer = rData.totalAttempts
+                For i As Integer = 0 To UBound(rData.modificators) Step 1
+                    stack.units(rData.bestResult(i)).modificators.Add(rData.modificators(i).id.ToUpper)
+                Next i
+            Else
+                For Each m As String In GenSettings.StackStats.UnitsModificators
+                    stack.units(stack.leaderPos).modificators.Add(m)
+                Next m
+            End If
+        End If
+    End Sub
+    Private Class RecursiveApplyModificatorsData
+        Public units() As AllDataStructues.Stack.UnitInfo
+        Public preservedUnit() As Integer
+        Public notPreservedUnit() As Integer
+        Public modificators() As AllDataStructues.Modificator
+        Public currentResult() As Integer
+        Public bestResult() As Integer
+        Public bestValue As Double
+        Public wantFValue As Double
+        Public totalAttempts As Integer
+        Public forceExit As Boolean
+        Public baseUnitStats() As AllDataStructues.UnitBattleNumericValues
+        Public baseUnitPower() As Double
+        Public baseModificators() As List(Of AllDataStructues.Modificator)
+        Public basePowerChange() As Double
+        Public unitWeight() As Double
+        Public weightSum As Double
+        Public PowerChangeSingleMod(,) As Double
+        Public multithreadOnN As List(Of Integer)
+
+        Public Sub New()
+        End Sub
+        Public Sub New(ByRef stack As AllDataStructues.Stack, _
+                       ByRef GenSettings As AllDataStructues.CommonStackCreationSettings, _
+                       ByRef R As RandStack, ByRef preservedUnitList As List(Of Integer), _
+                       ByRef notPreservedUnitList As List(Of Integer))
+            units = stack.units
+            ReDim modificators(GenSettings.StackStats.UnitsModificators.Count - 1)
+            Dim q As Integer = -1
+            For Each m As String In GenSettings.StackStats.UnitsModificators
+                q += 1
+                modificators(q) = R.FindModificatorStats(m)
+            Next m
+            preservedUnit = preservedUnitList.ToArray
+            notPreservedUnit = notPreservedUnitList.ToArray
+            ReDim currentResult(UBound(modificators)), _
+                  bestResult(UBound(modificators)), _
+                  baseUnitStats(UBound(stack.units)), _
+                  baseUnitPower(UBound(stack.units)), _
+                  baseModificators(UBound(stack.units)), _
+                  basePowerChange(UBound(stack.units)), _
+                  unitWeight(UBound(stack.units))
+            multithreadOnN = New List(Of Integer)
+            For i As Integer = 0 To UBound(units) Step 1
+                baseModificators(i) = New List(Of AllDataStructues.Modificator)
+                If Not stack.units(i).unit.unitID.ToUpper = GenDefaultValues.emptyItem Then
+                    baseUnitStats(i) = AllDataStructues.UnitBattleNumericValues.BaseBattleNumericStats(stack.units(i))
+                    baseUnitPower(i) = AllDataStructues.UnitBattleNumericValues.UnitPower(baseUnitStats(i))
+                    Call AllDataStructues.Modificator.AddModificators(baseModificators(i), stack.units(i).modificators, R)
+                    basePowerChange(i) = AllDataStructues.Modificator.UnitPowerChange(stack.units(i), R)
+                    unitWeight(i) = units(i).unit.EXPkilled + units(i).unit.GetExpKilledOverlevel(units(i).level)
+                    weightSum += unitWeight(i)
+                End If
+            Next i
+            bestValue = -1
+            wantFValue = GenSettings.StackStats.ModificatorsEffect
+
+            ReDim PowerChangeSingleMod(UBound(stack.units), UBound(modificators))
+            Dim unitPos As Integer
+            Dim v As Double
+            For n As Integer = 0 To UBound(modificators) Step 1
+                For i As Integer = 0 To UBound(notPreservedUnit) Step 1
+                    unitPos = notPreservedUnit(i)
+                    v = AllDataStructues.Modificator.UnitPowerChange(units(unitPos).unit, _
+                                                                     baseUnitStats(unitPos), _
+                                                                     baseUnitPower(unitPos), _
+                                                                     baseModificators(unitPos), _
+                                                                     basePowerChange(unitPos), _
+                                                                     modificators(n))
+                    PowerChangeSingleMod(unitPos, n) = v
+                Next i
+                For i As Integer = 0 To UBound(preservedUnit) Step 1
+                    unitPos = preservedUnit(i)
+                    v = AllDataStructues.Modificator.UnitPowerChange(units(unitPos).unit, _
+                                                                     baseUnitStats(unitPos), _
+                                                                     baseUnitPower(unitPos), _
+                                                                     baseModificators(unitPos), _
+                                                                     basePowerChange(unitPos), _
+                                                                     modificators(n))
+                    PowerChangeSingleMod(unitPos, n) = v
+                Next i
+            Next n
+
+            Dim threadsN(UBound(modificators)) As Integer
+            For n As Integer = 0 To UBound(modificators) Step 1
+                For i As Integer = 0 To UBound(notPreservedUnit) Step 1
+                    unitPos = notPreservedUnit(i)
+                    If Not PowerChangeSingleMod(unitPos, n) = 1 Then
+                        threadsN(n) += 1
+                    End If
+                Next i
+                If threadsN(n) = 0 Then
+                    For i As Integer = 0 To UBound(preservedUnit) Step 1
+                        unitPos = preservedUnit(i)
+                        If Not PowerChangeSingleMod(unitPos, n) = 1 Then
+                            threadsN(n) += 1
+                        End If
+                    Next i
+                End If
+                If threadsN(n) = 0 Then
+                    threadsN(n) = 1
+                End If
+            Next n
+            Dim nAttempts As Integer = 1
+            Dim threads As Integer = 1
+            For n As Integer = UBound(modificators) To 0 Step -1
+                nAttempts *= threadsN(n)
+                If nAttempts > 1000 And threads < Environment.ProcessorCount Then
+                    threads *= threadsN(n)
+                    multithreadOnN.Add(n)
+                End If
+            Next n
+            If multithreadOnN.Count = 0 Then
+                For n As Integer = 0 To UBound(modificators) Step 1
+                    If threadsN(n) > 1 Then
+                        multithreadOnN.Add(n)
+                        Exit For
+                    End If
+                Next n
+            End If
+        End Sub
+
+        Public Function FastCopy() As RecursiveApplyModificatorsData
+            Dim r As New RecursiveApplyModificatorsData
+            r.units = units
+            r.preservedUnit = preservedUnit
+            r.notPreservedUnit = notPreservedUnit
+            r.modificators = modificators
+            r.currentResult = CType(currentResult.Clone, Integer())
+            r.bestResult = CType(bestResult.Clone, Integer())
+            r.bestValue = bestValue
+            r.wantFValue = wantFValue
+            r.totalAttempts = totalAttempts
+            r.forceExit = forceExit
+            r.baseUnitStats = baseUnitStats
+            r.baseUnitPower = baseUnitPower
+            r.baseModificators = baseModificators
+            r.basePowerChange = basePowerChange
+            r.unitWeight = unitWeight
+            r.weightSum = weightSum
+            r.PowerChangeSingleMod = PowerChangeSingleMod
+            r.multithreadOnN = multithreadOnN
+            Return r
+        End Function
+
+    End Class
+    Private Sub RecursiveApplyModificators(ByRef rData As RecursiveApplyModificatorsData, ByVal n As Integer)
+        If rData.forceExit Then Exit Sub
+        If n <= UBound(rData.modificators) Then
+            Dim skipPreserved As Boolean = False
+            Dim skipRandom As Boolean = False
+            Call RecurseLayer(rData, n, rData.notPreservedUnit, skipPreserved, skipRandom)
+            If Not skipPreserved Then
+                Call RecurseLayer(rData, n, rData.preservedUnit, skipPreserved, skipRandom)
+            End If
+            If Not skipRandom Then
+                Dim r As Integer = rndgen.RndIntFast(0, rData.notPreservedUnit.Length + rData.preservedUnit.Length - 1)
+                Dim unitPos As Integer
+                If r > UBound(rData.notPreservedUnit) Then
+                    unitPos = rData.preservedUnit(r - UBound(rData.notPreservedUnit))
+                Else
+                    unitPos = rData.notPreservedUnit(r)
+                End If
+                rData.currentResult(n) = unitPos
+                Call RecursiveApplyModificators(rData, n + 1)
+            End If
+        Else
+            rData.totalAttempts += 1
+            Dim total As Double = 1
+            Dim v As Double
+            Dim mods(UBound(rData.units)) As List(Of AllDataStructues.Modificator)
+            For i As Integer = 0 To UBound(mods) Step 1
+                mods(i) = New List(Of AllDataStructues.Modificator)
+            Next i
+            For i As Integer = 0 To UBound(rData.currentResult) Step 1
+                mods(rData.currentResult(i)).Add(rData.modificators(i))
+            Next i
+            For i As Integer = 0 To UBound(mods) Step 1
+                v = AllDataStructues.Modificator.UnitPowerChange(rData.units(i).unit, _
+                                                                 rData.baseUnitStats(i), _
+                                                                 rData.baseUnitPower(i), _
+                                                                 rData.baseModificators(i), _
+                                                                 rData.basePowerChange(i), _
+                                                                 mods(i))
+                Call AddModificatorEffect(total, v, rData.unitWeight(i), rData.weightSum)
+            Next i
+            Dim replace As Boolean
+            If rData.bestValue < 0 Then
+                replace = True
+            ElseIf Math.Abs(rData.wantFValue - total) < Math.Abs(rData.wantFValue - rData.bestValue) Then
+                replace = True
+            ElseIf Math.Abs(rData.wantFValue - total) = Math.Abs(rData.wantFValue - rData.bestValue) Then
+                If rndgen.RndDblFast(0, 1) > 0.5 Then replace = True
+            Else
+                replace = False
+            End If
+            If replace Then
+                rData.bestValue = total
+                For i As Integer = 0 To UBound(rData.currentResult) Step 1
+                    rData.bestResult(i) = rData.currentResult(i)
+                Next i
+            End If
+
+            Dim d As Double = Math.Abs(rData.bestValue / rData.wantFValue - 1)
+            If (d < 0.001 And rData.totalAttempts > 1000) _
+            OrElse (d < 0.005 And rData.totalAttempts > 10000) _
+            OrElse (d < 0.01 And rData.totalAttempts > 100000) _
+            OrElse (d < 0.1 And rData.totalAttempts > 500000) _
+            OrElse (rData.totalAttempts > 1000000) Then
+                rData.forceExit = True
+            End If
+        End If
+    End Sub
+    Private Sub RecurseLayer(ByRef rData As RecursiveApplyModificatorsData, ByVal n As Integer, _
+                             ByVal unitPos() As Integer, ByRef skipPreserved As Boolean, ByRef skipRandom As Boolean)
+        If rData.multithreadOnN.Contains(n) Then
+            Dim pRData(UBound(unitPos)) As RecursiveApplyModificatorsData
+            For i As Integer = 0 To UBound(unitPos) Step 1
+                If Not rData.PowerChangeSingleMod(unitPos(i), n) = 1 Then
+                    skipPreserved = True
+                    skipRandom = True
+                    Exit For
+                End If
+            Next i
+            Dim trData As RecursiveApplyModificatorsData = rData
+            Parallel.For(0, unitPos.Length, _
+             Sub(i As Integer)
+                 If Not trData.PowerChangeSingleMod(unitPos(i), n) = 1 Then
+                     pRData(i) = trData.FastCopy
+                     pRData(i).currentResult(n) = unitPos(i)
+                     Call RecursiveApplyModificators(pRData(i), n + 1)
+                 End If
+             End Sub)
+            Dim parallelAttempts As Integer = 0
+            For i As Integer = 0 To UBound(unitPos) Step 1
+                If Not IsNothing(pRData(i)) Then
+                    rData.forceExit = pRData(i).forceExit
+                    parallelAttempts += pRData(i).totalAttempts - rData.totalAttempts
+                    If Math.Abs(rData.wantFValue - pRData(i).bestValue) <= Math.Abs(rData.wantFValue - rData.bestValue) Then
+                        rData.bestValue = pRData(i).bestValue
+                        For k As Integer = 0 To UBound(rData.currentResult) Step 1
+                            rData.bestResult(k) = pRData(i).bestResult(k)
+                        Next k
+                    End If
+                End If
+            Next i
+            rData.totalAttempts += parallelAttempts
+        Else
+            For i As Integer = 0 To UBound(unitPos) Step 1
+                If Not rData.PowerChangeSingleMod(unitPos(i), n) = 1 Then
+                    skipPreserved = True
+                    skipRandom = True
+                    rData.currentResult(n) = unitPos(i)
+                    Call RecursiveApplyModificators(rData, n + 1)
+                End If
+            Next i
+        End If
     End Sub
 
     Private Function GenStackMultithread(ByVal GenSettings As AllDataStructues.CommonStackCreationSettings, _
@@ -2496,8 +2843,19 @@ Public Class Common
         Dim result, name As String
         result = vbNewLine & "----Excluded objects list----"
         For Each item As String In excludedObjects
-            name = rStack.FindUnitStats(item).name
-            If name = "" Then name = rStack.FindItemStats(item).name
+            name = ""
+            If name = "" Then
+                Dim f As AllDataStructues.Unit = rStack.FindUnitStats(item)
+                If Not IsNothing(f) Then name = f.name
+            End If
+            If name = "" Then
+                Dim f As AllDataStructues.Item = rStack.FindItemStats(item)
+                If Not IsNothing(f) Then name = f.name
+            End If
+            If name = "" Then
+                Dim f As AllDataStructues.Spell = rStack.FindSpellStats(item)
+                If Not IsNothing(f) Then name = f.name
+            End If
             If name = "" AndAlso rStack.comm.itemType.ContainsValue(item.ToUpper) Then name = "item type"
             If name = "" Then name = "I don't know what is that"
             result &= vbNewLine & item & " - " & name
@@ -2506,7 +2864,11 @@ Public Class Common
 
         result = vbNewLine & "----Custom units races list----"
         For Each item As String In customRace.Keys
-            name = rStack.FindUnitStats(item).name
+            name = ""
+            If name = "" Then
+                Dim f As AllDataStructues.Unit = rStack.FindUnitStats(item)
+                If Not IsNothing(f) Then name = f.name
+            End If
             If name = "" Then name = "I don't know what is that"
             result &= vbNewLine & item & " - " & Races.Item(customRace.Item(item).ToUpper) & " - " & name
         Next item
@@ -2521,7 +2883,11 @@ Public Class Common
 
         result = vbNewLine & "----Loot item chance multipliers list----"
         For Each item As String In LootItemChanceMultiplier.Keys
-            name = rStack.FindItemStats(item).name
+            name = ""
+            If name = "" Then
+                Dim f As AllDataStructues.Item = rStack.FindItemStats(item)
+                If Not IsNothing(f) Then name = f.name
+            End If
             If name = "" Then name = "I don't know what is that"
             result &= vbNewLine & item & " - " & LootItemChanceMultiplier.Item(item) & " - " & name
         Next item
@@ -2529,12 +2895,20 @@ Public Class Common
 
         result = vbNewLine & "----Sole units list----"
         For Each item As String In SoleUnits.Keys
-            name = rStack.FindUnitStats(item).name
+            name = ""
+            If name = "" Then
+                Dim f As AllDataStructues.Unit = rStack.FindUnitStats(item)
+                If Not IsNothing(f) Then name = f.name
+            End If
             If name = "" Then name = "???"
             result &= vbNewLine & item & " - " & name & " // "
             Dim s As String = ""
             For Each u As String In SoleUnits.Item(item)
-                name = rStack.FindUnitStats(u).name
+                name = ""
+                If name = "" Then
+                    Dim f As AllDataStructues.Unit = rStack.FindUnitStats(u)
+                    If Not IsNothing(f) Then name = f.name
+                End If
                 If name = "" Then name = "???"
                 If Not s = "" Then s &= " # "
                 s &= u & " - " & name
@@ -2545,7 +2919,11 @@ Public Class Common
 
         result = vbNewLine & "----Big stack units list----"
         For Each item As String In BigStackUnits.Keys
-            name = rStack.FindUnitStats(item).name
+            name = ""
+            If name = "" Then
+                Dim f As AllDataStructues.Unit = rStack.FindUnitStats(item)
+                If Not IsNothing(f) Then name = f.name
+            End If
             If name = "" Then name = "I don't know what is that"
             result &= vbNewLine & item & " - " & name & " - " & BigStackUnits.Item(item)
         Next item
@@ -2999,6 +3377,13 @@ Public Class AllDataStructues
         ''' <summary>True, если отряд является внутренней охраной города</summary>
         Dim isInternalCityGuard As Boolean
 
+        ''' <summary>Список модификаторов для лидера</summary>
+        Dim LeaderModificators As List(Of String)
+        ''' <summary>Список модификаторов, которые нужно распределить между юнитами</summary>
+        Dim UnitsModificators As List(Of String)
+        ''' <summary>Во сколько раз отряд стал сильнее из-за модификаторов</summary>
+        Dim ModificatorsEffect As Double
+
         ''' <summary>
         ''' True, если в preservedUnits есть лидер
         ''' </summary>
@@ -3044,7 +3429,10 @@ Public Class AllDataStructues
                                           .shopContent = CopyList(v.shopContent), _
                                           .isInternalCityGuard = v.isInternalCityGuard, _
                                           .WeightedOverlevel = v.WeightedOverlevel, _
-                                          .preservedUnits = CopyList(v.preservedUnits)}
+                                          .preservedUnits = CopyList(v.preservedUnits), _
+                                          .LeaderModificators = CopyList(v.LeaderModificators), _
+                                          .UnitsModificators = CopyList(v.UnitsModificators), _
+                                          .ModificatorsEffect = v.ModificatorsEffect}
         End Function
         ''' <param name="RaceNumberToRaceChar">Преобразует номер расы в ее текстовый идентификатор. Если передать Nothing, то будут печататься номера рас</param>
         Public Shared Function Print(ByVal v As DesiredStats, ByRef RaceNumberToRaceChar As Dictionary(Of Integer, String)) As String
@@ -3055,7 +3443,7 @@ Public Class AllDataStructues
                     "ExpStackKilled" & vbTab & v.ExpStackKilled & vbNewLine & _
                     "Race" & vbTab & PrintList(v.Race, "+", RaceNumberToRaceChar) & vbNewLine & _
                     "Preserved units" & vbNewLine & PrintList(v.preservedUnits, vbNewLine) & vbNewLine & _
-                    "Has preserved leader" & vbNewLine & v.hasPreservedLeader & vbNewLine
+                    "Has preserved leader" & vbNewLine & v.HasPreservedLeader & vbNewLine
 
                 s &= "StackSize" & vbTab & v.StackSize & vbNewLine & _
                      "MaxGiants" & vbTab & v.MaxGiants & vbNewLine & _
@@ -3065,6 +3453,10 @@ Public Class AllDataStructues
                 s &= "LootCost" & vbTab & v.LootCost & vbNewLine & _
                      "IsInternalCityGuard" & vbTab & v.isInternalCityGuard & vbNewLine & _
                      AllDataStructues.LootGenSettings.Print(v.IGen) & vbNewLine
+
+                s &= "ModificatorsEffect" & vbTab & v.ModificatorsEffect & vbNewLine & _
+                     "LeaderModificators" & vbTab & PrintList(v.LeaderModificators, "+") & vbNewLine & _
+                     "UnitsModificators" & vbTab & PrintList(v.UnitsModificators, "+") & vbNewLine
             Else
                 s = "ID" & vbTab & v.LocationName & vbNewLine & _
                     "ShopContent" & vbTab & PrintList(v.shopContent, "+") & vbNewLine
@@ -3166,43 +3558,113 @@ Public Class AllDataStructues
         End Class
     End Structure
 
-    Public Structure Unit
-        ''' <summary>Имя</summary>
-        Dim name As String
-        ''' <summary>Базовый уровень</summary>
-        Dim level As Integer
-        ''' <summary>Номер расы</summary>
-        Dim race As Integer
+    Public Class UnitBattleNumericValues
+        ''' <summary>Очки здоровья</summary>
+        Public hp As Integer
+        ''' <summary>Броня</summary>
+        Public armor As Integer
+        ''' <summary>Урон</summary>
+        Public damage As Integer
+        ''' <summary>Восстановление здоровья</summary>
+        Public heal As Integer
+        ''' <summary>Точность основной атаки юнита</summary>
+        Public accuracy As Integer
+        ''' <summary>Инициатива юнита</summary>
+        Public initiative As Integer
+
+        Public Shared Function BaseBattleNumericStats(ByRef unit As Stack.UnitInfo) As UnitBattleNumericValues
+            Return BaseBattleNumericStats(unit.unit, unit.level)
+        End Function
+        Public Shared Function BaseBattleNumericStats(ByRef unit As Unit, _
+                                                      ByVal unitLevel As Integer) As UnitBattleNumericValues
+            Dim base As New UnitBattleNumericValues
+
+            base.accuracy = Math.Min(unit.accuracy + unit.GetAccuracyOverlevel(unitLevel), 100)
+            base.armor = Math.Min(unit.armor + unit.GetArmorOverlevel(unitLevel), 90)
+            If unit.damage > 0 Then base.damage = unit.damage + unit.GetDamageOverlevel(unitLevel)
+            If unit.heal > 0 Then base.heal = unit.heal + unit.GetHealOverlevel(unitLevel)
+            base.hp = unit.hp + unit.GetHPOverlevel(unitLevel)
+            base.initiative = unit.initiative + unit.GetInitiativeOverlevel(unitLevel)
+
+            If unit.heal > 0 And unit.damage > 0 Then Throw New Exception("unit.heal > 0 And unit.damage > 0")
+            Return base
+        End Function
+
+        Public Shared Function UnitPower(ByRef stats As UnitBattleNumericValues) As Double
+            Dim effHP As Double = CDbl(stats.hp) / (1 - 0.01 * CDbl(stats.armor))
+            Dim d As Double = stats.damage + stats.heal
+            If d = 0 Then d = 0.33 * effHP
+            Dim effAction As Double = CDbl(stats.accuracy) * d
+            Dim ini As Double = 1 + 0.02 * CDbl(stats.initiative - 50)
+            Return effHP * effAction * ini
+        End Function
+
+        Public Shared Function Copy(ByRef v As UnitBattleNumericValues) As UnitBattleNumericValues
+            Dim r As New UnitBattleNumericValues
+            r.accuracy = v.accuracy
+            r.armor = v.armor
+            r.damage = v.damage
+            r.heal = v.heal
+            r.hp = v.hp
+            r.initiative = v.initiative
+            Return r
+        End Function
+    End Class
+    Public Class UnitNumericValues
+        Inherits UnitBattleNumericValues
+
         ''' <summary>Опыт за убийство юнита</summary>
-        Dim EXPkilled As Integer
+        Public EXPkilled As Integer
         ''' <summary>Опыт для апа уровня</summary>
-        Dim EXPnext As Integer
-        ''' <summary>Лидерство от 0 до 6</summary>
-        Dim leadership As Integer
-        ''' <summary>Область атаки.</summary>
-        Dim reach As Integer
-        ''' <summary>GxxxUUxxxx</summary>
-        Dim unitID As String
-        ''' <summary>True, если занимает одну клетку</summary>
-        Dim small As Boolean
-        ''' <summary>True, если может находиться только на воде</summary>
-        Dim waterOnly As Boolean
-        ''' <summary>Класс юнита</summary>
-        Dim unitBranch As Integer
+        Public EXPnext As Integer
         ''' <summary>Цена найма юнита</summary>
-        Dim unitCost As Cost
+        Public unitCost As New Cost
+    End Class
+
+    Public Class Unit
+        Inherits UnitNumericValues
+
+        ''' <summary>Имя</summary>
+        Public name As String
+        ''' <summary>Базовый уровень</summary>
+        Public level As Integer
+        ''' <summary>Номер расы</summary>
+        Public race As Integer
+        ''' <summary>Лидерство от 0 до 6</summary>
+        Public leadership As Integer
+        ''' <summary>Область атаки.</summary>
+        Public reach As Integer
+        ''' <summary>GxxxUUxxxx</summary>
+        Public unitID As String
+        ''' <summary>True, если занимает одну клетку</summary>
+        Public small As Boolean
+        ''' <summary>True, если может находиться только на воде</summary>
+        Public waterOnly As Boolean
+        ''' <summary>Класс юнита</summary>
+        Public unitBranch As Integer
         ''' <summary>Уровень, до которого статы растут согласно dynUpgr1</summary>
-        Dim dynUpgradeLevel As Integer
+        Public dynUpgradeLevel As Integer
         ''' <summary>Рост статов до dynUpgradeLevel</summary>
-        Dim dynUpgrade1 As DynUpgrade
+        Public dynUpgrade1 As New DynUpgrade
         ''' <summary>Рост статов после dynUpgradeLevel</summary>
-        Dim dynUpgrade2 As DynUpgrade
+        Public dynUpgrade2 As New DynUpgrade
         ''' <summary>Можно ли использовать юнита. 0 - неизвестно, -1 - нет, 1 - да</summary>
         Friend useState As Integer
         ''' <summary>True - юнит находится в ветке развития играбельной расы</summary>
         Friend fromRaceBranch As Boolean
 
-        Public Shared Function Copy(ByVal v As Unit) As Unit
+        ''' <summary>
+        ''' Защита или иммунитет к источнику атаки.
+        ''' Ключ - источник атаки, значение - тип сопротивления.
+        ''' </summary>
+        Public ASourceImmunity As New Dictionary(Of Integer, Integer)
+        ''' <summary>
+        ''' Защита или иммунитет к типу атаки.
+        ''' Ключ - тип атаки, значение - тип сопротивления.
+        ''' </summary>
+        Public AClassImmunity As New Dictionary(Of Integer, Integer)
+
+        Public Shared Shadows Function Copy(ByVal v As Unit) As Unit
             Return New Unit With {.name = v.name, _
                                   .level = v.level, _
                                   .race = v.race, _
@@ -3218,62 +3680,104 @@ Public Class AllDataStructues
                                   .dynUpgradeLevel = v.dynUpgradeLevel, _
                                   .dynUpgrade1 = DynUpgrade.Copy(v.dynUpgrade1), _
                                   .dynUpgrade2 = DynUpgrade.Copy(v.dynUpgrade2), _
-                                  .useState = v.useState}
+                                  .useState = v.useState, _
+                                  .fromRaceBranch = v.fromRaceBranch, _
+                                  .hp = v.hp, _
+                                  .armor = v.armor, _
+                                  .damage = v.damage, _
+                                  .heal = v.heal, _
+                                  .accuracy = v.accuracy, _
+                                  .initiative = v.initiative, _
+                                  .ASourceImmunity = CopyDictionaty(v.ASourceImmunity), _
+                                  .AClassImmunity = CopyDictionaty(v.AClassImmunity)}
         End Function
 
         ''' <summary>Вернет прибавку к опыту за убийство юнита при получении им оверлевелов</summary>
         ''' <param name="unitLevel">Текущий уровень юнита</param>
         Public Function GetExpKilledOverlevel(ByVal unitLevel As Integer) As Integer
-            If level >= unitLevel Then Return 0
-            Dim d1 As Integer = unitLevel - level
-            If unitLevel < dynUpgradeLevel Then
-                Return dynUpgrade1.EXPkilled * d1
-            Else
-                Dim d2 As Integer = dynUpgradeLevel - level
-                Return dynUpgrade1.EXPkilled * d2 + dynUpgrade2.EXPkilled * (d1 - d2)
-            End If
+            Return OverlevelValue(unitLevel, dynUpgrade1.EXPkilled, dynUpgrade2.EXPkilled)
         End Function
         ''' <summary>Вернет прибавку к планке опыта юнита при получении им оверлевелов</summary>
         ''' <param name="unitLevel">Текущий уровень юнита</param>
         Public Function GetExpNextOverlevel(ByVal unitLevel As Integer) As Integer
-            If level >= unitLevel Then Return 0
-            Dim d1 As Integer = unitLevel - level
-            If unitLevel < dynUpgradeLevel Then
-                Return dynUpgrade1.EXPnext * d1
-            Else
-                Dim d2 As Integer = dynUpgradeLevel - level
-                Return dynUpgrade1.EXPnext * d2 + dynUpgrade2.EXPnext * (d1 - d2)
-            End If
+            Return OverlevelValue(unitLevel, dynUpgrade1.EXPnext, dynUpgrade2.EXPnext)
+        End Function
+        ''' <summary>Вернет прибавку к здоровью юнита при получении им оверлевелов</summary>
+        ''' <param name="unitLevel">Текущий уровень юнита</param>
+        Public Function GetHPOverlevel(ByVal unitLevel As Integer) As Integer
+            Return OverlevelValue(unitLevel, dynUpgrade1.hp, dynUpgrade2.hp)
+        End Function
+        ''' <summary>Вернет прибавку к броне юнита при получении им оверлевелов</summary>
+        ''' <param name="unitLevel">Текущий уровень юнита</param>
+        Public Function GetArmorOverlevel(ByVal unitLevel As Integer) As Integer
+            Return OverlevelValue(unitLevel, dynUpgrade1.armor, dynUpgrade2.armor)
+        End Function
+        ''' <summary>Вернет прибавку к броне юнита при получении им оверлевелов</summary>
+        ''' <param name="unitLevel">Текущий уровень юнита</param>
+        Public Function GetDamageOverlevel(ByVal unitLevel As Integer) As Integer
+            Return OverlevelValue(unitLevel, dynUpgrade1.damage, dynUpgrade2.damage)
+        End Function
+        ''' <summary>Вернет прибавку к броне юнита при получении им оверлевелов</summary>
+        ''' <param name="unitLevel">Текущий уровень юнита</param>
+        Public Function GetHealOverlevel(ByVal unitLevel As Integer) As Integer
+            Return OverlevelValue(unitLevel, dynUpgrade1.heal, dynUpgrade2.heal)
+        End Function
+        ''' <summary>Вернет прибавку к броне юнита при получении им оверлевелов</summary>
+        ''' <param name="unitLevel">Текущий уровень юнита</param>
+        Public Function GetAccuracyOverlevel(ByVal unitLevel As Integer) As Integer
+            Return OverlevelValue(unitLevel, dynUpgrade1.accuracy, dynUpgrade2.accuracy)
+        End Function
+        ''' <summary>Вернет прибавку к броне юнита при получении им оверлевелов</summary>
+        ''' <param name="unitLevel">Текущий уровень юнита</param>
+        Public Function GetInitiativeOverlevel(ByVal unitLevel As Integer) As Integer
+            Return OverlevelValue(unitLevel, dynUpgrade1.initiative, dynUpgrade2.initiative)
         End Function
         ''' <summary>Вернет прибавку к стоимости найма юнита при получении им оверлевелов</summary>
         ''' <param name="unitLevel">Текущий уровень юнита</param>
         Public Function GetCostOverlevel(ByVal unitLevel As Integer) As Cost
+            Return OverlevelValue(unitLevel, dynUpgrade1.unitCost, dynUpgrade2.unitCost)
+        End Function
+
+        Private Function OverlevelValue(ByVal unitLevel As Integer, _
+                                        ByVal vDynUpgr1 As Integer, ByVal vDynUpgr2 As Integer) As Integer
+            If level >= unitLevel Then Return 0
+            Dim d1 As Integer = unitLevel - level
+            If unitLevel < dynUpgradeLevel Then
+                Return vDynUpgr1 * d1
+            Else
+                Dim d2 As Integer = dynUpgradeLevel - level
+                Return vDynUpgr1 * d2 + vDynUpgr2 * (d1 - d2)
+            End If
+        End Function
+        Private Function OverlevelValue(ByVal unitLevel As Integer, _
+                                        ByVal vDynUpgr1 As Cost, ByVal vDynUpgr2 As Cost) As Cost
             If level >= unitLevel Then Return New Cost
             Dim d1 As Integer = unitLevel - level
             If unitLevel < dynUpgradeLevel Then
-                Return dynUpgrade1.unitCost * d1
+                Return vDynUpgr1 * d1
             Else
                 Dim d2 As Integer = dynUpgradeLevel - level
-                Return dynUpgrade1.unitCost * d2 + dynUpgrade2.unitCost * (d1 - d2)
+                Return vDynUpgr1 * d2 + vDynUpgr2 * (d1 - d2)
             End If
         End Function
 
-    End Structure
+    End Class
 
-    Public Structure DynUpgrade
-        ''' <summary>Опыт за убийство юнита</summary>
-        Dim EXPkilled As Integer
-        ''' <summary>Опыт для апа уровня</summary>
-        Dim EXPnext As Integer
-        ''' <summary>Цена найма юнита</summary>
-        Dim unitCost As Cost
+    Public Class DynUpgrade
+        Inherits UnitNumericValues
 
-        Public Shared Function Copy(ByVal v As DynUpgrade) As DynUpgrade
+        Public Shared Shadows Function Copy(ByVal v As DynUpgrade) As DynUpgrade
             Return New DynUpgrade With {.EXPkilled = v.EXPkilled, _
                                         .EXPnext = v.EXPnext, _
-                                        .unitCost = Cost.Copy(v.unitCost)}
+                                        .unitCost = Cost.Copy(v.unitCost), _
+                                        .hp = v.hp, _
+                                        .armor = v.armor, _
+                                        .damage = v.damage, _
+                                        .heal = v.heal, _
+                                        .accuracy = v.accuracy, _
+                                        .initiative = v.initiative}
         End Function
-    End Structure
+    End Class
 
     Public Class Cost
         ''' <summary>Золото</summary>
@@ -3481,15 +3985,15 @@ Public Class AllDataStructues
 
     End Class
 
-    Public Structure Item
+    Public Class Item
         ''' <summary>Название</summary>
-        Dim name As String
+        Public name As String
         ''' <summary>GxxxIGxxxx</summary>
-        Dim itemID As String
+        Public itemID As String
         ''' <summary>Описание типов в ./Resources/Items.txt</summary>
-        Dim type As GenDefaultValues.ItemTypes
+        Public type As GenDefaultValues.ItemTypes
         ''' <summary>Цена покупки предмета. При продаже цена в пять раз меньше</summary>
-        Dim itemCost As Cost
+        Public itemCost As New Cost
         ''' <summary>Сумма полей itemCost</summary>
         Friend itemCostSum As Double
         ''' <summary>Можно ли использовать предмет. 0 - неизвестно, -1 - нет, 1 - да</summary>
@@ -3503,23 +4007,23 @@ Public Class AllDataStructues
                                   .itemCostSum = v.itemCostSum, _
                                   .useState = v.useState}
         End Function
-    End Structure
+    End Class
 
-    Public Structure Spell
+    Public Class Spell
         ''' <summary>ID заклинания</summary>
-        Dim spellID As String
+        Public spellID As String
         ''' <summary>Название заклинания</summary>
-        Dim name As String
+        Public name As String
         ''' <summary>Цена изучения для каждого лорда. Ключ - id лорда в верхнем регистре. Список лордов хранится в Common.LordsRace</summary>
-        Dim researchCost As Dictionary(Of String, AllDataStructues.Cost)
+        Public researchCost As New Dictionary(Of String, AllDataStructues.Cost)
         ''' <summary>Цена применения</summary>
-        Dim castCost As AllDataStructues.Cost
+        Public castCost As New AllDataStructues.Cost
         ''' <summary>Уровень заклинания</summary>
-        Dim level As Integer
+        Public level As Integer
         ''' <summary>Тип заклинания</summary>
-        Dim category As Integer
+        Public category As Integer
         ''' <summary>Площадь действия заклинания</summary>
-        Dim area As Integer
+        Public area As Integer
 
         Public Shared Function Copy(ByRef v As Spell) As Spell
             Dim r As New Dictionary(Of String, AllDataStructues.Cost)
@@ -3534,7 +4038,7 @@ Public Class AllDataStructues
                                     .spellID = v.spellID, _
                                     .researchCost = r}
         End Function
-    End Structure
+    End Class
 
     Public Class LootGenSettings
         ''' <summary>Cферы, талисманы и свитки</summary>
@@ -3738,6 +4242,312 @@ Public Class AllDataStructues
         End Function
     End Structure
 
+    Public Class Modificator
+        ''' <summary>
+        ''' GxxxUMxxxx
+        ''' </summary>
+        Public id As String
+        ''' <summary>
+        ''' Тип модификатора.
+        ''' Поле SOURCE в Gmodif
+        ''' </summary>
+        Public source As Type
+        ''' <summary>
+        ''' Список эффектов
+        ''' </summary>
+        Public effect As New List(Of ModifEffect)
+
+        Public Enum Type
+            ''' <summary>
+            ''' L_UNIT
+            ''' </summary>
+            Defence = 0
+            ''' <summary>
+            ''' L_STACK
+            ''' </summary>
+            LeaderSkill = 1
+            '  ''' <summary>
+            '  ''' L_STACK_LEADER
+            '  ''' </summary>
+            '  L_STACK_LEADER = 2
+            ''' <summary>
+            ''' L_ATTACK
+            ''' </summary>
+            Offence = 3
+        End Enum
+
+        Public Class ModifEffect
+            ''' <summary>
+            ''' Тип модификатора
+            ''' </summary>
+            Public type As EffectType
+
+            ''' <summary>
+            ''' Поле PERCENT в GmodifL
+            ''' </summary>
+            Public percent As Integer
+            ''' <summary>
+            ''' Поле NUMBER в GmodifL
+            ''' </summary>
+            Public number As Integer
+            ''' <summary>
+            ''' Поле ABILITY в GmodifL
+            ''' </summary>
+            Public ability As Integer
+            ''' <summary>
+            ''' Поле IMMUNITY в GmodifL
+            ''' </summary>
+            Public immunASource As Integer
+            ''' <summary>
+            ''' Поле IMMUNECAT в GmodifL
+            ''' </summary>
+            Public immunASourceCat As Integer
+            ''' <summary>
+            ''' Поле IMMUNITYC в GmodifL
+            ''' </summary>
+            Public immunAClass As Integer
+            ''' <summary>
+            ''' Поле IMMUNECATC в GmodifL
+            ''' </summary>
+            Public immunAClassCat As Integer
+            ''' <summary>
+            ''' Поле Move в GmodifL
+            ''' </summary>
+            Public move As Integer
+
+            Public Enum EffectType
+                ScoutingRange = 1
+                Leadership = 2
+                Accuracy = 3
+                Damage = 4
+                Armor = 5
+                HitPoints = 6
+                MovePoints = 7
+                Initiative = 9
+                MoveAbility = 10
+                LeaderAbility = 11
+                ImmunitySource = 12
+                Regeneration = 13
+                ImmunityClass = 14
+                Vampirism = 15
+                FastRetreat = 16
+                LowerPurchaseCost = 17
+            End Enum
+        End Class
+
+        Public Shared Function TotalLeadershipChange(ByRef modificators As List(Of String), _
+                                                     ByRef randStack As RandStack) As Integer
+            Dim n As Integer = 0
+            If Not IsNothing(modificators) Then
+                For Each m As String In modificators
+                    Dim modif As AllDataStructues.Modificator = randStack.FindModificatorStats(m)
+                    If Not IsNothing(modif) Then n += modif.GetLeadershipChange
+                Next m
+            End If
+            Return n
+        End Function
+        Public Function GetLeadershipChange() As Integer
+            For Each e As ModifEffect In effect
+                If e.type = ModifEffect.EffectType.Leadership Then Return e.number
+            Next e
+            Return 0
+        End Function
+
+        Public Shared Function UnitPowerChange(ByRef unit As Stack.UnitInfo, ByRef R As RandStack) As Double
+            If unit.modificators.Count = 0 Then Return 1
+            Dim b As UnitBattleNumericValues = UnitBattleNumericValues.BaseBattleNumericStats(unit)
+            Dim p As Double = UnitBattleNumericValues.UnitPower(b)
+            Dim m As New List(Of Modificator)
+            Call AddModificators(m, unit.modificators, R)
+            Return UnitPowerChange(unit.unit, b, p, m)
+        End Function
+        Public Shared Function UnitPowerChange(ByRef unit As Unit, _
+                                               ByRef base As UnitBattleNumericValues, _
+                                               ByRef baseUnitPower As Double, _
+                                               ByRef baseModificators As List(Of Modificator), _
+                                               ByRef basePowerChange As Double, _
+                                               ByRef modificator As Modificator) As Double
+            Dim m As New List(Of Modificator)
+            m.Add(modificator)
+            Return UnitPowerChange(unit, base, baseUnitPower, baseModificators, basePowerChange, m)
+        End Function
+        Public Shared Function UnitPowerChange(ByRef unit As Unit, _
+                                               ByRef base As UnitBattleNumericValues, _
+                                               ByRef baseUnitPower As Double, _
+                                               ByRef baseModificators As List(Of Modificator), _
+                                               ByRef basePowerChange As Double, _
+                                               ByRef modificators As List(Of Modificator)) As Double
+            If modificators.Count = 0 Then Return 1
+            Dim m As New List(Of Modificator)
+            Call AddModificators(m, baseModificators)
+            Call AddModificators(m, modificators)
+            Dim n2 As Double = UnitPowerChange(unit, base, baseUnitPower, m)
+            Return n2 / basePowerChange
+        End Function
+        Public Shared Function UnitPowerChange(ByRef unit As Unit, _
+                                               ByRef base As UnitBattleNumericValues, _
+                                               ByRef baseUnitPower As Double, _
+                                               ByRef modificators As List(Of Modificator)) As Double
+            Dim r As Double = 1
+            If modificators.Count > 0 Then
+                Dim modif As UnitBattleNumericValues = UnitNumericValues.Copy(base)
+                For Each m As Modificator In modificators
+                    Call ModifyNumericStats(m.effect, modif)
+                Next m
+                Dim n As Double = UnitBattleNumericValues.UnitPower(modif) / baseUnitPower
+                Dim w As Double = WardsEffect(unit, TotalSourceWards(modificators), TotalClassWards(modificators))
+                r = n * w
+            End If
+            Return r
+        End Function
+        Public Shared Sub AddModificators(ByRef dest As List(Of Modificator), ByRef content As List(Of String), ByRef R As RandStack)
+            For Each id As String In content
+                dest.Add(R.FindModificatorStats(id))
+            Next id
+        End Sub
+        Public Shared Sub AddModificators(ByRef dest As List(Of Modificator), ByRef content As List(Of Modificator))
+            For Each modif As Modificator In content
+                dest.Add(modif)
+            Next modif
+        End Sub
+
+        Private Shared Sub ModifyNumericStats(ByRef effect As List(Of ModifEffect), _
+                                              ByRef modif As UnitBattleNumericValues)
+
+            For Each e As ModifEffect In effect
+                If e.type = ModifEffect.EffectType.Accuracy Then
+                    Call MultiplicativeEffect(modif.accuracy, e.percent, 100)
+                ElseIf e.type = ModifEffect.EffectType.Armor Then
+                    Call AdditiveEffect(modif.armor, e.number)
+                ElseIf e.type = ModifEffect.EffectType.Damage Then
+                    Call MultiplicativeEffect(modif.damage, e.percent)
+                ElseIf e.type = ModifEffect.EffectType.HitPoints Then
+                    If e.number = 1 Then
+                        Call MultiplicativeEffect(modif.hp, e.percent)
+                    ElseIf e.number = 2 Then
+                        Call AdditiveEffect(modif.hp, e.percent)
+                    Else
+                        Throw New Exception("Unexpected NUMBER field in type " & e.type)
+                    End If
+                ElseIf e.type = ModifEffect.EffectType.Initiative Then
+                    Call MultiplicativeEffect(modif.initiative, e.percent, 150)
+                ElseIf e.type = ModifEffect.EffectType.Vampirism Then
+                    Call MultiplicativeEffect(modif.damage, CInt(0.5 * e.percent))
+                End If
+            Next e
+        End Sub
+        Private Shared Function TotalSourceWards(ByRef modificators As List(Of Modificator)) As Dictionary(Of Integer, Integer)
+            Dim result As New Dictionary(Of Integer, Integer)
+            For Each m As Modificator In modificators
+                Dim r As Dictionary(Of Integer, Integer) = m.GetSourceWards
+                If r.Count > 0 Then
+                    For Each k As Integer In r.Keys
+                        If Not result.ContainsKey(k) Then
+                            result.Add(k, r.Item(k))
+                        ElseIf r.Item(k) > result.Item(k) Then
+                            result.Remove(k)
+                            result.Add(k, r.Item(k))
+                        End If
+                    Next k
+                End If
+            Next m
+            Return result
+        End Function
+        Private Function GetSourceWards() As Dictionary(Of Integer, Integer)
+            Dim result As New Dictionary(Of Integer, Integer)
+            For Each e As ModifEffect In effect
+                If e.type = ModifEffect.EffectType.ImmunitySource Then
+                    result.Add(e.immunASource, e.immunASourceCat)
+                End If
+            Next e
+            Return result
+        End Function
+        Private Shared Function TotalClassWards(ByRef modificators As List(Of Modificator)) As Dictionary(Of Integer, Integer)
+            Dim result As New Dictionary(Of Integer, Integer)
+            For Each m As Modificator In modificators
+                Dim r As Dictionary(Of Integer, Integer) = m.GetClassWards
+                If r.Count > 0 Then
+                    For Each k As Integer In r.Keys
+                        If Not result.ContainsKey(k) Then
+                            result.Add(k, r.Item(k))
+                        ElseIf r.Item(k) > result.Item(k) Then
+                            result.Remove(k)
+                            result.Add(k, r.Item(k))
+                        End If
+                    Next k
+                End If
+            Next m
+            Return result
+        End Function
+        Private Function GetClassWards() As Dictionary(Of Integer, Integer)
+            Dim result As New Dictionary(Of Integer, Integer)
+            For Each e As ModifEffect In effect
+                If e.type = ModifEffect.EffectType.ImmunityClass Then
+                    result.Add(e.immunAClass, e.immunAClassCat)
+                End If
+            Next e
+            Return result
+        End Function
+        Private Shared Function WardsEffect(ByRef unit As Unit, _
+                                            ByRef sourceWards As Dictionary(Of Integer, Integer), _
+                                            ByRef classWards As Dictionary(Of Integer, Integer)) As Double
+            Dim multiplier As Double = 1
+            For Each k As Integer In sourceWards.Keys
+                Dim type As Integer = k
+                Dim cat As Integer = sourceWards.Item(k)
+                Dim resBonus As Double = 1.09
+                Dim immBonus As Double = 1.15
+                If unit.ASourceImmunity.ContainsKey(type) Then
+                    If cat > unit.ASourceImmunity.Item(type) Then
+                        multiplier *= immBonus / resBonus
+                    End If
+                Else
+                    If cat = 2 Then
+                        multiplier *= resBonus
+                    ElseIf cat = 3 Then
+                        multiplier *= immBonus
+                    Else
+                        Throw New Exception("Unexpected IMMUNECAT field in type " & type)
+                    End If
+                End If
+            Next k
+            For Each k As Integer In classWards.Keys
+                Dim type As Integer = k
+                Dim cat As Integer = classWards.Item(k)
+                Dim resBonus As Double = 1.04
+                Dim immBonus As Double = 1.06
+                If unit.AClassImmunity.ContainsKey(type) Then
+                    If cat > unit.AClassImmunity.Item(type) Then
+                        multiplier *= immBonus / resBonus
+                    End If
+                Else
+                    If cat = 2 Then
+                        multiplier *= resBonus
+                    ElseIf cat = 3 Then
+                        multiplier *= immBonus
+                    Else
+                        Throw New Exception("Unexpected IMMUNECATC field in type " & type)
+                    End If
+                End If
+            Next k
+            Return multiplier
+        End Function
+
+        Private Shared Sub MultiplicativeEffect(ByRef currentValue As Integer, ByRef modifValue As Integer, _
+                                                Optional ByVal Cap As Integer = -1)
+            Dim v As Integer = CInt(Math.Floor(CDbl(currentValue) * (1 + 0.01 * CDbl(modifValue))))
+            If Cap > -1 Then v = Math.Min(v, Cap)
+            currentValue = v
+        End Sub
+        Private Shared Sub AdditiveEffect(ByRef currentValue As Integer, ByRef modifValue As Integer, _
+                                          Optional ByVal Cap As Integer = -1)
+            Dim v As Integer = currentValue + modifValue
+            If Cap > -1 Then v = Math.Min(v, Cap)
+            currentValue = v
+        End Sub
+
+    End Class
+
     Public MustInherit Class CommonCreationSettings
         '''<summary>Точка на карте, в которую добавляются предметы или отряд</summary>
         Public pos As Point
@@ -3821,6 +4631,18 @@ Public Class AllDataStructues
             For Each Item As Integer In v
                 result.Add(Item)
             Next Item
+        End If
+        Return result
+    End Function
+
+    Private Shared Function CopyDictionaty(ByRef v As Dictionary(Of Integer, Integer)) As Dictionary(Of Integer, Integer)
+        Dim result As Dictionary(Of Integer, Integer) = Nothing
+        If Not IsNothing(v) Then
+            result = New Dictionary(Of Integer, Integer)
+            Dim keys As List(Of Integer) = v.Keys.ToList
+            For Each k As Integer In keys
+                result.Add(k, v.Item(k))
+            Next k
         End If
         Return result
     End Function

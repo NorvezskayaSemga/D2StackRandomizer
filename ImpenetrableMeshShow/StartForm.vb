@@ -15,68 +15,6 @@ Friend Class StartForm
         MsgBox("Done")
     End Sub
 
-    Private Sub RndTest() Handles RndTestButton.Click
-        Dim r As New RndValueGen
-        'Dim vanillaR As New OriginalRndGenerator
-        Dim maxInt As Integer = Short.MaxValue
-
-        Dim steps As Integer = 10 ^ 7
-        Dim result(steps) As Double
-
-        Dim t11 As Integer = Environment.TickCount
-        For i As Integer = 0 To steps Step 1
-            result(i) = r.PRand(0, 1)
-        Next i
-        Dim t12 As Integer = Environment.TickCount
-        Dim u1 As Double = CalcUniformity(makeDistribution(result))
-
-        Dim t(8 * result.Length - 1) As Byte
-        For i As Integer = 0 To steps Step 1
-            Dim b() As Byte = BitConverter.GetBytes(result(i))
-            For j As Integer = 0 To UBound(b) Step 1
-                t(8 * i + j) = b(j)
-            Next j
-        Next i
-        IO.File.WriteAllBytes("./myRandomNumbers.txt", t)
-        Console.WriteLine("current rand: u= " & u1 & " t= " & t12 - t11)
-
-
-        Dim t21 As Integer = Environment.TickCount
-        For i As Integer = 0 To steps Step 1
-            'result(i) = vanillaR.randomNumberUpTo(maxInt) / (maxInt - 1)
-            result(i) = r.RndDblFast(0, 1)
-        Next i
-        Dim t22 As Integer = Environment.TickCount
-        Dim u2 As Double = CalcUniformity(makeDistribution(result))
-
-        Console.WriteLine("   test rand: u= " & u2 & " t= " & t22 - t21)
-    End Sub
-    Private Function makeDistribution(ByVal v() As Double) As Integer()
-        Dim dx As Double = 0.01
-        Dim result(1 / dx - 1) As Integer
-        For i As Integer = 0 To UBound(v) Step 1
-            For j As Integer = 0 To UBound(result) Step 1
-                If v(i) >= CDbl(j) * dx And v(i) < CDbl(j + 1) * dx Then
-                    result(j) += 1
-                    Exit For
-                End If
-            Next j
-        Next i
-        Return result
-    End Function
-    Private Function CalcUniformity(ByRef d() As Integer) As Double
-        Dim average As Integer
-        For j As Integer = 0 To UBound(d) Step 1
-            average += d(j)
-        Next j
-        average /= d.Length
-        Dim res As Double = 0
-        For j As Integer = 0 To UBound(d) Step 1
-            res += Math.Pow(d(j) - average, 2)
-        Next j
-        Return average / Math.Sqrt(res + 1)
-    End Function
-
     Private Sub GenButton_Click() Handles GenButton.Click
         'Call StackLocationsGen.PassageGuardPlacer.speedBanchmark()
         'Call ImpenetrableMeshGen.ActiveObjectsPlacer.speedBanchmark()
@@ -92,7 +30,7 @@ Friend Class StartForm
 
         Dim treesAmount() As Integer = {0, 20, 20, 20, 20, 20, 0, 0, 0, 0, 0, 0, 0, 0, 20}
 
-        Dim rstack As New RandStack(DefaultGenData)
+        Dim rstack As New RandStack(TestDataRead.DefaultGenData)
         Dim objCont As New ObjectsContentSet(rstack)
 
         'Dim ds As New AllDataStructues.DesiredStats With {.ExpBarAverage = 50, .ExpStackKilled = 56, .MaxGiants = 3, _
@@ -104,7 +42,7 @@ Friend Class StartForm
         Call comm.ReadExcludedObjectsList()
         Dim objSizeArray() As ImpenetrableObjects.GlobalMapDecoration = ReadObjSize()
 
-        Dim objplace As New ImpenetrableObjects(objSizeArray, False, ReadSpells, comm)
+        Dim objplace As New ImpenetrableObjects(objSizeArray, False, TestDataRead.ReadTestSpells, comm)
 
         Dim grid As Map
         Dim genTimeLimit As Integer = 10000
@@ -232,34 +170,8 @@ Friend Class StartForm
         PictureBox1.Image = img
     End Sub
 
-    Public Shared Function ReadSpells() As AllDataStructues.Spell()
-        Dim spells() As String = ValueConverter.TxtSplit(My.Resources.TestSpells)
-        Dim rspells() As String = ValueConverter.TxtSplit(My.Resources.TestSpellsRace)
-        Dim res(UBound(spells) - 1) As AllDataStructues.Spell
-        For i As Integer = 1 To UBound(spells) Step 1
-            Dim s() As String = spells(i).Split(" ")
-            res(i - 1) = New AllDataStructues.Spell With {.area = s(4), _
-                                                          .castCost = AllDataStructues.Cost.Read(s(3)), _
-                                                          .category = s(1), _
-                                                          .level = s(2), _
-                                                          .spellID = s(0).ToUpper, _
-                                                          .name = s(0) & "_test", _
-                                                          .researchCost = New Dictionary(Of String, AllDataStructues.Cost)}
-        Next i
-        For i As Integer = 1 To UBound(rspells) Step 1
-            Dim s() As String = rspells(i).Split(" ")
-            For j As Integer = 0 To UBound(res) Step 1
-                If res(j).spellID.ToUpper = s(1).ToUpper Then
-                    res(j).researchCost.Add(s(0).ToUpper, AllDataStructues.Cost.Read(s(2)))
-                    Exit For
-                End If
-            Next j
-        Next i
-        Return res
-    End Function
-
-    Public Function ReadObjSize() As ImpenetrableObjects.GlobalMapDecoration()
-        Dim t() As String = comm.TxtSplit(My.Resources.TestObjectSize)
+    Private Function ReadObjSize() As ImpenetrableObjects.GlobalMapDecoration()
+        Dim t() As String = ValueConverter.TxtSplit(My.Resources.TestObjectSize)
         Dim result(UBound(t) - 1) As ImpenetrableObjects.GlobalMapDecoration
         ObjectsSize.Clear()
         For i As Integer = 1 To UBound(t) Step 1
@@ -270,53 +182,285 @@ Friend Class StartForm
         Return result
     End Function
 
+End Class
+
+Public Class TestDataRead
+
+    Public Shared Function ReadTestSpells() As AllDataStructues.Spell()
+        Dim spells()() As String = TXTSplit(My.Resources.TestSpells, 5)
+        Dim rspells()() As String = TXTSplit(My.Resources.TestSpellsRace, 3)
+
+        Dim spellsHeader As Dictionary(Of String, Integer) = MakeHeader(spells(0))
+
+        Dim res(UBound(spells) - 1) As AllDataStructues.Spell
+        For i As Integer = 1 To UBound(spells) Step 1
+            Dim s() As String = spells(i)
+            res(i - 1) = New AllDataStructues.Spell With { _
+                    .area = GetField(spellsHeader, "AREA", s), _
+                    .castCost = AllDataStructues.Cost.Read(GetField(spellsHeader, "CASTING_C", s)), _
+                    .category = GetField(spellsHeader, "CATEGORY", s), _
+                    .level = GetField(spellsHeader, "LEVEL", s), _
+                    .spellID = GetField(spellsHeader, "SPELL_ID", s).ToUpper, _
+                    .name = GetField(spellsHeader, "SPELL_ID", s) & "_test"}
+        Next i
+        For i As Integer = 1 To UBound(rspells) Step 1
+            Dim s() As String = rspells(i)
+            For j As Integer = 0 To UBound(res) Step 1
+                If res(j).spellID.ToUpper = s(1).ToUpper Then
+                    res(j).researchCost.Add(s(0).ToUpper, AllDataStructues.Cost.Read(s(2)))
+                    Exit For
+                End If
+            Next j
+        Next i
+        Return res
+    End Function
+
     Public Shared Function ReadTestUnits(ByVal modName As String) As AllDataStructues.Unit()
-        Dim comm As New Common(modName)
-        Dim s() As String = comm.TxtSplit(My.Resources.TestUnitsTable)
-        Dim r() As String
-        Dim UnitsList(UBound(s) - 1) As AllDataStructues.Unit
-        For i As Integer = 1 To UBound(s) Step 1
-            r = s(i).Split(" ")
-            If r.Length = 12 Then
-                Do While Not r(0).Substring(0, 1).ToLower = "g" And r(0).Length > 1
-                    r(0) = r(0).Substring(1)
-                Loop
-                UnitsList(i - 1).unitID = r(0)
-                UnitsList(i - 1).level = r(2)
-                UnitsList(i - 1).race = r(3)
-                UnitsList(i - 1).unitBranch = r(4)
-                UnitsList(i - 1).small = r(5)
-                UnitsList(i - 1).EXPkilled = r(7)
-                UnitsList(i - 1).EXPnext = r(8)
-                UnitsList(i - 1).leadership = r(9)
-                UnitsList(i - 1).waterOnly = r(10)
-                UnitsList(i - 1).reach = r(11)
-                UnitsList(i - 1).name = UnitsList(i - 1).unitID & "_test"
-            End If
+        Dim units()() As String = TXTSplit(My.Resources.TestUnitsTable, 38)
+        Dim attacks()() As String = TXTSplit(My.Resources.TestAttacksTable, 19)
+        Dim gimmu()() As String = TXTSplit(My.Resources.TestGImmuTable, 3)
+        Dim gimmuc()() As String = TXTSplit(My.Resources.TestGImmuCTable, 3)
+        Dim dynupgr()() As String = TXTSplit(My.Resources.TestDynUpgr, 16)
+
+        Dim unitsHeader As Dictionary(Of String, Integer) = MakeHeader(units(0))
+        Dim attacksHeader As Dictionary(Of String, Integer) = MakeHeader(attacks(0))
+        Dim gimmuHeader As Dictionary(Of String, Integer) = MakeHeader(gimmu(0))
+        Dim gimmucHeader As Dictionary(Of String, Integer) = MakeHeader(gimmuc(0))
+        Dim dynupgrHeader As Dictionary(Of String, Integer) = MakeHeader(dynupgr(0))
+
+        Dim UnitsList(UBound(units) - 1) As AllDataStructues.Unit
+        For i As Integer = 1 To UBound(units) Step 1
+            Dim unit() As String = units(i)
+            UnitsList(i - 1) = New AllDataStructues.Unit
+            UnitsList(i - 1).unitID = GetField(unitsHeader, "UNIT_ID", unit)
+            UnitsList(i - 1).name = UnitsList(i - 1).unitID & "_test"
+            UnitsList(i - 1).level = GetField(unitsHeader, "LEVEL", unit)
+            UnitsList(i - 1).race = GetField(unitsHeader, "SUBRACE", unit)
+            UnitsList(i - 1).unitBranch = GetField(unitsHeader, "BRANCH", unit)
+            UnitsList(i - 1).small = GetField(unitsHeader, "SIZE_SMALL", unit)
+            UnitsList(i - 1).EXPkilled = GetField(unitsHeader, "XP_KILLED", unit)
+            UnitsList(i - 1).EXPnext = GetField(unitsHeader, "XP_NEXT", unit)
+            UnitsList(i - 1).dynUpgradeLevel = GetField(unitsHeader, "DYN_UPG_LV", unit)
+            UnitsList(i - 1).leadership = GetField(unitsHeader, "LEADERSHIP", unit)
+            UnitsList(i - 1).waterOnly = GetField(unitsHeader, "WATER_ONLY", unit)
+            UnitsList(i - 1).unitCost = AllDataStructues.Cost.Read(GetField(unitsHeader, "ENROLL_C", unit))
+            UnitsList(i - 1).hp = GetField(unitsHeader, "HIT_POINT", unit)
+            UnitsList(i - 1).armor = GetField(unitsHeader, "ARMOR", unit)
+
+            Dim attackID As String = GetField(unitsHeader, "ATTACK_ID", unit)
+            For j As Integer = 1 To UBound(attacks) Step 1
+                Dim attack() As String = attacks(j)
+                If attackID.ToUpper = GetField(attacksHeader, "ATT_ID", attack).ToUpper Then
+                    UnitsList(i - 1).reach = GetField(attacksHeader, "REACH", attack)
+                    UnitsList(i - 1).initiative = GetField(attacksHeader, "INITIATIVE", attack)
+                    UnitsList(i - 1).accuracy = GetField(attacksHeader, "POWER", attack)
+                    UnitsList(i - 1).damage = GetField(attacksHeader, "QTY_DAM", attack)
+                    UnitsList(i - 1).heal = GetField(attacksHeader, "QTY_HEAL", attack)
+                    If UnitsList(i - 1).initiative = 0 Then
+                        i = i
+                    End If
+                    Exit For
+                End If
+                If j = UBound(attacks) Then Throw New Exception
+            Next j
+            UnitsList(i - 1).ASourceImmunity = ReadImmunity(UnitsList(i - 1).unitID, gimmuHeader, gimmu)
+            UnitsList(i - 1).AClassImmunity = ReadImmunity(UnitsList(i - 1).unitID, gimmucHeader, gimmuc)
+            UnitsList(i - 1).dynUpgrade1 = ReadDynUpgr(GetField(unitsHeader, "DYN_UPG1", unit), dynupgrHeader, dynupgr)
+            UnitsList(i - 1).dynUpgrade2 = ReadDynUpgr(GetField(unitsHeader, "DYN_UPG2", unit), dynupgrHeader, dynupgr)
         Next i
         Return UnitsList
     End Function
+    Private Shared Function ReadImmunity(ByRef unitID As String, _
+                                         ByRef header As Dictionary(Of String, Integer), _
+                                         ByRef data()() As String) As Dictionary(Of Integer, Integer)
+        Dim r As New Dictionary(Of Integer, Integer)
+        For j As Integer = 1 To UBound(data) Step 1
+            Dim immu() As String = data(j)
+            If unitID.ToUpper = GetField(header, "UNIT_ID", immu).ToUpper Then
+                r.Add(GetField(header, "IMMUNITY", immu), _
+                               GetField(header, "IMMUNECAT", immu))
+            End If
+        Next j
+        Return r
+    End Function
+    Private Shared Function ReadDynUpgr(ByRef dynUpgrID As String, _
+                                        ByRef header As Dictionary(Of String, Integer), _
+                                        ByRef data()() As String) As AllDataStructues.DynUpgrade
+        Dim r As New AllDataStructues.DynUpgrade
+        For j As Integer = 1 To UBound(data) Step 1
+            Dim upgr() As String = data(j)
+            If dynUpgrID.ToUpper = GetField(header, "UPGRADE_ID", upgr).ToUpper Then
+                r.accuracy = GetField(header, "POWER", upgr)
+                r.armor = GetField(header, "ARMOR", upgr)
+                r.damage = GetField(header, "DAMAGE", upgr)
+                r.EXPkilled = GetField(header, "XP_KILLED", upgr)
+                r.EXPnext = GetField(header, "XP_NEXT", upgr)
+                r.heal = GetField(header, "HEAL", upgr)
+                r.hp = GetField(header, "HIT_POINT", upgr)
+                r.initiative = GetField(header, "INITIATIVE", upgr)
+                r.unitCost = AllDataStructues.Cost.Read(GetField(header, "ENROLL_C", upgr))
+                Exit For
+            End If
+            If j = UBound(data) Then Throw New Exception
+        Next j
+        Return r
+    End Function
 
     Public Shared Function ReadTestItems(ByVal modName As String) As AllDataStructues.Item()
-        Dim comm As New Common(modName)
-        Dim s() As String = comm.TxtSplit(My.Resources.TestItemsTable)
-        Dim r() As String
-        Dim ItemsList(UBound(s) - 1) As AllDataStructues.Item
-        For i As Integer = 1 To UBound(s) Step 1
-            r = s(i).Split(" ")
-            If r.Length = 3 Then
-                ItemsList(i - 1).type = r(0)
-                ItemsList(i - 1).itemID = r(1)
-                ItemsList(i - 1).name = r(1) & "_test"
-                ItemsList(i - 1).itemCost = AllDataStructues.Cost.Read(r(2))
-            End If
+        Dim items()() As String = TXTSplit(My.Resources.TestItemsTable, 3)
+
+        Dim itemsHeader As Dictionary(Of String, Integer) = MakeHeader(items(0))
+
+        Dim ItemsList(UBound(items) - 1) As AllDataStructues.Item
+        For i As Integer = 1 To UBound(items) Step 1
+            Dim r() As String = items(i)
+            ItemsList(i - 1) = New AllDataStructues.Item
+            ItemsList(i - 1).type = GetField(itemsHeader, "ITEM_CAT", r)
+            ItemsList(i - 1).itemID = GetField(itemsHeader, "ITEM_ID", r)
+            ItemsList(i - 1).name = ItemsList(i - 1).itemID & "_test"
+            ItemsList(i - 1).itemCost = AllDataStructues.Cost.Read(GetField(itemsHeader, "VALUE", r))
         Next i
         Return ItemsList
     End Function
 
-    Private Sub itemGenTest(ByVal modName As String)
+    Public Shared Function ReadTestModificators() As AllDataStructues.Modificator()
+        Dim gmodif()() As String = TXTSplit(My.Resources.TestGModif, 2)
+        Dim gmodifL()() As String = TXTSplit(My.Resources.TestGModifL, 11)
 
-        Dim r As New RandStack(DefaultGenData)
+        Dim gmodifHeader As Dictionary(Of String, Integer) = MakeHeader(gmodif(0))
+        Dim gmodiflHeader As Dictionary(Of String, Integer) = MakeHeader(gmodifL(0))
+
+        Dim result(UBound(gmodif) - 1) As AllDataStructues.Modificator
+        For i As Integer = 1 To UBound(gmodif) Step 1
+            result(i - 1) = New AllDataStructues.Modificator With { _
+                                .id = GetField(gmodifHeader, "MODIF_ID", gmodif(i)), _
+                                .source = GetField(gmodifHeader, "SOURCE", gmodif(i))}
+            For j As Integer = 1 To UBound(gmodifL) Step 1
+                Dim s() As String = gmodifL(j)
+                If result(i - 1).id.ToUpper = GetField(gmodiflHeader, "BELONGS_TO", s).ToUpper Then
+                    result(i - 1).effect.Add(New AllDataStructues.Modificator.ModifEffect With { _
+                                                .type = GetField(gmodiflHeader, "TYPE", s), _
+                                                .percent = GetField(gmodiflHeader, "PERCENT", s), _
+                                                .number = GetField(gmodiflHeader, "NUMBER", s), _
+                                                .ability = GetField(gmodiflHeader, "ABILITY", s), _
+                                                .immunASource = GetField(gmodiflHeader, "IMMUNITY", s), _
+                                                .immunASourceCat = GetField(gmodiflHeader, "IMMUNECAT", s), _
+                                                .move = GetField(gmodiflHeader, "MOVE", s), _
+                                                .immunAClass = GetField(gmodiflHeader, "IMMUNITYC", s), _
+                                                .immunAClassCat = GetField(gmodiflHeader, "IMMUNECATC", s)})
+                End If
+            Next j
+            If result(i - 1).effect.Count = 0 Then Throw New Exception
+        Next i
+        Return result
+    End Function
+
+    Private Shared Function TXTSplit(ByRef content As String, ByVal expectedLen As Integer) As String()()
+        Dim s() As String = ValueConverter.TxtSplit(content)
+        Dim r(UBound(s))() As String
+        For i As Integer = 0 To UBound(s) Step 1
+            r(i) = s(i).Split(" ")
+            If Not r(i).Length = expectedLen Then
+                Throw New Exception
+            End If
+        Next i
+        Return r
+    End Function
+    Private Shared Function MakeHeader(ByRef header() As String) As Dictionary(Of String, Integer)
+        Dim r As New Dictionary(Of String, Integer)
+        For i As Integer = 0 To UBound(header) Step 1
+            r.Add(header(i), i)
+        Next i
+        Return r
+    End Function
+    Private Shared Function GetField(ByRef header As Dictionary(Of String, Integer), _
+                                     ByRef name As String, _
+                                     ByRef data() As String) As String
+        If header.ContainsKey(name) Then
+            Return Data(header.Item(name))
+        Else
+            Throw New Exception("Unexpected field name: " & name)
+        End If
+    End Function
+
+    Public Shared Function DefaultGenData() As RandStack.ConstructorInput
+        Dim r As New RandStack.ConstructorInput
+        r.AllUnitsList = ReadTestUnits(GenDefaultValues.DefaultMod)
+        r.AllItemsList = ReadTestItems(GenDefaultValues.DefaultMod)
+        r.AllSpellsList = ReadTestSpells()
+        r.AllModificatorsList = ReadTestModificators()
+        r.settings.modName = GenDefaultValues.DefaultMod
+        Return r
+    End Function
+
+End Class
+
+Class Tests
+
+    Public Shared Sub RndTest()
+        Dim r As New RndValueGen
+        'Dim vanillaR As New OriginalRndGenerator
+        Dim maxInt As Integer = Short.MaxValue
+
+        Dim steps As Integer = 10 ^ 7
+        Dim result(steps) As Double
+
+        Dim t11 As Integer = Environment.TickCount
+        For i As Integer = 0 To steps Step 1
+            result(i) = r.PRand(0, 1)
+        Next i
+        Dim t12 As Integer = Environment.TickCount
+        Dim u1 As Double = CalcUniformity(makeDistribution(result))
+
+        Dim t(8 * result.Length - 1) As Byte
+        For i As Integer = 0 To steps Step 1
+            Dim b() As Byte = BitConverter.GetBytes(result(i))
+            For j As Integer = 0 To UBound(b) Step 1
+                t(8 * i + j) = b(j)
+            Next j
+        Next i
+        IO.File.WriteAllBytes("./myRandomNumbers.txt", t)
+        Console.WriteLine("current rand: u= " & u1 & " t= " & t12 - t11)
+
+
+        Dim t21 As Integer = Environment.TickCount
+        For i As Integer = 0 To steps Step 1
+            'result(i) = vanillaR.randomNumberUpTo(maxInt) / (maxInt - 1)
+            result(i) = r.RndDblFast(0, 1)
+        Next i
+        Dim t22 As Integer = Environment.TickCount
+        Dim u2 As Double = CalcUniformity(makeDistribution(result))
+
+        Console.WriteLine("   test rand: u= " & u2 & " t= " & t22 - t21)
+    End Sub
+    Private Shared Function makeDistribution(ByVal v() As Double) As Integer()
+        Dim dx As Double = 0.01
+        Dim result(1 / dx - 1) As Integer
+        For i As Integer = 0 To UBound(v) Step 1
+            For j As Integer = 0 To UBound(result) Step 1
+                If v(i) >= CDbl(j) * dx And v(i) < CDbl(j + 1) * dx Then
+                    result(j) += 1
+                    Exit For
+                End If
+            Next j
+        Next i
+        Return result
+    End Function
+    Private Shared Function CalcUniformity(ByRef d() As Integer) As Double
+        Dim average As Integer
+        For j As Integer = 0 To UBound(d) Step 1
+            average += d(j)
+        Next j
+        average /= d.Length
+        Dim res As Double = 0
+        For j As Integer = 0 To UBound(d) Step 1
+            res += Math.Pow(d(j) - average, 2)
+        Next j
+        Return average / Math.Sqrt(res + 1)
+    End Function
+
+    Public Shared Sub itemGenTest(ByVal modName As String)
+        Dim r As New RandStack(TestDataRead.DefaultGenData)
 
         Dim items As New List(Of String)
         items.Add("G000IG0004")
@@ -329,14 +473,4 @@ Friend Class StartForm
                                                                           .TypeCostRestriction = Nothing}
         Dim result As List(Of String) = r.ItemsGen(sett)
     End Sub
-
-    Public Shared Function DefaultGenData() As RandStack.ConstructorInput
-        Dim r As New RandStack.ConstructorInput
-        r.AllUnitsList = ReadTestUnits(GenDefaultValues.DefaultMod)
-        r.AllItemsList = ReadTestItems(GenDefaultValues.DefaultMod)
-        r.AllSpellsList = ReadSpells()
-        r.settings.modName = GenDefaultValues.DefaultMod
-        Return r
-    End Function
-
 End Class
