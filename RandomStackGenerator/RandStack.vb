@@ -3275,7 +3275,7 @@ Public Class Common
     End Function
 
     Friend Function ItemTypeCostModify(ByRef item As AllDataStructues.Item) As AllDataStructues.Cost
-        If itemType.Item(item.type) = "JEWEL" Then
+        If item.type = GenDefaultValues.ItemTypes.jewel Then
             Return item.itemCost / defValues.JewelItemsCostDevider
         Else
             Return item.itemCost / defValues.NonJewelItemsCostDevider
