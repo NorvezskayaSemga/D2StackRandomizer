@@ -56,8 +56,6 @@ Public Class RandStackTest
 #End Region
 
 
-    Private def() As String = {"%default%"}
-
     Friend Function CreateRandStack_Accessor() As RandStack_Accessor
         Call PrepareToTest()
         Dim rstackData As New RandStack.ConstructorInput With {.AllUnitsList = UnitsList, _
@@ -387,7 +385,7 @@ Public Class RandStackTest
     '''A test for ItemsGen
     '''</summary>
     <TestMethod()> _
-    Public Sub ItemsGenTest()
+    Public Sub ItemsGenTest1()
         Dim target As RandStack_Accessor = CreateRandStack_Accessor()
         Call target.ResetExclusions()
         target.log.Disable()
@@ -407,6 +405,116 @@ Public Class RandStackTest
         Next i
         If Not ok Then Assert.Inconclusive("Verify the correctness of this test method.")
     End Sub
+
+    <TestMethod()> _
+    Public Sub ItemsGenTest2()
+        Dim target As RandStack_Accessor = CreateRandStack_Accessor()
+        Call target.ResetExclusions()
+        target.log.Disable()
+
+        Dim ok As Boolean = True
+        Dim inputItems() As List(Of String)
+        Dim items As List(Of String)
+        Dim testRuinsLootCreator As Boolean
+        For ruinsLoot As Integer = 0 To 1 Step 1
+            testRuinsLootCreator = (ruinsLoot = 1)
+            If testRuinsLootCreator Then
+                inputItems = ImpenetrableMeshShow.TestDataRead.ReadTestRuinsTreasure
+            Else
+                inputItems = ImpenetrableMeshShow.TestDataRead.ReadTestBags
+            End If
+            For strictFilter As Integer = 0 To 1 Step 1
+                target.settings.ApplyStrictTypesFilter = (strictFilter = 1)
+                For i As Integer = 0 To UBound(inputItems) Step 1
+                    Call target.ResetAddedItems()
+                    Call target.ResetItemWeightMultiplier()
+                    items = RunLootCreation(target, inputItems(i), testRuinsLootCreator)
+                    ok = TestCreatedLoot(target, inputItems(i), items)
+                    If Not ok Then Exit For
+                Next i
+                If Not ok Then Exit For
+            Next strictFilter
+            If Not ok Then Exit For
+        Next
+
+        If Not ok Then Assert.Inconclusive("Verify the correctness of this test method.")
+    End Sub
+    Private Function RunLootCreation(ByRef target As RandStack_Accessor, ByRef inputLoot As List(Of String), ByRef ruinsTest As Boolean) As List(Of String)
+        Dim igen As AllDataStructues.LootGenSettings = target.GetItemsGenSettings(inputLoot, ruinsTest)
+        Dim settings As New AllDataStructues.CommonLootCreationSettings
+        settings.GoldCost = AllDataStructues.Cost.Sum(target.LootCost(inputLoot))
+        settings.IGen = igen
+        settings.pos = New Point(10, 10)
+        settings.TypeCostRestriction = Nothing
+        Dim result As List(Of String)
+        If ruinsTest Then
+            result = New List(Of String)
+            result.Add(target.ThingGen(settings))
+        Else
+            result = target.ItemsGen(settings)
+        End If
+        Return result
+    End Function
+    Private Function TestCreatedLoot(ByRef target As RandStack_Accessor, ByRef inputLoot As List(Of String), ByRef outputLoot As List(Of String)) As Boolean
+        Dim iLoot, oLoot As New List(Of AllDataStructues.Item)
+        Dim iTypes, oTypes, iCommonTypes, oCommonTypes As New List(Of Integer)
+        Dim t, n As Integer
+        Dim c As Boolean
+        For Each id As String In inputLoot
+            iLoot.Add(target.FindItemStats(id))
+            t = target.FindItemStats(id).type
+            If Not iTypes.Contains(t) Then iTypes.Add(t)
+            n = -1
+            For i As Integer = 0 To UBound(target.comm.ItemTypesLists) Step 1
+                If target.comm.ItemTypesLists(i).Contains(t) Then n = i
+            Next i
+            If Not iCommonTypes.Contains(n) Then iCommonTypes.Add(n)
+        Next id
+        For Each id As String In inputLoot
+            oLoot.Add(target.FindItemStats(id))
+            t = target.FindItemStats(id).type
+            If Not oTypes.Contains(t) Then oTypes.Add(t)
+            n = -1
+            For i As Integer = 0 To UBound(target.comm.ItemTypesLists) Step 1
+                If target.comm.ItemTypesLists(i).Contains(t) Then n = i
+            Next i
+            If Not oCommonTypes.Contains(n) Then oCommonTypes.Add(n)
+        Next id
+
+        For Each i As Integer In oCommonTypes
+            If Not iCommonTypes.Contains(i) Then Return False
+        Next i
+        If target.settings.ApplyStrictTypesFilter Then
+            For Each i As Integer In oTypes
+                If Not iTypes.Contains(i) Then Return False
+            Next i
+        End If
+        For Each item As AllDataStructues.Item In iLoot
+            If item.type = GenDefaultValues.ItemTypes.special Or target.comm.IsPreserved(item) Then
+                c = False
+                For Each i As AllDataStructues.Item In oLoot
+                    If item.itemID.ToUpper = i.itemID.ToUpper Then
+                        c = True
+                        Exit For
+                    End If
+                Next i
+                If Not c Then Return False
+            End If
+        Next item
+        For Each item As AllDataStructues.Item In oLoot
+            If item.type = GenDefaultValues.ItemTypes.special Then
+                c = False
+                For Each i As AllDataStructues.Item In iLoot
+                    If item.itemID.ToUpper = i.itemID.ToUpper Then
+                        c = True
+                        Exit For
+                    End If
+                Next i
+                If Not c Then Return False
+            End If
+        Next item
+        Return True
+    End Function
 
     '''<summary>
     '''A test for Gen
