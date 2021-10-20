@@ -11252,7 +11252,7 @@ Public Class ObjectsContentSet
         End If
     End Function
 #End Region
-#Region "Units merchant"
+#Region "Items merchant"
     ''' <summary>Создаст список предметов</summary>
     ''' <param name="d">Желаемые параметры доступных предметов. Имеет значение только .shopContent и .IGen.
     ''' IGen используется только при генерации по цене</param>
@@ -11299,7 +11299,7 @@ Public Class ObjectsContentSet
                 Next u
                 'If selection.Count = 0 Then Throw New Exception("Не могу выбрать предмет в качестве товара. Тип: " & v)
                 If selection.Count > 0 Then
-                    itemID = randStack.comm.RandomSelection(selection, randStack.multiplierItemsWeight, True)
+                    itemID = randStack.comm.RandomSelection(selection, randStack.Global_ItemsWeightMultiplier, True)
                     res.Add(randStack.AllItems(itemID).itemID)
                 Else
                     itemID = -1
@@ -11390,7 +11390,7 @@ Public Class ObjectsContentSet
         Loop
         dCost += bar
         If selection.Count > 0 Then
-            Dim r As Integer = randStack.comm.RandomSelection(selection, randStack.multiplierItemsWeight, True)
+            Dim r As Integer = randStack.comm.RandomSelection(selection, randStack.Global_ItemsWeightMultiplier, True)
             dCost -= randStack.AllItems(r).itemCost.Gold
             Return r
         Else
