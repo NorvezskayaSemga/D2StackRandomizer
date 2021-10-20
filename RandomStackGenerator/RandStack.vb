@@ -680,15 +680,13 @@ Public Class RandStack
     Public Function ItemsGen(ByVal GenSettings As AllDataStructues.CommonLootCreationSettings, _
                              Optional ByVal LogID As Integer = -1) As List(Of String)
 
-        Call LootGenPrepare(GenSettings.GoldCost, GenSettings.IGen, GenSettings.pos, LogID, True)
+        Call LootGenPrepare(GenSettings, LogID, True)
 
         Dim DynTypeWeightMultiplier() As Double = ItemTypeDynWeight(GenSettings.pos)
 
-        Dim DynIGen As AllDataStructues.LootGenSettings = GenItemSetDynIGen(GenSettings.IGen, GenSettings.GoldCost)
         Dim serialExecution As Boolean = (LogID < 0)
-        Dim costBar(), maxCost(), selected As Integer
+        Dim maxCost(), selected As Integer
         Dim weight(UBound(AllItems)) As Double
-        Dim DynCost As Integer = GenSettings.GoldCost
         Dim IDs As New List(Of Integer)
         Dim result As New List(Of String)
         Dim sameAddedCount(UBound(AllItems)) As Integer
@@ -697,24 +695,32 @@ Public Class RandStack
         Dim Local_SameItemCount() As Integer = SameItemsCounter(GenSettings.pos)
         Dim DynSameItemWeightMultiplier() As Double = SameItemDynWeight(GenSettings.pos, Local_SameItemCount)
 
-        Dim forceStrictFilterDisable, again As Boolean
+        Dim again As Boolean
+        Dim itemsFilter As New ItemsFilter(2, Me, GenItemSetDynIGen(GenSettings.IGen, GenSettings.GoldCost), _
+                                      GenSettings.TypeCostRestriction, Nothing, GenSettings.GoldCost)
+        itemsFilter.presets(0).useSimple = True
+        itemsFilter.presets(0).useTypeStrict = True
+        itemsFilter.presets(0).useTypeSoft = True
+        itemsFilter.presets(0).useTypeCost = True
+        itemsFilter.presets(0).useCostSum = True
 
-        Do While DynCost >= minItemGoldCost
-            maxCost = GenItemMaxCost(DynIGen, DynCost)
-            costBar = GenItemCostBar(DynIGen, maxCost, serialExecution)
-            Call AddToLog(LogID, "Max cost bar:" & DynCost & _
-                                 " Selected cost bar:" & costBar(0) & "|" & costBar(1) & "|" & costBar(2) & _
+        itemsFilter.presets(1).useCostBar = True
+
+        Do While itemsFilter.CurrentMaxLootCost >= minItemGoldCost
+            maxCost = GenItemMaxCost(itemsFilter.IGen, itemsFilter.CurrentMaxLootCost)
+            itemsFilter.TypeCostBar = GenItemCostBar(itemsFilter.IGen, maxCost, serialExecution)
+            Call AddToLog(LogID, "Max cost bar:" & itemsFilter.CurrentMaxLootCost & _
+                                 " Selected cost bar:" & itemsFilter.TypeCostBar(0) & "|" & itemsFilter.TypeCostBar(1) & "|" & itemsFilter.TypeCostBar(2) & _
                                  " max item cost:" & maxCost(0) & "|" & maxCost(1) & "|" & maxCost(2))
             IDs.Clear()
-            forceStrictFilterDisable = False
+            itemsFilter.ForceDisableStrictTypesFilter = False
             again = True
             Do While again
                 For i As Integer = 0 To UBound(AllItems) Step 1
-                    'new filter
-                    If ItemFilter(GenSettings.IGen, AllItems(i), forceStrictFilterDisable) AndAlso ItemFilter(GenSettings.TypeCostRestriction, AllItems(i)) AndAlso ItemFilter(DynIGen, AllItems(i), DynCost) Then
+                    If itemsFilter.Filter(0, AllItems(i)) Then
                         IDs.Add(i)
-                        weight(i) = GenItemWeight(AllItems(i), costBar) * multiplierItemsWeight(i) * DynTypeWeightMultiplier(AllItems(i).type) * DynSameItemWeightMultiplier(i)
-                        If Not ItemFilter(DynIGen, AllItems(i), costBar) Then weight(i) *= 0.001
+                        weight(i) = GenItemWeight(AllItems(i), itemsFilter.TypeCostBar) * multiplierItemsWeight(i) * DynTypeWeightMultiplier(AllItems(i).type) * DynSameItemWeightMultiplier(i)
+                        If Not itemsFilter.Filter(1, AllItems(i)) Then weight(i) *= 0.001
                         If result.Contains(AllItems(i).itemID) Then
                             Dim d As Integer = 1 + sameAddedCount(i) - comm.defValues.SameItemsAmountRestriction(AllItems(i).type)
                             If d > 0 Then weight(i) *= comm.defValues.ThisBag_SameItems_ChanceMultiplier(AllItems(i).type) ^ d
@@ -726,20 +732,12 @@ Public Class RandStack
                     Else
                         weight(i) = 0
                     End If
-
-                    'old filter
-                    'If ItemFilter(DynIGen, AllItems(i), costBar) AndAlso ItemFilter(TypeCostRestriction, AllItems(i)) Then
-                    '    IDs.Add(i)
-                    '    weight(i) = GenItemWeight(AllItems(i), costBar) * multiplierItemsWeight(i) * DynTypeWeightMultiplier(AllItems(i).type)
-                    'Else
-                    '    weight(i) = 0
-                    'End If
                 Next i
                 If IDs.Count > 0 Then
                     again = False
                 Else
-                    If Not forceStrictFilterDisable Then
-                        forceStrictFilterDisable = True
+                    If Not itemsFilter.ForceDisableStrictTypesFilter Then
+                        itemsFilter.ForceDisableStrictTypesFilter = True
                     Else
                         again = False
                     End If
@@ -754,8 +752,8 @@ Public Class RandStack
             Call AddToLog(LogID, "Selected item:" & AllItems(selected).name & " id:" & AllItems(selected).itemID & " cost:" & ItemCostSum(selected))
             result.Add(AllItems(selected).itemID)
             Call AddToAddedItemList(AllItems(selected), GenSettings.pos)
-            Call GenItemIGenChange(DynIGen, AllItems(selected), DynCost)
-            DynCost = CInt(DynCost - ItemCostSum(selected))
+            Call GenItemIGenChange(itemsFilter.IGen, AllItems(selected), itemsFilter.CurrentMaxLootCost)
+            itemsFilter.CurrentMaxLootCost = CInt(itemsFilter.CurrentMaxLootCost - ItemCostSum(selected))
             sameAddedCount(selected) += 1
             sameTypeAddedCount(AllItems(selected).type) += 1
 
@@ -806,38 +804,36 @@ Public Class RandStack
         Dim bar As Double = 1 - (1 - R) / m
         Return minBar + CInt(bar * CDbl(maxBar - minBar))
     End Function
-    Private Sub LootGenPrepare(ByRef GoldCost As Integer, _
-                               ByRef IGen As AllDataStructues.LootGenSettings, _
-                               ByRef pos As Point, _
+    Private Sub LootGenPrepare(ByRef GenSettings As AllDataStructues.CommonLootCreationSettings, _
                                ByRef LogID As Integer, _
                                ByRef lootGenCall As Boolean)
 
-        Dim preservedItemsCost As Integer = AllDataStructues.Cost.Sum(LootCost(IGen.PreserveItems))
-        If IGen.lootCostMultiplier > 0 Then preservedItemsCost = CInt(preservedItemsCost * IGen.lootCostMultiplier)
-        GoldCost -= preservedItemsCost
+        Dim preservedItemsCost As Integer = AllDataStructues.Cost.Sum(LootCost(GenSettings.IGen.PreserveItems))
+        If GenSettings.IGen.lootCostMultiplier > 0 Then preservedItemsCost = CInt(preservedItemsCost * GenSettings.IGen.lootCostMultiplier)
+        GenSettings.GoldCost -= preservedItemsCost
 
-        Call IGen.Initialize()
+        Call GenSettings.IGen.Initialize()
 
-        If (IsNothing(IGen.PreserveItems) OrElse IGen.PreserveItems.Count = 0) _
-         And IGen.addLootAnyway And GoldCost < minItemGoldCost Then
-            GoldCost = CInt(1.2 * minItemGoldCost)
+        If (IsNothing(GenSettings.IGen.PreserveItems) OrElse GenSettings.IGen.PreserveItems.Count = 0) _
+         And GenSettings.IGen.addLootAnyway And GenSettings.GoldCost < minItemGoldCost Then
+            GenSettings.GoldCost = CInt(1.2 * minItemGoldCost)
         End If
 
         If lootGenCall Then
             Call AddToLog(LogID, "----Loot creation started----" & vbNewLine & _
-                                 "Gold sum: " & GoldCost)
+                                 "Gold sum: " & GenSettings.GoldCost)
         Else
             Call AddToLog(LogID, "----Single item creation started----" & vbNewLine & _
-                                 "Max cost: " & GoldCost)
+                                 "Max cost: " & GenSettings.GoldCost)
         End If
         Call AddToLog(LogID, "Preserved items cost sum: " & preservedItemsCost)
 
-        If Not IsNothing(pos) Then
-            Call AddToLog(LogID, "Position: " & pos.X & " " & pos.Y)
+        If Not IsNothing(GenSettings.pos) Then
+            Call AddToLog(LogID, "Position: " & GenSettings.pos.X & " " & GenSettings.pos.Y)
         Else
             Call AddToLog(LogID, "Position: unknown")
         End If
-        Call AddToLog(LogID, IGen)
+        Call AddToLog(LogID, GenSettings.IGen)
     End Sub
 
     ''' <summary>Генерирует один предмет. Если не получится выбрать подходящий предмет, вернет пустую строку</summary>
@@ -846,7 +842,7 @@ Public Class RandStack
     Public Function ThingGen(ByVal GenSettings As AllDataStructues.CommonLootCreationSettings, _
                              Optional ByVal LogID As Integer = -1) As String
 
-        Call LootGenPrepare(GenSettings.GoldCost, GenSettings.IGen, GenSettings.pos, LogID, False)
+        Call LootGenPrepare(GenSettings, LogID, False)
 
         If Not IsNothing(GenSettings.IGen.PreserveItems) AndAlso GenSettings.IGen.PreserveItems.Count > 0 Then
             Dim thing As AllDataStructues.Item = FindItemStats(GenSettings.IGen.PreserveItems.Item(0))
@@ -860,36 +856,43 @@ Public Class RandStack
         Dim selected As Integer
         Dim IDs As New List(Of Integer)
         Dim result As String = ""
-        Dim minGoldCost As Integer = CInt(Math.Max(Math.Min(comm.defValues.MinRuinsLootCostMultiplier, 1), 0) * GenSettings.GoldCost)
 
         Dim DynTypeWeightMultiplier(), DynItemWeightMultiplier(UBound(AllItems)), DynSameItemWeightMultiplier() As Double
 
         DynTypeWeightMultiplier = ItemTypeDynWeight(GenSettings.pos)
         DynSameItemWeightMultiplier = SameItemDynWeight(GenSettings.pos, SameItemsCounter(GenSettings.pos))
 
-        Dim forceStrictFilterDisable As Boolean = False
         Dim again As Boolean = True
+
+        Dim itemsFilter As New ItemsFilter(1, Me, GenSettings.IGen, GenSettings.TypeCostRestriction, Nothing, GenSettings.GoldCost)
+        itemsFilter.presets(0).useSimple = True
+        itemsFilter.presets(0).useTypeStrict = True
+        itemsFilter.presets(0).useTypeSoft = True
+        itemsFilter.presets(0).useTypeCost = True
+
+        itemsFilter.ForceDisableStrictTypesFilter = False
+        itemsFilter.strictMinCost = CInt(Math.Max(Math.Min(comm.defValues.MinRuinsLootCostMultiplier, 1), 0) * GenSettings.GoldCost)
+        itemsFilter.strictMaxCost = GenSettings.GoldCost
 
         IDs.Clear()
 
         Do While again
             For i As Integer = 0 To UBound(AllItems) Step 1
                 DynItemWeightMultiplier(i) = multiplierItemsWeight(i) * DynTypeWeightMultiplier(AllItems(i).type) * DynSameItemWeightMultiplier(i)
-                If ItemCostSum(i) <= GenSettings.GoldCost AndAlso ItemCostSum(i) >= minGoldCost AndAlso ItemFilter(GenSettings.IGen, AllItems(i), forceStrictFilterDisable) _
-                AndAlso ItemFilter(GenSettings.TypeCostRestriction, AllItems(i)) Then IDs.Add(i)
+                If itemsFilter.Filter(0, AllItems(i)) Then IDs.Add(i)
             Next i
             If IDs.Count > 0 Then
                 again = False
             Else
-                If Not forceStrictFilterDisable Then
-                    forceStrictFilterDisable = True
+                If Not itemsFilter.ForceDisableStrictTypesFilter Then
+                    itemsFilter.ForceDisableStrictTypesFilter = True
                 Else
                     again = False
                 End If
             End If
         Loop
         If IDs.Count > 0 Then
-            selected = comm.RandomSelection(IDs, New Double()() {ItemCostSum}, New Double() {GenSettings.GoldCost}, DynItemWeightMultiplier, itemGenSigma, serialExecution)
+            selected = comm.RandomSelection(IDs, New Double()() {ItemCostSum}, New Double() {itemsFilter.CurrentMaxLootCost}, DynItemWeightMultiplier, itemGenSigma, serialExecution)
             multiplierItemsWeight(selected) *= comm.defValues.Global_AddedItem_ChanceMultiplier
             Call AddToLog(LogID, "Selected item:" & AllItems(selected).name & " id:" & AllItems(selected).itemID & " cost:" & ItemCostSum(selected))
             result = AllItems(selected).itemID
@@ -1119,71 +1122,165 @@ Public Class RandStack
         AddedItems.Item(pos.X).Item(pos.Y).Add(item)
     End Sub
 
-    ''' <summary>Фильтр предметов по типу и назначению: расходники, надеваемые артефакты или драгоценности</summary>
-    Friend Function ItemFilter(ByRef IGen As AllDataStructues.LootGenSettings, ByRef item As AllDataStructues.Item, _
-                               ByVal ForceDisableStrictTypesFilter As Boolean) As Boolean
-        If Not comm.IsAppropriateItem(item) Then Return False
-        Dim settings() As AllDataStructues.ItemGenSettings = AllDataStructues.LootGenSettings.ToArray(IGen)
-        For i As Integer = 0 To UBound(settings) Step 1
-            If comm.ItemTypesLists(i).Contains(item.type) Then
-                If settings(i).exclude Then
-                    Return False
-                Else
-                    Exit For
-                End If
-            End If
-        Next i
-        If Not ForceDisableStrictTypesFilter AndAlso Not IGen.Filter(item) Then Return False
-        Return True
-    End Function
-    ''' <summary>Фильтр предметов по стоимости (стоимость не выше заданного значения)</summary>
-    Friend Function ItemFilter(ByRef IGen As AllDataStructues.LootGenSettings, ByRef item As AllDataStructues.Item, _
-                               ByRef CostBar() As Integer) As Boolean
-        If Not comm.IsAppropriateItem(item) Then Return False
-        Dim settings() As AllDataStructues.ItemGenSettings = AllDataStructues.LootGenSettings.ToArray(IGen)
-        For i As Integer = 0 To UBound(settings) Step 1
-            If comm.ItemTypesLists(i).Contains(item.type) Then
-                If settings(i).exclude Then
-                    Return False
-                Else
-                    Dim sum As Integer = AllDataStructues.Cost.Sum(LootCost(item))
-                    If sum > comm.defValues.CostBarExcessLimit * CostBar(i) Then Return False
-                    Exit For
-                End If
-            End If
-        Next i
-        Return True
-    End Function
-    ''' <summary>Фильтр предметов по стоимости (стоимость не выше заданной суммарной стоимости лута)</summary>
-    Friend Function ItemFilter(ByRef IGen As AllDataStructues.LootGenSettings, ByRef item As AllDataStructues.Item, _
-                               ByRef currentMaxLootCost As Integer) As Boolean
-        If Not comm.IsAppropriateItem(item) Then Return False
-        Dim settings() As AllDataStructues.ItemGenSettings = AllDataStructues.LootGenSettings.ToArray(IGen)
-        For i As Integer = 0 To UBound(settings) Step 1
-            If comm.ItemTypesLists(i).Contains(item.type) Then
-                If settings(i).exclude Then
-                    Return False
-                Else
-                    Dim sum As Integer = AllDataStructues.Cost.Sum(LootCost(item))
-                    If sum > comm.defValues.LootCostExcessLimit * currentMaxLootCost Then Return False
-                    Exit For
-                End If
-            End If
-        Next i
-        Return True
-    End Function
-    ''' <summary>Фильтр предметов по стоимости (стоимость находится в диапазоне)</summary>
-    Friend Function ItemFilter(ByRef TypeCostRestriction As Dictionary(Of Integer, AllDataStructues.Restriction), _
+    Public Class ItemsFilter
+
+        Public randStack As RandStack
+        Private comm As Common
+
+        Public IGen As AllDataStructues.LootGenSettings
+        Public TypeCostRestriction As Dictionary(Of Integer, AllDataStructues.Restriction)
+
+        Public strictMinCost As Integer = -1
+        Public strictMaxCost As Integer = -1
+
+        Public presets(-1) As FiltersPreset
+
+        Public CurrentMaxLootCost As Integer
+        Public TypeCostBar() As Integer
+        Public ForceDisableStrictTypesFilter As Boolean
+
+        Public Class FiltersPreset
+            Public useSimple As Boolean
+            Public useTypeStrict As Boolean
+            Public useTypeSoft As Boolean
+            Public useCostBar As Boolean
+            Public useCostSum As Boolean
+            Public useTypeCost As Boolean
+        End Class
+
+        Public Sub New(ByVal _presetsNumber As Integer, _
+                       ByRef _randStack As RandStack, _
+                       ByRef _DynIGen As AllDataStructues.LootGenSettings, _
+                       ByRef _TypeCostRestriction As Dictionary(Of Integer, AllDataStructues.Restriction), _
+                       ByRef _TypeCostBar() As Integer, _
+                       ByRef _CurrentMaxLootCost As Integer)
+            ReDim presets(_presetsNumber - 1)
+            For i As Integer = 0 To UBound(presets) Step 1
+                presets(i) = New FiltersPreset
+            Next i
+            randStack = _randStack
+            comm = _randStack.comm
+            IGen = _DynIGen
+            TypeCostRestriction = _TypeCostRestriction
+            CurrentMaxLootCost = _CurrentMaxLootCost
+            TypeCostBar = _TypeCostBar
+        End Sub
+
+        Public Function Filter(ByVal usePreset As Integer, _
                                ByRef item As AllDataStructues.Item) As Boolean
-        If Not comm.IsAppropriateItem(item) Then Return False
-        If IsNothing(TypeCostRestriction) Then Return True
-        If AllDataStructues.Restriction.CheckValue(AllDataStructues.Cost.Sum(LootCost(item)), _
-                                                   TypeCostRestriction.Item(item.type)) Then
+
+            Dim settings() As AllDataStructues.ItemGenSettings = Nothing
+            Dim itemCostSum As Integer = -1
+            Dim subtypeID As Integer = -1
+            If presets(usePreset).useTypeSoft _
+            Or presets(usePreset).useCostBar _
+            Or presets(usePreset).useCostSum Then
+                settings = AllDataStructues.LootGenSettings.ToArray(IGen)
+                For i As Integer = 0 To UBound(comm.ItemTypesLists) Step 1
+                    If comm.ItemTypesLists(i).Contains(item.type) Then
+                        subtypeID = i
+                    End If
+                Next i
+            End If
+
+            If presets(usePreset).useCostBar _
+            Or presets(usePreset).useCostSum _
+            Or presets(usePreset).useTypeCost _
+            Or strictMinCost > -1 _
+            Or strictMaxCost > -1 Then
+                itemCostSum = AllDataStructues.Cost.Sum(randStack.LootCost(item))
+            End If
+
+            If Not Simple(usePreset, item) Then Return False
+            If Not TypeStrict(usePreset, item) Then Return False
+            If Not TypeSoft(usePreset, item, settings, subtypeID) Then Return False
+            If Not CostBar(usePreset, item, settings, itemCostSum, subtypeID) Then Return False
+            If Not CostSum(usePreset, item, settings, itemCostSum, subtypeID) Then Return False
+            If Not TypeCost(usePreset, item, itemCostSum) Then Return False
+            If Not StrictCost_Min(itemCostSum) Then Return False
+            If Not StrictCost_Max(itemCostSum) Then Return False
             Return True
-        Else
-            Return False
-        End If
-    End Function
+        End Function
+
+        ''' <summary>Фильтр предметов по тому, является ли предмет исключенным</summary>
+        Private Function Simple(ByVal usePreset As Integer, ByRef item As AllDataStructues.Item) As Boolean
+            If Not presets(usePreset).useSimple Then Return True
+            If Not comm.IsAppropriateItem(item) Then Return False
+            Return True
+        End Function
+        ''' <summary>Фильтр предметов по типу: знамя, артефакт, реликвия, свиток, сфера и т.д.</summary>
+        Private Function TypeStrict(ByVal usePreset As Integer, ByRef item As AllDataStructues.Item) As Boolean
+            If Not presets(usePreset).useTypeStrict Then Return True
+            If ForceDisableStrictTypesFilter Then Return True
+            If Not IGen.Filter(item) Then Return False
+            Return True
+        End Function
+        ''' <summary>Фильтр предметов по типу: расходуемый, не расходуемый или драгоценность</summary>
+        Private Function TypeSoft(ByVal usePreset As Integer, ByRef item As AllDataStructues.Item, _
+                                  ByRef settings() As AllDataStructues.ItemGenSettings, _
+                                  ByRef subtypeID As Integer) As Boolean
+            If Not presets(usePreset).useTypeSoft Then Return True
+            If subtypeID > -1 Then
+                If settings(subtypeID).exclude Then Return False
+            End If
+            Return True
+        End Function
+        ''' <summary>Фильтр предметов их стоимости относительно выбранной планки цены</summary>
+        Private Function CostBar(ByVal usePreset As Integer, ByRef item As AllDataStructues.Item, _
+                                 ByRef settings() As AllDataStructues.ItemGenSettings, _
+                                 ByRef itemCostSum As Integer, _
+                                 ByRef subtypeID As Integer) As Boolean
+            If Not presets(usePreset).useCostBar Then Return True
+            If subtypeID > -1 Then
+                If settings(subtypeID).exclude Then Return False
+                If itemCostSum = -1 Then Throw New Exception("Unexpected cost sum")
+                If itemCostSum > comm.defValues.CostBarExcessLimit * TypeCostBar(subtypeID) Then Return False
+            End If
+            Return True
+        End Function
+        ''' <summary>Фильтр предметов их стоимости относительно текущей доступной максимальной цены</summary>
+        Private Function CostSum(ByVal usePreset As Integer, ByRef item As AllDataStructues.Item, _
+                                 ByRef settings() As AllDataStructues.ItemGenSettings, _
+                                 ByRef itemCostSum As Integer, _
+                                 ByRef subtypeID As Integer) As Boolean
+            If Not presets(usePreset).useCostSum Then Return True
+            If subtypeID > -1 Then
+                If settings(subtypeID).exclude Then Return False
+                If itemCostSum = -1 Then Throw New Exception("Unexpected cost sum")
+                If itemCostSum > comm.defValues.LootCostExcessLimit * CurrentMaxLootCost Then Return False
+            End If
+            Return True
+        End Function
+        ''' <summary>Фильтр предметов по стоимости (стоимость находится в диапазоне)</summary>
+        Private Function TypeCost(ByVal usePreset As Integer, ByRef item As AllDataStructues.Item, _
+                                  ByRef itemCostSum As Integer) As Boolean
+            If Not presets(usePreset).useTypeCost Then Return True
+            If IsNothing(TypeCostRestriction) Then Return True
+            If itemCostSum = -1 Then Throw New Exception("Unexpected cost sum")
+            If AllDataStructues.Restriction.CheckValue(CDbl(itemCostSum), _
+                                                       TypeCostRestriction.Item(item.type)) Then
+                Return True
+            Else
+                Return False
+            End If
+        End Function
+        ''' <summary>Строгий фильтр по минимальной цене предмета</summary>
+        Private Function StrictCost_Min(ByRef itemCostSum As Integer) As Boolean
+            If strictMinCost < 0 Then Return True
+            If itemCostSum = -1 Then Throw New Exception("Unexpected cost sum")
+            If itemCostSum < strictMinCost Then Return False
+            Return True
+        End Function
+        ''' <summary>Строгий фильтр по максимальной цене предмета</summary>
+        Private Function StrictCost_Max(ByRef itemCostSum As Integer) As Boolean
+            If strictMaxCost < 0 Then Return True
+            If itemCostSum = -1 Then Throw New Exception("Unexpected cost sum")
+            If itemCostSum > strictMaxCost Then Return False
+            Return True
+        End Function
+
+    End Class
+
 #End Region
 
 #Region "Stack creation"

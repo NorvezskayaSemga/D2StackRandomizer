@@ -11271,6 +11271,13 @@ Public Class ObjectsContentSet
         Dim selection As New List(Of Integer)
         Dim dCost As Integer = 0
         Dim itemID As Integer = -1
+        Dim itemsFilter As New RandStack.ItemsFilter(1, randStack, d.IGen, TypeCostRestriction, Nothing, -1)
+        itemsFilter.ForceDisableStrictTypesFilter = True
+        itemsFilter.presets(0).useSimple = True
+        itemsFilter.presets(0).useTypeStrict = True
+        itemsFilter.presets(0).useTypeSoft = True
+        itemsFilter.presets(0).useTypeCost = True
+
         For Each v As String In d.shopContent
             If log.IsEnabled Then txt = "In: " & v
             If IsNumeric(v) Then
@@ -11284,10 +11291,8 @@ Public Class ObjectsContentSet
                 For u As Integer = 0 To UBound(randStack.AllItems) Step 1
                     If randStack.comm.IsAppropriateItem(randStack.AllItems(u)) Then
                         If randStack.AllItems(u).itemCost.Gold > 0 AndAlso randStack.LootCost(randStack.AllItems(u)).Gold = randStack.AllItems(u).itemCostSum Then
-                            If type = randStack.AllItems(u).type AndAlso randStack.ItemFilter(d.IGen, randStack.AllItems(u), True) Then
-                                If randStack.ItemFilter(TypeCostRestriction, randStack.AllItems(u)) Then
-                                    selection.Add(u)
-                                End If
+                            If type = randStack.AllItems(u).type AndAlso itemsFilter.Filter(0, randStack.AllItems(u)) Then
+                                selection.Add(u)
                             End If
                         End If
                     End If
@@ -11352,6 +11357,15 @@ Public Class ObjectsContentSet
         Dim oneMore As Boolean = False
         Dim add As Boolean
 
+        Dim itemsFilter As New RandStack.ItemsFilter(2, randStack, d.IGen, TypeCostRestriction, Nothing, -1)
+        itemsFilter.ForceDisableStrictTypesFilter = True
+        itemsFilter.presets(0).useSimple = True
+        itemsFilter.presets(0).useTypeSoft = True
+        itemsFilter.presets(0).useTypeStrict = True
+
+        itemsFilter.presets(1).useSimple = True
+        itemsFilter.presets(1).useTypeCost = True
+
         tolerance = 0
         Do While (selection.Count = 0 Or oneMore) And tolerance <= 10000
             tolerance += dtolerance
@@ -11362,11 +11376,11 @@ Public Class ObjectsContentSet
                         If Math.Abs(randStack.LootCost(randStack.AllItems(u)).Gold - correctedBar) <= tolerance Then
                             If type < 0 Then
                                 add = Not excludedItemType.Contains(randStack.AllItems(u).type)
-                                If add Then add = randStack.ItemFilter(d.IGen, randStack.AllItems(u), True)
+                                If add Then add = itemsFilter.Filter(0, randStack.AllItems(u))
                             Else
                                 add = (type = randStack.AllItems(u).type)
                             End If
-                            If add AndAlso Not randStack.ItemFilter(TypeCostRestriction, randStack.AllItems(u)) Then add = False
+                            If add AndAlso Not itemsFilter.Filter(1, randStack.AllItems(u)) Then add = False
                             If add Then selection.Add(u)
                         End If
                     End If
