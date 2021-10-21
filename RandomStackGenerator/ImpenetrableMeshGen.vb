@@ -5555,6 +5555,9 @@ Public Class shortMapFormat
                                          ByRef treesAmont() As Integer, _
                                          ByRef lang As GenDefaultValues.TextLanguage) As shortMapFormat
 
+        Call objContent.randStack.ResetAddedItems()
+        Call objContent.randStack.ResetItemWeightMultiplier()
+
         Dim attObjects() As AttendedObject = (New ImpenetrableMeshGen(m.comm)).ActiveObjects
         Dim sName As New SetName(lang, m.comm.defValues.selectedMod)
         Call sName.ResetNames(True, -1)
@@ -5609,17 +5612,35 @@ Public Class shortMapFormat
             Next i
         End If
         objContent.randStack.mapData.mapLords = lordsList
+        objContent.randStack.mapData.minesAmount = New AllDataStructues.Cost
 
         For y As Integer = 0 To UBound(m.board, 2) Step 1
             For x As Integer = 0 To UBound(m.board, 1) Step 1
                 If m.board(x, y).mapObject.objectID = DefMapObjects.Types.Mine Then
                     name = m.board(x, y).mapObject.objectName
-                    Call AddObject(res.mines, x, y, objContent.SetMineType(name), attObjects(DefMapObjects.Types.Mine).Size)
+                    Dim objTypeID As String = objContent.SetMineType(name)
+                    If objTypeID = DefMapObjects.mineGold Then
+                        objContent.randStack.mapData.minesAmount.Gold += 1
+                    ElseIf objTypeID = DefMapObjects.mineBlack Then
+                        objContent.randStack.mapData.minesAmount.Black += 1
+                    ElseIf objTypeID = DefMapObjects.mineBlue Then
+                        objContent.randStack.mapData.minesAmount.Blue += 1
+                    ElseIf objTypeID = DefMapObjects.mineGreen Then
+                        objContent.randStack.mapData.minesAmount.Green += 1
+                    ElseIf objTypeID = DefMapObjects.mineRed Then
+                        objContent.randStack.mapData.minesAmount.Red += 1
+                    ElseIf objTypeID = DefMapObjects.mineWhite Then
+                        objContent.randStack.mapData.minesAmount.White += 1
+                    Else
+                        Throw New Exception("Unexpected mine ID: " & objTypeID)
+                    End If
+                    Call AddObject(res.mines, x, y, objTypeID, attObjects(DefMapObjects.Types.Mine).Size)
                     If Not allMines.Contains(res.mines(UBound(res.mines)).id) Then allMines.Add(res.mines(UBound(res.mines)).id)
                 End If
             Next x
         Next y
 
+        ReDim objContent.randStack.mapData.capitalPos(-1)
         Dim tiles(m.board.Length - 1) As Point
         Dim tilesList As New List(Of Integer)
         Dim n As Integer = -1
@@ -5629,6 +5650,8 @@ Public Class shortMapFormat
                 tilesList.Add(n)
                 tiles(n) = New Point(x, y)
                 If m.board(x, y).mapObject.objectID = DefMapObjects.Types.Capital Then
+                    ReDim Preserve objContent.randStack.mapData.capitalPos(objContent.randStack.mapData.capitalPos.Length)
+                    objContent.randStack.mapData.capitalPos(UBound(objContent.randStack.mapData.capitalPos)) = New Point(x, y)
                     playableRaces.Add(objContent.randStack.comm.defValues.capitalToGeneratorRace(m.board(x, y).mapObject.objectName))
                 End If
             Next x
