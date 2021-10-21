@@ -256,11 +256,6 @@
     </Content>
   </ItemGroup>
   <ItemGroup>
-    <Content Include="Resources\common_game_data\Items.txt">
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-    </Content>
-  </ItemGroup>
-  <ItemGroup>
     <Content Include="Resources\common_game_data\ExcludeIDsForNames.txt">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>

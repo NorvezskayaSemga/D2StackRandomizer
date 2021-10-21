@@ -5370,15 +5370,13 @@ Public Class GenDefaultValues
     End Sub
     Protected Friend Sub ParseItemTypes(ByRef outitemTypeID As Dictionary(Of String, Integer), _
                                         ByRef outitemType As Dictionary(Of Integer, String))
-        Dim splitedItemsTypes() As String = ValueConverter.TxtSplit(Items)
-        Dim srow() As String
-        For i As Integer = 0 To UBound(splitedItemsTypes) Step 1
-            srow = splitedItemsTypes(i).Split(CChar(" "))
-            If Not IsNothing(outitemType) Then outitemType.Add(CInt(srow(0)), srow(1).ToUpper)
-            If Not IsNothing(outitemTypeID) Then outitemTypeID.Add(srow(1).ToUpper, CInt(srow(0)))
-        Next i
+        Dim names() As String = [Enum].GetNames(GetType(GenDefaultValues.ItemTypes))
+        For Each name In names
+            Dim value As Integer = CType([Enum].Parse(GetType(GenDefaultValues.ItemTypes), name), GenDefaultValues.ItemTypes)
+            If Not IsNothing(outitemType) Then outitemType.Add(value, name.ToUpper)
+            If Not IsNothing(outitemTypeID) Then outitemTypeID.Add(name.ToUpper, value)
+        Next name
     End Sub
-
 
     Enum TextLanguage
         Rus = 1
@@ -5614,9 +5612,6 @@ Public Class GenDefaultValues
     End Function
     Public Function ExcludeIDsForNames() As String
         Return ReadResources("ExcludeIDsForNames", My.Resources.ExcludeIDsForNames, False)
-    End Function
-    Public Function Items() As String
-        Return ReadResources("Items", My.Resources.Items, False)
     End Function
     Public Function Lords() As String
         Return ReadResources("Lords", My.Resources.Lords, False)
