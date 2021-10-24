@@ -4779,7 +4779,7 @@ Public Class AllDataStructues
         '''<summary>True, если создаем шаблон отряда</summary>
         Public isTemplate As Boolean
         '''<summary>Приказ отряда</summary>
-        Public order As String
+        Public order As String = "L_STAND"
 
         Public Shared Function Copy(ByVal v As CommonStackCreationSettings) As CommonStackCreationSettings
             Return New CommonStackCreationSettings With {.StackStats = DesiredStats.Copy(v.StackStats), _
