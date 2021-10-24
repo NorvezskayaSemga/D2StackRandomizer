@@ -33,6 +33,7 @@ ObjectGuardsPowerMultiplicator		[Common_map_settings]	[Double]	0.00001	10000.0
 
 LocExpRatio		[Common_map_settings]	[Double]	0.00001	10000.0
 
+StackStrength	[Common_map_settings]	[Double]		0.0	10000.0
 Wealth			[Common_map_settings]	[Double]		0.0	10000.0
 
 WaterAmount			[Common_map_settings]	[Double]		0.0	1.0

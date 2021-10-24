@@ -35,6 +35,8 @@ ObjectGuardsPowerMultiplicator Visited object guards power multiplier
 
 LocExpRatio Ratio of the maximum experience gained for clearing a average-sized location to the minimum./nThe further the location is from the nearest capital and the closer to the center, the more experience for clearing it
 
+StackStrength Neutral stacks strength multiplier
+
 Wealth Neutral loot cost multiplier
 
 WaterAmount Amount of water on the map. 0 - no water, 1 - a lot

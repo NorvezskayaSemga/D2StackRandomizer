@@ -142,7 +142,7 @@
         For i As Integer = 0 To UBound(m.Loc) Step 1
             Lpos(i).X = CInt(Lpos(i).X / Area(i))
             Lpos(i).Y = CInt(Lpos(i).Y / Area(i))
-            LExp(i) = settLoc(i).expAmount
+            LExp(i) = settLoc(i).expAmount * settMap.StackStrength
             If settLoc(i).scaleContent Then LExp(i) *= Area(i) / (Math.PI * Math.Pow(settLoc(i).AverageRadius - 1, 2))
             'If i >= CapPos.Count Then LExp(i) *= Area(i) / (Math.PI * Math.Pow(settLoc(i).AverageRadius - 1, 2))
             'If i < CapPos.Count Then

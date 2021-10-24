@@ -6538,6 +6538,8 @@ Public Class Map
         ''' <summary>Отношение максимального опыта, получаемого за зачистку локации среднего размера, к минимальному.
         ''' Чем дальше локация от ближайшей столицы и чем ближе к центру, тем больше опыта за ее зачистку</summary>
         Public LocExpRatio As Double
+        ''' <summary>Множитель силы нейтралов</summary>
+        Public StackStrength As Double
         ''' <summary>Множитель стоимости лута нейтралов</summary>
         Public Wealth As Double
         ''' <summary>Количество воды на карте. 0 - без воды, 1 - очень много</summary>
@@ -6585,6 +6587,7 @@ Public Class Map
             fields.Add("PassGuardsPowerMultiplicator", PassGuardsPowerMultiplicator.ToString)
             fields.Add("ObjectGuardsPowerMultiplicator", ObjectGuardsPowerMultiplicator.ToString)
             fields.Add("LocExpRatio", LocExpRatio.ToString)
+            fields.Add("StackStrength", StackStrength.ToString)
             fields.Add("Wealth", Wealth.ToString)
             fields.Add("WaterAmount", WaterAmount.ToString)
             fields.Add("SpellsMaxLevel", SpellsMaxLevel.ToString)
@@ -6651,6 +6654,7 @@ Public Class Map
                                          .PassGuardsPowerMultiplicator = v.PassGuardsPowerMultiplicator, _
                                          .ObjectGuardsPowerMultiplicator = v.ObjectGuardsPowerMultiplicator, _
                                          .LocExpRatio = v.LocExpRatio, _
+                                         .StackStrength = v.StackStrength, _
                                          .Wealth = v.Wealth, _
                                          .WaterAmount = v.WaterAmount, _
                                          .SpellsMaxLevel = v.SpellsMaxLevel, _
