@@ -73,7 +73,33 @@ Namespace My.Resources
         End Property
         
         '''<summary>
-        '''  Looks up a localized string similar to .
+        '''  Looks up a localized string similar to #по одной сумке на строку
+        '''G000IG1004 G000IG1004 G000IG1003 G000IG1005 G000IG1008 G000IG1007
+        '''G000IG0013 G000IG0010
+        '''G000IG5015 G000IG5019 G000IG5025 G000IG5009
+        '''G000IG7005 G000IG7006 G000IG7009
+        '''G000IG7005 G000IG7006 G000IG7009 G000IG6011
+        '''G000IG0021 G000IG0022 G000IG0024
+        '''G000IG4006 G000IG4007
+        '''G000IG8003 G000IG8004 G000IG8005
+        '''G000IG9039 G000IG9040
+        '''G000IG7115 G000IG7116 G000IG7117 G000IG7118
+        '''G000IG9041 G000IG7101
+        '''G001IG0047 G001IG0043
+        '''G001IG0100 G001IG0102
+        '''.
+        '''</summary>
+        Friend ReadOnly Property TestBags() As String
+            Get
+                Return ResourceManager.GetString("TestBags", resourceCulture)
+            End Get
+        End Property
+        
+        '''<summary>
+        '''  Looks up a localized string similar to UPGRADE_ID	ENROLL_C	HIT_POINT	ARMOR	REGEN	REVIVE_C	HEAL_C	TRAINING_C	XP_KILLED	XP_NEXT	MOVE	NEGOTIATE	DAMAGE	HEAL	INITIATIVE	POWER
+        '''g000DU0001	g0005:r0000:y0000:e0000:w0000	10	0	0	g0000:r0000:y0000:e0000:w0000	g0000:r0000:y0000:e0000:w0000	g0000:r0000:y0000:e0000:w0000	2	0	1	2	3	0	0	1
+        '''g000DU0002	g0030:r0000:y0000:e0000:w0000	15	0	0	g0000:r0000:y0000:e0000:w0000	g0000:r0000:y0000:e0000:w0000	g0000:r0000:y0000:e0000:w0000	6	0	0	0	5	0	0	1
+        '''g000DU0003	g0085:r0000:y0000:e0000:w0000	10	1	0	g0000:r0000:y0000:e000 [rest of string was truncated]&quot;;.
         '''</summary>
         Friend ReadOnly Property TestDynUpgr() As String
             Get

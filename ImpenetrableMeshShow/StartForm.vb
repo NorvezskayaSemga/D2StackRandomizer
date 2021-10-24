@@ -360,7 +360,7 @@ Public Class TestDataRead
         Dim r(UBound(s))() As String
         For i As Integer = 0 To UBound(s) Step 1
             r(i) = s(i).Split(" ")
-            If Not r(i).Length = expectedLen Then
+            If expectedLen > -1 And Not r(i).Length = expectedLen Then
                 Throw New Exception
             End If
         Next i
@@ -390,6 +390,30 @@ Public Class TestDataRead
         r.AllSpellsList = ReadTestSpells()
         r.AllModificatorsList = ReadTestModificators()
         r.settings.modName = GenDefaultValues.DefaultMod
+        Return r
+    End Function
+
+    Public Shared Function ReadTestBags() As List(Of String)()
+        Return ReadBags(False)
+    End Function
+    Public Shared Function ReadTestRuinsTreasure() As List(Of String)()
+        Return ReadBags(True)
+    End Function
+    Private Shared Function ReadBags(ByVal firstItemOnly As Boolean) As List(Of String)()
+        Dim bags()() As String = TXTSplit(My.Resources.TestBags, -1)
+        Dim r(UBound(bags)) As List(Of String)
+        Dim n As Integer
+        For i As Integer = 0 To UBound(bags) Step 1
+            r(i) = New List(Of String)
+            If firstItemOnly Then
+                n = 0
+            Else
+                n = UBound(bags(i))
+            End If
+            For j As Integer = 0 To n Step 1
+                r(i).Add(bags(i)(j))
+            Next j
+        Next i
         Return r
     End Function
 

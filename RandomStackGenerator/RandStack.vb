@@ -131,7 +131,7 @@ Public Class RandStack
 
     Private ExpBar(), ExpKilled(), multiplierUnitDesiredStats() As Double
 
-    Friend ItemCostSum(), multiplierItemsWeight() As Double
+    Friend ItemCostSum() As Double
     Private minItemGoldCost As Integer
     Private bak_multiplierItemsWeight() As Double
 
@@ -144,7 +144,8 @@ Public Class RandStack
     ''' </summary>
     Public mapData As ConstructorInput.MapInfo
 
-    Private AddedItems As New Dictionary(Of Integer, Dictionary(Of Integer, List(Of AllDataStructues.Item)))
+    Friend Global_ItemsWeightMultiplier() As Double
+    Private Global_AddedItems As New Dictionary(Of Integer, Dictionary(Of Integer, List(Of AllDataStructues.Item)))
 
     ''' <summary>Сюда генератор пишет лог</summary>
     Public log As Log
@@ -215,7 +216,7 @@ Public Class RandStack
             End If
         Next i
 
-        ReDim AllItems(UBound(data.AllItemsList)), ItemCostSum(UBound(data.AllItemsList)), multiplierItemsWeight(UBound(data.AllItemsList))
+        ReDim AllItems(UBound(data.AllItemsList)), ItemCostSum(UBound(data.AllItemsList)), Global_ItemsWeightMultiplier(UBound(data.AllItemsList))
 
         Dim weight As New Dictionary(Of String, String)
         For Each s As String In comm.defValues.Global_ItemType_ChanceMultiplier.Split(CChar(";"))
@@ -232,13 +233,13 @@ Public Class RandStack
 
             ItemCostSum(i) = AllDataStructues.Cost.Sum(LootCost(AllItems(i)))
             AllItems(i).itemCostSum = ItemCostSum(i)
-            multiplierItemsWeight(i) = ItemTypeWeight(weight, comm.itemType.Item(AllItems(i).type), ItemCostSum(i))
+            Global_ItemsWeightMultiplier(i) = ItemTypeWeight(weight, comm.itemType.Item(AllItems(i).type), ItemCostSum(i))
             If comm.LootItemChanceMultiplier.ContainsKey(AllItems(i).itemID.ToUpper) Then
-                multiplierItemsWeight(i) *= comm.LootItemChanceMultiplier.Item(AllItems(i).itemID.ToUpper)
+                Global_ItemsWeightMultiplier(i) *= comm.LootItemChanceMultiplier.Item(AllItems(i).itemID.ToUpper)
             End If
             If AllItems(i).itemCost.Gold > 0 Then minItemGoldCost = Math.Min(minItemGoldCost, CInt(AllItems(i).itemCost.Gold))
         Next i
-        bak_multiplierItemsWeight = CType(multiplierItemsWeight.Clone, Double())
+        bak_multiplierItemsWeight = CType(Global_ItemsWeightMultiplier.Clone, Double())
 
         ReDim AllSpells(UBound(data.AllSpellsList))
         For i As Integer = 0 To UBound(data.AllSpellsList) Step 1
@@ -295,10 +296,10 @@ Public Class RandStack
     End Function
     ''' <summary>Установит множители шанса появления предметов на значения по умолчанию</summary>
     Public Sub ResetItemWeightMultiplier()
-        multiplierItemsWeight = CType(bak_multiplierItemsWeight.Clone, Double())
+        Global_ItemsWeightMultiplier = CType(bak_multiplierItemsWeight.Clone, Double())
     End Sub
     Public Sub ResetAddedItems()
-        AddedItems.Clear()
+        Global_AddedItems.Clear()
     End Sub
     Private Sub ResetExclusions()
         If Not IsNothing(AllUnits) Then
@@ -680,66 +681,56 @@ Public Class RandStack
     Public Function ItemsGen(ByVal GenSettings As AllDataStructues.CommonLootCreationSettings, _
                              Optional ByVal LogID As Integer = -1) As List(Of String)
 
-        Call LootGenPrepare(GenSettings.GoldCost, GenSettings.IGen, GenSettings.pos, LogID, True)
+        Call LootGenPrepare(GenSettings, LogID, True)
 
-        Dim DynTypeWeightMultiplier() As Double = ItemTypeDynWeight(GenSettings.pos)
-
-        Dim DynIGen As AllDataStructues.LootGenSettings = GenItemSetDynIGen(GenSettings.IGen, GenSettings.GoldCost)
         Dim serialExecution As Boolean = (LogID < 0)
-        Dim costBar(), maxCost(), selected As Integer
+        Dim maxCost(), selected As Integer
         Dim weight(UBound(AllItems)) As Double
-        Dim DynCost As Integer = GenSettings.GoldCost
         Dim IDs As New List(Of Integer)
         Dim result As New List(Of String)
-        Dim sameAddedCount(UBound(AllItems)) As Integer
-        Dim sameTypeAddedCount(UBound(comm.defValues.ThisBag_SameItemsType_ChanceMultiplier)) As Integer
 
-        Dim Local_SameItemCount() As Integer = SameItemsCounter(GenSettings.pos)
-        Dim DynSameItemWeightMultiplier() As Double = SameItemDynWeight(GenSettings.pos, Local_SameItemCount)
+        Dim again As Boolean
+        Dim itemsFilter As New ItemsFilter(2, Me, GenItemSetDynIGen(GenSettings.IGen, GenSettings.GoldCost), _
+                                           GenSettings.TypeCostRestriction, Nothing, GenSettings.GoldCost)
+        itemsFilter.presets(0).useSimple = True
+        itemsFilter.presets(0).useTypeStrict = True
+        itemsFilter.presets(0).useTypeSoft = True
+        itemsFilter.presets(0).useTypeCost = True
+        itemsFilter.presets(0).useCostSum = True
 
-        Dim forceStrictFilterDisable, again As Boolean
+        itemsFilter.presets(1).useCostBar = True
 
-        Do While DynCost >= minItemGoldCost
-            maxCost = GenItemMaxCost(DynIGen, DynCost)
-            costBar = GenItemCostBar(DynIGen, maxCost, serialExecution)
-            Call AddToLog(LogID, "Max cost bar:" & DynCost & _
-                                 " Selected cost bar:" & costBar(0) & "|" & costBar(1) & "|" & costBar(2) & _
+        Dim DynWeight As New ItemsWeigtMultipliers(Me, GenSettings, itemsFilter)
+
+        Do While itemsFilter.CurrentMaxLootCost >= minItemGoldCost
+            maxCost = GenItemMaxCost(itemsFilter.IGen, itemsFilter.CurrentMaxLootCost)
+            itemsFilter.TypeCostBar = GenItemCostBar(itemsFilter.IGen, maxCost, serialExecution)
+            Call AddToLog(LogID, "Max cost bar:" & itemsFilter.CurrentMaxLootCost & _
+                                 " Selected cost bar:" & itemsFilter.TypeCostBar(0) & "|" & itemsFilter.TypeCostBar(1) & "|" & itemsFilter.TypeCostBar(2) & _
                                  " max item cost:" & maxCost(0) & "|" & maxCost(1) & "|" & maxCost(2))
             IDs.Clear()
-            forceStrictFilterDisable = False
+            itemsFilter.ForceDisableStrictTypesFilter = False
             again = True
             Do While again
                 For i As Integer = 0 To UBound(AllItems) Step 1
-                    'new filter
-                    If ItemFilter(GenSettings.IGen, AllItems(i), forceStrictFilterDisable) AndAlso ItemFilter(GenSettings.TypeCostRestriction, AllItems(i)) AndAlso ItemFilter(DynIGen, AllItems(i), DynCost) Then
+                    If itemsFilter.Filter(0, AllItems(i)) Then
                         IDs.Add(i)
-                        weight(i) = GenItemWeight(AllItems(i), costBar) * multiplierItemsWeight(i) * DynTypeWeightMultiplier(AllItems(i).type) * DynSameItemWeightMultiplier(i)
-                        If Not ItemFilter(DynIGen, AllItems(i), costBar) Then weight(i) *= 0.001
-                        If result.Contains(AllItems(i).itemID) Then
-                            Dim d As Integer = 1 + sameAddedCount(i) - comm.defValues.SameItemsAmountRestriction(AllItems(i).type)
-                            If d > 0 Then weight(i) *= comm.defValues.ThisBag_SameItems_ChanceMultiplier(AllItems(i).type) ^ d
-                        End If
-                        If sameTypeAddedCount(AllItems(i).type) >= comm.defValues.SameItemsTypeAmountRestriction(AllItems(i).type) Then
-                            Dim d As Integer = 1 + sameTypeAddedCount(AllItems(i).type) - comm.defValues.SameItemsTypeAmountRestriction(AllItems(i).type)
-                            If d > 0 Then weight(i) *= comm.defValues.ThisBag_SameItemsType_ChanceMultiplier(AllItems(i).type) ^ d
-                        End If
+                        weight(i) = GenItemWeight(AllItems(i), itemsFilter.TypeCostBar) * _
+                                    Global_ItemsWeightMultiplier(i) * _
+                                    DynWeight.Nearby_SameTypeMultiplier(AllItems(i).type) * _
+                                    DynWeight.Nearby_SameItemMultiplier(i) * _
+                                    DynWeight.NearbyCapitalSameTypeItemsEffectOnWeight(i)
+                        If Not itemsFilter.Filter(1, AllItems(i)) Then weight(i) *= 0.001
+                        weight(i) *= DynWeight.ThisBagItemsEffectOnWeight(result, i)
                     Else
                         weight(i) = 0
                     End If
-
-                    'old filter
-                    'If ItemFilter(DynIGen, AllItems(i), costBar) AndAlso ItemFilter(TypeCostRestriction, AllItems(i)) Then
-                    '    IDs.Add(i)
-                    '    weight(i) = GenItemWeight(AllItems(i), costBar) * multiplierItemsWeight(i) * DynTypeWeightMultiplier(AllItems(i).type)
-                    'Else
-                    '    weight(i) = 0
-                    'End If
                 Next i
                 If IDs.Count > 0 Then
                     again = False
                 Else
-                    If Not forceStrictFilterDisable Then
-                        forceStrictFilterDisable = True
+                    If Not itemsFilter.ForceDisableStrictTypesFilter Then
+                        itemsFilter.ForceDisableStrictTypesFilter = True
                     Else
                         again = False
                     End If
@@ -748,32 +739,15 @@ Public Class RandStack
             If IDs.Count = 0 Then Exit Do
 
             selected = comm.RandomSelection(IDs, weight, serialExecution)
-            multiplierItemsWeight(selected) *= comm.defValues.Global_AddedItem_ChanceMultiplier
-            DynTypeWeightMultiplier(AllItems(selected).type) *= comm.defValues.Local_AddedItemType_ChanceMultiplier(AllItems(selected).type)
-
-            Call AddToLog(LogID, "Selected item:" & AllItems(selected).name & " id:" & AllItems(selected).itemID & " cost:" & ItemCostSum(selected))
-            result.Add(AllItems(selected).itemID)
-            Call AddToAddedItemList(AllItems(selected), GenSettings.pos)
-            Call GenItemIGenChange(DynIGen, AllItems(selected), DynCost)
-            DynCost = CInt(DynCost - ItemCostSum(selected))
-            sameAddedCount(selected) += 1
-            sameTypeAddedCount(AllItems(selected).type) += 1
-
-            Local_SameItemCount(selected) += 1
-            If Local_SameItemCount(selected) >= comm.defValues.SameItemsAmountRestriction(AllItems(selected).type) Then
-                DynSameItemWeightMultiplier(selected) *= comm.defValues.Local_SameItem_ChanceMultiplier(AllItems(selected).type)
-            End If
-
-            Call GenSettings.IGen.Added(AllItems(selected))
+            Call DynWeight.ItemAdded(result, selected, True, LogID)
         Loop
 
         If Not IsNothing(GenSettings.IGen.PreserveItems) AndAlso GenSettings.IGen.PreserveItems.Count > 0 Then
             For Each item As String In GenSettings.IGen.PreserveItems
-                result.Add(item.ToUpper)
-                Dim thing As AllDataStructues.Item = FindItemStats(item)
-                Call AddToLog(LogID, "Preserved item:" & thing.name & " id:" & item.ToUpper)
-                Call AddToAddedItemList(thing, GenSettings.pos)
-                Call GenSettings.IGen.Added(thing)
+                selected = ItemsArrayPos.Item(item.ToUpper)
+                Call DynWeight.ItemAdded(result, selected, False, LogID)
+                Dim thing As AllDataStructues.Item = AllItems(selected)
+                Call AddToLog(LogID, "Preserved item:" & thing.name & " id:" & thing.itemID.ToUpper)
             Next item
         End If
 
@@ -806,38 +780,36 @@ Public Class RandStack
         Dim bar As Double = 1 - (1 - R) / m
         Return minBar + CInt(bar * CDbl(maxBar - minBar))
     End Function
-    Private Sub LootGenPrepare(ByRef GoldCost As Integer, _
-                               ByRef IGen As AllDataStructues.LootGenSettings, _
-                               ByRef pos As Point, _
+    Private Sub LootGenPrepare(ByRef GenSettings As AllDataStructues.CommonLootCreationSettings, _
                                ByRef LogID As Integer, _
                                ByRef lootGenCall As Boolean)
 
-        Dim preservedItemsCost As Integer = AllDataStructues.Cost.Sum(LootCost(IGen.PreserveItems))
-        If IGen.lootCostMultiplier > 0 Then preservedItemsCost = CInt(preservedItemsCost * IGen.lootCostMultiplier)
-        GoldCost -= preservedItemsCost
+        Dim preservedItemsCost As Integer = AllDataStructues.Cost.Sum(LootCost(GenSettings.IGen.PreserveItems))
+        If GenSettings.IGen.lootCostMultiplier > 0 Then preservedItemsCost = CInt(preservedItemsCost * GenSettings.IGen.lootCostMultiplier)
+        GenSettings.GoldCost -= preservedItemsCost
 
-        Call IGen.Initialize()
+        Call GenSettings.IGen.Initialize()
 
-        If (IsNothing(IGen.PreserveItems) OrElse IGen.PreserveItems.Count = 0) _
-         And IGen.addLootAnyway And GoldCost < minItemGoldCost Then
-            GoldCost = CInt(1.2 * minItemGoldCost)
+        If (IsNothing(GenSettings.IGen.PreserveItems) OrElse GenSettings.IGen.PreserveItems.Count = 0) _
+         And GenSettings.IGen.addLootAnyway And GenSettings.GoldCost < minItemGoldCost Then
+            GenSettings.GoldCost = CInt(1.2 * minItemGoldCost)
         End If
 
         If lootGenCall Then
             Call AddToLog(LogID, "----Loot creation started----" & vbNewLine & _
-                                 "Gold sum: " & GoldCost)
+                                 "Gold sum: " & GenSettings.GoldCost)
         Else
             Call AddToLog(LogID, "----Single item creation started----" & vbNewLine & _
-                                 "Max cost: " & GoldCost)
+                                 "Max cost: " & GenSettings.GoldCost)
         End If
         Call AddToLog(LogID, "Preserved items cost sum: " & preservedItemsCost)
 
-        If Not IsNothing(pos) Then
-            Call AddToLog(LogID, "Position: " & pos.X & " " & pos.Y)
+        If Not IsNothing(GenSettings.pos) Then
+            Call AddToLog(LogID, "Position: " & GenSettings.pos.X & " " & GenSettings.pos.Y)
         Else
             Call AddToLog(LogID, "Position: unknown")
         End If
-        Call AddToLog(LogID, IGen)
+        Call AddToLog(LogID, GenSettings.IGen)
     End Sub
 
     ''' <summary>Генерирует один предмет. Если не получится выбрать подходящий предмет, вернет пустую строку</summary>
@@ -846,55 +818,55 @@ Public Class RandStack
     Public Function ThingGen(ByVal GenSettings As AllDataStructues.CommonLootCreationSettings, _
                              Optional ByVal LogID As Integer = -1) As String
 
-        Call LootGenPrepare(GenSettings.GoldCost, GenSettings.IGen, GenSettings.pos, LogID, False)
-
-        If Not IsNothing(GenSettings.IGen.PreserveItems) AndAlso GenSettings.IGen.PreserveItems.Count > 0 Then
-            Dim thing As AllDataStructues.Item = FindItemStats(GenSettings.IGen.PreserveItems.Item(0))
-            Call AddToLog(LogID, "Preserved item:" & thing.name & " id:" & GenSettings.IGen.PreserveItems.Item(0).ToUpper)
-            Call AddToLog(LogID, "----Single item creation ended----")
-            Call AddToAddedItemList(thing, GenSettings.pos)
-            Return GenSettings.IGen.PreserveItems.Item(0).ToUpper
-        End If
+        Call LootGenPrepare(GenSettings, LogID, False)
 
         Dim serialExecution As Boolean = (LogID < 0)
-        Dim selected As Integer
-        Dim IDs As New List(Of Integer)
         Dim result As String = ""
-        Dim minGoldCost As Integer = CInt(Math.Max(Math.Min(comm.defValues.MinRuinsLootCostMultiplier, 1), 0) * GenSettings.GoldCost)
 
-        Dim DynTypeWeightMultiplier(), DynItemWeightMultiplier(UBound(AllItems)), DynSameItemWeightMultiplier() As Double
+        Dim itemsFilter As New ItemsFilter(1, Me, GenSettings.IGen, GenSettings.TypeCostRestriction, Nothing, GenSettings.GoldCost)
+        itemsFilter.presets(0).useSimple = True
+        itemsFilter.presets(0).useTypeStrict = True
+        itemsFilter.presets(0).useTypeSoft = True
+        itemsFilter.presets(0).useTypeCost = True
 
-        DynTypeWeightMultiplier = ItemTypeDynWeight(GenSettings.pos)
-        DynSameItemWeightMultiplier = SameItemDynWeight(GenSettings.pos, SameItemsCounter(GenSettings.pos))
+        itemsFilter.ForceDisableStrictTypesFilter = False
+        itemsFilter.strictMinCost = CInt(Math.Max(Math.Min(comm.defValues.MinRuinsLootCostMultiplier, 1), 0) * GenSettings.GoldCost)
+        itemsFilter.strictMaxCost = GenSettings.GoldCost
 
-        Dim forceStrictFilterDisable As Boolean = False
-        Dim again As Boolean = True
+        Dim DynWeight As New ItemsWeigtMultipliers(Me, GenSettings, itemsFilter)
 
-        IDs.Clear()
-
-        Do While again
-            For i As Integer = 0 To UBound(AllItems) Step 1
-                DynItemWeightMultiplier(i) = multiplierItemsWeight(i) * DynTypeWeightMultiplier(AllItems(i).type) * DynSameItemWeightMultiplier(i)
-                If ItemCostSum(i) <= GenSettings.GoldCost AndAlso ItemCostSum(i) >= minGoldCost AndAlso ItemFilter(GenSettings.IGen, AllItems(i), forceStrictFilterDisable) _
-                AndAlso ItemFilter(GenSettings.TypeCostRestriction, AllItems(i)) Then IDs.Add(i)
-            Next i
-            If IDs.Count > 0 Then
-                again = False
-            Else
-                If Not forceStrictFilterDisable Then
-                    forceStrictFilterDisable = True
-                Else
+        If Not IsNothing(GenSettings.IGen.PreserveItems) AndAlso GenSettings.IGen.PreserveItems.Count > 0 Then
+            Dim selected As Integer = ItemsArrayPos.Item(GenSettings.IGen.PreserveItems.Item(0).ToUpper)
+            Call DynWeight.ItemAdded(result, selected, False, LogID)
+            Dim thing As AllDataStructues.Item = AllItems(selected)
+            Call AddToLog(LogID, "Preserved item:" & thing.name & " id:" & thing.itemID.ToUpper)
+        Else
+            Dim IDs As New List(Of Integer)
+            Dim weight(UBound(AllItems)) As Double
+            Dim again As Boolean = True
+            Do While again
+                For i As Integer = 0 To UBound(AllItems) Step 1
+                    weight(i) = Global_ItemsWeightMultiplier(i) * _
+                                DynWeight.Nearby_SameTypeMultiplier(AllItems(i).type) * _
+                                DynWeight.Nearby_SameItemMultiplier(i) * _
+                                DynWeight.NearbyCapitalSameTypeItemsEffectOnWeight(i)
+                    If itemsFilter.Filter(0, AllItems(i)) Then IDs.Add(i)
+                Next i
+                If IDs.Count > 0 Then
                     again = False
+                Else
+                    If Not itemsFilter.ForceDisableStrictTypesFilter Then
+                        itemsFilter.ForceDisableStrictTypesFilter = True
+                    Else
+                        again = False
+                    End If
                 End If
+            Loop
+            If IDs.Count > 0 Then
+                Dim selected As Integer = comm.RandomSelection(IDs, New Double()() {ItemCostSum}, _
+                    New Double() {itemsFilter.CurrentMaxLootCost}, weight, itemGenSigma, serialExecution)
+                Call DynWeight.ItemAdded(result, selected, True, LogID)
             End If
-        Loop
-        If IDs.Count > 0 Then
-            selected = comm.RandomSelection(IDs, New Double()() {ItemCostSum}, New Double() {GenSettings.GoldCost}, DynItemWeightMultiplier, itemGenSigma, serialExecution)
-            multiplierItemsWeight(selected) *= comm.defValues.Global_AddedItem_ChanceMultiplier
-            Call AddToLog(LogID, "Selected item:" & AllItems(selected).name & " id:" & AllItems(selected).itemID & " cost:" & ItemCostSum(selected))
-            result = AllItems(selected).itemID
-            Call AddToAddedItemList(AllItems(selected), GenSettings.pos)
-            Call GenSettings.IGen.Added(AllItems(selected))
         End If
 
         Call AddToLog(LogID, "----Single item creation ended----")
@@ -995,195 +967,441 @@ Public Class RandStack
         Next i
         Return result
     End Function
-    Private Sub GenItemIGenChange(ByRef IGen As AllDataStructues.LootGenSettings, _
-                                  ByRef item As AllDataStructues.Item, _
-                                  ByRef DynCost As Integer)
-        Dim settings() As AllDataStructues.ItemGenSettings = AllDataStructues.LootGenSettings.ToArray(IGen)
-        For i As Integer = 0 To UBound(settings) Step 1
-            If comm.ItemTypesLists(i).Contains(item.type) Then
-                If settings(i).amount > 0 Then
-                    settings(i).amount -= 1
-                    If settings(i).amount = 0 Then
-                        Dim weightsSum As Double
-                        For j As Integer = 0 To UBound(settings) Step 1
-                            If Not settings(j).exclude Then weightsSum += settings(j).costPart
-                        Next j
-                        If weightsSum > 0 Then
-                            settings(i).costPart = 1 - weightsSum
-                            settings(i).dynCostPart = CInt(settings(i).costPart * DynCost)
+
+    Public Class ItemsWeigtMultipliers
+
+        Public randStack As RandStack
+        Private comm As Common
+
+        Public GenSettings As AllDataStructues.CommonLootCreationSettings
+
+        Public ItemsFilter As ItemsFilter
+
+        Private ThisBag_SameAddedCount() As Integer
+        Private ThisBag_SameTypeAddedCount() As Integer
+
+        Private Nearby_SameItemCount() As Integer
+        Public Nearby_SameItemMultiplier() As Double
+        Public Nearby_SameTypeMultiplier() As Double
+
+        Private NearbyCapital_SameTypeCount() As Integer = Nothing
+        Private NearbyCapital_SameTypeMultiplierSettings() As ItemAmountWeightMultiplierSetting = Nothing
+        Private Structure ItemAmountWeightMultiplierSetting
+            Public maxAmount As Integer
+            Public multiplier As Double
+        End Structure
+
+        Public Sub New(ByRef _randStack As RandStack, ByRef _GenSettings As AllDataStructues.CommonLootCreationSettings, _
+                       ByRef _ItemsFilter As ItemsFilter)
+            randStack = _randStack
+            comm = _randStack.comm
+            GenSettings = _GenSettings
+            ItemsFilter = _ItemsFilter
+
+            ReDim ThisBag_SameAddedCount(UBound(randStack.AllItems)), ThisBag_SameTypeAddedCount(UBound(comm.defValues.ThisBag_SameItemsType_ChanceMultiplier))
+            Call SameItemsCounter(GenSettings.pos)
+            Call SameItemDynWeight(GenSettings.pos, Nearby_SameItemCount)
+            Call ItemTypeDynWeight(GenSettings.pos)
+            Call SameTypeAroundCapitalMultiplierSettings()
+            Call SameTypesAroundCapitalCounter()
+        End Sub
+        Private Sub ItemTypeDynWeight(ByRef pos As Point)
+            ReDim Nearby_SameTypeMultiplier(comm.defValues.maxItemTypeID)
+            For i As Integer = 0 To UBound(Nearby_SameTypeMultiplier) Step 1
+                Nearby_SameTypeMultiplier(i) = 1
+            Next i
+            If IsNothing(pos) Then Exit Sub
+            Dim w, t As Double
+            Dim d As Double = comm.defValues.AddedItemTypeSearchRadius
+            Dim R2 As Double = d * d
+            Dim invD As Double = 1 / d
+            For Each x As Integer In randStack.Global_AddedItems.Keys
+                If Math.Abs(pos.X - x) <= d Then
+                    For Each y As Integer In randStack.Global_AddedItems.Item(x).Keys
+                        If pos.SqDist(x, y) <= R2 Then
+                            w = pos.Dist(x, y) * invD
+                            For Each item As AllDataStructues.Item In randStack.Global_AddedItems.Item(x).Item(y)
+                                t = comm.defValues.Local_AddedItemType_ChanceMultiplier(item.type)
+                                Nearby_SameTypeMultiplier(item.type) *= t + Math.Max((1 - t) * w, 0)
+                            Next item
+                        End If
+                    Next y
+                End If
+            Next x
+        End Sub
+        Private Sub SameItemsCounter(ByRef pos As Point)
+            ReDim Nearby_SameItemCount(UBound(randStack.AllItems))
+            If IsNothing(pos) Then Exit Sub
+            Dim d As Double = comm.defValues.AddedItemTypeSearchRadius
+            Dim R2 As Double = d * d
+            For Each x As Integer In randStack.Global_AddedItems.Keys
+                If Math.Abs(pos.X - x) <= d Then
+                    For Each y As Integer In randStack.Global_AddedItems.Item(x).Keys
+                        If pos.SqDist(x, y) <= R2 Then
+                            For Each item As AllDataStructues.Item In randStack.Global_AddedItems.Item(x).Item(y)
+                                Nearby_SameItemCount(randStack.ItemsArrayPos.Item(item.itemID)) += 1
+                            Next item
+                        End If
+                    Next y
+                End If
+            Next x
+        End Sub
+        Private Sub SameItemDynWeight(ByRef pos As Point, ByRef SameItemsCount() As Integer)
+            ReDim Nearby_SameItemMultiplier(UBound(randStack.AllItems))
+            For i As Integer = 0 To UBound(Nearby_SameItemMultiplier) Step 1
+                Nearby_SameItemMultiplier(i) = 1
+            Next i
+            If IsNothing(pos) Then Exit Sub
+            Dim itemI As Integer
+            Dim w, t, a, r As Double
+            Dim d As Double = comm.defValues.AddedItemTypeSearchRadius
+            Dim R2 As Double = d * d
+            Dim invD As Double = 1 / d
+            For Each x As Integer In randStack.Global_AddedItems.Keys
+                If Math.Abs(pos.X - x) <= d Then
+                    For Each y As Integer In randStack.Global_AddedItems.Item(x).Keys
+                        If pos.SqDist(x, y) <= R2 Then
+                            w = pos.Dist(x, y) * invD
+                            For Each item As AllDataStructues.Item In randStack.Global_AddedItems.Item(x).Item(y)
+                                itemI = randStack.ItemsArrayPos.Item(item.itemID)
+                                a = SameItemsCount(itemI)
+                                r = comm.defValues.SameItemsAmountRestriction(item.type)
+                                If a >= r Then
+                                    t = comm.defValues.Local_SameItem_ChanceMultiplier(item.type)
+                                    Nearby_SameItemMultiplier(itemI) *= (t + Math.Max((1 - t) * w, 0)) ^ ((a - r + 1) / (a + 1))
+                                End If
+                            Next item
+                        End If
+                    Next y
+                End If
+            Next x
+        End Sub
+        Private Sub SameTypesAroundCapitalCounter()
+            Dim minSqDist As Double = comm.defValues.CapitalLocationRadius ^ 2
+            Dim halfCapitalSize As Integer = 2
+            Dim m As Double = Double.MaxValue
+            Dim nearestCapital As Point = Nothing
+            For Each p As Point In randStack.mapData.capitalPos
+                Dim c As Point = New Point(p.X + halfCapitalSize, p.Y + halfCapitalSize)
+                Dim d As Double = c.SqDist(GenSettings.pos)
+                If d <= minSqDist AndAlso d < m Then
+                    m = d
+                    nearestCapital = New Point(c.X, c.Y)
+                End If
+            Next p
+            If Not IsNothing(nearestCapital) Then
+                ReDim NearbyCapital_SameTypeCount(comm.defValues.maxItemTypeID)
+                For Each x As Integer In randStack.Global_AddedItems.Keys
+                    If Math.Abs(nearestCapital.X - x) <= comm.defValues.CapitalLocationRadius Then
+                        For Each y As Integer In randStack.Global_AddedItems.Item(x).Keys
+                            If nearestCapital.SqDist(x, y) <= minSqDist Then
+                                For Each item As AllDataStructues.Item In randStack.Global_AddedItems.Item(x).Item(y)
+                                    NearbyCapital_SameTypeCount(item.type) += 1
+                                Next item
+                            End If
+                        Next y
+                    End If
+                Next x
+            End If
+        End Sub
+        Private Sub SameTypeAroundCapitalMultiplierSettings()
+            ReDim NearbyCapital_SameTypeMultiplierSettings(comm.defValues.maxItemTypeID)
+            Dim txt() As String = comm.defValues.CapitalLocationBasicItems
+            Dim splited(), s() As String
+            Dim n As Integer
+            For i As Integer = 0 To UBound(txt) Step 1
+                splited = txt(i).Replace(" ", "").Replace(vbTab, "").Split(CChar("="))
+                n = comm.itemTypeID.Item(splited(0))
+                s = splited(1).Split(CChar("#"))
+                NearbyCapital_SameTypeMultiplierSettings(n) = New ItemAmountWeightMultiplierSetting With { _
+                    .maxAmount = CInt(s(0)), .multiplier = CDbl(s(1))}
+            Next i
+        End Sub
+
+        Public Sub ItemAdded(ByRef result As String, ByRef selected As Integer, ByRef printLogMsg As Boolean, ByRef LogID As Integer)
+            result = randStack.AllItems(selected).itemID
+            Call ItemAddedEffect(selected, printLogMsg, LogID)
+        End Sub
+        Public Sub ItemAdded(ByRef result As List(Of String), ByRef selected As Integer, ByRef printLogMsg As Boolean, ByRef LogID As Integer)
+            result.Add(randStack.AllItems(selected).itemID)
+            Call ItemAddedEffect(selected, printLogMsg, LogID)
+        End Sub
+        Private Sub ItemAddedEffect(ByRef selected As Integer, ByRef printLogMsg As Boolean, ByRef LogID As Integer)
+            'добавленный предмет
+            Dim item As AllDataStructues.Item = randStack.AllItems(selected)
+
+            If printLogMsg Then
+                Call randStack.AddToLog(LogID, "Selected item:" & item.name & _
+                                               " id:" & item.itemID & _
+                                               " cost:" & randStack.ItemCostSum(selected))
+            End If
+            Call GenSettings.IGen.Added(item)
+
+            'меняем параметры генерации
+            Call GenItemIGenChange(selected)
+
+            'сохраняем глобальную информацию о добавленных- предметах
+            Call AddToAddedItemList(item)
+
+            'глобальное уменьшение шанса создать предмет того же типа
+            randStack.Global_ItemsWeightMultiplier(selected) *= comm.defValues.Global_AddedItem_ChanceMultiplier
+
+            'количество одинаковых предметов в текущем наборе
+            ThisBag_SameAddedCount(selected) += 1
+
+            'количество одинаковых типов предметов в текущем наборе
+            ThisBag_SameTypeAddedCount(item.type) += 1
+
+            'уменьшение шанса создать предмет того же типа, что и расположенные поблизости
+            Nearby_SameTypeMultiplier(item.type) *= comm.defValues.Local_AddedItemType_ChanceMultiplier(item.type)
+
+            'уменьшение шанса создать предмет, если поблизости есть такой же предмет
+            Nearby_SameItemCount(selected) += 1
+            If Nearby_SameItemCount(selected) >= comm.defValues.SameItemsAmountRestriction(item.type) Then
+                Nearby_SameItemMultiplier(selected) *= comm.defValues.Local_SameItem_ChanceMultiplier(item.type)
+            End If
+
+            'количество одинаковых типов предметов рядом с близлежащей столицей
+            If Not IsNothing(NearbyCapital_SameTypeCount) Then
+                NearbyCapital_SameTypeCount(item.type) += 1
+            End If
+        End Sub
+        Private Sub GenItemIGenChange(ByRef selected As Integer)
+            Dim settings() As AllDataStructues.ItemGenSettings = AllDataStructues.LootGenSettings.ToArray(ItemsFilter.IGen)
+            For i As Integer = 0 To UBound(settings) Step 1
+                If comm.ItemTypesLists(i).Contains(randStack.AllItems(selected).type) Then
+                    If settings(i).amount > 0 Then
+                        settings(i).amount -= 1
+                        If settings(i).amount = 0 Then
+                            Dim weightsSum As Double
+                            For j As Integer = 0 To UBound(settings) Step 1
+                                If Not settings(j).exclude Then weightsSum += settings(j).costPart
+                            Next j
+                            If weightsSum > 0 Then
+                                settings(i).costPart = 1 - weightsSum
+                                settings(i).dynCostPart = CInt(settings(i).costPart * ItemsFilter.CurrentMaxLootCost)
+                            End If
                         End If
                     End If
+                    If settings(i).dynCostPart > 0 Then
+                        settings(i).dynCostPart -= AllDataStructues.Cost.Sum(randStack.LootCost(randStack.AllItems(selected)))
+                        If settings(i).dynCostPart <= 0 Then
+                            settings(i).dynCostPart = 0
+                            For j As Integer = 0 To UBound(settings) Step 1
+                                If Not i = j And Not settings(j).exclude Then settings(i).exclude = True
+                            Next j
+                        End If
+                    End If
+                    If i = 0 Then
+                        ItemsFilter.IGen.ConsumableItems = settings(i)
+                    ElseIf i = 1 Then
+                        ItemsFilter.IGen.NonconsumableItems = settings(i)
+                    ElseIf i = 2 Then
+                        ItemsFilter.IGen.JewelItems = settings(i)
+                    Else
+                        Throw New Exception
+                    End If
+                    Exit For
                 End If
-                If settings(i).dynCostPart > 0 Then
-                    settings(i).dynCostPart -= AllDataStructues.Cost.Sum(LootCost(item))
-                    If settings(i).dynCostPart <= 0 Then
-                        settings(i).dynCostPart = 0
-                        For j As Integer = 0 To UBound(settings) Step 1
-                            If Not i = j And Not settings(j).exclude Then settings(i).exclude = True
-                        Next j
-                    End If
-                End If
-                If i = 0 Then
-                    IGen.ConsumableItems = settings(i)
-                ElseIf i = 1 Then
-                    IGen.NonconsumableItems = settings(i)
-                ElseIf i = 2 Then
-                    IGen.JewelItems = settings(i)
-                Else
-                    Throw New Exception
-                End If
-                Exit For
-            End If
-        Next i
-    End Sub
-    Private Function ItemTypeDynWeight(ByRef pos As Point) As Double()
-        Dim DynTypeWeightMultiplier(14) As Double
-        For i As Integer = 0 To UBound(DynTypeWeightMultiplier) Step 1
-            DynTypeWeightMultiplier(i) = 1
-        Next i
-        If IsNothing(pos) Then Return DynTypeWeightMultiplier
-        Dim w, t As Double
-        Dim d As Double = comm.defValues.AddedItemTypeSearchRadius
-        Dim R2 As Double = d * d
-        Dim invD As Double = 1 / d
-        For Each x As Integer In AddedItems.Keys
-            If Math.Abs(pos.X - x) <= d Then
-                For Each y As Integer In AddedItems.Item(x).Keys
-                    If pos.SqDist(x, y) <= R2 Then
-                        w = pos.Dist(x, y) * invD
-                        For Each item As AllDataStructues.Item In AddedItems.Item(x).Item(y)
-                            t = comm.defValues.Local_AddedItemType_ChanceMultiplier(item.type)
-                            DynTypeWeightMultiplier(item.type) *= t + Math.Max((1 - t) * w, 0)
-                        Next item
-                    End If
-                Next y
-            End If
-        Next x
-        Return DynTypeWeightMultiplier
-    End Function
-    Private Function SameItemsCounter(ByRef pos As Point) As Integer()
-        Dim result(UBound(AllItems)) As Integer
-        If IsNothing(pos) Then Return result
-        Dim d As Double = comm.defValues.AddedItemTypeSearchRadius
-        Dim R2 As Double = d * d
-        For Each x As Integer In AddedItems.Keys
-            If Math.Abs(pos.X - x) <= d Then
-                For Each y As Integer In AddedItems.Item(x).Keys
-                    If pos.SqDist(x, y) <= R2 Then
-                        For Each item As AllDataStructues.Item In AddedItems.Item(x).Item(y)
-                            result(ItemsArrayPos.Item(item.itemID)) += 1
-                        Next item
-                    End If
-                Next y
-            End If
-        Next x
-        Return result
-    End Function
-    Private Function SameItemDynWeight(ByRef pos As Point, ByRef SameItemsCount() As Integer) As Double()
-        Dim DynTypeWeightMultiplier(UBound(AllItems)) As Double
-        For i As Integer = 0 To UBound(DynTypeWeightMultiplier) Step 1
-            DynTypeWeightMultiplier(i) = 1
-        Next i
-        If IsNothing(pos) Then Return DynTypeWeightMultiplier
-        Dim itemI As Integer
-        Dim w, t, a, r As Double
-        Dim d As Double = comm.defValues.AddedItemTypeSearchRadius
-        Dim R2 As Double = d * d
-        Dim invD As Double = 1 / d
-        For Each x As Integer In AddedItems.Keys
-            If Math.Abs(pos.X - x) <= d Then
-                For Each y As Integer In AddedItems.Item(x).Keys
-                    If pos.SqDist(x, y) <= R2 Then
-                        w = pos.Dist(x, y) * invD
-                        For Each item As AllDataStructues.Item In AddedItems.Item(x).Item(y)
-                            itemI = ItemsArrayPos.Item(item.itemID)
-                            a = SameItemsCount(itemI)
-                            r = comm.defValues.SameItemsAmountRestriction(item.type)
-                            If a >= r Then
-                                t = comm.defValues.Local_SameItem_ChanceMultiplier(item.type)
-                                DynTypeWeightMultiplier(itemI) *= (t + Math.Max((1 - t) * w, 0)) ^ ((a - r + 1) / (a + 1))
-                            End If
-                        Next item
-                    End If
-                Next y
-            End If
-        Next x
-        Return DynTypeWeightMultiplier
-    End Function
-    Private Sub AddToAddedItemList(ByRef item As AllDataStructues.Item, ByRef pos As Point)
-        If IsNothing(pos) Then Exit Sub
-        If Not AddedItems.ContainsKey(pos.X) Then _
-            AddedItems.Add(pos.X, New Dictionary(Of Integer, List(Of AllDataStructues.Item)))
-        If Not AddedItems.Item(pos.X).ContainsKey(pos.Y) Then _
-            AddedItems.Item(pos.X).Add(pos.Y, New List(Of AllDataStructues.Item))
-        AddedItems.Item(pos.X).Item(pos.Y).Add(item)
-    End Sub
+            Next i
+            ItemsFilter.CurrentMaxLootCost = CInt(ItemsFilter.CurrentMaxLootCost - randStack.ItemCostSum(selected))
+        End Sub
+        Private Sub AddToAddedItemList(ByRef item As AllDataStructues.Item)
+            Dim pos As Point = GenSettings.pos
+            If IsNothing(pos) Then Exit Sub
+            If Not randStack.Global_AddedItems.ContainsKey(pos.X) Then _
+                randStack.Global_AddedItems.Add(pos.X, New Dictionary(Of Integer, List(Of AllDataStructues.Item)))
+            If Not randStack.Global_AddedItems.Item(pos.X).ContainsKey(pos.Y) Then _
+                randStack.Global_AddedItems.Item(pos.X).Add(pos.Y, New List(Of AllDataStructues.Item))
+            randStack.Global_AddedItems.Item(pos.X).Item(pos.Y).Add(item)
+        End Sub
 
-    ''' <summary>Фильтр предметов по типу и назначению: расходники, надеваемые артефакты или драгоценности</summary>
-    Friend Function ItemFilter(ByRef IGen As AllDataStructues.LootGenSettings, ByRef item As AllDataStructues.Item, _
-                               ByVal ForceDisableStrictTypesFilter As Boolean) As Boolean
-        If Not comm.IsAppropriateItem(item) Then Return False
-        Dim settings() As AllDataStructues.ItemGenSettings = AllDataStructues.LootGenSettings.ToArray(IGen)
-        For i As Integer = 0 To UBound(settings) Step 1
-            If comm.ItemTypesLists(i).Contains(item.type) Then
-                If settings(i).exclude Then
-                    Return False
-                Else
-                    Exit For
+        Public Function ThisBagItemsEffectOnWeight(ByRef addedItems As List(Of String), ByRef i As Integer) As Double
+            Dim item As AllDataStructues.Item = randStack.AllItems(i)
+            Dim d As Integer
+            Dim w As Double = 1
+            If addedItems.Contains(item.itemID) Then
+                d = 1 + ThisBag_SameAddedCount(i) - comm.defValues.SameItemsAmountRestriction(item.type)
+                If d > 0 Then w *= comm.defValues.ThisBag_SameItems_ChanceMultiplier(item.type) ^ d
+            End If
+            If ThisBag_SameTypeAddedCount(item.type) >= comm.defValues.SameItemsTypeAmountRestriction(item.type) Then
+                d = 1 + ThisBag_SameTypeAddedCount(item.type) - comm.defValues.SameItemsTypeAmountRestriction(item.type)
+                If d > 0 Then w *= comm.defValues.ThisBag_SameItemsType_ChanceMultiplier(item.type) ^ d
+            End If
+            Return w
+        End Function
+
+        Public Function NearbyCapitalSameTypeItemsEffectOnWeight(ByRef i As Integer) As Double
+            Dim w As Double = 1
+            If Not IsNothing(NearbyCapital_SameTypeCount) Then
+                Dim m As ItemAmountWeightMultiplierSetting = NearbyCapital_SameTypeMultiplierSettings(randStack.AllItems(i).type)
+                If NearbyCapital_SameTypeCount(randStack.AllItems(i).type) < m.maxAmount Then
+                    w = m.multiplier
                 End If
             End If
-        Next i
-        If Not ForceDisableStrictTypesFilter AndAlso Not IGen.Filter(item) Then Return False
-        Return True
-    End Function
-    ''' <summary>Фильтр предметов по стоимости (стоимость не выше заданного значения)</summary>
-    Friend Function ItemFilter(ByRef IGen As AllDataStructues.LootGenSettings, ByRef item As AllDataStructues.Item, _
-                               ByRef CostBar() As Integer) As Boolean
-        If Not comm.IsAppropriateItem(item) Then Return False
-        Dim settings() As AllDataStructues.ItemGenSettings = AllDataStructues.LootGenSettings.ToArray(IGen)
-        For i As Integer = 0 To UBound(settings) Step 1
-            If comm.ItemTypesLists(i).Contains(item.type) Then
-                If settings(i).exclude Then
-                    Return False
-                Else
-                    Dim sum As Integer = AllDataStructues.Cost.Sum(LootCost(item))
-                    If sum > comm.defValues.CostBarExcessLimit * CostBar(i) Then Return False
-                    Exit For
-                End If
-            End If
-        Next i
-        Return True
-    End Function
-    ''' <summary>Фильтр предметов по стоимости (стоимость не выше заданной суммарной стоимости лута)</summary>
-    Friend Function ItemFilter(ByRef IGen As AllDataStructues.LootGenSettings, ByRef item As AllDataStructues.Item, _
-                               ByRef currentMaxLootCost As Integer) As Boolean
-        If Not comm.IsAppropriateItem(item) Then Return False
-        Dim settings() As AllDataStructues.ItemGenSettings = AllDataStructues.LootGenSettings.ToArray(IGen)
-        For i As Integer = 0 To UBound(settings) Step 1
-            If comm.ItemTypesLists(i).Contains(item.type) Then
-                If settings(i).exclude Then
-                    Return False
-                Else
-                    Dim sum As Integer = AllDataStructues.Cost.Sum(LootCost(item))
-                    If sum > comm.defValues.LootCostExcessLimit * currentMaxLootCost Then Return False
-                    Exit For
-                End If
-            End If
-        Next i
-        Return True
-    End Function
-    ''' <summary>Фильтр предметов по стоимости (стоимость находится в диапазоне)</summary>
-    Friend Function ItemFilter(ByRef TypeCostRestriction As Dictionary(Of Integer, AllDataStructues.Restriction), _
+            Return w
+        End Function
+    End Class
+
+    Public Class ItemsFilter
+
+        Public randStack As RandStack
+        Private comm As Common
+
+        Public IGen As AllDataStructues.LootGenSettings
+        Public TypeCostRestriction As Dictionary(Of Integer, AllDataStructues.Restriction)
+
+        Public strictMinCost As Integer = -1
+        Public strictMaxCost As Integer = -1
+
+        Public presets(-1) As FiltersPreset
+
+        Public CurrentMaxLootCost As Integer
+        Public TypeCostBar() As Integer
+        Public ForceDisableStrictTypesFilter As Boolean
+
+        Public Class FiltersPreset
+            Public useSimple As Boolean
+            Public useTypeStrict As Boolean
+            Public useTypeSoft As Boolean
+            Public useCostBar As Boolean
+            Public useCostSum As Boolean
+            Public useTypeCost As Boolean
+        End Class
+
+        Public Sub New(ByVal _presetsNumber As Integer, _
+                       ByRef _randStack As RandStack, _
+                       ByRef _DynIGen As AllDataStructues.LootGenSettings, _
+                       ByRef _TypeCostRestriction As Dictionary(Of Integer, AllDataStructues.Restriction), _
+                       ByRef _TypeCostBar() As Integer, _
+                       ByRef _CurrentMaxLootCost As Integer)
+            ReDim presets(_presetsNumber - 1)
+            For i As Integer = 0 To UBound(presets) Step 1
+                presets(i) = New FiltersPreset
+            Next i
+            randStack = _randStack
+            comm = _randStack.comm
+            IGen = _DynIGen
+            TypeCostRestriction = _TypeCostRestriction
+            CurrentMaxLootCost = _CurrentMaxLootCost
+            TypeCostBar = _TypeCostBar
+        End Sub
+
+        Public Function Filter(ByVal usePreset As Integer, _
                                ByRef item As AllDataStructues.Item) As Boolean
-        If Not comm.IsAppropriateItem(item) Then Return False
-        If IsNothing(TypeCostRestriction) Then Return True
-        If AllDataStructues.Restriction.CheckValue(AllDataStructues.Cost.Sum(LootCost(item)), _
-                                                   TypeCostRestriction.Item(item.type)) Then
+
+            Dim settings() As AllDataStructues.ItemGenSettings = Nothing
+            Dim itemCostSum As Integer = -1
+            Dim subtypeID As Integer = -1
+            If presets(usePreset).useTypeSoft _
+            Or presets(usePreset).useCostBar _
+            Or presets(usePreset).useCostSum Then
+                settings = AllDataStructues.LootGenSettings.ToArray(IGen)
+                For i As Integer = 0 To UBound(comm.ItemTypesLists) Step 1
+                    If comm.ItemTypesLists(i).Contains(item.type) Then
+                        subtypeID = i
+                    End If
+                Next i
+            End If
+
+            If presets(usePreset).useCostBar _
+            Or presets(usePreset).useCostSum _
+            Or presets(usePreset).useTypeCost _
+            Or strictMinCost > -1 _
+            Or strictMaxCost > -1 Then
+                itemCostSum = AllDataStructues.Cost.Sum(randStack.LootCost(item))
+            End If
+
+            If Not Simple(usePreset, item) Then Return False
+            If Not TypeStrict(usePreset, item) Then Return False
+            If Not TypeSoft(usePreset, item, settings, subtypeID) Then Return False
+            If Not CostBar(usePreset, item, settings, itemCostSum, subtypeID) Then Return False
+            If Not CostSum(usePreset, item, settings, itemCostSum, subtypeID) Then Return False
+            If Not TypeCost(usePreset, item, itemCostSum) Then Return False
+            If Not StrictCost_Min(itemCostSum) Then Return False
+            If Not StrictCost_Max(itemCostSum) Then Return False
             Return True
-        Else
-            Return False
-        End If
-    End Function
+        End Function
+
+        ''' <summary>Фильтр предметов по тому, является ли предмет исключенным</summary>
+        Private Function Simple(ByVal usePreset As Integer, ByRef item As AllDataStructues.Item) As Boolean
+            If Not presets(usePreset).useSimple Then Return True
+            If Not comm.IsAppropriateItem(item) Then Return False
+            Return True
+        End Function
+        ''' <summary>Фильтр предметов по типу: знамя, артефакт, реликвия, свиток, сфера и т.д.</summary>
+        Private Function TypeStrict(ByVal usePreset As Integer, ByRef item As AllDataStructues.Item) As Boolean
+            If Not presets(usePreset).useTypeStrict Then Return True
+            If ForceDisableStrictTypesFilter Then Return True
+            If Not IGen.Filter(item) Then Return False
+            Return True
+        End Function
+        ''' <summary>Фильтр предметов по типу: расходуемый, не расходуемый или драгоценность</summary>
+        Private Function TypeSoft(ByVal usePreset As Integer, ByRef item As AllDataStructues.Item, _
+                                  ByRef settings() As AllDataStructues.ItemGenSettings, _
+                                  ByRef subtypeID As Integer) As Boolean
+            If Not presets(usePreset).useTypeSoft Then Return True
+            If subtypeID > -1 Then
+                If settings(subtypeID).exclude Then Return False
+            End If
+            Return True
+        End Function
+        ''' <summary>Фильтр предметов их стоимости относительно выбранной планки цены</summary>
+        Private Function CostBar(ByVal usePreset As Integer, ByRef item As AllDataStructues.Item, _
+                                 ByRef settings() As AllDataStructues.ItemGenSettings, _
+                                 ByRef itemCostSum As Integer, _
+                                 ByRef subtypeID As Integer) As Boolean
+            If Not presets(usePreset).useCostBar Then Return True
+            If subtypeID > -1 Then
+                If settings(subtypeID).exclude Then Return False
+                If itemCostSum = -1 Then Throw New Exception("Unexpected cost sum")
+                If itemCostSum > comm.defValues.CostBarExcessLimit * TypeCostBar(subtypeID) Then Return False
+            End If
+            Return True
+        End Function
+        ''' <summary>Фильтр предметов их стоимости относительно текущей доступной максимальной цены</summary>
+        Private Function CostSum(ByVal usePreset As Integer, ByRef item As AllDataStructues.Item, _
+                                 ByRef settings() As AllDataStructues.ItemGenSettings, _
+                                 ByRef itemCostSum As Integer, _
+                                 ByRef subtypeID As Integer) As Boolean
+            If Not presets(usePreset).useCostSum Then Return True
+            If subtypeID > -1 Then
+                If settings(subtypeID).exclude Then Return False
+                If itemCostSum = -1 Then Throw New Exception("Unexpected cost sum")
+                If itemCostSum > comm.defValues.LootCostExcessLimit * CurrentMaxLootCost Then Return False
+            End If
+            Return True
+        End Function
+        ''' <summary>Фильтр предметов по стоимости (стоимость находится в диапазоне)</summary>
+        Private Function TypeCost(ByVal usePreset As Integer, ByRef item As AllDataStructues.Item, _
+                                  ByRef itemCostSum As Integer) As Boolean
+            If Not presets(usePreset).useTypeCost Then Return True
+            If IsNothing(TypeCostRestriction) Then Return True
+            If itemCostSum = -1 Then Throw New Exception("Unexpected cost sum")
+            If AllDataStructues.Restriction.CheckValue(CDbl(itemCostSum), _
+                                                       TypeCostRestriction.Item(item.type)) Then
+                Return True
+            Else
+                Return False
+            End If
+        End Function
+        ''' <summary>Строгий фильтр по минимальной цене предмета</summary>
+        Private Function StrictCost_Min(ByRef itemCostSum As Integer) As Boolean
+            If strictMinCost < 0 Then Return True
+            If itemCostSum = -1 Then Throw New Exception("Unexpected cost sum")
+            If itemCostSum < strictMinCost Then Return False
+            Return True
+        End Function
+        ''' <summary>Строгий фильтр по максимальной цене предмета</summary>
+        Private Function StrictCost_Max(ByRef itemCostSum As Integer) As Boolean
+            If strictMaxCost < 0 Then Return True
+            If itemCostSum = -1 Then Throw New Exception("Unexpected cost sum")
+            If itemCostSum > strictMaxCost Then Return False
+            Return True
+        End Function
+
+    End Class
+
 #End Region
 
 #Region "Stack creation"
@@ -3275,7 +3493,7 @@ Public Class Common
     End Function
 
     Friend Function ItemTypeCostModify(ByRef item As AllDataStructues.Item) As AllDataStructues.Cost
-        If itemType.Item(item.type) = "JEWEL" Then
+        If item.type = GenDefaultValues.ItemTypes.jewel Then
             Return item.itemCost / defValues.JewelItemsCostDevider
         Else
             Return item.itemCost / defValues.NonJewelItemsCostDevider
@@ -4882,7 +5100,7 @@ Public Class GenDefaultValues
 
     ''' <summary>Название выбранного мода</summary>
     ''' <remarks></remarks>
-    Public selectedMod As String
+    Public ReadOnly selectedMod As String
     Private myLog As Log
 
     Protected Friend linked_Races As New Dictionary(Of String, Integer)
@@ -4952,7 +5170,7 @@ Public Class GenDefaultValues
 
         Dim fields() As String = ClassFieldsHandler.GetFieldsNamesList(Me, {"myLog", "linked_Races", "RaceNumberToRaceChar", "playableRaces", "neutralRaces", _
                                                                             "generatorRaceToGameRace", "generatorRaceToCapitalID", "capitalToGeneratorRace", _
-                                                                            "gameRaceToGeneratorRace", "selectedMod"})
+                                                                            "gameRaceToGeneratorRace", "selectedMod", "maxItemTypeID"})
 
         For Each f As String In fields
             If sendLinkedRaces.Contains(f.ToUpper) Then
@@ -5215,15 +5433,13 @@ Public Class GenDefaultValues
     End Sub
     Protected Friend Sub ParseItemTypes(ByRef outitemTypeID As Dictionary(Of String, Integer), _
                                         ByRef outitemType As Dictionary(Of Integer, String))
-        Dim splitedItemsTypes() As String = ValueConverter.TxtSplit(Items)
-        Dim srow() As String
-        For i As Integer = 0 To UBound(splitedItemsTypes) Step 1
-            srow = splitedItemsTypes(i).Split(CChar(" "))
-            If Not IsNothing(outitemType) Then outitemType.Add(CInt(srow(0)), srow(1).ToUpper)
-            If Not IsNothing(outitemTypeID) Then outitemTypeID.Add(srow(1).ToUpper, CInt(srow(0)))
-        Next i
+        Dim names() As String = [Enum].GetNames(GetType(GenDefaultValues.ItemTypes))
+        For Each name In names
+            Dim value As Integer = CType([Enum].Parse(GetType(GenDefaultValues.ItemTypes), name), GenDefaultValues.ItemTypes)
+            If Not IsNothing(outitemType) Then outitemType.Add(value, name.ToUpper)
+            If Not IsNothing(outitemTypeID) Then outitemTypeID.Add(name.ToUpper, value)
+        Next name
     End Sub
-
 
     Enum TextLanguage
         Rus = 1
@@ -5232,6 +5448,7 @@ Public Class GenDefaultValues
 
     ''' <summary>Игра использует такую строку для неиспользуемых юнитов, предметов и т.д.</summary>
     Public Const emptyItem As String = "G000000000"
+    Public ReadOnly maxItemTypeID As Integer = GetType(GenDefaultValues.ItemTypes).GetEnumValues.Cast(Of Integer).Max
 
     'common
     Public ReadOnly defaultSigma As Double
@@ -5264,6 +5481,8 @@ Public Class GenDefaultValues
     Public ReadOnly CostBarExcessLimit As Double
     Public ReadOnly LootCostExcessLimit As Double
     Public ReadOnly MinRuinsLootCostMultiplier As Double
+    Public ReadOnly CapitalLocationRadius As Double
+    Public ReadOnly CapitalLocationBasicItems As String()
 
     'map
     Public ReadOnly minLocationRadiusAtAll As Double
@@ -5457,9 +5676,6 @@ Public Class GenDefaultValues
     End Function
     Public Function ExcludeIDsForNames() As String
         Return ReadResources("ExcludeIDsForNames", My.Resources.ExcludeIDsForNames, False)
-    End Function
-    Public Function Items() As String
-        Return ReadResources("Items", My.Resources.Items, False)
     End Function
     Public Function Lords() As String
         Return ReadResources("Lords", My.Resources.Lords, False)

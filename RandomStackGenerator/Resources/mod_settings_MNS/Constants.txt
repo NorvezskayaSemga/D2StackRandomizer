@@ -239,3 +239,25 @@ ThisBag_SameItemsType_ChanceMultiplier nonattack_artifact=0.001;/
                                        sphere=0.05;/
                                        talisman=0.001;/
                                        special=1
+
+#В пределах этого расстояния генератор постарается разместить базовый набор предметов, заданный в CapitalLocationBasicItems
+CapitalLocationRadius	8.0
+
+#Если на расстоянии CapitalLocationRadius от столицы мало предметов (например, зелий лечения меньше 5),
+#то шанс создания соответствующего предмета умножаются на некоторое число.
+#Например ressurection_elixir=3#25 означает, что если зелий воскрешения рядом со столицей меньше 3, то шанс для таких зелий умножается на 25
+CapitalLocationBasicItems              nonattack_artifact=1#100;/
+                                       attack_artifact=1#100;/
+                                       relic=1#10;/
+                                       banner=1#25;/
+                                       boots=1#50;/
+                                       elixir=5#5;/
+                                       healing_elixir=5#75;/
+                                       ressurection_elixir=3#75;/
+                                       permanent_elixir=0#1;/
+                                       scroll=1#5;/
+                                       stuff=0#1;/
+                                       jewel=0#1;/
+                                       sphere=2#10;/
+                                       talisman=1#100;/
+                                       special=0#1

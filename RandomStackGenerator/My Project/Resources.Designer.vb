@@ -137,12 +137,16 @@ Namespace My.Resources
         '''
         '''maxGoldMines			0	0
         '''maxManaSources			0	0
-        '''maxCities			0
-        '''maxVendors			0
-        '''maxMercenaries		0
-        '''maxMages			0
-        '''maxTrainers			0
-        '''maxRuins			0
+        '''maxCities				0
+        '''maxVendors				0
+        '''maxMercenaries			0
+        '''maxMages				0
+        '''maxTrainers				0
+        '''maxRuins				0
+        '''RandomAttendedObject	0
+        '''
+        '''nonMineObjectValueGold	1.0
+        '''nonMineObjectValueMana	0.0
         '''
         '''minStackToStackDist		5.0
         '''
@@ -150,11 +154,7 @@ Namespace My.Resources
         '''
         '''mageSpellsMaxLevel		2
         '''mageSpellsMinLevel		1
-        '''mageSpellsCount			4
-        '''mageGlobalSpellsEnabled	False
-        '''
-        '''mercenariesMaxExpBar		1900
-        '''mercenariesMinExpB [rest of string was truncated]&quot;;.
+        '''mageSpellsCo [rest of string was truncated]&quot;;.
         '''</summary>
         Friend ReadOnly Property emptyloc() As String
             Get
@@ -282,7 +282,10 @@ Namespace My.Resources
         '''#крестьянин
         '''g000uu5001
         '''g000uu5101
-        '''#тол [rest of string was truncated]&quot;;.
+        '''#толстый бес
+        '''g000uu6004
+        '''g000uu6104
+        '''#ведьмино от [rest of string was truncated]&quot;;.
         '''</summary>
         Friend ReadOnly Property ExcludeIDsForNames() As String
             Get
@@ -329,32 +332,6 @@ Namespace My.Resources
         Friend ReadOnly Property GenParametersRange() As String
             Get
                 Return ResourceManager.GetString("GenParametersRange", resourceCulture)
-            End Get
-        End Property
-        
-        '''<summary>
-        '''  Looks up a localized string similar to #строка, начинающаяся с решетки, игнорируется
-        '''#Идентификаторы типов предметов.
-        '''0	nonattack_artifact
-        '''1	relic
-        '''2	attack_artifact
-        '''3	banner
-        '''4	elixir
-        '''5	healing_elixir
-        '''6	ressurection_elixir
-        '''7	permanent_elixir
-        '''8	scroll
-        '''9	stuff
-        '''10	jewel
-        '''11	sphere
-        '''12	talisman
-        '''13	boots
-        '''14	special
-        '''.
-        '''</summary>
-        Friend ReadOnly Property Items() As String
-            Get
-                Return ResourceManager.GetString("Items", resourceCulture)
             End Get
         End Property
         
@@ -599,7 +576,9 @@ Namespace My.Resources
         '''<summary>
         '''  Looks up a localized string similar to #строка, начинающаяся с решетки, игнорируется
         '''#с помощью ReadFromFile &apos;пробел&apos; &apos;путь к файлу&apos; можно прочитать данные из другого файла.
-        '''#ID предметов, которые генератор должен оставлять на месте
+        '''#ID предметов, юнитов и заклинаний, которые генератор должен оставлять на месте в отрядах, сундуках и у торговцев
+        '''
+        '''#ПРЕДМЕТЫ
         '''
         '''#Ржавые кандалы
         '''G000IG2007
@@ -618,6 +597,10 @@ Namespace My.Resources
         '''
         '''#типы предметов
         '''special
+        '''
+        '''#ЮНИТЫ
+        '''
+        '''#ЗАКЛИНАНИЯ
         '''.
         '''</summary>
         Friend ReadOnly Property PreservedObjects() As String
@@ -793,7 +776,7 @@ Namespace My.Resources
         '''# GGW   WWW    WW
         '''# WWW , GGW  и WG можно считать одинаковыми
         '''#              WG
-        '''#Делать блок нужно с учетом того, что объект буде [rest of string was truncated]&quot;;.
+        '''#Делать блок нужно с учетом того, что объект будет в центр [rest of string was truncated]&quot;;.
         '''</summary>
         Friend ReadOnly Property WaterBlocks3x3Objects() As String
             Get

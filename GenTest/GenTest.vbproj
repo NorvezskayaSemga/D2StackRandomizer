@@ -93,9 +93,9 @@
     <Shadow Include="Test References\RandomStackGenerator.accessor" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\ImpenetrableMeshShow\InpenetrableMeshShow.vbproj">
+    <ProjectReference Include="..\ImpenetrableMeshShow\ImpenetrableMeshShow.vbproj">
       <Project>{06CEDBA3-3200-4D4C-B293-38F87FF3BDB3}</Project>
-      <Name>InpenetrableMeshShow</Name>
+      <Name>ImpenetrableMeshShow</Name>
     </ProjectReference>
     <ProjectReference Include="..\RandomStackGenerator\RandomStackGenerator.vbproj">
       <Project>{75561DF2-6376-4542-847D-10DEDD5B2B29}</Project>

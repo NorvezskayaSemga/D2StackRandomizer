@@ -5555,6 +5555,9 @@ Public Class shortMapFormat
                                          ByRef treesAmont() As Integer, _
                                          ByRef lang As GenDefaultValues.TextLanguage) As shortMapFormat
 
+        Call objContent.randStack.ResetAddedItems()
+        Call objContent.randStack.ResetItemWeightMultiplier()
+
         Dim attObjects() As AttendedObject = (New ImpenetrableMeshGen(m.comm)).ActiveObjects
         Dim sName As New SetName(lang, m.comm.defValues.selectedMod)
         Call sName.ResetNames(True, -1)
@@ -5609,17 +5612,35 @@ Public Class shortMapFormat
             Next i
         End If
         objContent.randStack.mapData.mapLords = lordsList
+        objContent.randStack.mapData.minesAmount = New AllDataStructues.Cost
 
         For y As Integer = 0 To UBound(m.board, 2) Step 1
             For x As Integer = 0 To UBound(m.board, 1) Step 1
                 If m.board(x, y).mapObject.objectID = DefMapObjects.Types.Mine Then
                     name = m.board(x, y).mapObject.objectName
-                    Call AddObject(res.mines, x, y, objContent.SetMineType(name), attObjects(DefMapObjects.Types.Mine).Size)
+                    Dim objTypeID As String = objContent.SetMineType(name)
+                    If objTypeID = DefMapObjects.mineGold Then
+                        objContent.randStack.mapData.minesAmount.Gold += 1
+                    ElseIf objTypeID = DefMapObjects.mineBlack Then
+                        objContent.randStack.mapData.minesAmount.Black += 1
+                    ElseIf objTypeID = DefMapObjects.mineBlue Then
+                        objContent.randStack.mapData.minesAmount.Blue += 1
+                    ElseIf objTypeID = DefMapObjects.mineGreen Then
+                        objContent.randStack.mapData.minesAmount.Green += 1
+                    ElseIf objTypeID = DefMapObjects.mineRed Then
+                        objContent.randStack.mapData.minesAmount.Red += 1
+                    ElseIf objTypeID = DefMapObjects.mineWhite Then
+                        objContent.randStack.mapData.minesAmount.White += 1
+                    Else
+                        Throw New Exception("Unexpected mine ID: " & objTypeID)
+                    End If
+                    Call AddObject(res.mines, x, y, objTypeID, attObjects(DefMapObjects.Types.Mine).Size)
                     If Not allMines.Contains(res.mines(UBound(res.mines)).id) Then allMines.Add(res.mines(UBound(res.mines)).id)
                 End If
             Next x
         Next y
 
+        ReDim objContent.randStack.mapData.capitalPos(-1)
         Dim tiles(m.board.Length - 1) As Point
         Dim tilesList As New List(Of Integer)
         Dim n As Integer = -1
@@ -5629,6 +5650,8 @@ Public Class shortMapFormat
                 tilesList.Add(n)
                 tiles(n) = New Point(x, y)
                 If m.board(x, y).mapObject.objectID = DefMapObjects.Types.Capital Then
+                    ReDim Preserve objContent.randStack.mapData.capitalPos(objContent.randStack.mapData.capitalPos.Length)
+                    objContent.randStack.mapData.capitalPos(UBound(objContent.randStack.mapData.capitalPos)) = New Point(x, y)
                     playableRaces.Add(objContent.randStack.comm.defValues.capitalToGeneratorRace(m.board(x, y).mapObject.objectName))
                 End If
             Next x
@@ -11252,7 +11275,7 @@ Public Class ObjectsContentSet
         End If
     End Function
 #End Region
-#Region "Units merchant"
+#Region "Items merchant"
     ''' <summary>Создаст список предметов</summary>
     ''' <param name="d">Желаемые параметры доступных предметов. Имеет значение только .shopContent и .IGen.
     ''' IGen используется только при генерации по цене</param>
@@ -11271,6 +11294,13 @@ Public Class ObjectsContentSet
         Dim selection As New List(Of Integer)
         Dim dCost As Integer = 0
         Dim itemID As Integer = -1
+        Dim itemsFilter As New RandStack.ItemsFilter(1, randStack, d.IGen, TypeCostRestriction, Nothing, -1)
+        itemsFilter.ForceDisableStrictTypesFilter = True
+        itemsFilter.presets(0).useSimple = True
+        itemsFilter.presets(0).useTypeStrict = True
+        itemsFilter.presets(0).useTypeSoft = True
+        itemsFilter.presets(0).useTypeCost = True
+
         For Each v As String In d.shopContent
             If log.IsEnabled Then txt = "In: " & v
             If IsNumeric(v) Then
@@ -11284,17 +11314,15 @@ Public Class ObjectsContentSet
                 For u As Integer = 0 To UBound(randStack.AllItems) Step 1
                     If randStack.comm.IsAppropriateItem(randStack.AllItems(u)) Then
                         If randStack.AllItems(u).itemCost.Gold > 0 AndAlso randStack.LootCost(randStack.AllItems(u)).Gold = randStack.AllItems(u).itemCostSum Then
-                            If type = randStack.AllItems(u).type AndAlso randStack.ItemFilter(d.IGen, randStack.AllItems(u), True) Then
-                                If randStack.ItemFilter(TypeCostRestriction, randStack.AllItems(u)) Then
-                                    selection.Add(u)
-                                End If
+                            If type = randStack.AllItems(u).type AndAlso itemsFilter.Filter(0, randStack.AllItems(u)) Then
+                                selection.Add(u)
                             End If
                         End If
                     End If
                 Next u
                 'If selection.Count = 0 Then Throw New Exception("Не могу выбрать предмет в качестве товара. Тип: " & v)
                 If selection.Count > 0 Then
-                    itemID = randStack.comm.RandomSelection(selection, randStack.multiplierItemsWeight, True)
+                    itemID = randStack.comm.RandomSelection(selection, randStack.Global_ItemsWeightMultiplier, True)
                     res.Add(randStack.AllItems(itemID).itemID)
                 Else
                     itemID = -1
@@ -11352,6 +11380,15 @@ Public Class ObjectsContentSet
         Dim oneMore As Boolean = False
         Dim add As Boolean
 
+        Dim itemsFilter As New RandStack.ItemsFilter(2, randStack, d.IGen, TypeCostRestriction, Nothing, -1)
+        itemsFilter.ForceDisableStrictTypesFilter = True
+        itemsFilter.presets(0).useSimple = True
+        itemsFilter.presets(0).useTypeSoft = True
+        itemsFilter.presets(0).useTypeStrict = True
+
+        itemsFilter.presets(1).useSimple = True
+        itemsFilter.presets(1).useTypeCost = True
+
         tolerance = 0
         Do While (selection.Count = 0 Or oneMore) And tolerance <= 10000
             tolerance += dtolerance
@@ -11362,11 +11399,11 @@ Public Class ObjectsContentSet
                         If Math.Abs(randStack.LootCost(randStack.AllItems(u)).Gold - correctedBar) <= tolerance Then
                             If type < 0 Then
                                 add = Not excludedItemType.Contains(randStack.AllItems(u).type)
-                                If add Then add = randStack.ItemFilter(d.IGen, randStack.AllItems(u), True)
+                                If add Then add = itemsFilter.Filter(0, randStack.AllItems(u))
                             Else
                                 add = (type = randStack.AllItems(u).type)
                             End If
-                            If add AndAlso Not randStack.ItemFilter(TypeCostRestriction, randStack.AllItems(u)) Then add = False
+                            If add AndAlso Not itemsFilter.Filter(1, randStack.AllItems(u)) Then add = False
                             If add Then selection.Add(u)
                         End If
                     End If
@@ -11376,7 +11413,7 @@ Public Class ObjectsContentSet
         Loop
         dCost += bar
         If selection.Count > 0 Then
-            Dim r As Integer = randStack.comm.RandomSelection(selection, randStack.multiplierItemsWeight, True)
+            Dim r As Integer = randStack.comm.RandomSelection(selection, randStack.Global_ItemsWeightMultiplier, True)
             dCost -= randStack.AllItems(r).itemCost.Gold
             Return r
         Else
