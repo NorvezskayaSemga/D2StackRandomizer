@@ -130,7 +130,8 @@ Public Class RandStackTest
                   .groundTile = GroundTile, _
                   .noLeader = False, _
                   .pos = New Point(1, 1), _
-                  .order = ""}
+                  .order = New AllDataStructues.Stack.StackOrder(AllDataStructues.Stack.StackOrder.OrderType.Stand, GenDefaultValues.emptyItem, _
+                                                                 AllDataStructues.Stack.StackOrder.OrderType.Normal, GenDefaultValues.emptyItem)}
     End Function
 
     '''<summary>

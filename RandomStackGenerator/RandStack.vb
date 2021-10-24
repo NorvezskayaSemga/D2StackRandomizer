@@ -1442,7 +1442,7 @@ Public Class RandStack
         End If
         Call ApplyOverlevel(result, GenSettings)
         Call ApplyModificators(result, GenSettings)
-        result.order = GenSettings.order
+        result.order = AllDataStructues.Stack.StackOrder.Copy(GenSettings.order)
 
         result.items = ItemsGen(New AllDataStructues.CommonLootCreationSettings _
                                 With {.GoldCost = DynStackStats.LootCost, _
@@ -1522,7 +1522,7 @@ Public Class RandStack
             If preservedSlotsCount + 2 > comm.defValues.maxStackSize Then Return False
         End If
 
-        If Not GenSettings.order.ToUpper = "L_STAND" Then
+        If Not GenSettings.order.order.name.ToUpper = AllDataStructues.Stack.StackOrder.OrderType.Stand.ToUpper Then
             If Not GenSettings.StackStats.WaterOnly = AllUnits(leaderID).waterOnly Then Return False
         End If
 
@@ -2288,7 +2288,7 @@ Public Class RandStack
                             "Location name: " & GenSettings.StackStats.LocationName & vbNewLine & _
                             "Is ground: " & GenSettings.groundTile & vbNewLine & _
                             "Is template: " & GenSettings.isTemplate & vbNewLine & _
-                            "Orfder: " & GenSettings.order & vbNewLine & _
+                            "Orfder: " & AllDataStructues.Stack.StackOrder.Print(GenSettings.order) & vbNewLine & _
                             "Position: " & p & vbNewLine & _
                             "StackStats:" & vbNewLine & AllDataStructues.DesiredStats.Print(GenSettings.StackStats, comm.defValues.RaceNumberToRaceChar) & vbNewLine & _
                             "DynStackStats:" & vbNewLine & AllDataStructues.DesiredStats.Print(DynStackStats, comm.defValues.RaceNumberToRaceChar))
@@ -3691,7 +3691,7 @@ Public Class AllDataStructues
         ''' <summary>Имя отряда</summary>
         Public name As String
         '''<summary>Приказ отряда</summary>
-        Public order As String
+        Public order As StackOrder
 
         Public Class UnitInfo
             ''' <summary>Уровень юнита, находящегося в отряде</summary>
@@ -3792,7 +3792,20 @@ Public Class AllDataStructues
                 ''' </summary>
                 Public target As String
 
-#Region "OrderType"
+                Public Sub New(ByVal _name As String, ByVal _target As String)
+                    name = _name.ToUpper
+                    target = _target
+                End Sub
+
+                Public Shared Function Copy(ByRef v As StackOrder.Settings) As StackOrder.Settings
+                    Return New StackOrder.Settings(v.name, v.target)
+                End Function
+
+                Public Shared Function Print(ByRef v As Settings) As String
+                    Return "Name: " & v.name & " Target: " & v.target
+                End Function
+            End Class
+            Public Class OrderType
                 ''' <summary>
                 ''' Если приналежит играбельной расе под управлением ИИ, то будет ходить по карте, атаковать отряды руины или города, подбирать сундуки и т.д.
                 ''' Если принадлежит нейтралам, то то же, что и "Стоять", но может отступить из боя.
@@ -3876,35 +3889,6 @@ Public Class AllDataStructues
                 ''' Не знаю, что такое
                 ''' </summary>
                 Public Const DefendCity As String = "L_DEFEND_CITY"
-#End Region
-
-                Public Sub New(ByVal _name As String, ByVal _target As String)
-                    name = _name.ToUpper
-                    If HasParameter(name) Then
-                        target = _target
-                    Else
-                        target = GenDefaultValues.emptyItem
-                    End If
-                End Sub
-
-                Public Shared Function Copy(ByRef v As StackOrder.Settings) As StackOrder.Settings
-                    If Not IsNothing(v) Then
-                        Return New StackOrder.Settings(v.name, v.target)
-                    Else
-                        Return New StackOrder.Settings(Stand, GenDefaultValues.emptyItem)
-                    End If
-                End Function
-
-                Public Shared Function HasParameter(ByVal _name As String) As Boolean
-                    Dim name As String = _name.ToUpper
-                    If name = AttackStack Or name = MoveToLocation Or name = DefendStack Then
-                        Return True
-                    ElseIf name = Normal Or name = Stand Or name = Guard Or name = Bezerk Then
-                        Return False
-                    Else
-                        Throw New Exception("Unexpected order name")
-                    End If
-                End Function
             End Class
 
             Public Sub New(ByVal _orderName As String, ByVal _orderTarget As String, _
@@ -3918,11 +3902,14 @@ Public Class AllDataStructues
                     Return New StackOrder(v.order.name, v.order.target, _
                                           v.aiOrder.name, v.aiOrder.target)
                 Else
-                    Return New StackOrder(Settings.Stand, GenDefaultValues.emptyItem, _
-                                          Settings.Stand, GenDefaultValues.emptyItem)
+                    Return New StackOrder(OrderType.Stand, GenDefaultValues.emptyItem, _
+                                          OrderType.Normal, GenDefaultValues.emptyItem)
                 End If
             End Function
 
+            Public Shared Function Print(ByRef v As StackOrder) As String
+                Return "Order: " & Settings.Print(v.order) & "; AiOrder: " & Settings.Print(v.aiOrder)
+            End Function
         End Class
     End Structure
 
@@ -4934,7 +4921,8 @@ Public Class AllDataStructues
         '''<summary>True, если создаем шаблон отряда</summary>
         Public isTemplate As Boolean
         '''<summary>Приказ отряда</summary>
-        Public order As String = "L_STAND"
+        Public order As Stack.StackOrder = New Stack.StackOrder(Stack.StackOrder.OrderType.Stand, GenDefaultValues.emptyItem, _
+                                                                Stack.StackOrder.OrderType.Normal, GenDefaultValues.emptyItem)
 
         Public Shared Function Copy(ByVal v As CommonStackCreationSettings) As CommonStackCreationSettings
             Return New CommonStackCreationSettings With {.StackStats = DesiredStats.Copy(v.StackStats), _
@@ -4943,7 +4931,7 @@ Public Class AllDataStructues
                                                          .noLeader = v.noLeader, _
                                                          .pos = New Point(v.pos.X, v.pos.Y), _
                                                          .isTemplate = v.isTemplate, _
-                                                         .order = v.order}
+                                                         .order = Stack.StackOrder.Copy(v.order)}
         End Function
     End Class
     Public Class CommonLootCreationSettings
