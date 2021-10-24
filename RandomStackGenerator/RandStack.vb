@@ -3641,6 +3641,7 @@ Public Class AllDataStructues
                                           .IGen = AllDataStructues.LootGenSettings.Copy(v.IGen), _
                                           .shopContent = CopyList(v.shopContent), _
                                           .isInternalCityGuard = v.isInternalCityGuard, _
+                                          .WaterOnly = v.WaterOnly, _
                                           .WeightedOverlevel = v.WeightedOverlevel, _
                                           .preservedUnits = CopyList(v.preservedUnits), _
                                           .LeaderModificators = CopyList(v.LeaderModificators), _
