@@ -3709,7 +3709,7 @@ Public Class AllDataStructues
             ''' </summary>
             Protected Friend isPreserved As Boolean
 
-            Public Sub New(ByRef _id As String, ByRef _level As Integer, ByRef _modificators As List(Of String), _
+            Public Sub New(ByVal _id As String, ByVal _level As Integer, ByVal _modificators As List(Of String), _
                            ByRef RandStack As RandStack)
                 If Not _id.ToUpper = GenDefaultValues.emptyItem.ToUpper Then
                     level = _level
