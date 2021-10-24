@@ -10092,9 +10092,9 @@ Public Class ImpenetrableObjects
                     s.StackSize = citySize
                     If s.StackSize < 2 Then
                         s.MaxGiants = 0
-                    ElseIf s.StackSize < 4 Then
+                    ElseIf s.StackSize < comm.defValues.maxStackSize - 2 Then
                         s.MaxGiants = Math.Min(s.MaxGiants, 1)
-                    ElseIf s.StackSize < 6 Then
+                    ElseIf s.StackSize < comm.defValues.maxStackSize Then
                         s.MaxGiants = Math.Min(s.MaxGiants, 2)
                     Else
                         s.MaxGiants = Math.Min(s.MaxGiants, 3)

@@ -108,12 +108,8 @@ Public Class RandStack
 
     End Class
 
-    Private busytransfer() As Integer = New Integer() {1, -1, 3, -1, 5, -1}
-    Private firstrow() As Integer = New Integer() {0, 2, 4}
-    Private secondrow() As Integer = New Integer() {1, 3, 5}
     Private Const itemGenSigma As Double = 0.5
     Private Const multiItemGenSigmaMultiplier As Double = 1.5
-    Private ReadOnly maxStackSize As Integer = firstrow.Length + secondrow.Length
 
     Private UnitsArrayPos As New Dictionary(Of String, Integer)
     Friend AllUnits() As AllDataStructues.Unit
@@ -1439,7 +1435,7 @@ Public Class RandStack
             result = GenStackMultithread(GenSettings, DynStackStats)
         Else
             result.leaderPos = -1
-            ReDim result.units(UBound(busytransfer))
+            ReDim result.units(comm.defValues.maxStackSize - 1)
             For i As Integer = 0 To UBound(result.units) Step 1
                 result.units(i) = AllDataStructues.Stack.UnitInfo.CreateEmpty
             Next i
@@ -1521,9 +1517,9 @@ Public Class RandStack
         AndAlso DynStackStats.StackSize < comm.BigStackUnits.Item(AllUnits(leaderID).unitID) Then Return False
 
         If AllUnits(leaderID).small Then
-            If preservedSlotsCount + 1 > maxStackSize Then Return False
+            If preservedSlotsCount + 1 > comm.defValues.maxStackSize Then Return False
         Else
-            If preservedSlotsCount + 2 > maxStackSize Then Return False
+            If preservedSlotsCount + 2 > comm.defValues.maxStackSize Then Return False
         End If
 
         If Not GenSettings.order.ToUpper = "L_STAND" Then
@@ -1916,13 +1912,13 @@ Public Class RandStack
                 End If
             End If
 
-            If BaseStackSize + preservedSlots > maxStackSize Then
-                Dim dL As Integer = BaseStackSize + preservedSlots - maxStackSize
+            If BaseStackSize + preservedSlots > comm.defValues.maxStackSize Then
+                Dim dL As Integer = BaseStackSize + preservedSlots - comm.defValues.maxStackSize
                 BaseStackSize = Math.Max(BaseStackSize - dL, 0)
                 DynStackStats(jobID).StackSize = Math.Max(DynStackStats(jobID).StackSize - dL, 0)
             End If
-            If DynStackStats(jobID).StackSize + preservedSlots > maxStackSize Then
-                Dim dL As Integer = DynStackStats(jobID).StackSize + preservedSlots - maxStackSize
+            If DynStackStats(jobID).StackSize + preservedSlots > comm.defValues.maxStackSize Then
+                Dim dL As Integer = DynStackStats(jobID).StackSize + preservedSlots - comm.defValues.maxStackSize
                 BaseStackSize = Math.Max(BaseStackSize - dL, 0)
                 DynStackStats(jobID).StackSize = Math.Max(DynStackStats(jobID).StackSize - dL, 0)
             End If
@@ -1943,8 +1939,8 @@ Public Class RandStack
                     slotsInUse += 2
                 End If
             Next u
-            If slotsInUse > maxStackSize Then ThrowStackCreationException("Unexpected slots used: " & slotsInUse, _
-                                                                          GenSettings, DynStackStats(jobID))
+            If slotsInUse > comm.defValues.maxStackSize Then ThrowStackCreationException( _
+                "Unexpected slots used: " & slotsInUse, GenSettings, DynStackStats(jobID))
             If Not GenSettings.StackStats.ExpStackKilled = 0 Then
                 DynStackStats(jobID).LootCost = CInt(CDbl(DynStackStats(jobID).LootCost) _
                                                      * (1 + CDbl(deltaExpKilled) / GenSettings.StackStats.ExpStackKilled))
@@ -2046,7 +2042,7 @@ Public Class RandStack
 
         'теперь нужно добрать воинов в отряд
         Dim R As Double = rndgen.Rand(0, 1, serialExecution)
-        Dim leadershipCap As Integer = Math.Min(AllUnits(SelectedLeader).leadership + GenSettings.deltaLeadership, maxStackSize)
+        Dim leadershipCap As Integer = Math.Min(AllUnits(SelectedLeader).leadership + GenSettings.deltaLeadership, comm.defValues.maxStackSize)
         If AllUnits(SelectedLeader).small Then
             leadershipCap = Math.Max(leadershipCap, 1)
         Else
@@ -2062,7 +2058,7 @@ Public Class RandStack
             End If
         ElseIf R > 0.9 Then
             DynStackStats.StackSize += 1
-            If DynStackStats.StackSize - DynStackStats.MeleeCount < secondrow.Length Then DynStackStats.MeleeCount += 1
+            If DynStackStats.StackSize - DynStackStats.MeleeCount < comm.defValues.secondrow.Length Then DynStackStats.MeleeCount += 1
         End If
         If AllUnits(SelectedLeader).small Then
             DynStackStats.StackSize = Math.Max(DynStackStats.StackSize, 1)
@@ -2168,7 +2164,7 @@ Public Class RandStack
                                   ByRef DynStackStats As AllDataStructues.DesiredStats, _
                                   ByRef SelectedUnits() As AllDataStructues.Stack.UnitInfo) As AllDataStructues.Stack
         Dim result As New AllDataStructues.Stack With {.leaderPos = -1}
-        ReDim result.units(UBound(busytransfer))
+        ReDim result.units(comm.defValues.maxStackSize - 1)
         Dim unitIsUsed(UBound(SelectedUnits)) As Boolean
         Dim firstRowSlots As Integer = 3
         Dim secondRowSlots As Integer = 3
@@ -2407,18 +2403,18 @@ Public Class RandStack
 
         Dim t As Integer
         Dim m As Integer = 0
-        For k As Integer = 0 To UBound(firstrow) Step 1
+        For k As Integer = 0 To UBound(comm.defValues.firstrow) Step 1
             If (Not units(i).unit.small Or units(i).unit.reach = GenDefaultValues.UnitAttackReach.melee) And Not AnySlot Then
-                If IsNothing(result.units(firstrow(k))) Then
+                If IsNothing(result.units(comm.defValues.firstrow(k))) Then
                     m += 1
                     If m = n1 Then
-                        Call SetUnitPos(result, firstrow(k), units(i))
+                        Call SetUnitPos(result, comm.defValues.firstrow(k), units(i))
                         FRowSlots -= 1
                         If Not units(i).unit.small Then
-                            result.units(busytransfer(firstrow(k))) = AllDataStructues.Stack.UnitInfo.CreateEmpty
+                            result.units(comm.defValues.busytransfer(comm.defValues.firstrow(k))) = AllDataStructues.Stack.UnitInfo.CreateEmpty
                             SRowSlots -= 1
                         End If
-                        If i = 0 Then result.leaderPos = firstrow(k)
+                        If i = 0 Then result.leaderPos = comm.defValues.firstrow(k)
                         placed = True
                         Exit For
                     End If
@@ -2430,16 +2426,16 @@ Public Class RandStack
                         m += 1
                         If m = n1 + n2 Then
                             Call SetUnitPos(result, t, units(i))
-                            For r As Integer = 0 To UBound(firstrow) Step 1
-                                If t = firstrow(r) Then
+                            For r As Integer = 0 To UBound(comm.defValues.firstrow) Step 1
+                                If t = comm.defValues.firstrow(r) Then
                                     FRowSlots -= 1
-                                    If i = 0 Then result.leaderPos = firstrow(r)
+                                    If i = 0 Then result.leaderPos = comm.defValues.firstrow(r)
                                     p = 1
                                     placed = True
                                     Exit For
-                                ElseIf t = secondrow(r) Then
+                                ElseIf t = comm.defValues.secondrow(r) Then
                                     SRowSlots -= 1
-                                    If i = 0 Then result.leaderPos = secondrow(r)
+                                    If i = 0 Then result.leaderPos = comm.defValues.secondrow(r)
                                     p = 1
                                     placed = True
                                     Exit For
@@ -2449,12 +2445,12 @@ Public Class RandStack
                     End If
                 Next p
             Else
-                If IsNothing(result.units(secondrow(k))) Then
+                If IsNothing(result.units(comm.defValues.secondrow(k))) Then
                     m += 1
                     If m = n2 Then
-                        Call SetUnitPos(result, secondrow(k), units(i))
+                        Call SetUnitPos(result, comm.defValues.secondrow(k), units(i))
                         SRowSlots -= 1
-                        If i = 0 Then result.leaderPos = secondrow(k)
+                        If i = 0 Then result.leaderPos = comm.defValues.secondrow(k)
                         placed = True
                         Exit For
                     End If
@@ -5169,7 +5165,7 @@ Public Class GenDefaultValues
 
         Dim fields() As String = ClassFieldsHandler.GetFieldsNamesList(Me, {"myLog", "linked_Races", "RaceNumberToRaceChar", "playableRaces", "neutralRaces", _
                                                                             "generatorRaceToGameRace", "generatorRaceToCapitalID", "capitalToGeneratorRace", _
-                                                                            "gameRaceToGeneratorRace", "selectedMod", "maxItemTypeID"})
+                                                                            "gameRaceToGeneratorRace", "selectedMod", "maxItemTypeID", "maxStackSize"})
 
         For Each f As String In fields
             If sendLinkedRaces.Contains(f.ToUpper) Then
@@ -5448,6 +5444,12 @@ Public Class GenDefaultValues
     ''' <summary>Игра использует такую строку для неиспользуемых юнитов, предметов и т.д.</summary>
     Public Const emptyItem As String = "G000000000"
     Public ReadOnly maxItemTypeID As Integer = GetType(GenDefaultValues.ItemTypes).GetEnumValues.Cast(Of Integer).Max
+
+    'stack info
+    Friend busytransfer() As Integer = New Integer() {1, -1, 3, -1, 5, -1}
+    Friend firstrow() As Integer = New Integer() {0, 2, 4}
+    Friend secondrow() As Integer = New Integer() {1, 3, 5}
+    Friend ReadOnly maxStackSize As Integer = firstrow.Length + secondrow.Length
 
     'common
     Public ReadOnly defaultSigma As Double

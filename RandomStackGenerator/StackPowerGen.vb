@@ -2,7 +2,6 @@
 
     Private rndgen As New RndValueGen
     Private imp As ImpenetrableMeshGen
-    Private valConv As New ValueConverter
     Private defValues As GenDefaultValues
 
     Private Structure StackLoc
@@ -319,7 +318,7 @@
         Return res
     End Function
     Private Function GenDesiredStats(ByRef expKilled As Double, ByRef LootCost As Double, ByRef groupID As Integer) As AllDataStructues.DesiredStats
-        Return StackStatsGen.GenDesiredStats(expKilled, LootCost, rndgen, valConv, defValues, groupID)
+        Return StackStatsGen.GenDesiredStats(expKilled, LootCost, rndgen, defValues, groupID)
     End Function
 End Class
 
@@ -338,18 +337,18 @@ Class StackStatsGen
         Return CInt(UnitExpBarToExpKilled(CDbl(value)))
     End Function
 
-    Friend Shared Function GenDesiredStats(ByRef expKilled As Double, ByRef LootCost As Double, ByRef rndGen As RandomStackGenerator.RndValueGen, ByRef valConv As ValueConverter, ByRef defValues As GenDefaultValues) As AllDataStructues.DesiredStats
-        Return StackStatsGen.GenDesiredStats(expKilled, LootCost, rndGen, valConv, defValues, -1)
+    Friend Shared Function GenDesiredStats(ByRef expKilled As Double, ByRef LootCost As Double, ByRef rndGen As RandomStackGenerator.RndValueGen, ByRef defValues As GenDefaultValues) As AllDataStructues.DesiredStats
+        Return StackStatsGen.GenDesiredStats(expKilled, LootCost, rndGen, defValues, -1)
     End Function
-    Friend Shared Function GenDesiredStats(ByRef expKilled As Double, ByRef LootCost As Double, ByRef rndGen As RandomStackGenerator.RndValueGen, ByRef valConv As ValueConverter, ByRef defValues As GenDefaultValues, ByRef groupID As Integer) As AllDataStructues.DesiredStats
-        Dim stackSize As Integer = rndGen.RndPos(6, True)
+    Friend Shared Function GenDesiredStats(ByRef expKilled As Double, ByRef LootCost As Double, ByRef rndGen As RandomStackGenerator.RndValueGen, ByRef defValues As GenDefaultValues, ByRef groupID As Integer) As AllDataStructues.DesiredStats
+        Dim stackSize As Integer = rndGen.RndPos(defValues.maxStackSize, True)
         Dim meleeCount As Integer = rndGen.RndPos(Math.Min(stackSize, 3), True)
         Dim maxGiants As Integer
         If stackSize < 2 Then
             maxGiants = 0
-        ElseIf stackSize < 4 Then
+        ElseIf stackSize < defValues.maxStackSize - 2 Then
             maxGiants = rndGen.RndPos(2, True) - 1
-        ElseIf stackSize < 6 Then
+        ElseIf stackSize < defValues.maxStackSize Then
             maxGiants = rndGen.RndPos(3, True) - 1
         Else
             maxGiants = rndGen.RndPos(4, True) - 1
