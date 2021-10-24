@@ -1526,8 +1526,7 @@ Public Class RandStack
             If preservedSlotsCount + 2 > maxStackSize Then Return False
         End If
 
-        If Not GenSettings.order = "" Then
-            MsgBox("нужен текст с названием приказа")
+        If Not GenSettings.order.ToUpper = "L_STAND" Then
             If Not GenSettings.StackStats.WaterOnly = AllUnits(leaderID).waterOnly Then Return False
         End If
 
