@@ -3280,7 +3280,7 @@ Public Class Common
     ''' <param name="ExcludeLists">Файлы со списками исключенных объектов. Записи в них могут повторяться. 
     ''' Допускается передача неинициализитрованного массива.
     ''' Не воспринимает ключевые слова</param>
-    Friend Sub ReadExcludedObjectsList(ByRef ExcludeLists As List(Of String))
+    Public Sub ReadExcludedObjectsList(ByRef ExcludeLists As List(Of String))
         Call ReadFile(ReadMode.ExcludedObjects, ExcludeLists)
         If Not IsNothing(onExcludedListChanged) Then Call onExcludedListChanged()
     End Sub
@@ -3357,7 +3357,7 @@ Public Class Common
         Call ReadFile(ReadMode.PlateauConstructionDescription, PlateauConstructionDescription)
     End Sub
     ''' <summary>Читает список предметов, юнитов и заклинаний, которые генератор должен оставлять на месте</summary>
-    Protected Friend Sub ReadPreservedObjects()
+    Public Sub ReadPreservedObjects()
         Dim s() As String = SettingsFileSplit(defValues.PreservedItems)
         Call ReadFile(ReadMode.ReadPreservedObjects, s)
     End Sub
@@ -3368,7 +3368,7 @@ Public Class Common
     End Sub
     ''' <summary>Читает список предметов, юнитов и заклинаний, которые генератор должен оставлять на месте</summary>
     ''' <param name="PreservedLists">Список ID. Не воспринимает ключевые слова</param>
-    Protected Friend Sub ReadPreservedObjects(ByRef PreservedLists As List(Of String))
+    Public Sub ReadPreservedObjects(ByRef PreservedLists As List(Of String))
         Call ReadFile(ReadMode.ReadPreservedObjects, PreservedLists)
     End Sub
     Private Function SettingsFileSplit(ByRef fileContent As String) As String()
