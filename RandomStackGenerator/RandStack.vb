@@ -3770,6 +3770,125 @@ Public Class AllDataStructues
                        "Modificators" & vbTab & PrintList(v.modificators, "+")
             End Function
         End Class
+
+        Public Class StackOrder
+
+            Public order As Settings
+            Public aiOrder As Settings
+
+            Public Class Settings
+                ''' <summary>
+                ''' Название приказа. Поле TEXT в LOrder.dbf
+                ''' </summary>
+                Public name As String
+                ''' <summary>
+                ''' Цель приказа, если нужна. Например, для "защищать в локацию" или "защищать отряд"
+                ''' </summary>
+                Public target As String
+
+#Region "OrderType"
+                ''' <summary>
+                ''' Если приналежит играбельной расе под управлением ИИ, то будет ходить по карте, атаковать отряды, подбирать сундуки и т.д.
+                ''' Если принадлежит нейтралам, то то же, что и "Стоять", но может отступить из боя.
+                ''' Без параметров
+                ''' </summary>
+                Public Const Normal As String = "L_NORMAL"
+                ''' <summary>
+                ''' Отряд ничего не делает.
+                ''' Без параметров
+                ''' </summary>
+                Public Const Stand As String = "L_STAND"
+                ''' <summary>
+                ''' Отряд атакует соседние отряды, находящиеся максимум в одном шаге от него и имеющие приказ, отличный от "Стоять".
+                ''' Отряд будет игнорировать все другие объекты на карте.
+                ''' Без параметров
+                ''' </summary>
+                Public Const Guard As String = "L_GUARD"
+                ''' <summary>
+                ''' Отряд будет стремиться уничтожить указанный отряд.
+                ''' Он атакует другой отряд или подберет сундук, если что-то из этого будет преграждать путь.
+                ''' При уничтожении цели приказ сменится на "Берсерк".
+                ''' С параметром
+                ''' </summary>
+                Public Const AttackStack As String = "L_ATTACK_STACK"
+                ''' <summary>
+                ''' Отряд будет атаковать любой отряд, находящийся максимум в одном шаге от указанного отряда.
+                ''' Если возможно, защитник попытается подойти ближе к защищаемому отряду.
+                ''' Он атакует другой отряд или подберет сундук, если что-то из этого будет преграждать путь.
+                ''' При уничтожении охраняемого отряда приказ сменится на "Поход", если защитник нейтральный или на "Нормальный", если отряд приналежит играбельной расе.
+                ''' С параметром
+                ''' </summary>
+                Public Const DefendStack As String = "L_DEFEND_STACK"
+                Public Const SecureCity As String = "L_SECURE_CITY"
+
+                Public Const Roam As String = "L_ROAM"
+                ''' <summary>
+                ''' Отряд будет стремиться к указанной локации.
+                ''' Он атакует другой отряд или подберет сундук, если что-то из этого будет преграждать путь.
+                ''' При достижении локации приказ сменится на "Стоять".
+                ''' С параметром
+                ''' </summary>
+                Public Const MoveToLocation As String = "L_MOVE_TO_LOCATION"
+                Public Const DefendLocation As String = "L_DEFEND_LOCATION"
+
+                ''' <summary>
+                ''' Отряд будет атаковать любые вражеские города и отряды в поле зрения.
+                ''' Не будет заходить в города, нападать на руины и подбирать сундуки, пока они не окажутся на пути.
+                ''' Без параметров
+                ''' </summary>
+                Public Const Bezerk As String = "L_BEZERK"
+                Public Const Assist As String = "L_ASSIST"
+                Public Const ExploreUnused As String = "L_EXPLORE___UNUSED"
+                Public Const Steal As String = "L_STEAL"
+                Public Const DefendCity As String = "L_DEFEND_CITY"
+#End Region
+
+                Public Sub New(ByVal _name As String, ByVal _target As String)
+                    name = _name.ToUpper
+                    If HasParameter(name) Then
+                        target = _target
+                    Else
+                        target = GenDefaultValues.emptyItem
+                    End If
+                End Sub
+
+                Public Shared Function Copy(ByRef v As StackOrder.Settings) As StackOrder.Settings
+                    If Not IsNothing(v) Then
+                        Return New StackOrder.Settings(v.name, v.target)
+                    Else
+                        Return New StackOrder.Settings(Stand, GenDefaultValues.emptyItem)
+                    End If
+                End Function
+
+                Public Shared Function HasParameter(ByVal _name As String) As Boolean
+                    Dim name As String = _name.ToUpper
+                    If name = AttackStack Or name = MoveToLocation Or name = DefendStack Then
+                        Return True
+                    ElseIf name = Normal Or name = Stand Or name = Guard Or name = Bezerk Then
+                        Return False
+                    Else
+                        Throw New Exception("Unexpected order name")
+                    End If
+                End Function
+            End Class
+
+            Public Sub New(ByVal _orderName As String, ByVal _orderTarget As String, _
+                           ByVal _aiOrderName As String, ByVal _aiOrderTarget As String)
+                order = New Settings(_orderName, _orderTarget)
+                aiOrder = New Settings(_aiOrderName, _aiOrderTarget)
+            End Sub
+
+            Public Shared Function Copy(ByRef v As StackOrder) As StackOrder
+                If Not IsNothing(v) Then
+                    Return New StackOrder(v.order.name, v.order.target, _
+                                          v.aiOrder.name, v.aiOrder.target)
+                Else
+                    Return New StackOrder(Settings.Stand, GenDefaultValues.emptyItem, _
+                                          Settings.Stand, GenDefaultValues.emptyItem)
+                End If
+            End Function
+
+        End Class
     End Structure
 
     Public Class UnitBattleNumericValues
