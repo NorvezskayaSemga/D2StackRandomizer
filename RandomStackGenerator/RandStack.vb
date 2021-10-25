@@ -78,6 +78,22 @@ Public Class RandStack
             ''' Если были сапоги - будут какие-нибудь сапоги.
             ''' </summary>
             Public ApplyStrictTypesFilter As Boolean
+
+            '''<summary>
+            ''' Если отряд имеет приказ "Стоять" (L_STAND) и он не принадлежит играбельной расе,
+            ''' то при его перегенерации будет шанс получить другой приказ в соответствие
+            ''' с настройками: ключ - название приказа, значение - стат. вес.
+            ''' По умолчанию L_STAND=1, L_NORMAL=0, L_GUARD=0, L_BEZERK=0, L_ROAM=0
+            ''' </summary>
+            Public neutralOrderWeight As New Dictionary(Of String, Double)
+
+            Public Sub New()
+                neutralOrderWeight.Add(AllDataStructues.Stack.StackOrder.OrderType.Stand, 1)
+                neutralOrderWeight.Add(AllDataStructues.Stack.StackOrder.OrderType.Normal, 0)
+                neutralOrderWeight.Add(AllDataStructues.Stack.StackOrder.OrderType.Guard, 0)
+                neutralOrderWeight.Add(AllDataStructues.Stack.StackOrder.OrderType.Bezerk, 0)
+                neutralOrderWeight.Add(AllDataStructues.Stack.StackOrder.OrderType.Roam, 0)
+            End Sub
         End Class
         Public Class CustomModSettings
             ''' <summary>
@@ -1442,7 +1458,10 @@ Public Class RandStack
         End If
         Call ApplyOverlevel(result, GenSettings)
         Call ApplyModificators(result, GenSettings)
-        result.order = AllDataStructues.Stack.StackOrder.Copy(GenSettings.order)
+        result.order = GenStackOrder(GenSettings)
+
+        Call log.Add("Input order: " & AllDataStructues.Stack.StackOrder.Print(GenSettings.order))
+        Call log.Add("Output order: " & AllDataStructues.Stack.StackOrder.Print(result.order))
 
         result.items = ItemsGen(New AllDataStructues.CommonLootCreationSettings _
                                 With {.GoldCost = DynStackStats.LootCost, _
@@ -2491,6 +2510,25 @@ Public Class RandStack
         Call AddToLog(LogID, "Unit added: " & unit.name & " id: " & unit.unitID)
         Call AddToLog(LogID, DynStackStats)
     End Sub
+
+    Private Function GenStackOrder(ByRef GenSettings As AllDataStructues.CommonStackCreationSettings) As AllDataStructues.Stack.StackOrder
+        If Not GenSettings.ownerIsPlayableRaсe And GenSettings.order.order.name = AllDataStructues.Stack.StackOrder.OrderType.Stand Then
+            Dim names() As String = settings.neutralOrderWeight.Keys.ToArray
+            Dim IDs As New List(Of Integer)
+            Dim weight(UBound(names)) As Double
+            For i As Integer = 0 To UBound(names) Step 1
+                IDs.Add(i)
+                weight(i) = settings.neutralOrderWeight.Item(names(i))
+            Next i
+            Dim selected As Integer = comm.RandomSelection(IDs, weight, True)
+            Dim order As New AllDataStructues.Stack.StackOrder _
+                (names(selected), GenDefaultValues.emptyItem, _
+                 AllDataStructues.Stack.StackOrder.OrderType.Normal, GenDefaultValues.emptyItem)
+            Return order
+        Else
+            Return AllDataStructues.Stack.StackOrder.Copy(GenSettings.order)
+        End If
+    End Function
 #End Region
 
 End Class
@@ -4920,6 +4958,8 @@ Public Class AllDataStructues
         Public noLeader As Boolean
         '''<summary>True, если создаем шаблон отряда</summary>
         Public isTemplate As Boolean
+        '''<summary>True, если отряд находится под управлением играбельной расы</summary>
+        Public ownerIsPlayableRaсe As Boolean
         '''<summary>Приказ отряда</summary>
         Public order As Stack.StackOrder = New Stack.StackOrder(Stack.StackOrder.OrderType.Stand, GenDefaultValues.emptyItem, _
                                                                 Stack.StackOrder.OrderType.Normal, GenDefaultValues.emptyItem)
@@ -4931,6 +4971,7 @@ Public Class AllDataStructues
                                                          .noLeader = v.noLeader, _
                                                          .pos = New Point(v.pos.X, v.pos.Y), _
                                                          .isTemplate = v.isTemplate, _
+                                                         .ownerIsPlayableRaсe = v.ownerIsPlayableRaсe, _
                                                          .order = Stack.StackOrder.Copy(v.order)}
         End Function
     End Class
@@ -5230,7 +5271,7 @@ End Class
 Public Class GenDefaultValues
 
     Public Const DefaultMod As String = "MNS"
-    Public Const myVersion As String = "06.10.2021.20.08"
+    Public Const myVersion As String = "25.10.2021.18.25"
 
     Public Shared Function PrintVersion() As String
         Return "Semga's generator DLL version: " & myVersion

@@ -199,7 +199,7 @@ Public Class CommonTest
             For i As Integer = 0 To UBound(expected) Step 1
                 actual(i) = False
             Next i
-            For i As Integer = 0 To 10 * expected.Length Step 1
+            For i As Integer = 0 To 30 * expected.Length Step 1
                 actual(target.RandomSelection(IDs, serial)) = True
             Next i
             For i As Integer = 0 To UBound(expected) Step 1
@@ -234,7 +234,7 @@ Public Class CommonTest
             For i As Integer = 0 To UBound(expected) Step 1
                 actual(i) = False
             Next i
-            For i As Integer = 0 To 10 * expected.Length Step 1
+            For i As Integer = 0 To 30 * expected.Length Step 1
                 actual(target.RandomSelection(IDs, fullStatsArray, serial)) = True
             Next i
             For i As Integer = 0 To UBound(expected) Step 1
