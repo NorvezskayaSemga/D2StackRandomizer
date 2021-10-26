@@ -1530,7 +1530,11 @@ Public Class RandStack
         End If
 
         If Not AllUnits(leaderID).small And DynStackStats.MaxGiants = 0 Then Return False
-        If AllUnits(leaderID).waterOnly And GenSettings.groundTile Then Return False
+        If GenSettings.isTemplate Then
+            If Not GenSettings.StackStats.WaterOnly = AllUnits(leaderID).waterOnly Then Return False
+        Else
+            If AllUnits(leaderID).waterOnly And GenSettings.groundTile Then Return False
+        End If
 
         If comm.BigStackUnits.ContainsKey(AllUnits(leaderID).unitID) _
         AndAlso DynStackStats.StackSize < comm.BigStackUnits.Item(AllUnits(leaderID).unitID) Then Return False
@@ -1740,7 +1744,7 @@ Public Class RandStack
             Dim nAttempts As Integer = 1
             Dim threads As Integer = 1
             For n As Integer = UBound(modificators) To 0 Step -1
-                nAttempts *= threadsN(n)
+                If nAttempts < 1000 Then nAttempts *= threadsN(n)
                 If nAttempts > 1000 And threads < Environment.ProcessorCount Then
                     threads *= threadsN(n)
                     multithreadOnN.Add(n)
@@ -2522,8 +2526,8 @@ Public Class RandStack
             Next i
             Dim selected As Integer = comm.RandomSelection(IDs, weight, True)
             Dim order As New AllDataStructues.Stack.StackOrder _
-                (names(selected), GenDefaultValues.emptyItem, _
-                 AllDataStructues.Stack.StackOrder.OrderType.Normal, GenDefaultValues.emptyItem)
+                (names(selected), AllDataStructues.Stack.StackOrder.Settings.NoTarget, _
+                 AllDataStructues.Stack.StackOrder.OrderType.Normal, AllDataStructues.Stack.StackOrder.Settings.NoTarget)
             Return order
         Else
             Return AllDataStructues.Stack.StackOrder.Copy(GenSettings.order)
@@ -3830,6 +3834,8 @@ Public Class AllDataStructues
                 ''' </summary>
                 Public target As String
 
+                Public Const NoTarget As String = "000000"
+
                 Public Sub New(ByVal _name As String, ByVal _target As String)
                     name = _name.ToUpper
                     target = _target
@@ -3940,8 +3946,8 @@ Public Class AllDataStructues
                     Return New StackOrder(v.order.name, v.order.target, _
                                           v.aiOrder.name, v.aiOrder.target)
                 Else
-                    Return New StackOrder(OrderType.Stand, GenDefaultValues.emptyItem, _
-                                          OrderType.Normal, GenDefaultValues.emptyItem)
+                    Return New StackOrder(OrderType.Stand, Settings.NoTarget, _
+                                          OrderType.Normal, Settings.NoTarget)
                 End If
             End Function
 
@@ -4961,8 +4967,8 @@ Public Class AllDataStructues
         '''<summary>True, если отряд находится под управлением играбельной расы</summary>
         Public ownerIsPlayableRaсe As Boolean
         '''<summary>Приказ отряда</summary>
-        Public order As Stack.StackOrder = New Stack.StackOrder(Stack.StackOrder.OrderType.Stand, GenDefaultValues.emptyItem, _
-                                                                Stack.StackOrder.OrderType.Normal, GenDefaultValues.emptyItem)
+        Public order As Stack.StackOrder = New Stack.StackOrder(Stack.StackOrder.OrderType.Stand, Stack.StackOrder.Settings.NoTarget, _
+                                                                Stack.StackOrder.OrderType.Normal, Stack.StackOrder.Settings.NoTarget)
 
         Public Shared Function Copy(ByVal v As CommonStackCreationSettings) As CommonStackCreationSettings
             Return New CommonStackCreationSettings With {.StackStats = DesiredStats.Copy(v.StackStats), _
@@ -5271,7 +5277,7 @@ End Class
 Public Class GenDefaultValues
 
     Public Const DefaultMod As String = "MNS"
-    Public Const myVersion As String = "25.10.2021.18.25"
+    Public Const myVersion As String = "26.10.2021.17.25"
 
     Public Shared Function PrintVersion() As String
         Return "Semga's generator DLL version: " & myVersion
