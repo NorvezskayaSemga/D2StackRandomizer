@@ -9099,13 +9099,13 @@ Public Class WaterGen
             owner = w
             m = myMap
             settMap = sM
-            wBlocks = ReadWaterBlocks(owner.comm.defValues.WaterBlocksCommon, False)
-            objWBlocks = ReadWaterBlocks(owner.comm.defValues.WaterBlocks3x3Objects, True)
-            unacceptWBlocks = ReadWaterBlocks(owner.comm.defValues.WaterBlocksUnacceptable, False)
+            wBlocks = ReadWaterBlocks(owner.comm.defValues.resReader.WaterBlocksCommon, False)
+            objWBlocks = ReadWaterBlocks(owner.comm.defValues.resReader.WaterBlocks3x3Objects, True)
+            unacceptWBlocks = ReadWaterBlocks(owner.comm.defValues.resReader.WaterBlocksUnacceptable, False)
         End Sub
         Private Function ReadWaterBlocks(ByVal blocksText As String, ByVal isObjBlock As Boolean) As Dictionary(Of String, WaterBlock)
             Dim result As New Dictionary(Of String, WaterBlock)
-            Dim lines() As String = owner.comm.TxtSplit(blocksText)
+            Dim lines() As String = Common.TxtSplit(blocksText)
             Dim key As String = ""
             For i As Integer = 0 To UBound(lines) Step 1
                 If lines(i).StartsWith("_") Then
@@ -9598,13 +9598,13 @@ Public Class ImpenetrableObjects
         trainers = objList(5)
         'objects = objList(6)
 
-        Dim races() As String = comm.TxtSplit(comm.defValues.Races)
+        Dim races() As String = Common.TxtSplit(comm.defValues.resReader.Races)
         For Each s As String In races
             Dim splited() As String = s.Split(CChar(" "))
             raceIdToString.Add(CInt(splited(UBound(splited))), splited(1).ToUpper)
         Next s
 
-        Dim rSublocations() As String = comm.TxtSplit(comm.defValues.RaceSublocations)
+        Dim rSublocations() As String = Common.TxtSplit(comm.defValues.resReader.RaceSublocations)
         For Each Str As String In rSublocations
             Dim s() As String = Str.Split(CChar(" "))
             Dim r As Integer = comm.RaceIdentifierToSubrace(s(0))

@@ -218,7 +218,7 @@
         Try
             Dim alltext As String = IO.File.ReadAllText(path)
             AddToLog(-1, "Content:" & vbNewLine & alltext & vbNewLine & "-------------------")
-            Dim str() As String = comm.TxtSplit(alltext)
+            Dim str() As String = Common.TxtSplit(alltext)
             Dim s(), w As String
             Dim i0 As Integer
             If IsNumeric(str(0)) Then
@@ -258,7 +258,7 @@
     Private Sub ReadExclusions()
         Try
             excludeRace.Add(comm.RaceIdentifierToSubrace("Greenskins"))
-            Dim str() As String = comm.TxtSplit(comm.defValues.ExcludeIDsForNames)
+            Dim str() As String = Common.TxtSplit(comm.defValues.resReader.ExcludeIDsForNames)
             log.Add(comm.ReadingLog.PrintAll)
             For i As Integer = 0 To UBound(str) Step 1
                 exclude.Add(str(i).ToUpper)
