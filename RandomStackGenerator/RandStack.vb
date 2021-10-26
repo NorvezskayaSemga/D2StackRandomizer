@@ -119,13 +119,16 @@ Public Class RandStack
             Public Shared Function GetDefaultExcludedObjects(ByRef log As Log, ByVal modName As String) As List(Of String)
                 Dim r As New ReasoucesReader(log, modName)
                 Dim lines() As String = Common.SettingsFileSplit(r.ExcludedIDs)
-                Dim result As New List(Of String)
-                Dim fields() As String
-                For j As Integer = 0 To UBound(lines) Step 1
-                    fields = lines(j).Split(CChar(" "))
-                    If Not result.Contains(fields(0).ToUpper) Then result.Add(fields(0).ToUpper)
-                Next j
-                Return result
+                Return ToList(lines)
+            End Function
+            ''' <summary>Читает список лорных юнитов, предметов и заклинаний, которые не должен использовать генератор</summary>
+            ''' <param name="log">Лог для записи отчета, можно nothing</param>
+            ''' <param name="modName">Название мода, на котором происходит генерация.
+            ''' Ваианты можно получить из GenDefaultValues.GetSupportedMods</param>
+            Public Shared Function GetDefaultExcludedLoreObjects(ByRef log As Log, ByVal modName As String) As List(Of String)
+                Dim r As New ReasoucesReader(log, modName)
+                Dim lines() As String = Common.SettingsFileSplit(r.ExcludedIDs_ModLore)
+                Return ToList(lines)
             End Function
             ''' <summary>Читает список предметов, юнитов и заклинаний, которые генератор должен оставлять на месте</summary>
             ''' <param name="log">Лог для записи отчета, можно nothing</param>
@@ -134,13 +137,7 @@ Public Class RandStack
             Public Shared Function GetDefaultPreservedObjects(ByRef log As Log, ByVal modName As String) As List(Of String)
                 Dim r As New ReasoucesReader(log, modName)
                 Dim lines() As String = Common.SettingsFileSplit(r.PreservedItems)
-                Dim result As New List(Of String)
-                Dim fields() As String
-                For j As Integer = 0 To UBound(lines) Step 1
-                    fields = lines(j).Split(CChar(" "))
-                    If Not result.Contains(fields(0).ToUpper) Then result.Add(fields(0).ToUpper)
-                Next j
-                Return result
+                Return ToList(lines)
             End Function
             ''' <summary>Читает множители шанса выпадения для отдельных предметов</summary>
             ''' <param name="log">Лог для записи отчета, можно nothing</param>
@@ -149,16 +146,7 @@ Public Class RandStack
             Public Shared Function GetDefaultLootItemChanceMultiplier(ByRef log As Log, ByVal modName As String) As Dictionary(Of String, Double)
                 Dim r As New ReasoucesReader(log, modName)
                 Dim lines() As String = Common.SettingsFileSplit(r.LootItemChanceMultiplier)
-                Dim result As New Dictionary(Of String, Double)
-                Dim fields() As String
-                For j As Integer = 0 To UBound(lines) Step 1
-                    fields = lines(j).Split(CChar(" "))
-                    If fields.Length > 1 Then
-                        If result.ContainsKey(fields(0).ToUpper) Then result.Remove(fields(0).ToUpper)
-                        result.Add(fields(0).ToUpper, ValueConverter.StrToDbl(fields(1)))
-                    End If
-                Next j
-                Return result
+                Return ToDictionary(lines)
             End Function
 
             Friend Shared Function ToList(ByRef d As Dictionary(Of String, Double)) As List(Of String)
@@ -167,6 +155,28 @@ Public Class RandStack
                 For Each k As String In keys
                     result.Add(k & " " & d.Item(k))
                 Next k
+                Return result
+            End Function
+            Friend Shared Function ToList(ByRef a() As String) As List(Of String)
+                Dim result As New List(Of String)
+                Dim fields() As String
+                For j As Integer = 0 To UBound(a) Step 1
+                    fields = a(j).Split(CChar(" "))
+                    If Not result.Contains(fields(0).ToUpper) Then result.Add(fields(0).ToUpper)
+                Next j
+                Return result
+            End Function
+
+            Friend Shared Function ToDictionary(ByRef a() As String) As Dictionary(Of String, Double)
+                Dim result As New Dictionary(Of String, Double)
+                Dim fields() As String
+                For j As Integer = 0 To UBound(a) Step 1
+                    fields = a(j).Split(CChar(" "))
+                    If fields.Length > 1 Then
+                        If result.ContainsKey(fields(0).ToUpper) Then result.Remove(fields(0).ToUpper)
+                        result.Add(fields(0).ToUpper, ValueConverter.StrToDbl(fields(1)))
+                    End If
+                Next j
                 Return result
             End Function
         End Class
@@ -222,12 +232,12 @@ Public Class RandStack
 
         If settings.talismanChargesDefaultAmount < 1 Then Throw New Exception("Unexpected TalismanChargesDefaultAmount")
 
-        If settings.excludeLoreUnits Then Call comm.ReadExcludedLoreObjectsList()
+        If settings.excludeLoreUnits Then Call comm.ReadExcludedLoreObjects()
         If settings.preserveLoreUnits Then Call comm.ReadLoreUnitsToPreservedObjects()
         If IsNothing(data.modData.ExcludedObjects) Then
-            Call comm.ReadExcludedObjectsList()
+            Call comm.ReadExcludedObjects()
         Else
-            Call comm.ReadExcludedObjectsList(data.modData.ExcludedObjects)
+            Call comm.ReadExcludedObjects(data.modData.ExcludedObjects)
         End If
         If IsNothing(data.modData.PreservedItems) Then
             Call comm.ReadPreservedObjects()
@@ -3351,7 +3361,7 @@ Public Class Common
         ReadPreservedObjects = 8
     End Enum
     ''' <summary>Читает список юнитов, предметов и заклинаний, которые не должен использовать генератор</summary>
-    Protected Friend Sub ReadExcludedObjectsList()
+    Protected Friend Sub ReadExcludedObjects()
         Dim s() As String = SettingsFileSplit(defValues.resReader.ExcludedIDs)
         Call ReadFile(ReadMode.ExcludedObjects, s)
         If Not IsNothing(onExcludedListChanged) Then Call onExcludedListChanged()
@@ -3360,12 +3370,12 @@ Public Class Common
     ''' <param name="ExcludeLists">Файлы со списками исключенных объектов. Записи в них могут повторяться. 
     ''' Допускается передача неинициализитрованного массива.
     ''' Не воспринимает ключевые слова</param>
-    Protected Friend Sub ReadExcludedObjectsList(ByRef ExcludeLists As List(Of String))
+    Protected Friend Sub ReadExcludedObjects(ByRef ExcludeLists As List(Of String))
         Call ReadFile(ReadMode.ExcludedObjects, ExcludeLists)
         If Not IsNothing(onExcludedListChanged) Then Call onExcludedListChanged()
     End Sub
     ''' <summary>Читает список лорных юнитов, предметов и заклинаний, которые не должен использовать генератор</summary>
-    Protected Friend Sub ReadExcludedLoreObjectsList()
+    Protected Friend Sub ReadExcludedLoreObjects()
         Dim s() As String = SettingsFileSplit(defValues.resReader.ExcludedIDs_ModLore)
         Call ReadFile(ReadMode.ExcludedObjects, s)
         If Not IsNothing(onExcludedListChanged) Then Call onExcludedListChanged()

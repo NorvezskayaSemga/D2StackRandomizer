@@ -1087,7 +1087,7 @@ Public Class RandStackTest
 
         Call CreateRandStack_Accessor()
         Dim target As RandStack = CreateRandStack()
-        target.comm.ReadExcludedObjectsList()
+        target.comm.ReadExcludedObjects()
         target.settings.preserveUnitsOverlevel = True
 
         Dim ok As Boolean = True
