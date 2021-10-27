@@ -5562,16 +5562,7 @@ Public Class shortMapFormat
         Dim sName As New SetName(lang, m.comm.defValues.selectedMod)
         Call sName.ResetNames(True, -1)
 
-        Dim allSpells(objContent.spells.Count + objContent.excludedSpells.Count - 1) As AllDataStructues.Spell
-        Dim ns As Integer = -1
-        For Each spellsList As Dictionary(Of String, AllDataStructues.Spell) In {objContent.spells, objContent.excludedSpells}
-            For Each spell As AllDataStructues.Spell In spellsList.Values
-                ns += 1
-                allSpells(ns) = spell
-            Next spell
-        Next spellsList
-
-        Dim raceMana As Dictionary(Of Integer, AllDataStructues.Cost()) = ImpenetrableObjects.RacesManaUsing(objContent.randStack.comm, allSpells)
+        Dim raceMana As Dictionary(Of Integer, AllDataStructues.Cost()) = ImpenetrableObjects.RacesManaUsing(objContent.randStack.comm, objContent.randStack.AllSpells)
         Dim raceT1mana As New Dictionary(Of Integer, AllDataStructues.Cost)
         For Each id As Integer In raceMana.Keys
             Dim a() As Integer = AllDataStructues.Cost.ToArray(raceMana.Item(id)(1))
@@ -10911,8 +10902,6 @@ Public Class ObjectsContentSet
     Private manaSourcesTypes() As String = New String() {DefMapObjects.mineGreen, DefMapObjects.mineBlack, DefMapObjects.mineWhite, _
                                                          DefMapObjects.mineRed, DefMapObjects.mineBlue}
 
-    Friend spells, excludedSpells As New Dictionary(Of String, AllDataStructues.Spell)
-
     Delegate Function getSettings(ByVal mode As Integer, ByRef input() As String) As List(Of String)
 
     Private mines As New Dictionary(Of String, String)
@@ -10920,6 +10909,7 @@ Public Class ObjectsContentSet
     Friend excludedItemType As New List(Of Integer)
 
     Private typeMinCost(-1), typeMaxCost(-1) As Integer
+    Private itemCostFilter() As Boolean
 
     ''' <param name="RStack">Инициализированный класс</param>
     Public Sub New(ByRef RStack As RandStack)
@@ -10935,23 +10925,23 @@ Public Class ObjectsContentSet
             typeMinCost(i) = Integer.MaxValue
         Next i
 
-        For Each item As AllDataStructues.Item In randStack.AllItems
-            If Not randStack.comm.IsExcluded(item) Then
-                Dim sum As Integer = AllDataStructues.Cost.Sum(randStack.LootCost(item))
+        ReDim itemCostFilter(UBound(randStack.AllItems))
+        For i As Integer = 0 To UBound(randStack.AllItems) Step 1
+            If Not randStack.comm.IsExcluded(randStack.AllItems(i)) Then
+                Dim sum As Integer = AllDataStructues.Cost.Sum(randStack.LootCost(randStack.AllItems(i)))
                 If sum > 0 Then
-                    typeMinCost(item.type) = Math.Min(typeMinCost(item.type), sum)
-                    typeMaxCost(item.type) = Math.Max(typeMaxCost(item.type), sum)
+                    typeMinCost(randStack.AllItems(i).type) = Math.Min(typeMinCost(randStack.AllItems(i).type), sum)
+                    typeMaxCost(randStack.AllItems(i).type) = Math.Max(typeMaxCost(randStack.AllItems(i).type), sum)
                 End If
             End If
-        Next item
-
-        For Each item As AllDataStructues.Spell In randStack.AllSpells
-            If Not randStack.comm.IsExcluded(item) Then
-                spells.Add(item.spellID.ToUpper, AllDataStructues.Spell.Copy(item))
+            If randStack.AllItems(i).itemCost.Gold = 0 Then
+                itemCostFilter(i) = False
+            ElseIf Not randStack.LootCost(randStack.AllItems(i)).Gold = randStack.AllItems(i).itemCostSum Then
+                itemCostFilter(i) = False
             Else
-                excludedSpells.Add(item.spellID.ToUpper, AllDataStructues.Spell.Copy(item))
+                itemCostFilter(i) = True
             End If
-        Next item
+        Next i
 
         excludedItemType.AddRange(New Integer() {GenDefaultValues.ItemTypes.jewel, GenDefaultValues.ItemTypes.special})
 
@@ -11014,7 +11004,12 @@ Public Class ObjectsContentSet
             races(UBound(races)) = randStack.comm.defValues.RaceNumberToRaceChar(randStack.comm.RaceIdentifierToSubrace(r))
         Next r
 
-        Dim res, slist As New List(Of String)
+        Dim res As New List(Of String)
+        Dim selection As New List(Of Integer)
+        Dim pIDs(Environment.ProcessorCount - 1) As List(Of Integer)
+        For i As Integer = 0 To Environment.ProcessorCount - 1 Step 1
+            pIDs(i) = New List(Of Integer)
+        Next i
         Dim txt As String = ""
 
         For Each L As String In d.shopContent
@@ -11027,36 +11022,41 @@ Public Class ObjectsContentSet
                     txt = ""
                 End If
             ElseIf IsNumeric(L) Then
-                slist.Clear()
                 Dim type As Integer = CInt(L)
-                For Each s As AllDataStructues.Spell In spells.Values
-                    If Not res.Contains(s.spellID) AndAlso AddSpell(-1, -1, True, availMana, False, s) Then
-                        If type > -1 Then
-                            If s.category = type Then slist.Add(s.spellID)
-                        Else
-                            slist.Add(s.spellID)
-                        End If
-                    End If
-                Next s
-                Dim selected As String
-                If slist.Count > 0 Then
-                    selected = slist.Item(randStack.comm.rndgen.RndPos(slist.Count, True) - 1)
+                For i As Integer = 0 To Environment.ProcessorCount - 1 Step 1
+                    pIDs(i).Clear()
+                Next i
+                Parallel.For(0, Environment.ProcessorCount, _
+                 Sub(proc As Integer)
+                     Dim add As Boolean
+                     For u As Integer = proc To UBound(randStack.AllSpells) Step Environment.ProcessorCount
+                         add = True
+                         If type > -1 And Not randStack.AllSpells(u).category = type Then add = False
+                         If add AndAlso res.Contains(randStack.AllSpells(u).spellID) Then add = False
+                         If add AndAlso Not SpellFilter(-1, -1, True, availMana, False, randStack.AllSpells(u)) Then add = False
+                         If add Then pIDs(proc).Add(u)
+                     Next u
+                 End Sub)
+                selection = Common.MergeLists(pIDs)
+                Dim selected As Integer
+                If selection.Count > 0 Then
+                    selected = selection.Item(randStack.comm.rndgen.RndPos(selection.Count, True) - 1)
+                    res.Add(randStack.AllSpells(selected).spellID)
                 Else
-                    selected = ""
+                    selected = -1
                 End If
-                If Not selected = "" Then res.Add(selected)
-                If log.IsEnabled Then txt &= msgToLog(selected)
+                If log.IsEnabled Then txt &= SpellMsgToLog(selected)
             ElseIf L.Contains("#") Then
                 Dim s() As String = L.Split(CChar("#"))
                 Dim type As Integer = CInt(s(0))
                 Dim prop As String = s(1)
-                Dim selected As String = SelectSpell(prop, type, races, availMana, res)
-                If Not selected = "" Then res.Add(selected)
-                If log.IsEnabled Then txt &= msgToLog(selected)
+                Dim selected As Integer = SelectSpell(prop, type, races, availMana, res)
+                If selected > -1 Then res.Add(randStack.AllSpells(selected).spellID)
+                If log.IsEnabled Then txt &= SpellMsgToLog(selected)
             Else
-                Dim selected As String = SelectSpell(L, -1, races, availMana, res)
-                If Not selected = "" Then res.Add(selected)
-                If log.IsEnabled Then txt &= msgToLog(selected)
+                Dim selected As Integer = SelectSpell(L, -1, races, availMana, res)
+                If selected > -1 Then res.Add(randStack.AllSpells(selected).spellID)
+                If log.IsEnabled Then txt &= SpellMsgToLog(selected)
             End If
             If Not txt = "" Then Call AddToLog(log, LogID, txt)
         Next L
@@ -11065,24 +11065,27 @@ Public Class ObjectsContentSet
 
         Return res
     End Function
-    Private Function msgToLog(ByRef spellID As String) As String
-        If Not spellID = "" Then
-            Dim txt As String = spells.Item(spellID).spellID & " - " & _
-                                spells.Item(spellID).name & " - " & _
-                                "Lvl: " & spells.Item(spellID).level & " - " & _
-                                "Cat: " & spells.Item(spellID).category
+    Private Function SpellMsgToLog(ByRef spellID As Integer) As String
+        If spellID > -1 Then
+            Dim txt As String = randStack.AllSpells(spellID).spellID & " - " & _
+                                randStack.AllSpells(spellID).name & " - " & _
+                                "Lvl: " & randStack.AllSpells(spellID).level & " - " & _
+                                "Cat: " & randStack.AllSpells(spellID).category
             Return txt
         Else
             Return "nothing"
         End If
     End Function
-    Private Function SelectSpell(ByRef sProperties As String, ByRef type As Integer, ByRef races() As String, _
-                                 ByRef availMana As AllDataStructues.Cost, ByRef res As List(Of String)) As String
+    Private Function SelectSpell(ByRef sProperties As String, ByVal type As Integer, ByRef races() As String, _
+                                 ByVal availMana As AllDataStructues.Cost, ByVal res As List(Of String)) As Integer
 
-        Dim level, race As Integer
+        Dim level, race, racesList(), pRR, pSpellLevel As Integer
         Dim mass, ignoreAvailMana As Boolean
-        Dim slist As New List(Of String)
-        Dim rlist() As Integer
+        Dim selection As New List(Of Integer)
+        Dim pIDs(Environment.ProcessorCount - 1) As List(Of Integer)
+        For i As Integer = 0 To Environment.ProcessorCount - 1 Step 1
+            pIDs(i) = New List(Of Integer)
+        Next i
 
         Dim L As String = sProperties.ToUpper
         If L.Contains("T") Then
@@ -11106,36 +11109,43 @@ Public Class ObjectsContentSet
         Next r
         level = CInt(L)
         ignoreAvailMana = False
-        rlist = New Integer() {race, -1}
-        For rr As Integer = 0 To UBound(rlist) Step 1
+        racesList = New Integer() {race, -1}
+        For rr As Integer = 0 To UBound(racesList) Step 1
+            pRR = rr
             For p As Integer = 0 To 1 Step 1
                 For spellLevel As Integer = level To 0 Step -1
-                    For Each s As AllDataStructues.Spell In spells.Values
-                        If Not res.Contains(s.spellID) AndAlso AddSpell(spellLevel, rlist(rr), mass, _
-                                                                        availMana, ignoreAvailMana, s) Then
-                            If type > -1 Then
-                                If s.category = type Then slist.Add(s.spellID)
-                            Else
-                                slist.Add(s.spellID)
-                            End If
-                        End If
-                    Next s
-                    If slist.Count > 0 Then Exit For
+                    pSpellLevel = spellLevel
+                    For i As Integer = 0 To Environment.ProcessorCount - 1 Step 1
+                        pIDs(i).Clear()
+                    Next i
+                    Parallel.For(0, Environment.ProcessorCount, _
+                     Sub(proc As Integer)
+                         Dim add As Boolean
+                         For u As Integer = proc To UBound(randStack.AllSpells) Step Environment.ProcessorCount
+                             add = True
+                             If type > -1 And Not randStack.AllSpells(u).category = type Then add = False
+                             If add AndAlso res.Contains(randStack.AllSpells(u).spellID) Then add = False
+                             If add AndAlso Not SpellFilter(pSpellLevel, racesList(pRR), mass, availMana, ignoreAvailMana, randStack.AllSpells(u)) Then add = False
+                             If add Then pIDs(proc).Add(u)
+                         Next u
+                     End Sub)
+                    selection = Common.MergeLists(pIDs)
+                    If selection.Count > 0 Then Exit For
                 Next spellLevel
                 ignoreAvailMana = Not ignoreAvailMana
-                If slist.Count > 0 Then Exit For
+                If selection.Count > 0 Then Exit For
             Next p
-            If slist.Count > 0 Then Exit For
+            If selection.Count > 0 Then Exit For
         Next rr
-        If slist.Count > 0 Then
-            Return slist.Item(randStack.comm.rndgen.RndPos(slist.Count, True) - 1)
+        If selection.Count > 0 Then
+            Return selection.Item(randStack.comm.rndgen.RndPos(selection.Count, True) - 1)
         Else
-            Return ""
+            Return -1
         End If
     End Function
-    Private Function AddSpell(ByRef level As Integer, ByRef race As Integer, ByRef mass As Boolean, _
-                              ByRef avail As AllDataStructues.Cost, ByRef ignoreAvail As Boolean, ByRef s As AllDataStructues.Spell) As Boolean
-        If randStack.comm.IsExcluded(s) Then Return False
+    Private Function SpellFilter(ByRef level As Integer, ByRef race As Integer, ByRef mass As Boolean, _
+                             ByRef avail As AllDataStructues.Cost, ByRef ignoreAvail As Boolean, ByRef s As AllDataStructues.Spell) As Boolean
+        If randStack.comm.IsAppropriateSpell(s) Then Return False
 
         If Not mass And s.area > 998 Then Return False
         If level > 0 And Not s.level = level Then Return False
@@ -11175,6 +11185,10 @@ Public Class ObjectsContentSet
 
         Dim res As New List(Of String)
         Dim selection As New List(Of Integer)
+        Dim pIDs(Environment.ProcessorCount - 1) As List(Of Integer)
+        For i As Integer = 0 To Environment.ProcessorCount - 1 Step 1
+            pIDs(i) = New List(Of Integer)
+        Next i
         Dim txt As String = ""
 
         For Each v As String In d.shopContent
@@ -11183,23 +11197,31 @@ Public Class ObjectsContentSet
                 Dim bar As Integer = CInt(v)
                 Dim selected As Integer = SelectMercenary(bar, -1, res)
                 If selected > -1 Then res.Add(randStack.AllUnits(selected).unitID)
-                If log.IsEnabled Then txt &= msgToLog(selected)
+                If log.IsEnabled Then txt &= UnitMsgToLog(selected)
             ElseIf randStack.comm.RaceIdentifierToSubrace(v, False) > -1 Then
-                selection.Clear()
                 Dim selected As Integer = -1
                 Dim race As Integer = randStack.comm.RaceIdentifierToSubrace(v)
-                For u As Integer = 0 To UBound(randStack.AllUnits) Step 1
-                    If randStack.comm.IsAppropriateFighter(randStack.AllUnits(u)) Then
-                        If Not res.Contains(randStack.AllUnits(u).unitID) Then
-                            If race = randStack.AllUnits(u).race Then selection.Add(u)
-                        End If
-                    End If
-                Next u
+                For i As Integer = 0 To Environment.ProcessorCount - 1 Step 1
+                    pIDs(i).Clear()
+                Next i
+                Parallel.For(0, Environment.ProcessorCount, _
+                 Sub(proc As Integer)
+                     Dim add As Boolean
+                     For u As Integer = proc To UBound(randStack.AllUnits) Step Environment.ProcessorCount
+                         add = (race = randStack.AllUnits(u).race)
+                         If add AndAlso Not randStack.comm.IsAppropriateFighter(randStack.AllUnits(u)) Then add = False
+                         If add AndAlso res.Contains(randStack.AllUnits(u).unitID) Then add = False
+                         If add Then pIDs(proc).Add(u)
+                     Next u
+                 End Sub)
+                selection = Common.MergeLists(pIDs)
                 If selection.Count > 0 Then
                     selected = selection.Item(randStack.comm.rndgen.RndPos(selection.Count, True) - 1)
                     res.Add(randStack.AllUnits(selected).unitID)
+                Else
+                    selected = -1
                 End If
-                If log.IsEnabled Then txt &= msgToLog(selected)
+                If log.IsEnabled Then txt &= UnitMsgToLog(selected)
             ElseIf v.Contains("#") Then
                 Dim s() As String = v.Split(CChar("#"))
                 Dim race As Integer
@@ -11211,7 +11233,7 @@ Public Class ObjectsContentSet
                 Dim bar As Integer = CInt(s(1))
                 Dim selected As Integer = SelectMercenary(bar, race, res)
                 If selected > -1 Then res.Add(randStack.AllUnits(selected).unitID)
-                If log.IsEnabled Then txt &= msgToLog(selected)
+                If log.IsEnabled Then txt &= UnitMsgToLog(selected)
             Else
                 If Not res.Contains(v.ToUpper) Then
                     res.Add(v)
@@ -11227,8 +11249,8 @@ Public Class ObjectsContentSet
 
         Return res
     End Function
-    Private Function msgToLog(ByRef unitID As Integer) As String
-        If unitID > 0 Then
+    Private Function UnitMsgToLog(ByRef unitID As Integer) As String
+        If unitID > -1 Then
             Dim unit As AllDataStructues.Unit = randStack.AllUnits(unitID)
             Dim txt As String = unit.unitID & " - " & unit.name & " - " & randStack.comm.defValues.RaceNumberToRaceChar(unit.race) & " - " & unit.EXPnext
             If unit.small Then
@@ -11241,33 +11263,44 @@ Public Class ObjectsContentSet
             Return "nothing"
         End If
     End Function
-    Private Function SelectMercenary(ByRef bar As Integer, ByRef race As Integer, ByRef added As List(Of String)) As Integer
+    Private Function SelectMercenary(ByVal bar As Integer, ByVal race As Integer, ByVal added As List(Of String)) As Integer
 
         Dim selection As New List(Of Integer)
+        Dim pIDs(Environment.ProcessorCount - 1) As List(Of Integer)
+        For i As Integer = 0 To Environment.ProcessorCount - 1 Step 1
+            pIDs(i) = New List(Of Integer)
+        Next i
 
         Dim tolerance As Integer
         Dim dtolerance As Integer = 50
         Dim oneMore As Boolean = False
-        Dim add As Boolean
 
         Do While (selection.Count = 0 Or oneMore) And tolerance <= 10000
             tolerance += dtolerance
-            For u As Integer = 0 To UBound(randStack.AllUnits) Step 1
-                If randStack.comm.IsAppropriateFighter(randStack.AllUnits(u)) Then
-                    If Not added.Contains(randStack.AllUnits(u).unitID) Then
-                        add = False
-                        If randStack.AllUnits(u).small Then
-                            If Math.Abs(randStack.AllUnits(u).EXPnext - bar) <= tolerance Then add = True
-                        Else
-                            If Math.Abs(randStack.AllUnits(u).EXPnext - 2 * bar) <= 2 * tolerance Then add = True
-                        End If
-                        If add And race > -1 Then
-                            If Not race = randStack.AllUnits(u).race Then add = False
-                        End If
-                        If add Then selection.Add(u)
-                    End If
-                End If
-            Next u
+            For i As Integer = 0 To Environment.ProcessorCount - 1 Step 1
+                pIDs(i).Clear()
+            Next i
+            Parallel.For(0, Environment.ProcessorCount, _
+             Sub(proc As Integer)
+                 Dim add As Boolean
+                 For u As Integer = proc To UBound(randStack.AllUnits) Step Environment.ProcessorCount
+                     If randStack.comm.IsAppropriateFighter(randStack.AllUnits(u)) Then
+                         If Not added.Contains(randStack.AllUnits(u).unitID) Then
+                             add = False
+                             If randStack.AllUnits(u).small Then
+                                 If Math.Abs(randStack.AllUnits(u).EXPnext - bar) <= tolerance Then add = True
+                             Else
+                                 If Math.Abs(randStack.AllUnits(u).EXPnext - 2 * bar) <= 2 * tolerance Then add = True
+                             End If
+                             If add And race > -1 Then
+                                 If Not race = randStack.AllUnits(u).race Then add = False
+                             End If
+                             If add Then pIDs(proc).Add(u)
+                         End If
+                     End If
+                 Next u
+             End Sub)
+            selection = Common.MergeLists(pIDs)
             If selection.Count > 0 Then oneMore = Not oneMore
         Loop
         'If selection.Count = 0 Then Throw New Exception("Не могу выбрать юнита в качестве наемника. Планка опыта: " & bar.ToString)
@@ -11296,6 +11329,10 @@ Public Class ObjectsContentSet
         Dim txt As String = ""
         Dim res As New List(Of String)
         Dim selection As New List(Of Integer)
+        Dim pIDs(Environment.ProcessorCount - 1) As List(Of Integer)
+        For i As Integer = 0 To Environment.ProcessorCount - 1 Step 1
+            pIDs(i) = New List(Of Integer)
+        Next i
         Dim dCost As Integer = 0
         Dim itemID As Integer = -1
         Dim itemsFilter As New RandStack.ItemsFilter(1, randStack, d.IGen, TypeCostRestriction, Nothing, -1)
@@ -11311,19 +11348,24 @@ Public Class ObjectsContentSet
                 Dim bar As Integer = CInt(v)
                 itemID = SelectItem(bar, -1, dCost, d, res.Count, TypeCostRestriction)
                 If itemID > -1 Then res.Add(randStack.AllItems(itemID).itemID)
-                If log.IsEnabled Then txt &= msgToLog(itemID, dCost, True)
+                If log.IsEnabled Then txt &= ItemMsgToLog(itemID, dCost, True)
             ElseIf randStack.comm.itemTypeID.ContainsKey(v.ToUpper) Then
-                selection.Clear()
                 Dim type As Integer = randStack.comm.itemTypeID.Item(v.ToUpper)
-                For u As Integer = 0 To UBound(randStack.AllItems) Step 1
-                    If randStack.comm.IsAppropriateItem(randStack.AllItems(u)) Then
-                        If randStack.AllItems(u).itemCost.Gold > 0 AndAlso randStack.LootCost(randStack.AllItems(u)).Gold = randStack.AllItems(u).itemCostSum Then
-                            If type = randStack.AllItems(u).type AndAlso itemsFilter.Filter(0, randStack.AllItems(u)) Then
-                                selection.Add(u)
-                            End If
-                        End If
-                    End If
-                Next u
+                For i As Integer = 0 To Environment.ProcessorCount - 1 Step 1
+                    pIDs(i).Clear()
+                Next i
+                Parallel.For(0, Environment.ProcessorCount, _
+                 Sub(proc As Integer)
+                     Dim add As Boolean
+                     For u As Integer = proc To UBound(randStack.AllItems) Step Environment.ProcessorCount
+                         add = itemCostFilter(u)
+                         If add AndAlso Not type = randStack.AllItems(u).type Then add = False
+                         If add AndAlso Not randStack.comm.IsAppropriateItem(randStack.AllItems(u)) Then add = False
+                         If add AndAlso Not itemsFilter.Filter(0, randStack.AllItems(u)) Then add = False
+                         If add Then pIDs(proc).Add(u)
+                     Next u
+                 End Sub)
+                selection = Common.MergeLists(pIDs)
                 'If selection.Count = 0 Then Throw New Exception("Не могу выбрать предмет в качестве товара. Тип: " & v)
                 If selection.Count > 0 Then
                     itemID = randStack.comm.RandomSelection(selection, randStack.Global_ItemsWeightMultiplier, True)
@@ -11331,7 +11373,7 @@ Public Class ObjectsContentSet
                 Else
                     itemID = -1
                 End If
-                If log.IsEnabled Then txt &= msgToLog(itemID, dCost, False)
+                If log.IsEnabled Then txt &= ItemMsgToLog(itemID, dCost, False)
             ElseIf v.Contains("#") Then
                 Dim s() As String = v.Split(CChar("#"))
                 Dim type As Integer
@@ -11347,7 +11389,7 @@ Public Class ObjectsContentSet
                     itemID = SelectItem(bar, -1, dCost, d, res.Count, TypeCostRestriction)
                 End If
                 If itemID > -1 Then res.Add(randStack.AllItems(itemID).itemID)
-                txt &= msgToLog(itemID, dCost, True)
+                txt &= ItemMsgToLog(itemID, dCost, True)
             Else
                 res.Add(v.ToUpper)
                 If log.IsEnabled Then txt &= " -> " & v.ToUpper
@@ -11359,7 +11401,7 @@ Public Class ObjectsContentSet
 
         Return res
     End Function
-    Private Function msgToLog(ByRef itemID As Integer, ByRef dCost As Integer, ByRef addDeltaCost As Boolean) As String
+    Private Function ItemMsgToLog(ByRef itemID As Integer, ByRef dCost As Integer, ByRef addDeltaCost As Boolean) As String
         Dim txt As String = ""
         If addDeltaCost Then txt &= " deltaCost: " & dCost
         txt &= " -> "
@@ -11370,10 +11412,15 @@ Public Class ObjectsContentSet
         End If
         Return txt
     End Function
-    Private Function SelectItem(ByRef bar As Integer, ByRef type As Integer, ByRef dCost As Integer, _
+    Private Function SelectItem(ByRef bar As Integer, ByVal type As Integer, ByRef dCost As Integer, _
                                 ByRef d As AllDataStructues.DesiredStats, ByRef addedCount As Integer, _
                                 ByRef TypeCostRestriction As Dictionary(Of Integer, AllDataStructues.Restriction)) As Integer
         Dim selection As New List(Of Integer)
+        Dim pIDs(Environment.ProcessorCount - 1) As List(Of Integer)
+        For i As Integer = 0 To Environment.ProcessorCount - 1 Step 1
+            pIDs(i) = New List(Of Integer)
+        Next i
+
         Dim correctedBar As Integer = bar + CInt(dCost / Math.Max(d.shopContent.Count - addedCount, 1))
         If correctedBar <= 0 Then
             dCost += bar
@@ -11382,7 +11429,6 @@ Public Class ObjectsContentSet
         Dim dtolerance As Integer = 100
         Dim tolerance As Integer
         Dim oneMore As Boolean = False
-        Dim add As Boolean
 
         Dim itemsFilter As New RandStack.ItemsFilter(2, randStack, d.IGen, TypeCostRestriction, Nothing, -1)
         itemsFilter.ForceDisableStrictTypesFilter = True
@@ -11396,23 +11442,29 @@ Public Class ObjectsContentSet
         tolerance = 0
         Do While (selection.Count = 0 Or oneMore) And tolerance <= 10000
             tolerance += dtolerance
-            selection.Clear()
-            For u As Integer = 0 To UBound(randStack.AllItems) Step 1
-                If randStack.comm.IsAppropriateItem(randStack.AllItems(u)) Then
-                    If randStack.AllItems(u).itemCost.Gold > 0 AndAlso randStack.LootCost(randStack.AllItems(u)).Gold = randStack.AllItems(u).itemCostSum Then
-                        If Math.Abs(randStack.LootCost(randStack.AllItems(u)).Gold - correctedBar) <= tolerance Then
-                            If type < 0 Then
-                                add = Not excludedItemType.Contains(randStack.AllItems(u).type)
-                                If add Then add = itemsFilter.Filter(0, randStack.AllItems(u))
-                            Else
-                                add = (type = randStack.AllItems(u).type)
-                            End If
-                            If add AndAlso Not itemsFilter.Filter(1, randStack.AllItems(u)) Then add = False
-                            If add Then selection.Add(u)
-                        End If
-                    End If
-                End If
-            Next u
+            For i As Integer = 0 To Environment.ProcessorCount - 1 Step 1
+                pIDs(i).Clear()
+            Next i
+            Parallel.For(0, Environment.ProcessorCount, _
+             Sub(proc As Integer)
+                 Dim add As Boolean
+                 For u As Integer = proc To UBound(randStack.AllItems) Step Environment.ProcessorCount
+                     add = itemCostFilter(u)
+                     If add Then
+                         If type > -1 Then
+                             add = (type = randStack.AllItems(u).type)
+                         Else
+                             add = Not excludedItemType.Contains(randStack.AllItems(u).type)
+                         End If
+                     End If
+                     If add AndAlso Not randStack.comm.IsAppropriateItem(randStack.AllItems(u)) Then add = False
+                     If add AndAlso Math.Abs(randStack.LootCost(randStack.AllItems(u)).Gold - correctedBar) > tolerance Then add = False
+                     If add AndAlso Not itemsFilter.Filter(1, randStack.AllItems(u)) Then add = False
+                     If add AndAlso type < 0 AndAlso Not itemsFilter.Filter(0, randStack.AllItems(u)) Then add = False
+                     If add Then pIDs(proc).Add(u)
+                 Next u
+             End Sub)
+            selection = Common.MergeLists(pIDs)
             If selection.Count > 0 Then oneMore = Not oneMore
         Loop
         dCost += bar

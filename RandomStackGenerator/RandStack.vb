@@ -391,15 +391,15 @@ Public Class RandStack
                 End If
             Next i
         End If
-        'If Not IsNothing(AllSpells) Then
-        '    For i As Integer = 0 To UBound(AllSpells) Step 1
-        '        If comm.IsExcluded(AllSpells(i)) Then
-        '            AllSpells(i).useState = GenDefaultValues.ExclusionState.excluded
-        '        Else
-        '            AllSpells(i).useState = GenDefaultValues.ExclusionState.canUse
-        '        End If
-        '    Next i
-        'End If
+        If Not IsNothing(AllSpells) Then
+            For i As Integer = 0 To UBound(AllSpells) Step 1
+                If comm.IsExcluded(AllSpells(i)) Then
+                    AllSpells(i).useState = GenDefaultValues.ExclusionState.excluded
+                Else
+                    AllSpells(i).useState = GenDefaultValues.ExclusionState.canUse
+                End If
+            Next i
+        End If
     End Sub
 
 #Region "Find stats"
@@ -759,6 +759,10 @@ Public Class RandStack
         Dim weight(UBound(AllItems)) As Double
         Dim IDs As New List(Of Integer)
         Dim result As New List(Of String)
+        Dim pIDs(Environment.ProcessorCount - 1) As List(Of Integer)
+        For i As Integer = 0 To Environment.ProcessorCount - 1 Step 1
+            pIDs(i) = New List(Of Integer)
+        Next i
 
         Dim again As Boolean
         Dim itemsFilter As New ItemsFilter(2, Me, GenItemSetDynIGen(GenSettings.IGen, GenSettings.GoldCost), _
@@ -783,20 +787,27 @@ Public Class RandStack
             itemsFilter.ForceDisableStrictTypesFilter = False
             again = True
             Do While again
-                For i As Integer = 0 To UBound(AllItems) Step 1
-                    If itemsFilter.Filter(0, AllItems(i)) Then
-                        IDs.Add(i)
-                        weight(i) = GenItemWeight(AllItems(i), itemsFilter.TypeCostBar) * _
-                                    Global_ItemsWeightMultiplier(i) * _
-                                    DynWeight.Nearby_SameTypeMultiplier(AllItems(i).type) * _
-                                    DynWeight.Nearby_SameItemMultiplier(i) * _
-                                    DynWeight.NearbyCapitalSameTypeItemsEffectOnWeight(i)
-                        If Not itemsFilter.Filter(1, AllItems(i)) Then weight(i) *= 0.001
-                        weight(i) *= DynWeight.ThisBagItemsEffectOnWeight(result, i)
-                    Else
-                        weight(i) = 0
-                    End If
+                For i As Integer = 0 To Environment.ProcessorCount - 1 Step 1
+                    pIDs(i).Clear()
                 Next i
+                Parallel.For(0, Environment.ProcessorCount, _
+                 Sub(proc As Integer)
+                     For i As Integer = proc To UBound(AllItems) Step Environment.ProcessorCount
+                         If itemsFilter.Filter(0, AllItems(i)) Then
+                             pIDs(proc).Add(i)
+                             weight(i) = GenItemWeight(AllItems(i), itemsFilter.TypeCostBar) * _
+                                         Global_ItemsWeightMultiplier(i) * _
+                                         DynWeight.Nearby_SameTypeMultiplier(AllItems(i).type) * _
+                                         DynWeight.Nearby_SameItemMultiplier(i) * _
+                                         DynWeight.NearbyCapitalSameTypeItemsEffectOnWeight(i)
+                             If Not itemsFilter.Filter(1, AllItems(i)) Then weight(i) *= 0.001
+                             weight(i) *= DynWeight.ThisBagItemsEffectOnWeight(result, i)
+                         Else
+                             weight(i) = 0
+                         End If
+                     Next i
+                 End Sub)
+                IDs = Common.MergeLists(pIDs)
                 If IDs.Count > 0 Then
                     again = False
                 Else
@@ -914,15 +925,25 @@ Public Class RandStack
         Else
             Dim IDs As New List(Of Integer)
             Dim weight(UBound(AllItems)) As Double
+            Dim pIDs(Environment.ProcessorCount - 1) As List(Of Integer)
+            For i As Integer = 0 To Environment.ProcessorCount - 1 Step 1
+                pIDs(i) = New List(Of Integer)
+            Next i
             Dim again As Boolean = True
             Do While again
-                For i As Integer = 0 To UBound(AllItems) Step 1
-                    weight(i) = Global_ItemsWeightMultiplier(i) * _
-                                DynWeight.Nearby_SameTypeMultiplier(AllItems(i).type) * _
-                                DynWeight.Nearby_SameItemMultiplier(i) * _
-                                DynWeight.NearbyCapitalSameTypeItemsEffectOnWeight(i)
-                    If itemsFilter.Filter(0, AllItems(i)) Then IDs.Add(i)
-                Next i
+                Parallel.For(0, Environment.ProcessorCount, _
+                 Sub(proc As Integer)
+                     For i As Integer = proc To UBound(AllItems) Step Environment.ProcessorCount
+                         If itemsFilter.Filter(0, AllItems(i)) Then
+                             pIDs(proc).Add(i)
+                             weight(i) = Global_ItemsWeightMultiplier(i) * _
+                                         DynWeight.Nearby_SameTypeMultiplier(AllItems(i).type) * _
+                                         DynWeight.Nearby_SameItemMultiplier(i) * _
+                                         DynWeight.NearbyCapitalSameTypeItemsEffectOnWeight(i)
+                         End If
+                     Next i
+                 End Sub)
+                IDs = Common.MergeLists(pIDs)
                 If IDs.Count > 0 Then
                     again = False
                 Else
@@ -1371,6 +1392,7 @@ Public Class RandStack
                 For i As Integer = 0 To UBound(comm.ItemTypesLists) Step 1
                     If comm.ItemTypesLists(i).Contains(item.type) Then
                         subtypeID = i
+                        Exit For
                     End If
                 Next i
             End If
@@ -3106,6 +3128,14 @@ Public Class Common
         End If
         Return True
     End Function
+    Friend Function IsAppropriateSpell(ByRef spell As AllDataStructues.Spell) As Boolean
+        If spell.useState = GenDefaultValues.ExclusionState.unknown Then
+            If IsExcluded(spell) Then Return False
+        Else
+            If spell.useState = GenDefaultValues.ExclusionState.excluded Then Return False
+        End If
+        Return True
+    End Function
     Protected Friend Function IsExcluded(ByRef item As AllDataStructues.Item) As Boolean
         If excludedObjects.Contains(item.itemID.ToUpper) Then Return True
         If IsExcluded(item.type) Then Return True
@@ -3597,6 +3627,36 @@ Public Class Common
         End If
     End Function
 
+    ''' <summary>Собирает списки в один</summary>
+    Public Shared Function MergeLists(ByRef input() As List(Of Double)) As List(Of Double)
+        Dim result As New List(Of Double)
+        For i As Integer = 0 To UBound(input) Step 1
+            For Each item As Double In input(i)
+                result.Add(item)
+            Next item
+        Next i
+        Return result
+    End Function
+    ''' <summary>Собирает списки в один</summary>
+    Public Shared Function MergeLists(ByRef input() As List(Of Integer)) As List(Of Integer)
+        Dim result As New List(Of Integer)
+        For i As Integer = 0 To UBound(input) Step 1
+            For Each item As Integer In input(i)
+                result.Add(item)
+            Next item
+        Next i
+        Return result
+    End Function
+    ''' <summary>Собирает списки в один</summary>
+    Public Shared Function MergeLists(ByRef input() As List(Of String)) As List(Of String)
+        Dim result As New List(Of String)
+        For i As Integer = 0 To UBound(input) Step 1
+            For Each item As String In input(i)
+                result.Add(item)
+            Next item
+        Next i
+        Return result
+    End Function
 End Class
 
 Public MustInherit Class DecorationPlacingPropertiesFields
@@ -4108,7 +4168,7 @@ Public Class AllDataStructues
         ''' <summary>Рост статов после dynUpgradeLevel</summary>
         Public dynUpgrade2 As New DynUpgrade
         ''' <summary>Можно ли использовать юнита. 0 - неизвестно, -1 - нет, 1 - да</summary>
-        Friend useState As Integer
+        Friend useState As GenDefaultValues.ExclusionState = GenDefaultValues.ExclusionState.unknown
         ''' <summary>True - юнит находится в ветке развития играбельной расы</summary>
         Friend fromRaceBranch As Boolean
 
@@ -4456,7 +4516,7 @@ Public Class AllDataStructues
         ''' <summary>Сумма полей itemCost</summary>
         Friend itemCostSum As Double
         ''' <summary>Можно ли использовать предмет. 0 - неизвестно, -1 - нет, 1 - да</summary>
-        Friend useState As Integer
+        Friend useState As GenDefaultValues.ExclusionState = GenDefaultValues.ExclusionState.unknown
 
         Public Shared Function Copy(ByVal v As Item) As Item
             Return New Item With {.name = v.name, _
@@ -4483,6 +4543,8 @@ Public Class AllDataStructues
         Public category As Integer
         ''' <summary>Площадь действия заклинания</summary>
         Public area As Integer
+        ''' <summary>Можно ли использовать предмет. 0 - неизвестно, -1 - нет, 1 - да</summary>
+        Friend useState As GenDefaultValues.ExclusionState = GenDefaultValues.ExclusionState.unknown
 
         Public Shared Function Copy(ByRef v As Spell) As Spell
             Dim r As New Dictionary(Of String, AllDataStructues.Cost)
@@ -4490,12 +4552,13 @@ Public Class AllDataStructues
                 r.Add(k, AllDataStructues.Cost.Copy(v.researchCost.Item(k)))
             Next k
             Return New Spell With {.area = v.area, _
-                                    .castCost = AllDataStructues.Cost.Copy(v.castCost), _
-                                    .category = v.category, _
-                                    .level = v.level, _
-                                    .name = v.name, _
-                                    .spellID = v.spellID, _
-                                    .researchCost = r}
+                                   .castCost = AllDataStructues.Cost.Copy(v.castCost), _
+                                   .category = v.category, _
+                                   .level = v.level, _
+                                   .name = v.name, _
+                                   .spellID = v.spellID, _
+                                   .researchCost = r, _
+                                   .useState = v.useState}
         End Function
     End Class
 
@@ -5337,7 +5400,7 @@ End Class
 Public Class GenDefaultValues
 
     Public Const DefaultMod As String = "MNS"
-    Public Const myVersion As String = "26.10.2021.17.25"
+    Public Const myVersion As String = "28.10.2021.02.31"
 
     Public Shared Function PrintVersion() As String
         Return "Semga's generator DLL version: " & myVersion

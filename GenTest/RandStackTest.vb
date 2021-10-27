@@ -737,7 +737,7 @@ Public Class RandStackTest
         Dim s As New AllDataStructues.Stack With {.units = AllDataStructues.Stack.UnitInfo.CreateArray( _
                                                      New String() {"g000uu5130", "g000uu5030", "G000000000", _
                                                                     "G000000000", "G000000000", "G000000000"}, _
-                                                     New Integer() {1, 1, 0, 0, 0, 0}, Nothing, rs), _
+                                                     New Integer() {1, 1, 0, 0, 0, 0}, Nothing, RS), _
                                                   .items = New List(Of String)}
         Dim stats As AllDataStructues.DesiredStats = target.StackStats(s, False)
 

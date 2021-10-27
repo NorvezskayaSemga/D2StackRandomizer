@@ -497,4 +497,144 @@ Class Tests
                                                                           .TypeCostRestriction = Nothing}
         Dim result As List(Of String) = r.ItemsGen(sett)
     End Sub
+
+
+    Private Const minItemGoldCost As Integer = 150
+    Public Shared Sub ItemsGenTest_time()
+        Dim lootTime As Integer = ItemsGenTest() '12761
+        Dim mercenariesTime As Integer = MakeMercenariesListTest() '18073
+        Dim merchantTime As Integer = MakeMerchItemsListTest() '13701
+        Dim mageTime As Integer = MakeSpellsListTest() '25538
+
+        Throw New Exception("")
+    End Sub
+    Private Shared Function CreateRandStack() As RandStack
+        Dim rstackData As New RandStack.ConstructorInput With {.AllUnitsList = TestDataRead.ReadTestUnits(GenDefaultValues.DefaultMod), _
+                                                               .AllItemsList = TestDataRead.ReadTestItems(GenDefaultValues.DefaultMod), _
+                                                               .AllSpellsList = TestDataRead.ReadTestSpells(), _
+                                                               .AllModificatorsList = TestDataRead.ReadTestModificators()}
+        rstackData.settings.modName = GenDefaultValues.DefaultMod
+        rstackData.mapData.capitalPos = {New Point(10, 10)}
+        Return New RandStack(rstackData)
+    End Function
+    Private Shared Function ItemsGenTest() As Integer
+        Dim target As RandStack = CreateRandStack()
+        target.log.Disable()
+
+        Dim t As Integer = Environment.TickCount
+        Dim inputItems() As List(Of String)
+        Dim items As List(Of String)
+        Dim testRuinsLootCreator As Boolean
+        For ruinsLoot As Integer = 0 To 1 Step 1
+            testRuinsLootCreator = (ruinsLoot = 1)
+            If testRuinsLootCreator Then
+                inputItems = ImpenetrableMeshShow.TestDataRead.ReadTestRuinsTreasure
+            Else
+                inputItems = ImpenetrableMeshShow.TestDataRead.ReadTestBags
+            End If
+            For p As Integer = 1 To 10 Step 1
+                For strictFilter As Integer = 0 To 1 Step 1
+                    target.settings.ApplyStrictTypesFilter = (strictFilter = 1)
+                    For i As Integer = 0 To UBound(inputItems) Step 1
+                        Call target.ResetAddedItems()
+                        Call target.ResetItemWeightMultiplier()
+                        items = RunLootCreation(target, inputItems(i), testRuinsLootCreator)
+                    Next i
+                Next strictFilter
+            Next p
+        Next
+        Return Environment.TickCount - t
+    End Function
+    Private Shared Function RunLootCreation(ByRef target As RandStack, ByRef inputLoot As List(Of String), ByRef ruinsTest As Boolean) As List(Of String)
+        Dim igen As AllDataStructues.LootGenSettings = target.GetItemsGenSettings(inputLoot, ruinsTest)
+        Dim settings As New AllDataStructues.CommonLootCreationSettings
+        settings.GoldCost = AllDataStructues.Cost.Sum(target.LootCost(inputLoot))
+        settings.IGen = igen
+        settings.pos = New Point(10, 10)
+        settings.TypeCostRestriction = Nothing
+        Dim result As List(Of String)
+        If ruinsTest Then
+            result = New List(Of String)
+            result.Add(target.ThingGen(settings))
+        Else
+            result = target.ItemsGen(settings)
+        End If
+        Return result
+    End Function
+
+    Private Shared Function MakeSpellsListTest() As Integer
+
+        Dim rStack As RandStack = CreateRandStack()
+
+        Dim target As New ObjectsContentSet(rStack)
+        Dim ok As Boolean = True
+        Dim actual As List(Of String)
+        Dim input, mines As New List(Of String)
+        Dim races() As String = New String() {"H", "U", "C", "R"}
+        Dim mass() As String = New String() {"F", "T"}
+        Dim c As New AllDataStructues.Cost
+
+        Dim t As Integer = Environment.TickCount
+            For m1 As Integer = 0 To 1 Step 1
+            c.Black = m1
+            c.Blue = m1
+            For m3 As Integer = 0 To 1 Step 1
+                c.Green = m3
+                c.Red = m3
+                For m5 As Integer = 0 To 1 Step 1
+                    c.White = m5
+                    mines.Clear()
+                    If c.Black > 0 Then mines.Add("G000CR0000RG")
+                    If c.Blue > 0 Then mines.Add("G000CR0000YE")
+                    If c.Green > 0 Then mines.Add("G000CR0000GR")
+                    If c.Red > 0 Then mines.Add("G000CR0000RD")
+                    If c.White > 0 Then mines.Add("G000CR0000WH")
+                    For Each g As String In mass
+                        For Each r As String In races
+                            For level As Integer = 1 To 5 Step 2
+                                If input.Count > 10 Then input.Clear()
+                                input.Add(level & r & g)
+                                actual = target.MakeSpellsList(New AllDataStructues.DesiredStats With {.shopContent = input}, mines, rStack.log, -1)
+                                If actual.Count = 0 Then ok = False
+                            Next level
+                        Next r
+                    Next g
+                Next
+            Next
+        Next
+        Return Environment.TickCount - t
+    End Function
+    Private Shared Function MakeMercenariesListTest() As Integer
+
+        Dim rStack As RandStack = CreateRandStack()
+
+        Dim target As New ObjectsContentSet(rStack)
+        Dim actual As List(Of String)
+        Dim input As New List(Of String)
+
+        Dim t As Integer = Environment.TickCount
+        For i As Integer = 100 To 10000 Step 100
+            'input.Clear()
+            input.Add(i)
+            actual = target.MakeMercenariesList(New AllDataStructues.DesiredStats With {.shopContent = input}, rStack.log, -1)
+        Next i
+        Return Environment.TickCount - t
+    End Function
+    Private Shared Function MakeMerchItemsListTest() As Integer
+        Dim rStack As RandStack = CreateRandStack()
+        Dim target As New ObjectsContentSet(rStack)
+        Dim actual As List(Of String)
+        Dim input As New List(Of String)
+
+        Dim t As Integer = Environment.TickCount
+        For p As Integer = 1 To 10 Step 1
+            input.Clear()
+            For i As Integer = 100 To 10000 Step 100
+                'input.Clear()
+                input.Add(i)
+                actual = target.MakeMerchantItemsList(New AllDataStructues.DesiredStats With {.shopContent = input, .IGen = New AllDataStructues.LootGenSettings(False)}, Nothing, rStack.log, -1)
+            Next i
+        Next p
+        Return Environment.TickCount - t
+    End Function
 End Class

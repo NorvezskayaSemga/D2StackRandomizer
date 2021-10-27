@@ -97,6 +97,7 @@ Public Class ObjectsContentSetTest
         Dim rStack As RandStack = rndtest.CreateRandStack
 
         Dim target As New ObjectsContentSet(rStack)
+        target.randStack.log.Disable()
         Dim ok As Boolean = True
         Dim actual As List(Of String)
         Dim input, mines As New List(Of String)
@@ -104,9 +105,9 @@ Public Class ObjectsContentSetTest
         Dim mass() As String = New String() {"F", "T"}
         Dim c As New AllDataStructues.Cost
         Dim log As New Log(New Common(GenDefaultValues.DefaultMod))
-        Call log.Enable()
+        Call log.Disable()
 
-        For i As Integer = 1 To 10 Step 1
+        For i As Integer = 1 To 2 Step 1
             For m1 As Integer = 0 To 1 Step 1
                 c.Black = m1
                 For m2 As Integer = 0 To 1 Step 1
@@ -140,10 +141,6 @@ Public Class ObjectsContentSetTest
             Next
         Next i
 
-        Dim t As Integer = Environment.TickCount
-        Dim txt As String = log.PrintAll
-        t = Environment.TickCount - t
-
         If Not ok Then Assert.Inconclusive("Verify the correctness of this test method.")
     End Sub
 
@@ -160,7 +157,7 @@ Public Class ObjectsContentSetTest
         Dim actual As List(Of String)
         Dim input As New List(Of String)
         Dim log As New Log(New Common(GenDefaultValues.DefaultMod))
-        Call log.Enable()
+        Call log.Disable()
 
         For i As Integer = 100 To 10000 Step 100
             'input.Clear()
@@ -168,10 +165,6 @@ Public Class ObjectsContentSetTest
             actual = target.MakeMercenariesList(New AllDataStructues.DesiredStats With {.shopContent = input}, log, -1)
             If actual.Count = 0 Then ok = False
         Next i
-
-        Dim t As Integer = Environment.TickCount
-        Dim txt As String = log.PrintAll
-        t = Environment.TickCount - t
 
         If Not ok Then Assert.Inconclusive("Verify the correctness of this test method.")
     End Sub
@@ -189,7 +182,7 @@ Public Class ObjectsContentSetTest
         Dim actual As List(Of String)
         Dim input As New List(Of String)
         Dim log As New Log(New Common(GenDefaultValues.DefaultMod))
-        Call log.Enable()
+        Call log.Disable()
 
         For i As Integer = 100 To 10000 Step 100
             'input.Clear()
@@ -197,10 +190,6 @@ Public Class ObjectsContentSetTest
             actual = target.MakeMerchantItemsList(New AllDataStructues.DesiredStats With {.shopContent = input, .IGen = New AllDataStructues.LootGenSettings(False)}, Nothing, log, -1)
             If actual.Count = 0 Then ok = False
         Next i
-
-        Dim t As Integer = Environment.TickCount
-        Dim txt As String = log.PrintAll
-        t = Environment.TickCount - t
 
         If Not ok Then Assert.Inconclusive("Verify the correctness of this test method.")
     End Sub
