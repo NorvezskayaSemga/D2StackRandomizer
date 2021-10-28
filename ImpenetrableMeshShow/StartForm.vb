@@ -19,6 +19,8 @@ Friend Class StartForm
         'Call StackLocationsGen.PassageGuardPlacer.speedBanchmark()
         'Call ImpenetrableMeshGen.ActiveObjectsPlacer.speedBanchmark()
 
+        Call Tests.ItemsGenTest_time()
+
         Dim tf As New TemplateForge(RandomStackGenerator.GenDefaultValues.TextLanguage.Rus)
         tf.ReadCommonMapSettingsFromFile(".\Resources", "example_template_2_unsymm.txt")
 
@@ -501,10 +503,22 @@ Class Tests
 
     Private Const minItemGoldCost As Integer = 150
     Public Shared Sub ItemsGenTest_time()
-        Dim lootTime As Integer = ItemsGenTest() '12761
-        Dim mercenariesTime As Integer = MakeMercenariesListTest() '18073
-        Dim merchantTime As Integer = MakeMerchItemsListTest() '13701
-        Dim mageTime As Integer = MakeSpellsListTest() '25538
+        Dim lootTime, mercenariesTime, merchantTime, mageTime As Integer
+
+        ' lootTime = ItemsGenTest() '12761
+        ' mercenariesTime = MakeMercenariesListTest() '18073
+        ' merchantTime = MakeMerchItemsListTest() '13701
+        mageTime = MakeSpellsListTest() '25538
+
+        Console.WriteLine("'" & lootTime)
+        Console.WriteLine("'" & mercenariesTime)
+        Console.WriteLine("'" & merchantTime)
+        Console.WriteLine("'" & mageTime)
+
+        '13136
+        '17784
+        '11279
+        '42807
 
         Throw New Exception("")
     End Sub
@@ -602,7 +616,8 @@ Class Tests
                 Next
             Next
         Next
-        Return Environment.TickCount - t
+        Dim dt As Integer = Environment.TickCount - t
+        Return dt
     End Function
     Private Shared Function MakeMercenariesListTest() As Integer
 

@@ -5400,7 +5400,7 @@ End Class
 Public Class GenDefaultValues
 
     Public Const DefaultMod As String = "MNS"
-    Public Const myVersion As String = "28.10.2021.02.31"
+    Public Const myVersion As String = "28.10.2021.18.28"
 
     Public Shared Function PrintVersion() As String
         Return "Semga's generator DLL version: " & myVersion
