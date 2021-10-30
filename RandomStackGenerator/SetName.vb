@@ -14,8 +14,8 @@
     Friend Const MerchantNameMaxLen As Integer = 35
     Friend Const RuinsNameMaxLen As Integer = 25
     Friend Const DescriptionMaxLen As Integer = 100
-    Private commonIDs, lordIDs As New List(Of Integer)
-    Private defailtLords As New Dictionary(Of Integer, List(Of Integer))
+    Private commonIDs, lordIDs As RandomSelection
+    Private defaultLords As New Dictionary(Of Integer, RandomSelection)
     Private LordMinWeight As Double
     Private defaultLordNames(14)() As String
     Private lordDonationThreshold As Double = 999
@@ -78,6 +78,8 @@
             users(NoneNameId).weight += users(i).weight
         Next i
         users(NoneNameId).weight *= NoneWeightMultiplier()
+        commonIDs = New RandomSelection(users.Length, rndgen)
+        lordIDs = New RandomSelection(users.Length, rndgen)
 
         Call AddToLog(-1, "-----Names creator initialization ended-----")
         If Not IsNothing(log) Then initializationLog = log.PrintAll
@@ -354,7 +356,7 @@
     Private Function SetName(ByRef leader As AllDataStructues.Unit, _
                              ByVal UserWeightMultiplier As Double, ByRef LogID As Integer) As String
         Dim res As String = leader.name
-        Dim i As Integer = comm.RandomSelection(commonIDs, WeightArray(UserWeightMultiplier, leader.unitID), True)
+        Dim i As Integer = commonIDs.RandomSelection(WeightArray(UserWeightMultiplier, leader.unitID))
         If i = NoneNameId Then Return res
 
         If SkipUnit(i, leader) Then Return res
@@ -390,14 +392,14 @@
         Call ResetNames(newMapGen, LogID)
 
         Dim result As String
-        If lordIDs.Count > 0 AndAlso rndgen.PRand(0, 1) > 0.5 Then
-            Dim i As Integer = comm.RandomSelection(lordIDs, WeightArray, True)
+        If lordIDs.Count > 0 AndAlso rndgen.RndDbl(0, 1) > 0.5 Then
+            Dim i As Integer = lordIDs.RandomSelection(WeightArray)
             lordIDs.Remove(i)
             result = users(i).name
         Else
-            If defailtLords.Item(RaceID).Count = 0 Then Throw New Exception("Lords names list is empty. Race ID: " & RaceID)
-            Dim i As Integer = comm.RandomSelection(defailtLords.Item(RaceID), True)
-            defailtLords.Item(RaceID).Remove(i)
+            If defaultLords.Item(RaceID).Count = 0 Then Throw New Exception("Lords names list is empty. Race ID: " & RaceID)
+            Dim i As Integer = defaultLords.Item(RaceID).RandomSelection()
+            defaultLords.Item(RaceID).Remove(i)
             result = defaultLordNames(RaceID)(i)
         End If
         Dim LName As String = NameCut(result, LordNameMaxLen)
@@ -512,12 +514,12 @@
             Next i
         End If
 
-        defailtLords.Clear()
+        defaultLords.Clear()
         For i As Integer = 0 To UBound(defaultLordNames) Step 1
             If Not IsNothing(defaultLordNames(i)) Then
-                defailtLords.Add(i, New List(Of Integer))
+                defaultLords.Add(i, New RandomSelection(defaultLordNames(i).Length, rndgen))
                 For j As Integer = 0 To UBound(defaultLordNames(i)) Step 1
-                    defailtLords.Item(i).Add(j)
+                    defaultLords.Item(i).Add(j)
                 Next j
             End If
         Next i

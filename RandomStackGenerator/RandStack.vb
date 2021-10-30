@@ -452,14 +452,14 @@ Public Class RandStack
     ''' <param name="conversionAmount">Какую часть золота сконвертировать (от 0 до 1)</param>
     Public Function GoldToMana(ByRef input As AllDataStructues.Cost, ByVal conversionChance As Double, ByVal conversionAmount As Double) As AllDataStructues.Cost
         Dim output As AllDataStructues.Cost = AllDataStructues.Cost.Copy(input)
-        If conversionChance > 0 AndAlso AllDataStructues.Cost.Sum(mapData.minesAmount) - mapData.minesAmount.Gold > 0 AndAlso rndgen.Rand(0, 1, True) <= conversionChance Then
+        If conversionChance > 0 AndAlso AllDataStructues.Cost.Sum(mapData.minesAmount) - mapData.minesAmount.Gold > 0 AndAlso rndgen.RndDbl(0, 1) <= conversionChance Then
             Dim relationships As New AllDataStructues.Cost
             Do While AllDataStructues.Cost.Sum(relationships) = 0
-                If mapData.minesAmount.Black > 0 Then relationships.Black = rndgen.RndInt(0, mapData.minesAmount.Black, True)
-                If mapData.minesAmount.Blue > 0 Then relationships.Blue = rndgen.RndInt(0, mapData.minesAmount.Blue, True)
-                If mapData.minesAmount.Green > 0 Then relationships.Green = rndgen.RndInt(0, mapData.minesAmount.Green, True)
-                If mapData.minesAmount.Red > 0 Then relationships.Red = rndgen.RndInt(0, mapData.minesAmount.Red, True)
-                If mapData.minesAmount.White > 0 Then relationships.White = rndgen.RndInt(0, mapData.minesAmount.White, True)
+                If mapData.minesAmount.Black > 0 Then relationships.Black = rndgen.RndInt(0, mapData.minesAmount.Black)
+                If mapData.minesAmount.Blue > 0 Then relationships.Blue = rndgen.RndInt(0, mapData.minesAmount.Blue)
+                If mapData.minesAmount.Green > 0 Then relationships.Green = rndgen.RndInt(0, mapData.minesAmount.Green)
+                If mapData.minesAmount.Red > 0 Then relationships.Red = rndgen.RndInt(0, mapData.minesAmount.Red)
+                If mapData.minesAmount.White > 0 Then relationships.White = rndgen.RndInt(0, mapData.minesAmount.White)
             Loop
 
             Dim manaPiece As Double = input.Gold * Math.Max(Math.Min(conversionAmount, 1), 0) / AllDataStructues.Cost.Sum(relationships)
@@ -469,7 +469,7 @@ Public Class RandStack
 
             Dim order() As Integer = New Integer() {0, 1, 2, 3, 4}
             For n As Integer = 1 To UBound(order) Step 1
-                Dim r As Integer = rndgen.RndPos(order.Length, True) - 1
+                Dim r As Integer = rndgen.RndItemIndex(order)
                 Dim t As Integer = order(r)
                 order(r) = order(0)
                 order(0) = t
@@ -499,7 +499,7 @@ Public Class RandStack
         field += convet
         dGold += modulo
         If dGold > 0 And output.Gold >= roundBy Then
-            Dim r As Double = rndgen.Rand(0, CDbl(roundBy), True)
+            Dim r As Double = rndgen.RndDbl(0, CDbl(roundBy))
             If r < dGold Then
                 output.Gold -= roundBy
                 field += roundBy
@@ -754,15 +754,10 @@ Public Class RandStack
 
         Call LootGenPrepare(GenSettings, LogID, True)
 
-        Dim serialExecution As Boolean = (LogID < 0)
         Dim maxCost(), selected As Integer
         Dim weight(UBound(AllItems)) As Double
-        Dim IDs As New List(Of Integer)
+        Dim IDs As New RandomSelection(AllItems.Length, rndgen)
         Dim result As New List(Of String)
-        Dim pIDs(Environment.ProcessorCount - 1) As List(Of Integer)
-        For i As Integer = 0 To Environment.ProcessorCount - 1 Step 1
-            pIDs(i) = New List(Of Integer)
-        Next i
 
         Dim again As Boolean
         Dim itemsFilter As New ItemsFilter(2, Me, GenItemSetDynIGen(GenSettings.IGen, GenSettings.GoldCost), _
@@ -779,22 +774,19 @@ Public Class RandStack
 
         Do While itemsFilter.CurrentMaxLootCost >= minItemGoldCost
             maxCost = GenItemMaxCost(itemsFilter.IGen, itemsFilter.CurrentMaxLootCost)
-            itemsFilter.TypeCostBar = GenItemCostBar(itemsFilter.IGen, maxCost, serialExecution)
+            itemsFilter.TypeCostBar = GenItemCostBar(itemsFilter.IGen, maxCost)
             Call AddToLog(LogID, "Max cost bar:" & itemsFilter.CurrentMaxLootCost & _
                                  " Selected cost bar:" & itemsFilter.TypeCostBar(0) & "|" & itemsFilter.TypeCostBar(1) & "|" & itemsFilter.TypeCostBar(2) & _
                                  " max item cost:" & maxCost(0) & "|" & maxCost(1) & "|" & maxCost(2))
-            IDs.Clear()
             itemsFilter.ForceDisableStrictTypesFilter = False
             again = True
             Do While again
-                For i As Integer = 0 To Environment.ProcessorCount - 1 Step 1
-                    pIDs(i).Clear()
-                Next i
+                IDs.Clear()
                 Parallel.For(0, Environment.ProcessorCount, _
                  Sub(proc As Integer)
                      For i As Integer = proc To UBound(AllItems) Step Environment.ProcessorCount
                          If itemsFilter.Filter(0, AllItems(i)) Then
-                             pIDs(proc).Add(i)
+                             IDs.Add(i)
                              weight(i) = GenItemWeight(AllItems(i), itemsFilter.TypeCostBar) * _
                                          Global_ItemsWeightMultiplier(i) * _
                                          DynWeight.Nearby_SameTypeMultiplier(AllItems(i).type) * _
@@ -807,7 +799,7 @@ Public Class RandStack
                          End If
                      Next i
                  End Sub)
-                IDs = Common.MergeLists(pIDs)
+                Call IDs.RefreshCount()
                 If IDs.Count > 0 Then
                     again = False
                 Else
@@ -820,7 +812,7 @@ Public Class RandStack
             Loop
             If IDs.Count = 0 Then Exit Do
 
-            selected = comm.RandomSelection(IDs, weight, serialExecution)
+            selected = IDs.RandomSelection(weight)
             Call DynWeight.ItemAdded(result, selected, True, LogID)
         Loop
 
@@ -850,9 +842,9 @@ Public Class RandStack
         s.GoldCost = CInt(s.GoldCost * lcm)
         Return ItemsGen(s, LogID)
     End Function
-    Private Function CostBarGen(ByRef minBar As Integer, ByRef maxBar As Integer, ByRef serialExecution As Boolean) As Integer
-        'Return CInt(rndgen.Rand(CDbl(minBar), CDbl(maxBar), serialExecution))
-        Dim R As Double = rndgen.Rand(0, 1, serialExecution)
+    Private Function CostBarGen(ByRef minBar As Integer, ByRef maxBar As Integer) As Integer
+        'Return CInt(rndgen.RndDblFast(CDbl(minBar), CDbl(maxBar), serialExecution))
+        Dim R As Double = rndgen.RndDbl(0, 1)
         Dim G As Double = 3
         Dim D As Double = 0.15
         Dim S As Double = 5
@@ -923,19 +915,15 @@ Public Class RandStack
             Dim thing As AllDataStructues.Item = AllItems(selected)
             Call AddToLog(LogID, "Preserved item:" & thing.name & " id:" & thing.itemID.ToUpper)
         Else
-            Dim IDs As New List(Of Integer)
+            Dim IDs As New RandomSelection(AllItems.Length, rndgen)
             Dim weight(UBound(AllItems)) As Double
-            Dim pIDs(Environment.ProcessorCount - 1) As List(Of Integer)
-            For i As Integer = 0 To Environment.ProcessorCount - 1 Step 1
-                pIDs(i) = New List(Of Integer)
-            Next i
             Dim again As Boolean = True
             Do While again
                 Parallel.For(0, Environment.ProcessorCount, _
                  Sub(proc As Integer)
                      For i As Integer = proc To UBound(AllItems) Step Environment.ProcessorCount
                          If itemsFilter.Filter(0, AllItems(i)) Then
-                             pIDs(proc).Add(i)
+                             IDs.Add(i)
                              weight(i) = Global_ItemsWeightMultiplier(i) * _
                                          DynWeight.Nearby_SameTypeMultiplier(AllItems(i).type) * _
                                          DynWeight.Nearby_SameItemMultiplier(i) * _
@@ -943,7 +931,7 @@ Public Class RandStack
                          End If
                      Next i
                  End Sub)
-                IDs = Common.MergeLists(pIDs)
+                Call IDs.RefreshCount()
                 If IDs.Count > 0 Then
                     again = False
                 Else
@@ -955,8 +943,8 @@ Public Class RandStack
                 End If
             Loop
             If IDs.Count > 0 Then
-                Dim selected As Integer = comm.RandomSelection(IDs, New Double()() {ItemCostSum}, _
-                    New Double() {itemsFilter.CurrentMaxLootCost}, weight, itemGenSigma, serialExecution)
+                Dim selected As Integer = IDs.RandomSelection(New Double()() {ItemCostSum}, _
+                    New Double() {itemsFilter.CurrentMaxLootCost}, weight, itemGenSigma)
                 Call DynWeight.ItemAdded(result, selected, True, LogID)
             End If
         End If
@@ -1006,8 +994,7 @@ Public Class RandStack
         Next i
         Return result
     End Function
-    Private Function GenItemCostBar(ByRef IGen As AllDataStructues.LootGenSettings, ByRef MaxCost() As Integer, _
-                                    ByRef serialExecution As Boolean) As Integer()
+    Private Function GenItemCostBar(ByRef IGen As AllDataStructues.LootGenSettings, ByRef MaxCost() As Integer) As Integer()
         Dim settings() As AllDataStructues.ItemGenSettings = AllDataStructues.LootGenSettings.ToArray(IGen)
         Dim result(UBound(settings)), min, max, n As Integer
         Dim upCost As Integer = CInt(0.75 * minItemGoldCost)
@@ -1023,7 +1010,7 @@ Public Class RandStack
                         n1 = minN
                         n2 = settings(i).amount
                     End If
-                    n = rndgen.RndInt(n1, n2, True)
+                    n = rndgen.RndInt(n1, n2)
                 Else
                     n = settings(i).amount
                 End If
@@ -1043,7 +1030,7 @@ Public Class RandStack
                     max = Math.Max(minItemGoldCost, MaxCost(i) + upCost)
                     min = minItemGoldCost
                 End If
-                result(i) = CostBarGen(min, max, serialExecution)
+                result(i) = CostBarGen(min, max)
             End If
         Next i
         Return result
@@ -1673,15 +1660,15 @@ Public Class RandStack
             Call rndgen.Shuffle(order)
             For i As Integer = 0 To u Step 1
                 k = order(i)
-                If 2 * overlevel >= unitOverlevelCost(k) AndAlso rndgen.RndDblFast(0, 1) <= chance Then
-                    If overlevel >= unitOverlevelCost(k) OrElse unitOverlevelCost(k) * rndgen.RndDblFast(0, 1) > overlevel Then
+                If 2 * overlevel >= unitOverlevelCost(k) AndAlso rndgen.RndDbl(0, 1) <= chance Then
+                    If overlevel >= unitOverlevelCost(k) OrElse unitOverlevelCost(k) * rndgen.RndDbl(0, 1) > overlevel Then
                         overlevel -= unitOverlevelCost(k)
                         stack.units(k).level += 1
                     End If
                 End If
             Next i
             If 2 * overlevel < minUnitOverlevelCost Then Exit Do
-            If overlevel < minUnitOverlevelCost AndAlso minUnitOverlevelCost * rndgen.RndDblFast(0, 1) > overlevel Then overlevel = 0
+            If overlevel < minUnitOverlevelCost AndAlso minUnitOverlevelCost * rndgen.RndDbl(0, 1) > overlevel Then overlevel = 0
         Loop
     End Sub
     Private Sub ApplyModificators(ByRef stack As AllDataStructues.Stack, ByRef GenSettings As AllDataStructues.CommonStackCreationSettings)
@@ -1875,7 +1862,7 @@ Public Class RandStack
                 Call RecurseLayer(rData, n, rData.preservedUnit, skipPreserved, skipRandom)
             End If
             If Not skipRandom Then
-                Dim r As Integer = rndgen.RndIntFast(0, rData.notPreservedUnit.Length + rData.preservedUnit.Length - 1)
+                Dim r As Integer = rndgen.RndInt(0, rData.notPreservedUnit.Length + rData.preservedUnit.Length - 1)
                 Dim unitPos As Integer
                 If r > UBound(rData.notPreservedUnit) Then
                     unitPos = rData.preservedUnit(r - UBound(rData.notPreservedUnit))
@@ -1911,7 +1898,7 @@ Public Class RandStack
             ElseIf Math.Abs(rData.wantFValue - total) < Math.Abs(rData.wantFValue - rData.bestValue) Then
                 replace = True
             ElseIf Math.Abs(rData.wantFValue - total) = Math.Abs(rData.wantFValue - rData.bestValue) Then
-                If rndgen.RndDblFast(0, 1) > 0.5 Then replace = True
+                If rndgen.RndDbl(0, 1) > 0.5 Then replace = True
             Else
                 replace = False
             End If
@@ -2092,13 +2079,11 @@ Public Class RandStack
             Return u
         End If
 
-        Dim serialExecution As Boolean = (LogID < 0)
-        Dim PossibleLeaders As New List(Of Integer)
         Dim SelectedLeader As Integer
 
         If ((DynStackStats.StackSize = 1 And DynStackStats.MaxGiants = 0) Or _
               (DynStackStats.StackSize = 2 And DynStackStats.MaxGiants = 1)) _
-             AndAlso rndgen.Rand(0, 1, serialExecution) > 0.5 Then
+             AndAlso rndgen.RndDbl(0, 1) > 0.5 Then
             If DynStackStats.StackSize = 1 Then
                 DynStackStats.StackSize += 1
                 DynStackStats.MaxGiants += 1
@@ -2113,12 +2098,13 @@ Public Class RandStack
         'создаем список лидеров, которых вообще можем использовать
         Dim preservedSlots As Integer = GenSettings.StackStats.PreservedSlots
         Dim Tolerance As Double = 0.02 * (DynStackStats.StackSize - 1)
-        Do While PossibleLeaders.Count < 3
-            PossibleLeaders.Clear()
+        Dim selector As New RandomSelection(AllUnits.Length, rndgen)
+        Do While selector.Count < 3
+            selector.Clear()
             For i As Integer = 0 To UBound(AllUnits) Step 1
-                If SelectPossibleLeader(i, Tolerance, GenSettings, DynStackStats, MapLordsRaces, preservedSlots) Then PossibleLeaders.Add(i)
+                If SelectPossibleLeader(i, Tolerance, GenSettings, DynStackStats, MapLordsRaces, preservedSlots) Then selector.Add(i)
             Next i
-            If Tolerance > 2 And PossibleLeaders.Count > 0 Then Exit Do
+            If Tolerance > 2 And selector.Count > 0 Then Exit Do
 
             'If Tolerance * DynStackStats.ExpBarAverage > maxExpBar And Tolerance * DynStackStats.ExpStackKilled > maxExpStrackKilled Then
             If Tolerance * DynStackStats.ExpStackKilled > maxExpStrackKilled Then
@@ -2126,7 +2112,7 @@ Public Class RandStack
                     DynStackStats.MaxGiants = 1
                     Tolerance = 0.02 * (DynStackStats.StackSize - 1)
                 Else
-                    If PossibleLeaders.Count > 0 Then Exit Do
+                    If selector.Count > 0 Then Exit Do
                     Call ThrowStackCreationException("Something is wrong with the choice of possible stack leaders", _
                                                      GenSettings, DynStackStats)
                 End If
@@ -2134,10 +2120,9 @@ Public Class RandStack
             Tolerance += 0.2
         Loop
 
-        Call AddToLog(LogID, AddressOf PrintSelectionList, AllUnits, PossibleLeaders)
-        Dim bar() As Double = SelectBar({DynStackStats.ExpBarAverage}, PossibleLeaders, {ExpBar}, Bias)
-        SelectedLeader = comm.RandomSelection(PossibleLeaders, {ExpBar}, bar, _
-                                              multiplierUnitDesiredStats, SigmaMultiplier(DynStackStats), serialExecution)
+        Call AddToLog(LogID, AddressOf PrintSelectionList, AllUnits, selector.GetChecked)
+        Dim bar() As Double = SelectBar({DynStackStats.ExpBarAverage}, selector, {ExpBar}, Bias)
+        SelectedLeader = selector.RandomSelection({ExpBar}, bar, multiplierUnitDesiredStats, SigmaMultiplier(DynStackStats))
 
         If SelectedLeader = -1 Then
             Call ThrowStackCreationException("Possibly an endless loop in a random selection from an array of possible leaders", _
@@ -2145,7 +2130,7 @@ Public Class RandStack
         End If
 
         'теперь нужно добрать воинов в отряд
-        Dim R As Double = rndgen.Rand(0, 1, serialExecution)
+        Dim R As Double = rndgen.RndDbl(0, 1)
         Dim leadershipCap As Integer = Math.Min(AllUnits(SelectedLeader).leadership + GenSettings.deltaLeadership, comm.defValues.maxStackSize)
         If AllUnits(SelectedLeader).small Then
             leadershipCap = Math.Max(leadershipCap, 1)
@@ -2321,11 +2306,11 @@ Public Class RandStack
     '    Next i
     '    Return result
     'End Function
-    Private Function SelectBar(ByRef Average() As Double, ByRef IDs As List(Of Integer), ByRef values()() As Double, ByRef bias As Double) As Double()
+    Private Function SelectBar(ByRef Average() As Double, ByRef selector As RandomSelection, ByRef values()() As Double, ByRef bias As Double) As Double()
         Dim maxV, result(UBound(Average)) As Double
         For i As Integer = 0 To UBound(Average) Step 1
             maxV = 0
-            For Each id As Integer In IDs
+            For Each id As Integer In selector
                 maxV = Math.Max(maxV, values(i)(id))
             Next id
             result(i) = Average(i) + bias * (maxV - Average(i))
@@ -2335,7 +2320,7 @@ Public Class RandStack
     Private Function SelectStack(ByRef GenSettings As AllDataStructues.CommonStackCreationSettings, _
                                  ByRef DynStackStats() As AllDataStructues.DesiredStats, _
                                  ByRef leaderExpKilled() As Integer) As Integer
-        Dim possible1, possible2 As New List(Of Integer)
+        Dim possible1, possible2 As New RandomSelection(DynStackStats.Length, rndgen)
         Dim SizeTolerance As Integer = 0
         Do While possible1.Count < 0.5 * DynStackStats.Length
             possible1.Clear()
@@ -2376,7 +2361,7 @@ Public Class RandStack
             'weight(i) = m / (1 + Math.Abs(DynStackStats(i).ExpStackKilled)) 'old
             weight(i) = m / (1 + (1 + Math.Abs(DynStackStats(i).ExpStackKilled)) / (1 + maxExpDelta)) 'new
         Next i
-        Dim selected As Integer = comm.RandomSelection(possible2, weight, False)
+        Dim selected As Integer = possible2.RandomSelection(weight)
         Return selected
     End Function
     Private Sub ThrowStackCreationException(ByRef comment As String, _
@@ -2406,27 +2391,26 @@ Public Class RandStack
                                     ByRef BaseStackSize As Integer, ByRef MapLordsRaces As List(Of Integer), _
                                     ByRef Bias As Double, ByRef LogID As Integer) As AllDataStructues.Stack.UnitInfo
 
-        Dim serialExecution As Boolean = (LogID < 0)
-        Dim PossibleFighters As New List(Of Integer)
         'Dim TExpStack As Double = DynStackStats.ExpStackKilled / DynStackStats.StackSize
         Dim SelectedFighter As AllDataStructues.Stack.UnitInfo = Nothing
+        Dim selector As New RandomSelection(AllUnits.Length, rndgen)
         'Dim nloops As Integer = 0
         'Do While PossibleFighters.Count = 0 'And TExpStack < 1.1 * DynStackStats.ExpStackKilled
         For j As Integer = 0 To UBound(AllUnits) Step 1
             If SelectPossibleFighter(skipfilter1, skipfilter2, j, DynStackStats, FreeMeleeSlots, _
-                                     SelectedLeader, SelectedFighters, BaseStackSize, MapLordsRaces) Then PossibleFighters.Add(j)
+                                     SelectedLeader, SelectedFighters, BaseStackSize, MapLordsRaces) Then selector.Add(j)
         Next j
         '    TExpStack += 0.1 * DynStackStats.ExpStackKilled / DynStackStats.StackSize
         '    nloops += 1
         '    If nloops > 10 Then Exit Do
         'Loop
-        If PossibleFighters.Count > 0 Then
-            Call AddToLog(LogID, AddressOf PrintSelectionList, AllUnits, PossibleFighters)
+        If selector.Count > 0 Then
+            Call AddToLog(LogID, AddressOf PrintSelectionList, AllUnits, selector.GetChecked)
 
             Dim bar() As Double = SelectBar({DynStackStats.ExpBarAverage, CDbl(DynStackStats.ExpStackKilled) / CDbl(DynStackStats.StackSize)}, _
-                                            PossibleFighters, {ExpBar, ExpKilled}, Bias)
-            Dim selectedID As Integer = comm.RandomSelection(PossibleFighters, {ExpBar, ExpKilled}, _
-                                                             bar, multiplierUnitDesiredStats, SigmaMultiplier(DynStackStats), serialExecution)
+                                            selector, {ExpBar, ExpKilled}, Bias)
+            Dim selectedID As Integer = selector.RandomSelection({ExpBar, ExpKilled}, _
+                                                                 bar, multiplierUnitDesiredStats, SigmaMultiplier(DynStackStats))
             If selectedID = -1 Then
                 Call ThrowStackCreationException("Possibly an endless loop in a random selection from an array of possible fighters", _
                                                  GenSettings, DynStackStats)
@@ -2502,8 +2486,8 @@ Public Class RandStack
                                      ByRef FRowSlots As Integer, ByRef SRowSlots As Integer, _
                                      ByRef AnySlot As Boolean, ByRef result As AllDataStructues.Stack) As Boolean
         Dim placed As Boolean = False
-        Dim n1 As Integer = rndgen.RndPos(FRowSlots, True)
-        Dim n2 As Integer = rndgen.RndPos(SRowSlots, True)
+        Dim n1 As Integer = rndgen.RndInt(Math.Min(1, FRowSlots), FRowSlots)
+        Dim n2 As Integer = rndgen.RndInt(Math.Min(1, SRowSlots), SRowSlots)
 
         Dim t As Integer
         Dim m As Integer = 0
@@ -2599,13 +2583,13 @@ Public Class RandStack
     Private Function GenStackOrder(ByRef GenSettings As AllDataStructues.CommonStackCreationSettings) As AllDataStructues.Stack.StackOrder
         If Not GenSettings.ownerIsPlayableRaсe And GenSettings.order.order.name = AllDataStructues.Stack.StackOrder.OrderType.Stand Then
             Dim names() As String = settings.neutralOrderWeight.Keys.ToArray
-            Dim IDs As New List(Of Integer)
+            Dim IDs As New RandomSelection(names.Length, rndgen)
             Dim weight(UBound(names)) As Double
             For i As Integer = 0 To UBound(names) Step 1
                 IDs.Add(i)
                 weight(i) = settings.neutralOrderWeight.Item(names(i))
             Next i
-            Dim selected As Integer = comm.RandomSelection(IDs, weight, True)
+            Dim selected As Integer = IDs.RandomSelection(weight)
             Dim order As New AllDataStructues.Stack.StackOrder _
                 (names(selected), AllDataStructues.Stack.StackOrder.Settings.NoTarget, _
                  AllDataStructues.Stack.StackOrder.OrderType.Normal, AllDataStructues.Stack.StackOrder.Settings.NoTarget)
@@ -2619,15 +2603,10 @@ Public Class RandStack
 End Class
 
 Public Class RndValueGen
-    Private betTick, lastRAM As Double
-    Private tempPat, delimiterBias As Integer
     Private fastModeSeed, fastModeTicks As Long
     Private Const seedMaxVal As Long = Integer.MaxValue - 10000
 
     Public Sub New(Optional ByVal seed As Integer = -1)
-        For i As Integer = 0 To 10 Step 1
-            Call RndDbl()
-        Next i
         If seed = -1 Then
             fastModeSeed = Math.Min(CLng(Math.Abs(Environment.TickCount)) + _
                                     CLng((Threading.Thread.CurrentThread.ManagedThreadId + 17) ^ 3), seedMaxVal)
@@ -2636,125 +2615,66 @@ Public Class RndValueGen
         End If
     End Sub
 
-    Private Function RndDbl() As Double
-        If betTick = 0 Or System.Double.IsInfinity(betTick) Then
-            betTick = (4 + 0.5 * delimiterBias + Math.Pow(delimiterBias + 1, 3))
-        End If
-        betTick = (Now.Ticks - betTick) * (4 + delimiterBias) * 0.112
-        Dim tick As Double = betTick
-        If tick < 0 Then tick = -tick
-        If delimiterBias > 3 Then delimiterBias = 0
-        If Double.IsInfinity(tick) Then
-            tick = Math.Pow(3.1 + 0.05 * CDbl(delimiterBias), _
-                            Math.Min(15, 3 * delimiterBias))
-        End If
-        If tick < 1000 Then tick += Math.Pow(2, 1 + delimiterBias)
-        tick = tick * Math.Pow(9.999, 19 - CInt(Math.Log10(tick)))
-        Dim RAM As Double
-        For i As Integer = 0 To 40 Step 1
-            RAM = (RAM + Threading.Thread.VolatileRead(tick + i)) * 0.5
-        Next i
-        'RAM = Math.Abs(RAM)
-        RAM = RAM * Math.Pow(10, 15 - CInt(Math.Log10(RAM)))
-        RAM = CDbl(Mid(((lastRAM + RAM) / 2).ToString, 5))
-        RAM = RAM * Math.Pow(10, 15 - CInt(Math.Log10(RAM))) + 0.1
-        lastRAM = RAM
-
-        tempPat += 1
-        If tempPat > 20 Then tempPat = 1
-        If delimiterBias > 3 Then delimiterBias = 0
-
-        Dim c1 As Double = RAM / (tempPat + delimiterBias)
-        Dim c2 As Double = (tick * (c1 + 1)) / ((100 + Math.Pow(4, 1 + delimiterBias)) * c1)
-        c2 *= Math.Pow(10, CInt(Math.Log10(c1)) - CInt(Math.Log10(c2)))
-        Dim c3 As Double = Math.Pow(9.1 + delimiterBias, 6 + delimiterBias) _
-            * Math.Sqrt(CDbl(Threading.Thread.CurrentThread.ManagedThreadId) + delimiterBias) _
-            * c1 / c2
-        Dim c12sum As Double = c1 + c2
-        c3 *= Math.Pow(10, CInt(Math.Log10(c12sum * 0.5)) - CInt(Math.Log10(c3)))
-        'Dim ws As long = Environment.WorkingSet
-        Dim c4 As Double = Math.Pow(487 + delimiterBias + tempPat, _
-                                    (0.5 * c12sum / (c1 + c3))) * c12sum / c3
-        c4 *= Math.Pow(10, CInt(Math.Log10((c12sum + c3) * 0.3333)) - CInt(Math.Log10(c4)))
-        Dim c5 As Double = Math.Pow((c12sum + c3) / (c12sum + c4), c3 / c4)
-        c5 *= Math.Pow(10, CInt(Math.Log10((c12sum + c3 + c4) * 0.25)) - CInt(Math.Log10(c5)))
-
-        If delimiterBias > 3 Then delimiterBias = 0
-        Dim v As Double = 0.2 * (c12sum + c3 + c4 + c5) * Math.Pow(0.1, 5 + delimiterBias)
-        delimiterBias += 1
-        Return v - Math.Floor(v)
+#Region "RndItemIndex"
+    '''<summary>Returns random value with uniform distribution from 0 to items count - 1.</summary>
+    Public Function RndItemIndex(ByRef v As RandomSelection) As Integer
+        Return v.RandomSelection
     End Function
-    '''<summary>Returns random value with uniform distribution.</summary>
-    '''<param name="lower">Minimum value.</param>
-    '''<param name="upper">Maximum value.</param>
-    Public Function Rand(ByVal lower As Double, ByVal upper As Double) As Double
-        Dim r As Double = RndDbl()
-        Return lower + r * (upper - lower)
+    '''<summary>Returns random value with uniform distribution from 0 to items count - 1.</summary>
+    Public Function RndItemIndex(ByRef v() As ImpenetrableMeshGen.GenSettings) As Integer
+        Return RndInt(v.Length - 1)
     End Function
-    '''<summary>Returns random value with uniform distribution. Use this to obtain more uniform distribution in the case of serial code.</summary>
-    '''<param name="lower">Minimum value.</param>
-    '''<param name="upper">Maximum value.</param>
-    Public Function PRandTestOnly(ByVal lower As Double, ByVal upper As Double) As Double
-        Dim value(Environment.ProcessorCount - 1) As Double
-        Dim n As Integer = CInt(Math.Round(Rand(0, Environment.ProcessorCount - 1), 0))
-        Parallel.For(0, Environment.ProcessorCount, _
-         Sub(i As Integer)
-             value(i) = Rand(lower, upper)
-         End Sub)
-        Return value(n)
+    '''<summary>Returns random value with uniform distribution from 0 to items count - 1.</summary>
+    Public Function RndItemIndex(ByRef v() As Integer) As Integer
+        Return RndInt(v.Length - 1)
     End Function
-    Public Function PRand(ByVal lower As Double, ByVal upper As Double) As Double
-        Dim value(CInt(0.5 * Environment.ProcessorCount)) As Double
-        Parallel.For(0, value.Length, _
-         Sub(i As Integer)
-             value(i) = Rand(lower, upper)
-         End Sub)
-        Return value(UBound(value))
+    '''<summary>Returns random value with uniform distribution from 0 to items count - 1.</summary>
+    Public Function RndItemIndex(ByRef v() As Double) As Integer
+        Return RndInt(v.Length - 1)
     End Function
-
-    '''<summary>Returns random value with uniform distribution.</summary>
-    '''<param name="lower">Minimum value.</param>
-    '''<param name="upper">Maximum value.</param>
-    ''' <param name="serial">True, if use in serial code</param>
-    Friend Function Rand(ByRef lower As Double, ByRef upper As Double, ByRef serial As Boolean) As Double
-        If serial Then
-            Return PRand(lower, upper)
-        Else
-            Return Rand(lower, upper)
-        End If
+    '''<summary>Returns random value with uniform distribution from 0 to items count - 1.</summary>
+    Public Function RndItemIndex(ByRef v() As String) As Integer
+        Return RndInt(v.Length - 1)
     End Function
-
-    '''<summary>Returns random value with uniform distribution from 1 to n.</summary>
-    ''' <param name="n">Value greater than zero</param>
-    ''' <param name="serial">True, if use in serial code</param>
-    Friend Function RndPos(ByRef n As Integer, ByRef serial As Boolean) As Integer
-        Dim R As Double = Rand(0, 1, serial)
-        Dim dr As Double = 1 / n
-        For i As Integer = 1 To n Step 1
-            If CDbl(i) * dr >= R Then Return i
-        Next i
-        Return n
+    '''<summary>Returns random value with uniform distribution from 0 to items count - 1.</summary>
+    Public Function RndItemIndex(ByRef v() As Boolean) As Integer
+        Return RndInt(v.Length - 1)
     End Function
+    '''<summary>Returns random value with uniform distribution from 0 to items count - 1.</summary>
+    Public Function RndItemIndex(ByRef v() As Point) As Integer
+        Return RndInt(v.Length - 1)
+    End Function
+    '''<summary>Returns random value with uniform distribution from 0 to items count - 1.</summary>
+    Public Function RndItemIndex(ByRef v As List(Of Integer)) As Integer
+        Return RndInt(v.Count - 1)
+    End Function
+    '''<summary>Returns random value with uniform distribution from 0 to items count - 1.</summary>
+    Public Function RndItemIndex(ByRef v As List(Of Double)) As Integer
+        Return RndInt(v.Count - 1)
+    End Function
+    '''<summary>Returns random value with uniform distribution from 0 to items count - 1.</summary>
+    Public Function RndItemIndex(ByRef v As List(Of String)) As Integer
+        Return RndInt(v.Count - 1)
+    End Function
+    '''<summary>Returns random value with uniform distribution from 0 to items count - 1.</summary>
+    Public Function RndItemIndex(ByRef v As List(Of Boolean)) As Integer
+        Return RndInt(v.Count - 1)
+    End Function
+    '''<summary>Returns random value with uniform distribution from 0 to items count - 1.</summary>
+    Public Function RndItemIndex(ByRef v As List(Of Point)) As Integer
+        Return RndInt(v.Count - 1)
+    End Function
+#End Region
 
     '''<summary>Returns random value with uniform distribution from min to max.</summary>
-    ''' <param name="serial">True, if use in serial code</param>
-    Public Function RndInt(ByRef min As Integer, ByRef max As Integer, ByRef serial As Boolean) As Integer
-        Return min - 1 + RndPos(max - min + 1, serial)
+    Public Function RndDbl(ByRef min As Double, ByRef max As Double) As Double
+        Return min + (max - min) * RndInt(seedMaxVal) / seedMaxVal
     End Function
-
-    '''<summary>Returns random value with uniform distribution from min to max.
-    ''' Runs approximately 100 times faster than regular.
-    ''' Use in the serial execution mode only.</summary>
-    Public Function RndDblFast(ByRef min As Double, ByRef max As Double) As Double
-        Return min + (max - min) * RndIntFast(seedMaxVal) / seedMaxVal
+    '''<summary>Returns random value with uniform distribution from min to max.</summary>
+    Public Function RndInt(ByRef min As Integer, ByRef max As Integer) As Integer
+        Return min + RndInt(max - min)
     End Function
-    '''<summary>Returns random value with uniform distribution from min to max.
-    ''' Runs approximately 100 times faster than regular.
-    ''' Use in the serial execution mode only.</summary>
-    Public Function RndIntFast(ByRef min As Integer, ByRef max As Integer) As Integer
-        Return min + RndIntFast(max - min)
-    End Function
-    Private Function RndIntFast(ByRef max As Integer) As Integer
+    Private Function RndInt(ByRef max As Integer) As Integer
 
         Dim m As Long
         Dim b As Long = CLng(max)
@@ -2803,22 +2723,120 @@ Public Class RndValueGen
         Return CInt(m Mod (max + 1))
     End Function
 
-    ''' <summary>Dыбирает случайным образом запись из списка</summary>
-    ''' <param name="IDs">Список намеров записей, из которых делается выбор.
+    ''' <summary>Перемешает массив</summary>
+    ''' <param name="v">Массив</param>
+    Public Sub Shuffle(ByRef v() As Integer)
+        'Dim rnd As New RndValueGen(seed)
+        If UBound(v) < 1 Then Exit Sub
+        Dim t, m As Integer
+        Dim u As Integer = UBound(v)
+        For i As Integer = 0 To 3 * UBound(v) Step 1
+            m = RndInt(0, u - 1)
+            t = v(m)
+            v(m) = v(u)
+            v(u) = t
+        Next i
+    End Sub
+
+End Class
+
+Public Class RandomSelection
+    Implements IEnumerable
+
+    Public rndgen As RndValueGen
+    Private ReadOnly Checked() As Integer
+    Public ReadOnly upperBound As Integer
+    Public Count As Integer
+
+    Public Sub New(ByVal size As Integer, ByRef r As RndValueGen)
+        If Not IsNothing(r) Then
+            rndgen = r
+        Else
+            rndgen = New RndValueGen
+        End If
+        upperBound = size - 1
+        ReDim Checked(upperBound)
+    End Sub
+
+    Public Function GetChecked() As List(Of Integer)
+        Dim result As New List(Of Integer)
+        For i As Integer = 0 To upperBound Step 1
+            If Contains(i) Then
+                For j As Integer = 1 To Checked(i) Step 1
+                    result.Add(i)
+                Next j
+            End If
+        Next i
+        Return result
+    End Function
+
+    Public Function Amount(ByVal index As Integer) As Integer
+        Return Checked(index)
+    End Function
+    Public Function Contains(ByVal index As Integer) As Boolean
+        Return Checked(index) > 0
+    End Function
+    Public Sub Add(ByVal index As Integer)
+        'If Not Checked(index) Then
+        Checked(index) += 1
+        Count += 1
+        'End If
+    End Sub
+    Public Sub Remove(ByVal index As Integer)
+        If Not Contains(index) Then Throw New Exception("Checked count is zero")
+        Checked(index) -= 1
+        Count -= 1
+    End Sub
+    Public Sub Clear()
+        Count = 0
+        For i As Integer = 0 To upperBound Step 1
+            Checked(i) = 0
+        Next i
+    End Sub
+    Public Sub RefreshCount()
+        Count = 0
+        For i As Integer = 0 To upperBound Step 1
+            Count += Checked(i)
+        Next i
+    End Sub
+    Public Sub AddRange(ByRef indexes() As Integer)
+        For i As Integer = 0 To UBound(indexes) Step 1
+            Call Add(indexes(i))
+        Next i
+    End Sub
+    Public Sub AddRange(ByVal minID As Integer, ByVal maxID As Integer)
+        For i As Integer = minID To maxID Step 1
+            Call Add(i)
+        Next i
+    End Sub
+    Public Function Item(ByVal n As Integer) As Integer
+        Dim k As Integer
+        For i As Integer = 0 To upperBound Step 1
+            If Contains(i) Then
+                If k + Checked(i) > n Then
+                    Return i
+                End If
+                k += Checked(i)
+            End If
+        Next i
+        Throw New Exception("Unexpected input: " & n)
+    End Function
+    Public Sub RemoveAt(ByVal n As Integer)
+        Call Remove(Item(n))
+    End Sub
+
+    ''' <summary>Dыбирает случайным образом запись из списка
     ''' Если массивы Stats (v) и DesiredStats (d) инициализированы, то каждой записи на их основании будет присвоен стат. вес в соответствие с распределением Гаусса g(v,d).
     ''' Если Stats (v1, v2, v3...) содержит несколько массивов, то DesiredStats (d1, d2, d3...) должен содержать соответствующее кол-во значений, и в этом случае для получения полного стат. веса стат. веса от каждого параметра будут перемножены g=g(v1,d1)*g(v2,d2)*g(v3,d3)...
-    ''' Если же оба массива не инициализированы, то у всех записей будет одинаковый стат. вес</param>
+    ''' Если же оба массива не инициализированы, то у всех записей будет одинаковый стат. вес</summary>
     ''' <param name="Stats">Массивы параметров, по которым выбираем запись</param>
     ''' <param name="DesiredStats">Какое значение будет иметь наибольший стат. вес (по одному на каждый массив значений)</param>
     ''' <param name="mult">Множитель "желаемого" значения, отражающий особенности выбираемого объекта (например, размер юнита или тип предмета).
     ''' Если не инициализирован, то считается что множитель для всех записей равен единице</param>
     ''' <param name="BaseSmearing">Множитель для Сигмы в распределении Гаусса. Сигма=Множитель*Желаемое_значение</param>
-    ''' <param name="serial">True, if use in serial code</param>
-    ''' <param name="fastMode">Generate random value faster. Don't recomended for parallel execution</param>
-    Public Function RandomSelection(ByRef IDs As List(Of Integer), ByRef Stats()() As Double, _
+    Public Function RandomSelection(ByRef Stats()() As Double, _
                                     ByRef DesiredStats() As Double, ByRef mult() As Double, _
-                                    ByVal BaseSmearing As Double, ByVal serial As Boolean, _
-                                    Optional ByVal fastMode As Boolean = False) As Integer
+                                    ByVal BaseSmearing As Double) As Integer
         Dim noValue As Boolean = False
         If IsNothing(Stats) And IsNothing(DesiredStats) Then
             noValue = True
@@ -2848,7 +2866,7 @@ Public Class RndValueGen
         Dim m As Double
 
         If noValue Then
-            ReDim Weight(IDs.Max)
+            ReDim Weight(upperBound)
         Else
             ReDim Weight(UBound(Stats(0)))
             If BaseSmearing <= 0 Then
@@ -2859,19 +2877,21 @@ Public Class RndValueGen
         Dim maxSmearing As Double = Math.Max(10 * BaseSmearing, 10)
         Do While WeightsSum = 0
             smearing += BaseSmearing
-            For Each i As Integer In IDs
-                Weight(i) = 1
-                If Not noValue Then
-                    If Not IsNothing(mult) Then
-                        m = mult(i)
-                    Else
-                        m = 1
+            For i As Integer = 0 To upperBound Step 1
+                If Contains(i) Then
+                    Weight(i) = 1
+                    If Not noValue Then
+                        If Not IsNothing(mult) Then
+                            m = mult(i)
+                        Else
+                            m = 1
+                        End If
+                        For j As Integer = 0 To UBound(Stats) Step 1
+                            Weight(i) *= Common.Gauss(Stats(j)(i), m * DesiredStats(j), smearing)
+                        Next j
                     End If
-                    For j As Integer = 0 To UBound(Stats) Step 1
-                        Weight(i) *= Common.Gauss(Stats(j)(i), m * DesiredStats(j), smearing)
-                    Next j
+                    WeightsSum += Weight(i) * Checked(i)
                 End If
-                WeightsSum += Weight(i)
             Next i
             If smearing > maxSmearing AndAlso WeightsSum = 0 Then
                 If Not noValue Then
@@ -2879,128 +2899,155 @@ Public Class RndValueGen
                     For j As Integer = 0 To UBound(Stats) Step 1
                         minAbs(j) = Double.MaxValue
                     Next j
-                    For Each i As Integer In IDs
-                        If Not IsNothing(mult) Then
-                            m = mult(i)
-                        Else
-                            m = 1
+                    For i As Integer = 0 To upperBound Step 1
+                        If Contains(i) Then
+                            If Not IsNothing(mult) Then
+                                m = mult(i)
+                            Else
+                                m = 1
+                            End If
+                            Dim invM As Double = 1 / m
+                            For j As Integer = 0 To UBound(Stats) Step 1
+                                minAbs(j) = Math.Min(minAbs(j), Math.Abs(DesiredStats(j) - Stats(j)(i) * invM))
+                            Next j
                         End If
-                        Dim invM As Double = 1 / m
-                        For j As Integer = 0 To UBound(Stats) Step 1
-                            minAbs(j) = Math.Min(minAbs(j), Math.Abs(DesiredStats(j) - Stats(j)(i) * invM))
-                        Next j
                     Next i
 
                     WeightsSum = 0
                     Dim s, d As Double
-                    For Each i As Integer In IDs
-                        Weight(i) = 1
-                        If Not IsNothing(mult) Then
-                            m = mult(i)
-                        Else
-                            m = 1
-                        End If
-                        For j As Integer = 0 To UBound(Stats) Step 1
-                            d = m * DesiredStats(j)
-                            s = Stats(j)(i)
-                            If s < d Then
-                                s += minAbs(j) * m
+                    For i As Integer = 0 To upperBound Step 1
+                        If Contains(i) Then
+                            Weight(i) = 1
+                            If Not IsNothing(mult) Then
+                                m = mult(i)
                             Else
-                                s -= minAbs(j) * m
+                                m = 1
                             End If
-                            Weight(i) *= Common.Gauss(s, d, BaseSmearing)
-                        Next j
-                        WeightsSum += Weight(i)
+                            For j As Integer = 0 To UBound(Stats) Step 1
+                                d = m * DesiredStats(j)
+                                s = Stats(j)(i)
+                                If s < d Then
+                                    s += minAbs(j) * m
+                                Else
+                                    s -= minAbs(j) * m
+                                End If
+                                Weight(i) *= Common.Gauss(s, d, BaseSmearing)
+                            Next j
+                            WeightsSum += Weight(i) * Checked(i)
+                        End If
                     Next i
                 End If
                 If WeightsSum = 0 Then
-                    For Each i As Integer In IDs
-                        Weight(i) = 1
+                    For i As Integer = 0 To upperBound Step 1
+                        If Contains(i) Then
+                            Weight(i) = 1
+                        End If
                     Next i
                 End If
                 Exit Do
             End If
         Loop
-        Return RandomSelection(IDs, Weight, serial, fastMode)
+        Return RandomSelection(Weight)
     End Function
-    ''' <summary>Dыбирает случайным образом запись из списка</summary>
-    ''' <param name="IDs">Список намеров записей, из которых делается выбор.
+    ''' <summary>Dыбирает случайным образом запись из списка
     ''' Если массивы Stats (v) и DesiredStats (d) инициализированы, то каждой записи на их основании будет присвоен стат. вес в соответствие с распределением Гаусса g(v,d).
     ''' Если Stats (v1, v2, v3...) содержит несколько массивов, то DesiredStats (d1, d2, d3...) должен содержать соответствующее кол-во значений, и в этом случае для получения полного стат. веса стат. веса от каждого параметра будут перемножены g=g(v1,d1)*g(v2,d2)*g(v3,d3)...
-    ''' Если же оба массива не инициализированы, то у всех записей будет одинаковый стат. вес</param>
+    ''' Если же оба массива не инициализированы, то у всех записей будет одинаковый стат. вес</summary>
     ''' <param name="Stats">Массивы параметров, по которым выбираем запись</param>
     ''' <param name="DesiredStats">Какое значение будет иметь наибольший стат. вес (по одному на каждый массив значений)</param>
     ''' <param name="BaseSmearing">Множитель для Сигмы в распределении Гаусса. Сигма=Множитель*Желаемое_значение</param>
-    ''' <param name="serial">True, if use in serial code</param>
-    ''' <param name="fastMode">Generate random value faster. Don't recomended for parallel execution</param>
-    Public Function RandomSelection(ByRef IDs As List(Of Integer), ByRef Stats()() As Double, _
-                                    ByRef DesiredStats() As Double, ByVal BaseSmearing As Double, _
-                                    ByVal serial As Boolean, Optional ByVal fastMode As Boolean = False) As Integer
-        Return RandomSelection(IDs, Stats, DesiredStats, Nothing, BaseSmearing, serial, fastMode)
+    Public Function RandomSelection(ByRef Stats()() As Double, _
+                                    ByRef DesiredStats() As Double, ByVal BaseSmearing As Double) As Integer
+        Return RandomSelection(Stats, DesiredStats, Nothing, BaseSmearing)
     End Function
     ''' <summary>Dыбирает случайным образом запись из списка, считая, что у всех записей будет одинаковый стат. вес</summary>
-    ''' <param name="IDs">Список намеров записей, из которых делается выбор</param>
-    ''' <param name="serial">True, if use in serial code</param>
-    ''' <param name="fastMode">Generate random value faster. Don't recomended for parallel execution</param>
-    Public Function RandomSelection(ByRef IDs As List(Of Integer), _
-                                    ByVal serial As Boolean, Optional ByVal fastMode As Boolean = False) As Integer
-        Return RandomSelection(IDs, Nothing, Nothing, 0, serial, fastMode)
+    Public Function RandomSelection() As Integer
+        Return RandomSelection(Nothing)
     End Function
     ''' <summary>Dыбирает случайным образом запись из списка</summary>
-    ''' <param name="IDs">Список намеров записей, из которых делается выбор.
-    ''' Если массив Weight не инициализирован, то у всех записей будет одинаковый стат. вес</param>
     ''' <param name="Weight">Вероятность выбрать запись прямо пропорциональна величине стат. веса. Сумма весов может быть не равна единице</param>
-    ''' <param name="serial">True, if use in serial code</param>
-    ''' <param name="fastMode">Generate random value faster. Don't recomended for parallel execution</param>
-    Public Function RandomSelection(ByRef IDs As List(Of Integer), ByRef Weight() As Double, _
-                                    ByVal serial As Boolean, Optional ByVal fastMode As Boolean = False) As Integer
-        Dim tWeight() As Double
+    Public Function RandomSelection(ByRef Weight() As Double) As Integer
+        Dim tWeight(upperBound), WeightsSum As Double
         If IsNothing(Weight) Then
-            ReDim tWeight(IDs.Max)
-            For Each i In IDs
-                tWeight(i) = 1
+            For i As Integer = 0 To upperBound Step 1
+                If Contains(i) Then
+                    tWeight(i) = Checked(i)
+                    WeightsSum += tWeight(i)
+                End If
             Next i
         Else
-            tWeight = Weight
+            For i As Integer = 0 To upperBound Step 1
+                If Contains(i) Then
+                    tWeight(i) = Checked(i) * Weight(i)
+                    WeightsSum += tWeight(i)
+                End If
+            Next i
         End If
-        Dim WeightsSum As Double
-        For Each i As Integer In IDs
-            WeightsSum += tWeight(i)
-        Next i
-        Dim R As Double
-        If Not fastMode Then
-            R = Rand(0, WeightsSum, serial)
-        Else
-            R = RndDblFast(0, WeightsSum)
-        End If
+        Dim R As Double = rndgen.RndDbl(0, WeightsSum)
         Dim W As Double = 0
         Dim SelectedItem As Integer = -1
-        For Each i In IDs
-            If tWeight(i) < 0 Then Throw New Exception("Отрицательный стат вес")
-            W += tWeight(i)
-            If W > R Then
-                SelectedItem = i
-                Exit For
+        Dim LastCheckedItem As Integer = -1
+        For i As Integer = 0 To upperBound Step 1
+            If Contains(i) Then
+                If tWeight(i) < 0 Then Throw New Exception("Отрицательный стат вес")
+                W += tWeight(i)
+                If W > R Then
+                    SelectedItem = i
+                    Exit For
+                End If
+                LastCheckedItem = i
             End If
         Next i
-        If SelectedItem = -1 Then SelectedItem = IDs.Item(IDs.Count - 1)
+        If SelectedItem = -1 Then SelectedItem = LastCheckedItem
         Return SelectedItem
     End Function
 
-    ''' <summary>Перемешает массив</summary>
-    ''' <param name="v">Массив</param>
-    Public Sub Shuffle(ByRef v() As Integer)
-        'Dim rnd As New RndValueGen(seed)
-        If UBound(v) < 1 Then Exit Sub
-        Dim t, m As Integer
-        Dim u As Integer = UBound(v)
-        For i As Integer = 0 To 3 * UBound(v) Step 1
-            m = RndIntFast(0, u - 1)
-            t = v(m)
-            v(m) = v(u)
-            v(u) = t
-        Next i
-    End Sub
+    Public Function GetEnumerator() As System.Collections.IEnumerator Implements System.Collections.IEnumerable.GetEnumerator
+        Return New ItemsEnum(Checked)
+    End Function
+    Public Class ItemsEnum
+        Implements IEnumerator
+
+        Private checked() As Integer
+        Private upperBound As Integer
+        Private currentIndex As Integer = -1
+        Private currentIndexAmount As Integer = 0
+
+        Public Sub New(ByVal _checked() As Integer)
+            checked = _checked
+            upperBound = UBound(checked)
+        End Sub
+
+        Public Function MoveNext() As Boolean Implements IEnumerator.MoveNext
+            If currentIndex > -1 AndAlso currentIndexAmount < Checked(currentIndex) Then
+                currentIndexAmount += 1
+                Return True
+            End If
+            For i As Integer = currentIndex + 1 To upperBound Step 1
+                If Checked(i) > 0 Then
+                    currentIndex = i
+                    currentIndexAmount = 1
+                    Return True
+                End If
+            Next i
+            Return False
+        End Function
+
+        Public Sub Reset() Implements IEnumerator.Reset
+            currentIndex = -1
+            currentIndexAmount = 0
+        End Sub
+
+        Public ReadOnly Property Current() As Object Implements IEnumerator.Current
+            Get
+                Try
+                    Return currentIndex
+                Catch ex As IndexOutOfRangeException
+                    Throw New InvalidOperationException()
+                End Try
+            End Get
+        End Property
+    End Class
 
 End Class
 
@@ -3320,60 +3367,6 @@ Public Class Common
     End Function
 #End Region
 
-#Region "RandomSelection"
-    ''' <summary>Dыбирает случайным образом запись из списка</summary>
-    ''' <param name="IDs">Список намеров записей, из которых делается выбор.
-    ''' Если массивы Stats (v) и DesiredStats (d) инициализированы, то каждой записи на их основании будет присвоен стат. вес в соответствие с распределением Гаусса g(v,d).
-    ''' Если Stats (v1, v2, v3...) содержит несколько массивов, то DesiredStats (d1, d2, d3...) должен содержать соответствующее кол-во значений, и в этом случае для получения полного стат. веса стат. веса от каждого параметра будут перемножены g=g(v1,d1)*g(v2,d2)*g(v3,d3)...
-    ''' Если же оба массива не инициализированы, то у всех записей будет одинаковый стат. вес</param>
-    ''' <param name="Stats">Массивы параметров, по которым выбираем запись</param>
-    ''' <param name="DesiredStats">Какое значение будет иметь наибольший стат. вес (по одному на каждый массив значений)</param>
-    ''' <param name="mult">Множитель "желаемого" значения, отражающий особенности выбираемого объекта (например, размер юнита или тип предмета).
-    ''' Если не инициализирован, то считается что множитель для всех записей равен единице</param>
-    ''' <param name="BaseSmearing">Множитель для Сигмы в распределении Гаусса. Сигма=Множитель*Желаемое_значение</param>
-    ''' <param name="serial">True, if use in serial code</param>
-    ''' <param name="fastMode">Generate random value faster. Don't recomended for parallel execution</param>
-    Public Function RandomSelection(ByRef IDs As List(Of Integer), ByRef Stats()() As Double, _
-                                    ByRef DesiredStats() As Double, ByRef mult() As Double, _
-                                    ByVal BaseSmearing As Double, ByVal serial As Boolean, _
-                                    Optional ByVal fastMode As Boolean = False) As Integer
-        Return rndgen.RandomSelection(IDs, Stats, DesiredStats, mult, BaseSmearing, serial, fastMode)
-    End Function
-    ''' <summary>Dыбирает случайным образом запись из списка</summary>
-    ''' <param name="IDs">Список намеров записей, из которых делается выбор.
-    ''' Если массивы Stats (v) и DesiredStats (d) инициализированы, то каждой записи на их основании будет присвоен стат. вес в соответствие с распределением Гаусса g(v,d).
-    ''' Если Stats (v1, v2, v3...) содержит несколько массивов, то DesiredStats (d1, d2, d3...) должен содержать соответствующее кол-во значений, и в этом случае для получения полного стат. веса стат. веса от каждого параметра будут перемножены g=g(v1,d1)*g(v2,d2)*g(v3,d3)...
-    ''' Если же оба массива не инициализированы, то у всех записей будет одинаковый стат. вес</param>
-    ''' <param name="Stats">Массивы параметров, по которым выбираем запись</param>
-    ''' <param name="DesiredStats">Какое значение будет иметь наибольший стат. вес (по одному на каждый массив значений)</param>
-    ''' <param name="BaseSmearing">Множитель для Сигмы в распределении Гаусса. Сигма=Множитель*Желаемое_значение</param>
-    ''' <param name="serial">True, if use in serial code</param>
-    ''' <param name="fastMode">Generate random value faster. Don't recomended for parallel execution</param>
-    Public Function RandomSelection(ByRef IDs As List(Of Integer), ByRef Stats()() As Double, _
-                                    ByRef DesiredStats() As Double, ByVal BaseSmearing As Double, _
-                                    ByVal serial As Boolean, Optional ByVal fastMode As Boolean = False) As Integer
-        Return rndgen.RandomSelection(IDs, Stats, DesiredStats, BaseSmearing, serial, fastMode)
-    End Function
-    ''' <summary>Dыбирает случайным образом запись из списка, считая, что у всех записей будет одинаковый стат. вес</summary>
-    ''' <param name="IDs">Список намеров записей, из которых делается выбор</param>
-    ''' <param name="serial">True, if use in serial code</param>
-    ''' <param name="fastMode">Generate random value faster. Don't recomended for parallel execution</param>
-    Public Function RandomSelection(ByRef IDs As List(Of Integer), _
-                                    ByVal serial As Boolean, Optional ByVal fastMode As Boolean = False) As Integer
-        Return rndgen.RandomSelection(IDs, serial, fastMode)
-    End Function
-    ''' <summary>Dыбирает случайным образом запись из списка</summary>
-    ''' <param name="IDs">Список намеров записей, из которых делается выбор.
-    ''' Если массив Weight не инициализирован, то у всех записей будет одинаковый стат. вес</param>
-    ''' <param name="Weight">Вероятность выбрать запись прямо пропорциональна величине стат. веса. Сумма весов может быть не равна единице</param>
-    ''' <param name="serial">True, if use in serial code</param>
-    ''' <param name="fastMode">Generate random value faster. Don't recomended for parallel execution</param>
-    Public Function RandomSelection(ByRef IDs As List(Of Integer), ByRef Weight() As Double, _
-                                    ByVal serial As Boolean, Optional ByVal fastMode As Boolean = False) As Integer
-        Return rndgen.RandomSelection(IDs, Weight, serial, fastMode)
-    End Function
-#End Region
-
     ''' <summary>e^(-0.5 * ((X - avX) / (sigma * avX)) ^ 2)</summary>
     Public Shared Function Gauss(ByVal X As Double, ByVal avX As Double, ByVal sigma As Double) As Double
         Return Math.Exp(-0.5 * ((X - avX) / (sigma * avX)) ^ 2)
@@ -3627,36 +3620,6 @@ Public Class Common
         End If
     End Function
 
-    ''' <summary>Собирает списки в один</summary>
-    Public Shared Function MergeLists(ByRef input() As List(Of Double)) As List(Of Double)
-        Dim result As New List(Of Double)
-        For i As Integer = 0 To UBound(input) Step 1
-            For Each item As Double In input(i)
-                result.Add(item)
-            Next item
-        Next i
-        Return result
-    End Function
-    ''' <summary>Собирает списки в один</summary>
-    Public Shared Function MergeLists(ByRef input() As List(Of Integer)) As List(Of Integer)
-        Dim result As New List(Of Integer)
-        For i As Integer = 0 To UBound(input) Step 1
-            For Each item As Integer In input(i)
-                result.Add(item)
-            Next item
-        Next i
-        Return result
-    End Function
-    ''' <summary>Собирает списки в один</summary>
-    Public Shared Function MergeLists(ByRef input() As List(Of String)) As List(Of String)
-        Dim result As New List(Of String)
-        For i As Integer = 0 To UBound(input) Step 1
-            For Each item As String In input(i)
-                result.Add(item)
-            Next item
-        Next i
-        Return result
-    End Function
 End Class
 
 Public MustInherit Class DecorationPlacingPropertiesFields
@@ -5968,7 +5931,7 @@ Public Class GenDefaultValues
             End Sub
             Public Function GetRndItem(ByRef r As RndValueGen) As String
                 If Count() = 0 Then Call Read()
-                Dim i As Integer = r.RndInt(0, Count() - 1, True)
+                Dim i As Integer = r.RndInt(0, Count() - 1)
                 Dim res As String = list.Item(i)
                 If maxNameLength > -1 And readRepeat > 1 Then
                     Dim s As String = "_" & readRepeat

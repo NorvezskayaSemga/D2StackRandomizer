@@ -76,7 +76,7 @@
     Public Function TemplatePoolGen(ByRef templates() As ImpenetrableMeshGen.GenSettings, _
                                     ByVal genTimeLimit As Integer, _
                                     ByVal modName As String) As Map
-        Dim selected As Integer = (New RndValueGen).RndInt(0, UBound(templates), True)
+        Dim selected As Integer = (New RndValueGen).RndItemIndex(templates)
         Return CommonGen(templates(selected), genTimeLimit, modName)
     End Function
 
@@ -149,7 +149,7 @@
             For i As Integer = 0 To UBound(settGen.common_settMap.PlayersRaces) Step 1
                 If settGen.common_settMap.PlayersRaces(i).ToUpper = GenDefaultValues.wTemplate_RandomRaceLongKeyword.ToUpper Or _
                    settGen.common_settMap.PlayersRaces(i).ToUpper = GenDefaultValues.wTemplate_RandomRaceShortKeyword.ToUpper Then
-                    PlayersRaces(i) = GenDefaultValues.randomRaceID
+                    PlayersRaces(i) = comm.defValues.randomRaceID
                 Else
                     PlayersRaces(i) = genmesh.comm.RaceIdentifierToSubrace(settGen.common_settMap.PlayersRaces(i))
                     ok = False

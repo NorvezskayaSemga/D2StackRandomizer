@@ -181,32 +181,23 @@ Public Class CommonTest
     <TestMethod()> _
     Public Sub RandomSelectionTest1()
         Call RandStackTest.CopyResources()
-        Dim target As Common = New Common(GenDefaultValues.DefaultMod)
-        Dim IDs As New List(Of Integer)
-        IDs.AddRange(idArray)
-        Dim expected(IDs.Max), actual(IDs.Max) As Boolean
-        For Each i As Integer In IDs
+        Dim target As New RandomSelection(idArray.Max + 1, Nothing)
+        Dim comm As New Common(GenDefaultValues.DefaultMod)
+        Dim expected(target.upperBound), actual(target.upperBound) As Boolean
+        For Each i As Integer In idArray
             expected(i) = True
-        Next i
-        Dim fullStatsArray(UBound(actual)) As Double
-        For i As Integer = 0 To UBound(idArray) Step 1
-            fullStatsArray(idArray(i)) = someStats(i)
+            target.Add(i)
         Next i
         Dim ok As Boolean = True
-        Dim serial As Boolean = False
-        For p As Integer = 0 To 1 Step 1
-            serial = Not serial
-            For i As Integer = 0 To UBound(expected) Step 1
-                actual(i) = False
-            Next i
-            For i As Integer = 0 To 30 * expected.Length Step 1
-                actual(target.RandomSelection(IDs, serial)) = True
-            Next i
-            For i As Integer = 0 To UBound(expected) Step 1
-                If Not actual(i) = expected(i) Then ok = False
-            Next i
-            If Not ok Then Exit For
-        Next p
+        For i As Integer = 0 To UBound(expected) Step 1
+            actual(i) = False
+        Next i
+        For i As Integer = 0 To 30 * expected.Length Step 1
+            actual(target.RandomSelection()) = True
+        Next i
+        For i As Integer = 0 To UBound(expected) Step 1
+            If Not actual(i) = expected(i) Then ok = False
+        Next i
         If Not ok Then Assert.Inconclusive("Verify the correctness of this test method.")
     End Sub
 
@@ -215,27 +206,26 @@ Public Class CommonTest
     '''</summary>
     <TestMethod()> _
     Public Sub RandomSelectionTest2()
-        Dim target As Common = New Common(GenDefaultValues.DefaultMod)
-        Dim IDs As New List(Of Integer)
-        IDs.AddRange(idArray)
-        Dim expected(IDs.Max), actual(IDs.Max) As Boolean
-        For Each i As Integer In IDs
+        Call RandStackTest.CopyResources()
+        Dim target As New RandomSelection(idArray.Max + 1, Nothing)
+        Dim comm As New Common(GenDefaultValues.DefaultMod)
+        Dim expected(target.upperBound), actual(target.upperBound) As Boolean
+        For Each i As Integer In idArray
             expected(i) = True
+            target.Add(i)
         Next i
         Dim fullStatsArray(UBound(actual)) As Double
         For i As Integer = 0 To UBound(idArray) Step 1
             fullStatsArray(idArray(i)) = someStats(i)
         Next i
         Dim ok As Boolean = True
-        Dim serial As Boolean = False
-        For p As Integer = 0 To 3 Step 1
-            If p > 1 Then fullStatsArray = Nothing
-            serial = Not serial
+        For p As Integer = 0 To 1 Step 1
+            If p > 0 Then fullStatsArray = Nothing
             For i As Integer = 0 To UBound(expected) Step 1
                 actual(i) = False
             Next i
             For i As Integer = 0 To 30 * expected.Length Step 1
-                actual(target.RandomSelection(IDs, fullStatsArray, serial)) = True
+                actual(target.RandomSelection(fullStatsArray)) = True
             Next i
             For i As Integer = 0 To UBound(expected) Step 1
                 If Not actual(i) = expected(i) Then ok = False
@@ -250,32 +240,28 @@ Public Class CommonTest
     '''</summary>
     <TestMethod()> _
     Public Sub RandomSelectionTest3()
-        Dim target As Common = New Common(GenDefaultValues.DefaultMod)
-        Dim IDs As New List(Of Integer)
-        IDs.AddRange(idArray)
-        Dim expected(IDs.Max), actual(IDs.Max) As Boolean
-        For Each i As Integer In IDs
+        Call RandStackTest.CopyResources()
+        Dim target As New RandomSelection(idArray.Max + 1, Nothing)
+        Dim comm As New Common(GenDefaultValues.DefaultMod)
+        Dim expected(target.upperBound), actual(target.upperBound) As Boolean
+        For Each i As Integer In idArray
             expected(i) = True
+            target.Add(i)
         Next i
         Dim fullStatsArray(UBound(actual)) As Double
         For i As Integer = 0 To UBound(idArray) Step 1
             fullStatsArray(idArray(i)) = someStats(i)
         Next i
         Dim ok As Boolean = True
-        Dim serial As Boolean = False
-        For p As Integer = 0 To 1 Step 1
-            serial = Not serial
-            For i As Integer = 0 To UBound(expected) Step 1
-                actual(i) = False
-            Next i
-            For i As Integer = 0 To 10 * expected.Length Step 1
-                actual(target.RandomSelection(IDs, {fullStatsArray}, {av}, target.defValues.defaultSigma, serial)) = True
-            Next i
-            For i As Integer = 0 To UBound(expected) Step 1
-                If Not actual(i) = expected(i) Then ok = False
-            Next i
-            If Not ok Then Exit For
-        Next p
+        For i As Integer = 0 To UBound(expected) Step 1
+            actual(i) = False
+        Next i
+        For i As Integer = 0 To 10 * expected.Length Step 1
+            actual(target.RandomSelection({fullStatsArray}, {av}, comm.defValues.defaultSigma)) = True
+        Next i
+        For i As Integer = 0 To UBound(expected) Step 1
+            If Not actual(i) = expected(i) Then ok = False
+        Next i
         If Not ok Then Assert.Inconclusive("Verify the correctness of this test method.")
     End Sub
 

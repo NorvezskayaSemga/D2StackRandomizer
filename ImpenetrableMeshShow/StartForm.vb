@@ -439,7 +439,7 @@ Class Tests
 
         Dim t11 As Integer = Environment.TickCount
         For i As Integer = 0 To steps Step 1
-            result(i) = r.PRand(0, 1)
+            result(i) = r.RndDbl(0, 1)
         Next i
         Dim t12 As Integer = Environment.TickCount
         Dim u1 As Double = CalcUniformity(makeDistribution(result))
@@ -453,17 +453,6 @@ Class Tests
         Next i
         IO.File.WriteAllBytes("./myRandomNumbers.txt", t)
         Console.WriteLine("current rand: u= " & u1 & " t= " & t12 - t11)
-
-
-        Dim t21 As Integer = Environment.TickCount
-        For i As Integer = 0 To steps Step 1
-            'result(i) = vanillaR.randomNumberUpTo(maxInt) / (maxInt - 1)
-            result(i) = r.RndDblFast(0, 1)
-        Next i
-        Dim t22 As Integer = Environment.TickCount
-        Dim u2 As Double = CalcUniformity(makeDistribution(result))
-
-        Console.WriteLine("   test rand: u= " & u2 & " t= " & t22 - t21)
     End Sub
     Private Shared Function makeDistribution(ByVal v() As Double) As Integer()
         Dim dx As Double = 0.01
@@ -506,14 +495,13 @@ Class Tests
         Dim result As List(Of String) = r.ItemsGen(sett)
     End Sub
 
-
     Private Const minItemGoldCost As Integer = 150
     Public Shared Sub ItemsGenTest_time()
         Dim lootTime, mercenariesTime, merchantTime, mageTime As Integer
 
-        ' lootTime = ItemsGenTest() '12761
-        ' mercenariesTime = MakeMercenariesListTest() '18073
-        ' merchantTime = MakeMerchItemsListTest() '13701
+        lootTime = ItemsGenTest() '12761
+        mercenariesTime = MakeMercenariesListTest() '18073
+        merchantTime = MakeMerchItemsListTest() '13701
         mageTime = MakeSpellsListTest() '25538
 
         Console.WriteLine("'" & lootTime)
@@ -595,7 +583,7 @@ Class Tests
         Dim c As New AllDataStructues.Cost
 
         Dim t As Integer = Environment.TickCount
-            For m1 As Integer = 0 To 1 Step 1
+        For m1 As Integer = 0 To 1 Step 1
             c.Black = m1
             c.Blue = m1
             For m3 As Integer = 0 To 1 Step 1

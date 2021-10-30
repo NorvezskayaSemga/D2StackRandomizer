@@ -892,7 +892,7 @@ Public Class ImpenetrableMeshGen
         ''' <summary>Минимальное расстояние^2</summary>
         Dim IminimumDist As Integer
         Dim possiblePoints() As Point
-        Dim ppIDs As List(Of Integer)
+        Dim ppIDs As RandomSelection
         Dim raceLocs() As Location
         Dim equalDist(,) As List(Of Integer)
     End Structure
@@ -1008,7 +1008,7 @@ Public Class ImpenetrableMeshGen
                 If min = max Then
                     Return min
                 Else
-                    Return randomizer.Rand(min, max, True)
+                    Return randomizer.RndDbl(min, max)
                 End If
             End Function
             Public Shared Function RandomValue(ByRef min As Integer, ByRef max As Integer, ByRef randomizer As RndValueGen) As Integer
@@ -1016,14 +1016,14 @@ Public Class ImpenetrableMeshGen
                 If min = max Then
                     Return min
                 Else
-                    Return randomizer.RndInt(min, max, True)
+                    Return randomizer.RndInt(min, max)
                 End If
             End Function
             Public Shared Function RandomValue(ByRef min As Boolean, ByRef max As Boolean, ByRef randomizer As RndValueGen) As Boolean
                 If min = max Then
                     Return min
                 Else
-                    If randomizer.RndInt(0, 1, True) = 0 Then
+                    If randomizer.RndInt(0, 1) = 0 Then
                         Return min
                     Else
                         Return max
@@ -1031,7 +1031,7 @@ Public Class ImpenetrableMeshGen
                 End If
             End Function
             Public Shared Function RandomValue(ByRef min() As String, ByRef max() As String, ByRef randomizer As RndValueGen) As String()
-                If randomizer.RndInt(0, 1, True) = 0 Then
+                If randomizer.RndInt(0, 1) = 0 Then
                     If Not IsNothing(min) Then
                         Return CType(min.Clone, String())
                     Else
@@ -1046,7 +1046,7 @@ Public Class ImpenetrableMeshGen
                 End If
             End Function
             Public Shared Function RandomValue(ByRef min() As Map.SettingsLoc.SettingsRaceCity, ByRef max() As Map.SettingsLoc.SettingsRaceCity, ByRef randomizer As RndValueGen) As Map.SettingsLoc.SettingsRaceCity()
-                If randomizer.RndInt(0, 1, True) = 0 Then
+                If randomizer.RndInt(0, 1) = 0 Then
                     If Not IsNothing(min) Then
                         Return Map.SettingsLoc.SettingsRaceCity.Copy(min)
                     Else
@@ -1400,7 +1400,7 @@ clearandexit:
                 End If
             Else
                 If IsNothing(slist) OrElse slist.Count = 0 Then Throw New Exception("Должно быть две или четыре расы для возможности создать симметричную карту")
-                selectedSymmetryClass = comm.RandomSelection(slist, True)
+                selectedSymmetryClass = slist.Item(comm.rndgen.RndItemIndex(slist))
             End If
         Else
             selectedSymmetryClass = -1
@@ -1547,7 +1547,7 @@ clearandexit:
         ElseIf chance >= 1 Then
             Return True
         Else
-            If rndgen.Rand(0, 1) > chance Then
+            If rndgen.RndDbl(0, 1) > chance Then
                 Return False
             Else
                 Return True
@@ -1605,7 +1605,7 @@ clearandexit:
             raceLocs = Nothing
             Do While Not ok
                 L = Location.Copy(prepResult.raceLocs(0))
-                id = comm.RandomSelection(prepResult.ppIDs, True)
+                id = prepResult.ppIDs.RandomSelection()
                 L.pos = New Point(prepResult.possiblePoints(id).X, prepResult.possiblePoints(id).Y)
                 raceLocs = symm.ApplySymm(L, settMap.nRaces, res, prepResult.IminimumDist)
                 If raceLocs.Length = settMap.nRaces Then
@@ -1619,9 +1619,13 @@ clearandexit:
             Dim borderPoints() As Point = Nothing
             Dim id, t As Integer
             raceLocs = prepResult.raceLocs
-            Dim SelID, tmpID As New List(Of Integer)
+            Dim maxEqualDistValue As Integer = -1
+            For Each i As Integer In prepResult.ppIDs
+                maxEqualDistValue = Math.Max(maxEqualDistValue, prepResult.equalDist(prepResult.possiblePoints(i).X, prepResult.possiblePoints(i).Y).Max())
+            Next i
+            Dim SelID, tmpID As New RandomSelection(maxEqualDistValue + 1, rndgen)
             Do While Not ok
-                id = comm.RandomSelection(prepResult.ppIDs, True)
+                id = prepResult.ppIDs.RandomSelection()
                 raceLocs(0).pos = New Point(prepResult.possiblePoints(id).X, prepResult.possiblePoints(id).Y)
 
                 SelID.Clear()
@@ -1629,7 +1633,7 @@ clearandexit:
                     SelID.Add(i)
                 Next i
                 For n As Integer = 1 To settMap.nRaces - 1 Step 1
-                    t = comm.RandomSelection(SelID, True)
+                    t = SelID.RandomSelection()
                     raceLocs(n).pos = New Point(prepResult.possiblePoints(t).X, prepResult.possiblePoints(t).Y)
 
                     If n < settMap.nRaces - 1 Then
@@ -1705,7 +1709,6 @@ clearandexit:
         Dim y1 As Integer = CInt(0.5 * settMap.ySize - dY)
         Dim y2 As Integer = CInt(0.5 * settMap.ySize + dY)
 
-        result.ppIDs = New List(Of Integer)
         ReDim result.possiblePoints((settMap.xSize + 1) * (settMap.ySize + 1) - 1)
         n = -1
         For x As Integer = 0 To settMap.xSize Step 1
@@ -1715,13 +1718,16 @@ clearandexit:
                         If Not (x > x1 And x < x2 And y > y1 And y < y2) Then
                             n += 1
                             result.possiblePoints(n) = New Point(x, y)
-                            result.ppIDs.Add(n)
                         End If
                     End If
                 Next y
             End If
         Next x
         ReDim Preserve result.possiblePoints(n)
+        result.ppIDs = New RandomSelection(result.possiblePoints.Length, rndgen)
+        For i As Integer = 0 To result.ppIDs.upperBound Step 1
+            result.ppIDs.Add(i)
+        Next i
 
         Dim borderPoints(2 * (settMap.xSize + settMap.ySize) - 1) As Point
         n = -1
@@ -1800,7 +1806,7 @@ clearandexit:
         Dim dynAverageRadius As Double = settCommLoc.AverageRadius
         Dim dynBaseRadius As Double = settCommLoc.AverageRadius
         Dim possiblePoints((m.xSize + 1) * (m.ySize + 1) - 1) As Point
-        Dim IDs As New List(Of Integer)
+        Dim IDs As New RandomSelection(possiblePoints.Length, rndgen)
         Dim nextloop As Boolean = True
 
         Dim sLocs() As Location
@@ -1842,7 +1848,7 @@ clearandexit:
             '#################
 
             If IDs.Count > 0 Then
-                Dim pid As Integer = comm.RandomSelection(IDs, True)
+                Dim pid As Integer = IDs.RandomSelection()
                 loc.pos = New Point(possiblePoints(pid).X, possiblePoints(pid).Y)
                 If m.symmID > -1 Then
                     Dim minR As Integer = MinimalSqDistanceForLocationsObtainedBySymmetry(loc)
@@ -1898,7 +1904,7 @@ clearandexit:
         Dim selectedIDs() As Integer = Nothing
         Dim weight(UBound(allPoints))() As Double
         Dim weightSum(UBound(allPoints)) As Double
-        Dim idlist As List(Of Integer) = New List(Of Integer)
+        Dim idlist As New RandomSelection(allPoints.Length, rndgen)
         Dim pointID(m.xSize, m.ySize) As Integer
 
         Dim n As Integer = -1
@@ -1947,8 +1953,7 @@ clearandexit:
                                 m.board(pp(i).X, pp(i).Y).AddToLocIDArray(selLocID)
                             Next i
                         Else
-                            Dim possibleLocs As New List(Of Integer)
-                            Dim usedLocs As New List(Of Integer)
+                            Dim possibleLocs, usedLocs As New RandomSelection(m.Loc.Length, rndgen)
                             For Each p As Point In pp
                                 possibleLocs.Clear()
                                 Dim t As Integer = 1
@@ -1980,7 +1985,7 @@ clearandexit:
                                     End If
                                 Loop
                                 If possibleLocs.Count = 0 Then Throw New Exception("Не могу найти подходящую локацию")
-                                Dim sel As Integer = comm.RandomSelection(possibleLocs, True)
+                                Dim sel As Integer = possibleLocs.RandomSelection()
                                 m.board(p.X, p.Y).AddToLocIDArray(m.Loc(sel).ID)
                                 usedLocs.Add(sel)
                             Next p
@@ -2004,7 +2009,7 @@ clearandexit:
             Loop
         End If
     End Sub
-    Private Sub makePointsList(ByRef m As Map, ByRef idlist As List(Of Integer), _
+    Private Sub makePointsList(ByRef m As Map, ByRef idlist As RandomSelection, _
                                ByRef allPoints() As Point, _
                                ByRef pointID(,) As Integer, _
                                ByRef weight()() As Double, ByRef weightSum() As Double, _
@@ -2031,7 +2036,7 @@ clearandexit:
             Next y
         End If
     End Sub
-    Private Sub makePointsList_handlePoint(ByRef m As Map, ByRef idlist As List(Of Integer), _
+    Private Sub makePointsList_handlePoint(ByRef m As Map, ByRef idlist As RandomSelection, _
                                            ByRef x As Integer, ByRef y As Integer, _
                                            ByRef allPoints() As Point, _
                                            ByRef pointID(,) As Integer, _
@@ -2054,15 +2059,15 @@ clearandexit:
             If Not idlist.Contains(pID) Then idlist.Add(pID)
         End If
     End Sub
-    Private Function selectPoint(ByRef idlist As List(Of Integer), _
+    Private Function selectPoint(ByRef idlist As RandomSelection, _
                                  ByRef weight()() As Double, ByRef weightSum() As Double) As Integer()
-        Dim selectedPointID As Integer = comm.RandomSelection(idlist, weightSum, True)
+        Dim selectedPointID As Integer = idlist.RandomSelection(weightSum)
 
-        Dim locs As New List(Of Integer)
+        Dim locs As New RandomSelection(weight.Length, rndgen)
         For i As Integer = 0 To UBound(weight(selectedPointID)) Step 1
             If weight(selectedPointID)(i) > 0 Then locs.Add(i)
         Next i
-        Dim selectedLoc As Integer = comm.RandomSelection(locs, weight(selectedPointID), True)
+        Dim selectedLoc As Integer = locs.RandomSelection(weight(selectedPointID))
         Return New Integer() {selectedPointID, selectedLoc}
     End Function
 #End Region
@@ -2108,7 +2113,7 @@ clearandexit:
                         Next j
                     Next i
                     If isBorder Then
-                        borderRadius(x, y) = rndgen.RndPos(2, True) - 1
+                        borderRadius(x, y) = rndgen.RndInt(0, 1)
                         If tmpm.symmID > -1 Then
                             Dim p() As Point = symm.ApplySymm(New Point(x, y), settMap.nRaces, tmpm, 1)
                             For i As Integer = 0 To UBound(p) Step 1
@@ -2167,7 +2172,7 @@ clearandexit:
                                                   + tmpm.Loc(tmpm.board(x, y).locID(0) - 1).gBSize)
                     If repeatloop <= nRepeatLoop Or averageR <= comm.defValues.smallLocationRadius Then
                         If nNeighbours(x, y) > 1 Then
-                            Dim r As Integer = rndgen.RndPos(5, False)
+                            Dim r As Integer = rndgen.RndInt(1, 5)
                             If Math.Abs(nNeighbours(x, y) - 5) > r Then del(x, y) = True
                             nNeighbours(x, y) = 0
                             If tmpm.symmID > -1 Then
@@ -2290,7 +2295,7 @@ clearandexit:
                         ysum = CInt(ysum / LocBorders(i, j).Count)
                         For Each p As Point In LocBorders(i, j).Values
                             D = p.SqDist(xsum, ysum)
-                            If D < minD Or (D = minD AndAlso rndgen.PRand(0, 1) > 0.5) Then
+                            If D < minD Or (D = minD AndAlso rndgen.RndDbl(0, 1) > 0.5) Then
                                 minD = D
                                 k = p.X & "_" & p.Y
                             End If
@@ -2341,9 +2346,23 @@ clearandexit:
 
         Parallel.For(0, UBound(tmpm.Loc), _
          Sub(i As Integer)
-             Dim ids As New List(Of Integer)
-             Dim selected, delete As New List(Of Integer)
              Dim startI As Integer = i + 1
+             Dim maxPointslistLen As Integer = -1
+             For j As Integer = startI To UBound(tmpm.Loc) Step 1
+                 If LocBorders(i, j).Count > 0 AndAlso Not equalLocPairsList.Contains(i & "_" & j) Then
+                     maxPointslistLen = Math.Max(maxPointslistLen, LocBorders(i, j).Count())
+                 End If
+             Next j
+             Dim ids, selected, delete As RandomSelection
+             If maxPointslistLen > -1 Then
+                 ids = New RandomSelection(maxPointslistLen, rndgen)
+                 selected = New RandomSelection(maxPointslistLen, rndgen)
+                 delete = New RandomSelection(maxPointslistLen, rndgen)
+             Else
+                 ids = Nothing
+                 selected = Nothing
+                 delete = Nothing
+             End If
              If i < settMap.nRaces Then
                  For j As Integer = settMap.nRaces To UBound(tmpm.Loc) Step 1
                      If LocBorders(i, j).Count > 0 Then
@@ -2372,7 +2391,7 @@ clearandexit:
                      ids.Add(UBound(pointsslist))
                      Dim maxPaths As Integer = CInt(Math.Max(Math.Sqrt(maxD) / settMap.minPassDist, 1))
                      For k As Integer = 1 To maxPaths Step 1
-                         Dim s As Integer = comm.RandomSelection(ids, False)
+                         Dim s As Integer = ids.RandomSelection()
                          selected.Add(s)
                          ids.Remove(s)
                          For Each p As Integer In ids
@@ -2382,6 +2401,7 @@ clearandexit:
                          For Each p As Integer In delete
                              ids.Remove(p)
                          Next p
+                         delete.Clear()
                          If ids.Count = 0 Then Exit For
                      Next k
                      ' } закончили выбор точек
@@ -2515,8 +2535,8 @@ clearandexit:
             Dim newX As Integer = -1
             Dim newY As Integer = -1
             Do While newX < 0 Or newY < 0 Or newX > m.xSize Or newY > m.ySize OrElse Not m.board(newX, newY).locID(0) = m.board(dest.X, dest.Y).locID(0)
-                newX = rndgen.RndInt(p.X - 1, p.X + 1, serial)
-                newY = rndgen.RndInt(p.Y - 1, p.Y + 1, serial)
+                newX = rndgen.RndInt(p.X - 1, p.X + 1)
+                newY = rndgen.RndInt(p.Y - 1, p.Y + 1)
             Loop
             intermediate = New Point(newX, newY)
             Call MakePass(m, init, intermediate, settMap, False, serial)
@@ -2541,7 +2561,7 @@ clearandexit:
                 For x As Integer = b.minX To b.maxX Step 1
                     If m.board(x, y).passability.isBorder Then
                         Dim dist As Double = Math.Sqrt(CDbl(x - tx) ^ 2 + CDbl(y - ty) ^ 2)
-                        If dist < 0.5 * settMap.minPassWidth OrElse (dist <= settMap.minPassWidth AndAlso rndgen.Rand(0, 1, serial) > 0.5) Then
+                        If dist < 0.5 * settMap.minPassWidth OrElse (dist <= settMap.minPassWidth AndAlso rndgen.RndDbl(0, 1) > 0.5) Then
                             Dim c1 As Integer = Math.Max(Math.Min(x, m.xSize - 1), 1)
                             Dim c2 As Integer = Math.Max(Math.Min(y, m.ySize - 1), 1)
                             setAsPath = False
@@ -2723,7 +2743,7 @@ clearandexit:
         Next x
 
         Dim nonEmpty(borders.Length - 1)() As Integer
-        Dim IDs As New List(Of Integer)
+        Dim IDs As New RandomSelection(m.Loc.Length * m.Loc.Length, rndgen)
         Dim n As Integer = -1
         For j As Integer = 0 To UBound(m.Loc) Step 1
             For i As Integer = 0 To UBound(m.Loc) Step 1
@@ -2738,7 +2758,7 @@ clearandexit:
         Dim tmpM As New Map(m.xSize, m.ySize, m.symmID)
         Dim s() As Point
         For i As Integer = 0 To n Step 1
-            Dim selected As Integer = comm.RandomSelection(IDs, True)
+            Dim selected As Integer = IDs.RandomSelection()
             IDs.Remove(selected)
             If Not TestChance(settMap.PassageCreationChance) Then
                 For x As Integer = 0 To m.xSize Step 1
@@ -2945,7 +2965,7 @@ clearandexit:
                     prefferedDistance = 2
                     sigma = 2
                 Else
-                    prefferedDistance = 0.5 * rndgen.Rand(1.05, Math.Sqrt(2.1), True) * (ActiveObjects(objectType).Size + ActiveObjects(nearObjectType).Size) + rndgen.Rand(0, 3, True)
+                    prefferedDistance = 0.5 * rndgen.RndDbl(1.05, Math.Sqrt(2.1)) * (ActiveObjects(objectType).Size + ActiveObjects(nearObjectType).Size) + rndgen.RndDbl(0, 3)
                     sigma = 0.2
                 End If
             End Sub
@@ -2979,7 +2999,7 @@ clearandexit:
             'считаем weightlayer(n)
             Call CalcLayerWeight(n - 1)
 
-            Dim pID As List(Of Integer) = Nothing
+            Dim pID As RandomSelection = Nothing
 
             Call CalcWeight(freeCells, n, currentWeight(n), pID)
 
@@ -2991,7 +3011,7 @@ clearandexit:
             Dim checkN As Integer = Math.Min(10, pID.Count)
             If n < UBound(placingObjects) Then
                 Do While pID.Count > 0
-                    selected = rndgen.RandomSelection(pID, currentWeight(n), False, True)
+                    selected = pID.RandomSelection(currentWeight(n))
                     pID.Remove(selected)
                     output(n) = CShort(selected)
                     Call ChangeObjectState(freeCells, placingObjects(n).objectType, _
@@ -3015,7 +3035,7 @@ clearandexit:
                 Loop
                 If output(n + 1) = -1 Then output(n) = -1
             Else
-                selected = rndgen.RandomSelection(pID, currentWeight(n), False, True)
+                selected = pID.RandomSelection(currentWeight(n))
                 pID.Clear()
                 output(n) = CShort(selected)
             End If
@@ -3057,8 +3077,8 @@ clearandexit:
         End Sub
         Private Sub CalcWeight(ByRef fc_bak(,) As Boolean, ByRef n As Integer, _
                                ByRef Weight() As Double, _
-                               ByRef pID As List(Of Integer))
-            pID = New List(Of Integer)
+                               ByRef pID As RandomSelection)
+            pID = New RandomSelection(free_initial_points.Length, rndgen)
 
             Dim R As Double
             If placingObjects(n).placeNearWith > -1 Or placingObjects(n).objectType = DefMapObjects.Types.Capital Then
@@ -3331,7 +3351,7 @@ clearandexit:
             Dim distSum, maxSum As Double
             For p As Integer = 0 To attempts Step 1
                 For i As Integer = 0 To settMap.nRaces - 1 Step 1
-                    Dim n As Integer = rndgen.RndIntFast(0, possiblePoints(i).Count - 1)
+                    Dim n As Integer = rndgen.RndItemIndex(possiblePoints(i))
                     t(i) = possiblePoints(i).Item(n)
                 Next i
                 distSum = 0
@@ -3340,7 +3360,7 @@ clearandexit:
                         distSum += t(i1).SqDist(t(i2))
                     Next i1
                 Next i2
-                If maxSum < distSum OrElse (maxSum = distSum AndAlso rndgen.RndIntFast(0, 1) = 1) Then
+                If maxSum < distSum OrElse (maxSum = distSum AndAlso rndgen.RndInt(0, 1) = 1) Then
                     maxSum = distSum
                     For i As Integer = 0 To settMap.nRaces - 1 Step 1
                         result(i) = t(i)
@@ -3480,8 +3500,8 @@ clearandexit:
                  Next x
              Next y
              If LocArea(id - 1)(0) > 0 And LocArea(id - 1)(1) = 0 Then
-                 Dim ids As New List(Of Integer)
                  Dim p(freeCells.Length - 1) As Point
+                 Dim ids As New RandomSelection(p.Length, rndgen)
                  Dim n As Integer = -1
                  For y As Integer = 1 To UBound(freeCells, 2) - 1 Step 1
                      For x As Integer = 1 To UBound(freeCells, 1) - 1 Step 1
@@ -3493,7 +3513,7 @@ clearandexit:
                      Next x
                  Next y
                  If ids.Count > 0 Then
-                     Dim s As Integer = comm.RandomSelection(ids, True)
+                     Dim s As Integer = ids.RandomSelection()
                      Dim x As Integer = p(s).X
                      Dim y As Integer = p(s).Y
                      For qq As Integer = y - 1 To y + 1 Step 1
@@ -3675,7 +3695,7 @@ clearandexit:
             Dim rObjCount As Double = sett.randomAttendedObject
             Dim i As Integer
             Do While rObjCount > 0
-                i = dest(rndgen.RndInt(0, UBound(dest), False))
+                i = dest(rndgen.RndItemIndex(dest))
                 If rObjCount >= 1 Then
                     DblnObj(i) += 1
                     rObjCount -= 1
@@ -3704,7 +3724,7 @@ clearandexit:
                 r = n1
             Else
                 Dim d As Double = m - CDbl(n1)
-                If rndgen.PRand(0, 1) > d Then
+                If rndgen.RndDbl(0, 1) > d Then
                     r = n1
                     If Not i = goldMineTypeID And Not i = manaMineTypeID Then
                         additionalGoldMines += d * sett.nonMineObjectValueGold
@@ -3791,8 +3811,8 @@ clearandexit:
             End If
         Next i
         Dim AllObjList(sum - p), s As Integer
-        Dim Weight(sum - p) As Double
-        Dim ids As New List(Of Integer)
+        Dim Weight(UBound(AllObjList)) As Double
+        Dim ids As New RandomSelection(AllObjList.Length, rndgen)
         Dim t As Integer = 0
         For i As Integer = 0 To UBound(nObj) Step 1
             For j As Integer = 1 To nObj(i) Step 1
@@ -3803,7 +3823,7 @@ clearandexit:
             Next j
         Next i
         Do While ids.Count > 0
-            s = comm.RandomSelection(ids, Weight, True)
+            s = ids.RandomSelection(Weight)
             ids.Remove(s)
             Call AddObjId(places, nObj, AllObjList(s), p, areaUsed)
             If areaUsed >= LocArea(1) Then
@@ -3936,7 +3956,7 @@ clearandexit:
         End If
     End Sub
     Private Function DesiredDist(ByRef objType1 As Integer, ByRef objType2 As Integer) As Double
-        Return 0.5 * rndgen.Rand(1.05, Math.Sqrt(2.1), True) * (ActiveObjects(objType1).Size + ActiveObjects(objType2).Size) + rndgen.Rand(0, 3, True)
+        Return 0.5 * rndgen.RndDbl(1.05, Math.Sqrt(2.1)) * (ActiveObjects(objType1).Size + ActiveObjects(objType2).Size) + rndgen.RndDbl(0, 3)
     End Function
 
     Private Sub AddObjId(ByRef places() As ActiveObjectsPlacer.ObjectPlacingSettings, _
@@ -4261,7 +4281,7 @@ exitfunction:
                                 End If
                             Next i
                         Next j
-                        If makeBorder Then If rndgen.Rand(0, 1) > 0.65 Then setAsBorder(x - b.minX, y - b.minY) = True
+                        If makeBorder Then If rndgen.RndDbl(0, 1) > 0.65 Then setAsBorder(x - b.minX, y - b.minY) = True
                     End If
                 Next x
             Next y
@@ -4325,7 +4345,7 @@ exitfunction:
         Dim birth As Integer = 2
         For y As Integer = 0 To ySize Step 1
             For x As Integer = 0 To xSize Step 1
-                If isLifeField(x, y) AndAlso rndgen.Rand(0, 1) < initChance Then free(x, y) = False
+                If isLifeField(x, y) AndAlso rndgen.RndDbl(0, 1) < initChance Then free(x, y) = False
             Next x
         Next y
 
@@ -4363,7 +4383,7 @@ exitfunction:
             Next y
             For y As Integer = 0 To ySize Step 1
                 For x As Integer = 0 To xSize Step 1
-                    If isLifeField(x, y) AndAlso W(x, y) > rndgen.Rand(0, maxW) Then
+                    If isLifeField(x, y) AndAlso W(x, y) > rndgen.RndDbl(0, maxW) Then
                         free(x, y) = Not free(x, y)
                     End If
                 Next x
@@ -4408,7 +4428,7 @@ exitfunction:
         Next y
         For y As Integer = 1 To ySize - 1 Step 1
             For x As Integer = 1 To xSize - 1 Step 1
-                If W(x, y) > 0 AndAlso W(x, y) > rndgen.Rand(0, maxW) Then
+                If W(x, y) > 0 AndAlso W(x, y) > rndgen.RndDbl(0, maxW) Then
                     free(x, y) = Not free(x, y)
                     Dim tconn(,) As Boolean = FindConnected(free, init)
                     If Not CompareConnection(free, connected, tconn) Then free(x, y) = Not free(x, y)
@@ -4423,7 +4443,7 @@ exitfunction:
                     Dim decAmount As Double = settLoc(m.board(x + LPos.X, y + LPos.Y).locID(0) - 1).DecorationsAmount
                     If decAmount < 1 Then
                         If decAmount > 0 Then
-                            If decAmount < rndgen.Rand(0, 1) Then free(x, y) = True
+                            If decAmount < rndgen.RndDbl(0, 1) Then free(x, y) = True
                         Else
                             free(x, y) = True
                         End If
@@ -4448,9 +4468,9 @@ exitfunction:
         Dim excludeR2 As Double = (1.5 * MaxR) ^ 2
         Dim moveChance As Double = 0.2
         Do While lifeAlgoPoints.Count > 0
-            Dim pstr() As String = lifeAlgoPoints.Item(rndgen.RndIntFast(0, lifeAlgoPoints.Count - 1)).Split(CChar("_"))
+            Dim pstr() As String = lifeAlgoPoints.Item(rndgen.RndItemIndex(lifeAlgoPoints)).Split(CChar("_"))
             Dim p As Point = New Point(CInt(pstr(0)), CInt(pstr(1)))
-            Dim R2 As Double = rndgen.Rand(MinR, MaxR) ^ 2
+            Dim R2 As Double = rndgen.RndDbl(MinR, MaxR) ^ 2
             Dim nTries As Integer = CInt(1.5 * Math.Sqrt(R2) / Math.Min(moveChance, 1))
             Dim movingPoints((xSize + 1) * (ySize + 1) - 1) As Point
             Dim nMovingP As Integer = -1
@@ -4473,7 +4493,7 @@ exitfunction:
                 ReDim Preserve movingPoints(nMovingP)
                 For t As Integer = 0 To nTries Step 1
                     For n As Integer = 0 To nMovingP Step 1
-                        If rndgen.Rand(0, 1) < moveChance Then
+                        If rndgen.RndDbl(0, 1) < moveChance Then
                             nearestList.Clear()
                             Dim d As Double = p.SqDist(movingPoints(n))
                             Dim b As Location.Borders = NearestXY(movingPoints(n).X, movingPoints(n).Y, xSize, ySize, 1)
@@ -4485,7 +4505,7 @@ exitfunction:
                                 Next i
                             Next j
                             If nearestList.Count > 0 Then
-                                Dim selected() As String = nearestList.Item(rndgen.RndIntFast(0, nearestList.Count - 1)).Split(CChar("_"))
+                                Dim selected() As String = nearestList.Item(rndgen.RndItemIndex(nearestList)).Split(CChar("_"))
                                 Dim xs As Integer = CInt(selected(0))
                                 Dim ys As Integer = CInt(selected(1))
                                 free(movingPoints(n).X, movingPoints(n).Y) = True
@@ -4512,7 +4532,7 @@ exitfunction:
                             If isLifeField(x, y) And d < R Then
                                 Dim delChance As Double = settLoc(m.board(x + LPos.X, y + LPos.Y).locID(0) - 1).DecorationsAmount
                                 delChance *= 0.75 * (R - d) / R
-                                If delChance = 1 OrElse delChance > rndgen.Rand(0, 1) Then free(x, y) = True
+                                If delChance = 1 OrElse delChance > rndgen.RndDbl(0, 1) Then free(x, y) = True
                             End If
                         Next x
                     Next y
@@ -5079,9 +5099,9 @@ Public Class Location
         If sett.maxRadiusDispersion >= 1 Or sett.maxRadiusDispersion < 0 Then Throw New Exception("Invalid radius dispersion: " & sett.maxRadiusDispersion & "(>=1 or <0)")
         If sett.maxEccentricityDispersion >= 1 Or sett.maxEccentricityDispersion < 0 Then Throw New Exception("Invalid eccentricity dispersion: " & sett.maxEccentricityDispersion & "(>=1 or <0)")
 
-        r = rndgen.PRand(1 - sett.maxRadiusDispersion, 1 + sett.maxRadiusDispersion) * sett.AverageRadius
-        e = rndgen.PRand(1 - sett.maxEccentricityDispersion, 1 + sett.maxEccentricityDispersion)
-        a = rndgen.PRand(0, Math.PI)
+        r = rndgen.RndDbl(1 - sett.maxRadiusDispersion, 1 + sett.maxRadiusDispersion) * sett.AverageRadius
+        e = rndgen.RndDbl(1 - sett.maxEccentricityDispersion, 1 + sett.maxEccentricityDispersion)
+        a = rndgen.RndDbl(0, Math.PI)
         r = Math.Max(r, minLocationRadiusAtAll)
         Return New Location(New Point(0, 0), r * e, r / e, a, id)
     End Function
@@ -5635,7 +5655,7 @@ Public Class shortMapFormat
 
         ReDim objContent.randStack.mapData.capitalPos(-1)
         Dim tiles(m.board.Length - 1) As Point
-        Dim tilesList As New List(Of Integer)
+        Dim tilesList As New RandomSelection(tiles.Length, objContent.randStack.rndgen)
         Dim n As Integer = -1
         For y As Integer = 0 To UBound(m.board, 2) Step 1
             For x As Integer = 0 To UBound(m.board, 1) Step 1
@@ -5650,7 +5670,7 @@ Public Class shortMapFormat
             Next x
         Next y
         For i As Integer = 0 To n Step 1
-            Dim pID As Integer = objContent.randStack.comm.RandomSelection(tilesList, True)
+            Dim pID As Integer = tilesList.RandomSelection()
             tilesList.Remove(pID)
             Dim x As Integer = tiles(pID).X
             Dim y As Integer = tiles(pID).Y
@@ -5747,7 +5767,7 @@ Public Class shortMapFormat
                            .noLeader = True, _
                            .pos = pos}
                     Dim stack As AllDataStructues.Stack = objContent.randStack.Gen(gs)
-                    Dim itemCost As Integer = objContent.randStack.rndgen.RndInt(CInt(0.25 * desiredStats.LootCost), desiredStats.LootCost, True)
+                    Dim itemCost As Integer = objContent.randStack.rndgen.RndInt(CInt(0.25 * desiredStats.LootCost), desiredStats.LootCost)
 
                     Dim gi As New AllDataStructues.CommonLootCreationSettings _
                         With {.GoldCost = itemCost, _
@@ -6012,7 +6032,7 @@ Public Class shortMapFormat
                 AndAlso s > 0 Then
                     If s < maxCost OrElse minCost = maxCost Then
                         forceExit = False
-                        If objContent.randStack.rndgen.Rand(0, 1, True) < 0.1 * Math.Min(1, healPotCost / s) Then
+                        If objContent.randStack.rndgen.RndDbl(0, 1) < 0.1 * Math.Min(1, healPotCost / s) Then
                             ReDim Preserve startItems(startItems.Length)
                             startItems(UBound(startItems)) = AllDataStructues.Item.Copy(item)
                             healPotCost -= s
@@ -7447,7 +7467,7 @@ Public Class StackLocationsGen
         Dim ySize As Integer = UBound(isPossiblePoint, 2)
         Dim PossiblePoints(isPossiblePoint.Length - 1) As Point
         Dim PosPID(xSize, ySize) As Integer
-        Dim IDs As New List(Of Integer)
+        Dim IDs As New RandomSelection(isPossiblePoint.Length, comm.rndgen)
         Dim n As Integer = -1
         For y As Integer = 0 To ySize Step 1
             For x As Integer = 0 To xSize Step 1
@@ -7464,7 +7484,7 @@ Public Class StackLocationsGen
         ReDim Preserve PossiblePoints(n)
         Dim output As New List(Of Point)
         Do While IDs.Count > 0
-            Dim r As Integer = comm.RandomSelection(IDs, False)
+            Dim r As Integer = IDs.RandomSelection()
             output.Add(PossiblePoints(r))
             IDs.Remove(r)
             PosPID(PossiblePoints(r).X, PossiblePoints(r).Y) = -1
@@ -8496,13 +8516,14 @@ Public Class WaterGen
         ''' </summary>
         Public isFree(,) As Boolean
         Public points() As Point
-        Public IDs As List(Of Integer)
+        Public IDs As RandomSelection
         Public xMax, yMax As Integer
 
-        Public Sub New(ByRef freeCell(,) As Boolean)
+        Public Sub New(ByRef freeCell(,) As Boolean, ByRef rndgen As RndValueGen)
             isFree = freeCell
             points = MakeFreePointsArray()
-            IDs = MakeIDsList(0, UBound(points))
+            IDs = New RandomSelection(points.Length, rndgen)
+            IDs.AddRange(0, IDs.upperBound)
         End Sub
 
         Private Function MakeFreePointsArray() As Point()
@@ -8526,14 +8547,7 @@ Public Class WaterGen
             Next i
             Return points
         End Function
-        Friend Shared Function MakeIDsList(ByVal minID As Integer, ByVal maxID As Integer) As List(Of Integer)
-            Dim r As New List(Of Integer)
-            For i As Integer = minID To maxID Step 1
-                r.Add(i)
-            Next i
-            Return r
-        End Function
-    End Class
+     End Class
     Public Class WaterPlacer_Common
         Public owner As WaterGen
         Public m As Map
@@ -8713,7 +8727,7 @@ Public Class WaterGen
             For i As Integer = 0 To m.xSize Step 1
                 For j As Integer = 0 To m.ySize Step 1
                     If m.board(i, j).locID(0) = loc.ID And m.board(i, j).mapObject.objectID = DefMapObjects.Types.Ruins Then
-                        makeWatered = (owner.rndgen.PRand(0, 1) < chance)
+                        makeWatered = (owner.rndgen.RndDbl(0, 1) < chance)
 
                         Dim d As Integer = 1
                         Dim x1 As Integer = Math.Max(i - d, 0)
@@ -8737,7 +8751,7 @@ Public Class WaterGen
                         For x As Integer = x1 To x2 Step 1
                             For y As Integer = y1 To y2 Step 1
                                 If (x = x1 Or x = x2 Or y = y1 Or y = y2) And Not ((x = x1 Or x = x2) And (y = y1 Or y = y2)) And Not m.board(x, y).passability.isAttended Then
-                                    If owner.rndgen.PRand(0, 1) < 0.45 Then
+                                    If owner.rndgen.RndDbl(0, 1) < 0.45 Then
                                         If makeWatered Then
                                             Call SetWaterCellSymm(x, y, Nothing, WaterAmount)
                                         Else
@@ -8772,7 +8786,7 @@ Public Class WaterGen
                                                               .maxEccentricityDispersion = 0.35}
             Dim freeCell(,) As Boolean = Nothing
             Dim WaterAmount As Integer = owner.wpCommon.WaterAmountCalc(loc, freeCell)
-            Dim fpInfo As New FreePointsInfo(freeCell)
+            Dim fpInfo As New FreePointsInfo(freeCell, owner.rndgen)
 
             Do While WaterAmount > owner.minLocationRadiusAtAll * owner.minLocationRadiusAtAll
                 lake = Location.GenLocSize(WaterLocSettings, 0, owner.rndgen, owner.minLocationRadiusAtAll)
@@ -8785,7 +8799,7 @@ Public Class WaterGen
             WaterAmountSum += WaterAmount
         End Sub
         Private Function SelectLakePlace(ByRef fpInfo As FreePointsInfo, ByRef lakeDist As Double) As Integer
-            Dim IDs As New List(Of Integer)
+            Dim IDs As New RandomSelection(fpInfo.IDs.upperBound + 1, fpInfo.IDs.rndgen)
             Dim add As Boolean
             Dim b As Location.Borders
             For p As Integer = 0 To 1 Step 1
@@ -8806,7 +8820,7 @@ Public Class WaterGen
                 If IDs.Count > 0 Then Exit For
             Next p
             If IDs.Count = 0 Then Return -1
-            Return owner.comm.RandomSelection(IDs, True)
+            Return IDs.RandomSelection()
         End Function
         Private Sub PlaceLake(ByRef fpInfo As FreePointsInfo, ByRef selected As Integer, ByRef lake As Location, ByRef WaterAmount As Integer)
             'размещаем эллиптическое озеро
@@ -8839,7 +8853,7 @@ Public Class WaterGen
                     End If
                 Next p
                 For Each p As Point In coastalTile
-                    If owner.rndgen.PRand(0, 1) < 0.25 - 0.1 * CDbl(L) Then
+                    If owner.rndgen.RndDbl(0, 1) < 0.25 - 0.1 * CDbl(L) Then
                         Call owner.wpCommon.SetGroundCellSymm(p.X, p.Y, WaterAmount)
                     End If
                 Next p
@@ -8864,13 +8878,13 @@ Public Class WaterGen
                             End If
                         Next y
                     Next x
-                    If maybe AndAlso owner.rndgen.PRand(0, 1) > threshold Then
-                        Dim R As Double = owner.rndgen.PRand(CDbl(minIslandR), CDbl(maxIslandR))
+                    If maybe AndAlso owner.rndgen.RndDbl(0, 1) > threshold Then
+                        Dim R As Double = owner.rndgen.RndDbl(CDbl(minIslandR), CDbl(maxIslandR))
                         For x As Integer = b.minX To b.maxX Step 1
                             For y As Integer = b.minY To b.maxY Step 1
                                 Dim d As Double = p.Dist(x, y)
                                 If m.board(x, y).surface.isWater AndAlso d < R Then
-                                    If owner.rndgen.PRand(0, R + 2 * dD) > d + dD Then
+                                    If owner.rndgen.RndDbl(0, R + 2 * dD) > d + dD Then
                                         Call owner.wpCommon.SetGroundCellSymm(x, y, WaterAmount)
                                     End If
                                 End If
@@ -8903,7 +8917,7 @@ Public Class WaterGen
                             Next y
                         Next x
                         If n < 2 And var.Count > 0 Then
-                            n = owner.rndgen.RndPos(var.Count, True) - 1
+                            n = owner.rndgen.RndItemIndex(var)
                             Dim p As Point = var.Item(n)
                             Call owner.wpCommon.SetWaterCellSymm(p.X, p.Y, Nothing, WaterAmountSum)
                         End If
@@ -9136,7 +9150,7 @@ Public Class WaterGen
             'если еще можем разместить воду, то добавляем блоки
             Dim freeCell(,) As Boolean = Nothing
             Dim WaterAmount As Integer = owner.wpCommon.WaterAmountCalc(loc, freeCell, 3)
-            Dim fpInfo As New FreePointsInfo(freeCell)
+            Dim fpInfo As New FreePointsInfo(freeCell, owner.rndgen)
 
             Call AddWaterToAttendedObjects(loc, fpInfo, WaterAmount)
             Call AddWaterCommon(loc, fpInfo, WaterAmount)
@@ -9151,7 +9165,7 @@ Public Class WaterGen
                     AndAlso owner.waterAttendedObj.ContainsKey(m.board(i, j).mapObject.objectID) Then
                         'не проверяем расы, т.к. они определяются где-то после добавления воды
                         'AndAlso ContainsAny(owner.waterAttendedObj.Item(m.board(i, j).mapObject.objectID), m.board(i, j).mapObject.objRace) Then
-                        If owner.rndgen.RndDblFast(0, 1) <= chance Then pList.Add(New Point(i, j))
+                        If owner.rndgen.RndDbl(0, 1) <= chance Then pList.Add(New Point(i, j))
                     End If
                 Next i
             Next j
@@ -9199,9 +9213,10 @@ Public Class WaterGen
                 Next i
                 If possibleWaterPlaces.Count > 0 Then
                     Dim idsArray() As String = possibleWaterPlaces.Keys.ToArray
-                    Dim ids As List(Of Integer) = WaterGen.FreePointsInfo.MakeIDsList(0, UBound(idsArray))
+                    Dim ids As New RandomSelection(idsArray.Length, owner.rndgen)
+                    ids.AddRange(0, ids.upperBound)
                     Dim weight() As Double = MakeWeight(possibleWaterPlaces, idsArray, WaterAmount)
-                    Dim selected As Integer = owner.comm.RandomSelection(ids, weight, True, True)
+                    Dim selected As Integer = ids.RandomSelection(weight)
                     Dim k() As String = idsArray(selected).Split(CChar("_"))
                     Dim key As String = k(0)
                     Dim x As Integer = CInt(k(1))
@@ -9251,9 +9266,10 @@ Public Class WaterGen
                 Next k
                 If possibleWaterPlaces.Count > 0 Then
                     Dim idsArray() As String = possibleWaterPlaces.Keys.ToArray
-                    Dim ids As List(Of Integer) = WaterGen.FreePointsInfo.MakeIDsList(0, UBound(idsArray))
+                    Dim ids As New RandomSelection(idsArray.Length, owner.rndgen)
+                    ids.AddRange(0, ids.upperBound)
                     Dim weight() As Double = MakeWeight(possibleWaterPlaces, idsArray, WaterAmount)
-                    Dim selected As Integer = owner.comm.RandomSelection(ids, weight, True, True)
+                    Dim selected As Integer = ids.RandomSelection(weight)
                     Dim k() As String = idsArray(selected).Split(CChar("_"))
                     Dim key As String = k(0)
                     Dim x As Integer = CInt(k(1))
@@ -9412,6 +9428,7 @@ Public Class ImpenetrableObjects
     Private raceIdToString As New Dictionary(Of Integer, String)
     Private constructorMsg As String = ""
     Private racesSublocations(-1) As Dictionary(Of String, sublocationProperties)
+    Private maxObjectsListLength As Integer = -1
 
     Class sublocationProperties
         Public objectsID() As Integer
@@ -9591,6 +9608,9 @@ Public Class ImpenetrableObjects
                 End If
             End If
         Next k
+        For Each a As MapObject() In objList
+            If Not IsNothing(a) Then maxObjectsListLength = Math.Max(maxObjectsListLength, a.Length)
+        Next a
         mages = objList(0)
         mercenaries = objList(1)
         merchants = objList(2)
@@ -9711,10 +9731,8 @@ Public Class ImpenetrableObjects
     Private Sub SetObjectsTags(ByRef m As Map, ByVal free(,) As Boolean)
         Dim pointID(m.xSize, m.ySize) As Integer
         Dim pointPos(pointID.Length - 1) As Point
-        Dim rndgen As New RndValueGen
         Dim posPool, del As New List(Of Integer)
         Dim n As Integer = -1
-
         For y As Integer = 0 To m.ySize Step 1
             For x As Integer = 0 To m.xSize Step 1
                 n += 1
@@ -9723,8 +9741,6 @@ Public Class ImpenetrableObjects
                 m.board(x, y).mapObject.NewTagsList()
             Next x
         Next y
-    End Sub
-
         For i As Integer = 0 To UBound(m.Loc) Step 1
             posPool.Clear()
             del.Clear()
@@ -9742,8 +9758,8 @@ Public Class ImpenetrableObjects
                 Next x
             Next y
             While posPool.Count > 0
-                Dim selectedPointID As Integer = posPool(rndgen.RndIntFast(0, posPool.Count - 1))
-                Dim selectedTag As String = racesSublocations(locRace).Keys(rndgen.RndIntFast(0, racesSublocations(locRace).Count - 1))
+                Dim selectedPointID As Integer = posPool(comm.rndgen.RndItemIndex(posPool))
+                Dim selectedTag As String = racesSublocations(locRace).Keys(comm.rndgen.RndInt(0, racesSublocations(locRace).Count - 1))
                 Dim r2Set As Double = racesSublocations(locRace).Item(selectedTag).radius ^ 2
                 Dim r2Rem As Double = (racesSublocations(locRace).Item(selectedTag).radius + minSublocationR) ^ 2
                 del.Clear()
@@ -9768,7 +9784,7 @@ Public Class ImpenetrableObjects
             If posPool.Count > 0 Then
                 Do While posPool.Count > 0
                     Dim tags As New List(Of String)
-                    Dim selectedPointID As Integer = posPool(rndgen.RndIntFast(0, posPool.Count - 1))
+                    Dim selectedPointID As Integer = posPool(comm.rndgen.RndItemIndex(posPool))
                     Dim x As Integer = pointPos(selectedPointID).X
                     Dim y As Integer = pointPos(selectedPointID).Y
                     tags.Clear()
@@ -9784,31 +9800,36 @@ Public Class ImpenetrableObjects
                         Next q
                     Next p
                     If tags.Count > 0 Then
-                        Dim t As String = tags(rndgen.RndIntFast(0, tags.Count - 1))
+                        Dim t As String = tags(comm.rndgen.RndItemIndex(tags))
                         m.board(x, y).mapObject.AddTag(t)
                         posPool.Remove(selectedPointID)
                     End If
                 Loop
             End If
         Next i
-        Return IDs
-    End Function
-    Private Function makeIDs(ByRef a() As PlateauObject, ByRef initOnly As Boolean, ByRef noWaterfalls As Boolean) As List(Of Integer)
-        Dim IDs As New List(Of Integer)
-        If Not IsNothing(a) Then
+    End Sub
+
+    Private Sub makeIDs(ByRef dest As RandomSelection, ByRef initOnly As Boolean, ByRef noWaterfalls As Boolean)
+        If Not IsNothing(plateau) Then
+            If IsNothing(dest) Then
+                dest = New RandomSelection(plateau.Length, comm.rndgen)
+            Else
+                dest.Clear()
+            End If
             If initOnly Then
-                For i As Integer = 0 To UBound(a) Step 1
-                    If a(i).connectors.Length = 1 Then IDs.Add(i)
+                For i As Integer = 0 To UBound(plateau) Step 1
+                    If plateau(i).connectors.Length = 1 Then dest.Add(i)
                 Next i
             Else
-                For i As Integer = 0 To UBound(a) Step 1
-                    If (noWaterfalls And Not a(i).isWaterfall) Or Not noWaterfalls Then IDs.Add(i)
+                For i As Integer = 0 To UBound(plateau) Step 1
+                    If (noWaterfalls And Not plateau(i).isWaterfall) Or Not noWaterfalls Then dest.Add(i)
                 Next i
             End If
+        Else
+            If IsNothing(dest) Then
+                dest = New RandomSelection(0, comm.rndgen)
+            End If
         End If
-        Return IDs
-    End Function
-
     End Sub
 
 #Region "MayPlace"
@@ -9975,7 +9996,7 @@ Public Class ImpenetrableObjects
 
     Private Sub PlaceAttendedObjects(ByRef m As Map)
         Dim objList() As MapObject
-        Dim IDs As New List(Of Integer)
+        Dim IDs As New RandomSelection(maxObjectsListLength, comm.rndgen)
         Dim id As Integer
         For y As Integer = 0 To m.ySize Step 1
             For x As Integer = 0 To m.xSize Step 1
@@ -10004,7 +10025,7 @@ Public Class ImpenetrableObjects
                         End If
                     Next i
                     If IDs.Count > 0 Then
-                        id = comm.RandomSelection(IDs, True)
+                        id = IDs.RandomSelection()
                     Else
                         Throw New Exception("Нет ни одного подходящего объекта для objectID=" & m.board(x, y).mapObject.objectID & " (см. DefMapObjects.Types)")
                         id = -1
@@ -10035,7 +10056,7 @@ Public Class ImpenetrableObjects
                     If m.board(L.Item(0).X, L.Item(0).Y).locID(0) <= settMap.nRaces Then
                         level = 1
                     Else
-                        Dim r As Double = comm.rndgen.PRand(0, 1)
+                        Dim r As Double = comm.rndgen.RndDbl(0, 1)
                         If r > 0.3 Then
                             level = 1
                         ElseIf r > 0.1 Then
@@ -10125,7 +10146,7 @@ Public Class ImpenetrableObjects
         'установить для шахт конкретный вид ресурсов
         Dim raceMana As Dictionary(Of Integer, AllDataStructues.Cost()) = RacesManaUsing(comm, raceSpells)
         Dim raceManaTier As Dictionary(Of Integer, String()) = ManaTier(raceMana)
-        Dim IDs As New List(Of Integer)
+        Dim IDs As New RandomSelection(AllDataStructues.Cost.ToArray(New AllDataStructues.Cost).Length, comm.rndgen)
         For y As Integer = 0 To m.ySize Step 1
             For x As Integer = 0 To m.xSize Step 1
                 If Not mineType(x, y) = "" Then
@@ -10169,10 +10190,11 @@ Public Class ImpenetrableObjects
                         weights = New Double() {1}
                     End If
                     IDs.Clear()
+                    If IDs.upperBound < UBound(types) Then MsgBox("Напиши Сёмге, чтобы поправил херню, которую он написал в ImpenetrableObjects.PlaceMines")
                     For i As Integer = 0 To UBound(types) Step 1
                         IDs.Add(i)
                     Next i
-                    Dim r As Integer = comm.RandomSelection(IDs, weights, True)
+                    Dim r As Integer = IDs.RandomSelection(weights)
                     m.board(x, y).mapObject.objectName = types(r)
                 End If
             Next x
@@ -10255,7 +10277,7 @@ Public Class ImpenetrableObjects
             Dim r1 As Double = goldLimit / (manaLimit + 0.001)
             Dim r2 As Double = settLoc.maxGoldMines / (settLoc.maxManaSources + 0.001)
             If goldLimit > 0 And manaLimit > 0 And goldLimit + manaLimit < 1 Then
-                Dim R As Double = comm.rndgen.PRand(0, goldLimit + manaLimit)
+                Dim R As Double = comm.rndgen.RndDbl(0, goldLimit + manaLimit)
                 Return R < settLoc.maxGoldMines
             Else
                 If r1 > r2 Or manaLimit <= 0 Then
@@ -10268,7 +10290,7 @@ Public Class ImpenetrableObjects
             If manaLimit > 0 Then
                 Return False
             Else
-                Dim R As Double = comm.rndgen.PRand(0, settLoc.maxGoldMines + settLoc.maxManaSources)
+                Dim R As Double = comm.rndgen.RndDbl(0, settLoc.maxGoldMines + settLoc.maxManaSources)
                 Return R < settLoc.maxGoldMines
             End If
         End If
@@ -10346,13 +10368,13 @@ Public Class ImpenetrableObjects
 #Region "Place plateau"
     Private Sub PlacePlateau(ByRef m As Map, ByRef free(,) As Boolean)
         Dim connectors(m.xSize, m.ySize) As Integer
-        Dim IDs As List(Of Integer)
+        Dim IDs As RandomSelection = Nothing
         Dim id As Integer
         Dim ok As Boolean
         For i As Integer = 0 To 2 * m.Loc.Length Step 1
-            IDs = makeIDs(plateau, True, False)
+            Call makeIDs(IDs, True, False)
             Do While IDs.Count > 0
-                id = comm.RandomSelection(IDs, True)
+                id = IDs.RandomSelection()
                 ok = TryToPlace(m, plateau(id), free, connectors)
                 If ok Then
                     Exit Do
@@ -10381,7 +10403,7 @@ Public Class ImpenetrableObjects
         Next y
 
         Do While places.Count > 0
-            id = comm.rndgen.RndPos(places.Count, True) - 1
+            id = comm.rndgen.RndItemIndex(places)
             ok = MakeChain(m, basic, places(id).X, places(id).Y, free, connectors, res)
             If ok Then
                 For i As Integer = 0 To res.n Step 1
@@ -10426,16 +10448,16 @@ Public Class ImpenetrableObjects
         Next j
         If Not placeMore Then Return True
 
-        Dim IDs As List(Of Integer)
+        Dim IDs As RandomSelection = Nothing
         Dim id, nx, ny As Integer
         If res.n < maxChainLen Then
-            IDs = makeIDs(plateau, False, True)
+            Call makeIDs(IDs, False, True)
         Else
-            IDs = makeIDs(plateau, True, True)
+            Call makeIDs(IDs, True, True)
         End If
 
         Do While IDs.Count > 0
-            id = comm.rndgen.RndPos(IDs.Count, True) - 1
+            id = comm.rndgen.RndItemIndex(IDs)
             nx = -1
             For j As Integer = y1 To y2 Step 1
                 For i As Integer = x1 To x2 Step 1
@@ -10468,7 +10490,7 @@ Public Class ImpenetrableObjects
     Private Sub PlaceMouintains(ByRef m As Map, ByRef free(,) As Boolean)
 
         Dim Tmp(,) As Integer
-        Dim sizeslist, IDs As New List(Of Integer)
+        Dim sizeslist As New List(Of Integer)
         Dim pos As New List(Of Point)
         Dim tmpPos() As List(Of Point)
         For Each obj As MapObject In mountains
@@ -10482,8 +10504,8 @@ Public Class ImpenetrableObjects
         Next s
         sizeslist = Nothing
         Array.Sort(basicSize)
-        Dim maxR As Integer
         Dim ismountain(m.xSize, m.ySize) As Boolean
+        Dim IDs As New RandomSelection(basicSize.Length, comm.rndgen)
 
         For s As Integer = UBound(basicSize) To 0 Step -1
             If basicSize(s) > 1 Then
@@ -10499,15 +10521,14 @@ Public Class ImpenetrableObjects
                     minX = m.xSize : minY = m.ySize
                     maxX = minX + basicSize(s) - 1 : maxY = minY + basicSize(s) - 1
 
-                    maxR = s
                     IDs.Clear()
-                    For i As Integer = 0 To maxR - 1 Step 1
+                    For i As Integer = 0 To s - 1 Step 1
                         IDs.Add(i)
                     Next i
                     Dim k As Integer = 0
                     Do While k < 7
                         k += 1
-                        Dim r As Integer = comm.RandomSelection(IDs, weight, True) 'comm.rndgen.RndPos(maxR, True) - 1
+                        Dim r As Integer = IDs.RandomSelection(weight) 'comm.rndgen.RndPos(maxR, True) - 1
                         Parallel.For(0, UBound(Tmp, 2) + 1, _
                          Sub(y As Integer)
                              tmpPos(y).Clear()
@@ -10524,7 +10545,7 @@ Public Class ImpenetrableObjects
                             Next p
                         Next y
                         If pos.Count > 0 Then
-                            Dim selected As Integer = comm.rndgen.RndPos(pos.Count, True) - 1
+                            Dim selected As Integer = comm.rndgen.RndItemIndex(pos)
                             Call PlaceTmpMountain(basicSize(r), pos.Item(selected).X, pos.Item(selected).Y, Tmp)
                             minX = Math.Min(minX, pos.Item(selected).X)
                             minY = Math.Min(minY, pos.Item(selected).Y)
@@ -10534,9 +10555,8 @@ Public Class ImpenetrableObjects
                             If r = 0 Then
                                 Exit Do
                             Else
-                                maxR = r
                                 IDs.Clear()
-                                For i As Integer = 0 To maxR - 1 Step 1
+                                For i As Integer = 0 To r - 1 Step 1
                                     IDs.Add(i)
                                 Next i
                             End If
@@ -10550,7 +10570,7 @@ Public Class ImpenetrableObjects
                         Next x
                     Next y
                     If pos.Count > 0 Then
-                        Dim selected As Integer = comm.rndgen.RndPos(pos.Count, True) - 1
+                        Dim selected As Integer = comm.rndgen.RndItemIndex(pos)
                         Call PlaceMountainBlock(m, free, pos(selected).X, pos(selected).Y, Tmp, minX, maxX, minY, maxY, ismountain)
                     End If
                 Next attempt
@@ -10620,7 +10640,7 @@ Public Class ImpenetrableObjects
                 End If
             Next i
         Next j
-        If Not t And e AndAlso comm.rndgen.PRand(0, 1) < 0.01 Then Return True
+        If Not t And e AndAlso comm.rndgen.RndDbl(0, 1) < 0.01 Then Return True
         Return t
     End Function
     Private Function MayPlaceMountainBlock(ByRef m As Map, ByRef free(,) As Boolean, _
@@ -10705,7 +10725,7 @@ Public Class ImpenetrableObjects
             Next i
         Next j
         If t Then
-            Dim r As Double = comm.rndgen.PRand(0, 1)
+            Dim r As Double = comm.rndgen.RndDbl(0, 1)
             Dim d As Double = Math.Max(0.075 - 0.005 * size, 0.025)
             Return r < d
         Else
@@ -10723,7 +10743,7 @@ Public Class ImpenetrableObjects
                 If Not IsNothing(ismountain) Then ismountain(x + q, y + p) = True
             Next q
         Next p
-        Dim IDs As New List(Of Integer)
+        Dim IDs As New RandomSelection(mountains.Length, comm.rndgen)
         Dim weight(UBound(mountains)) As Double
         For p As Integer = 0 To 1 Step 1
             For n As Integer = 0 To UBound(mountains) Step 1
@@ -10734,13 +10754,13 @@ Public Class ImpenetrableObjects
             Next n
             If IDs.Count > 0 Then Exit For
         Next p
-        Dim selected As Integer = comm.RandomSelection(IDs, weight, True)
+        Dim selected As Integer = IDs.RandomSelection(weight)
         m.board(x, y).mapObject.objectName = mountains(selected).name
     End Sub
 #End Region
 #Region "Place other objects: houses, towers, obelisks, breaches etc."
     Private Sub PlaceOtherObjects(ByRef m As Map, ByRef free(,) As Boolean)
-        Dim IDs As New List(Of Integer)
+        Dim IDs As New RandomSelection(m.board.Length, m.comm.rndgen)
         Dim weight(UBound(objects)) As Double
         Dim nextloop As Boolean = True
         Dim k As Integer = 0
@@ -10767,7 +10787,7 @@ Public Class ImpenetrableObjects
                             If weight(n) >= 0 Then IDs.Add(n)
                         Next n
                         If IDs.Count > 0 Then
-                            Dim selected As Integer = comm.RandomSelection(IDs, weight, True)
+                            Dim selected As Integer = IDs.RandomSelection(weight)
                             tmpm.board(x, y).mapObject.objectName = objects(selected).name
                             Call PlaceObject(f, x, y, objects(selected))
                         End If
@@ -10792,115 +10812,6 @@ Public Class ImpenetrableObjects
         m = tmpm
     End Sub
 #End Region
-
-#Region "Старые версии генераторов контента торговцев"
-    'Private Sub AddSpells(ByRef m As Map, ByRef settMap As Map.SettingsMap, ByRef settLoc() As Map.SettingsLoc)
-    '    Dim maxGroupID As Integer = ImpenetrableMeshGen.GetMaxGroupID(m)
-    '    Dim objList As Dictionary(Of Integer, List(Of Point)) = FindGroupsOfObjects(m, 5)
-    '    Dim levels As List(Of Integer)
-    '    Dim r, n As Integer
-    '    Dim setNewGroup As Boolean
-    '    For Each g As Integer In objList.Keys
-    '        Dim pLocID As Integer = pointLoc(m, objList.Item(g).Item(0))
-    '        If pLocID <= settMap.nRaces Then
-    '            setNewGroup = False
-    '            levels = SelectSpellsLevel(settLoc(pLocID - 1))
-    '            For Each p As Point In objList.Item(g)
-    '                r = m.board(p.X, p.Y).mapObject.objRace.Item(0)
-    '                If setNewGroup Then
-    '                    maxGroupID += 1
-    '                    n = maxGroupID
-    '                    m.board(p.X, p.Y).groupID = maxGroupID
-    '                Else
-    '                    setNewGroup = True
-    '                    n = g
-    '                End If
-    '                m.groupStats.Add(n, New AllDataStructues.DesiredStats With {.shopContent = SelectSpells(settLoc(pLocID - 1), r, levels)})
-    '            Next p
-    '        Else
-    '            levels = SelectSpellsLevel(settLoc(pLocID - 1))
-    '            m.groupStats.Add(g, New AllDataStructues.DesiredStats With {.shopContent = SelectSpells(settLoc(pLocID - 1), -1, levels)})
-    '        End If
-    '    Next g
-    'End Sub
-    'Private Function SelectSpells(ByRef settLoc As Map.SettingsLoc, ByRef raceID As Integer, ByRef levels As List(Of Integer)) As List(Of String)
-    '    Dim res As New List(Of String)
-    '    Dim v, r As String
-    '    If raceID = -1 Then
-    '        r = "R"
-    '    Else
-    '        r = raceIdToString.Item(raceID)
-    '    End If
-    '    For Each L As Integer In levels
-    '        v = L.ToString & r
-    '        If settLoc.mageGlobalSpellsEnabled Then
-    '            v &= "T"
-    '        Else
-    '            v &= "F"
-    '        End If
-    '        res.Add(v)
-    '    Next L
-    '    Return res
-    'End Function
-    'Private Function SelectSpellsLevel(ByRef settLoc As Map.SettingsLoc) As List(Of Integer)
-    '    Dim res As New List(Of Integer)
-    '    For i As Integer = 1 To settLoc.mageSpellsCount Step 1
-    '        res.Add(comm.rndgen.RndInt(settLoc.mageSpellsMinLevel, settLoc.mageSpellsMaxLevel, True))
-    '    Next i
-    '    Return res
-    'End Function
-    'Private Function FindGroupsOfObjects(ByRef m As Map, ByRef objType As Integer) As Dictionary(Of Integer, List(Of Point))
-    '    Dim res As New Dictionary(Of Integer, List(Of Point))
-    '    For y As Integer = 0 To m.ySize Step 1
-    '        For x As Integer = 0 To m.xSize Step 1
-    '            If m.board(x, y).mapObject.objectID = objType Then
-    '                If Not res.ContainsKey(m.board(x, y).groupID) Then res.Add(m.board(x, y).groupID, New List(Of Point))
-    '                res.Item(m.board(x, y).groupID).Add(New Point(x, y))
-    '            End If
-    '        Next x
-    '    Next y
-    '    Return res
-    'End Function
-    'Private Function pointLoc(ByRef m As Map, ByRef p As Point) As Integer
-    '    Return m.board(p.X, p.Y).locID(0)
-    'End Function
-
-    'Private Sub AddMercenaries(ByRef m As Map, ByRef settMap As Map.SettingsMap, ByRef settLoc() As Map.SettingsLoc)
-    '    Dim objList As Dictionary(Of Integer, List(Of Point)) = FindGroupsOfObjects(m, 4)
-    '    For Each g As Integer In objList.Keys
-    '        Dim pLocID As Integer = pointLoc(m, objList.Item(g).Item(0))
-    '        m.groupStats.Add(g, New AllDataStructues.DesiredStats With {.shopContent = SelectMercenaries(settLoc(pLocID - 1))})
-    '    Next g
-    'End Sub
-    'Private Function SelectMercenaries(ByRef settLoc As Map.SettingsLoc) As List(Of String)
-    '    Dim res As New List(Of String)
-    '    For i As Integer = 1 To settLoc.mercenariesCount Step 1
-    '        res.Add(comm.rndgen.RndInt(settLoc.mercenariesMinExpBar, settLoc.mercenariesMaxExpBar, True).ToString)
-    '    Next i
-    '    Return res
-    'End Function
-
-    'Private Sub AddMerchantItems(ByRef m As Map, ByRef settMap As Map.SettingsMap, ByRef settLoc() As Map.SettingsLoc)
-    '    Dim objList As Dictionary(Of Integer, List(Of Point)) = FindGroupsOfObjects(m, 3)
-    '    For Each g As Integer In objList.Keys
-    '        Dim pLocID As Integer = pointLoc(m, objList.Item(g).Item(0))
-    '        m.groupStats.Add(g, New AllDataStructues.DesiredStats With {.shopContent = SelectMerchantItems(settLoc(pLocID - 1))})
-    '    Next g
-    'End Sub
-    'Private Function SelectMerchantItems(ByRef settLoc As Map.SettingsLoc) As List(Of String)
-    '    Dim res As New List(Of String)
-    '    Dim sum, v As Integer
-    '    If settLoc.merchMinConsumableItemCost + settLoc.merchMaxConsumableItemCost = 0 Then Return res
-    '    Do While sum < settLoc.merchItemsCost
-    '        v = comm.rndgen.RndInt(settLoc.merchMinItemCost, settLoc.merchMaxItemCost, True)
-    '        If sum + v > settLoc.merchItemsCost Then v = settLoc.merchItemsCost - sum
-    '        sum += v
-    '        res.Add(v.ToString)
-    '    Loop
-    '    Return res
-    'End Function
-#End Region
-
 End Class
 
 Public Class ObjectsContentSet
@@ -10985,7 +10896,7 @@ Public Class ObjectsContentSet
     Public Function SetMineType(ByVal mineObjectName As String) As String
         Dim m As String = mineObjectName.ToUpper
         If m = My.Resources.mineTypeRandomMana.ToUpper Then
-            Dim r As Integer = randStack.comm.rndgen.RndPos(manaSourcesTypes.Length, True) - 1
+            Dim r As Integer = randStack.comm.rndgen.RndItemIndex(manaSourcesTypes)
             Return manaSourcesTypes(r)
         Else
             If mines.ContainsValue(m) Then
@@ -11031,11 +10942,7 @@ Public Class ObjectsContentSet
         Next r
 
         Dim res As New List(Of String)
-        Dim selection As New List(Of Integer)
-        Dim pIDs(Environment.ProcessorCount - 1) As List(Of Integer)
-        For i As Integer = 0 To Environment.ProcessorCount - 1 Step 1
-            pIDs(i) = New List(Of Integer)
-        Next i
+        Dim selection As New RandomSelection(randStack.AllSpells.Length, randStack.rndgen)
         Dim txt As String = ""
 
         For Each L As String In d.shopContent
@@ -11048,10 +10955,8 @@ Public Class ObjectsContentSet
                     txt = ""
                 End If
             ElseIf IsNumeric(L) Then
+                If Not selection.Count = 0 Then Throw New Exception("Unexpected selection.Count: " & selection.Count)
                 Dim type As Integer = CInt(L)
-                For i As Integer = 0 To Environment.ProcessorCount - 1 Step 1
-                    pIDs(i).Clear()
-                Next i
                 Parallel.For(0, Environment.ProcessorCount, _
                  Sub(proc As Integer)
                      Dim add As Boolean
@@ -11060,10 +10965,10 @@ Public Class ObjectsContentSet
                          If type > -1 Then add = (randStack.AllSpells(u).category = type)
                          If add Then add = spellAvailResourcesFilter(u)
                          If add Then add = Not res.Contains(randStack.AllSpells(u).spellID)
-                         If add Then pIDs(proc).Add(u)
+                         If add Then selection.Add(u)
                      Next u
                  End Sub)
-                selection = Common.MergeLists(pIDs)
+                Call selection.RefreshCount()
                 Dim selected As Integer = SelectListItem(selection)
                 If selected > -1 Then res.Add(randStack.AllSpells(selected).spellID)
                 If log.IsEnabled Then txt &= SpellMsgToLog(selected)
@@ -11071,11 +10976,11 @@ Public Class ObjectsContentSet
                 Dim s() As String = L.Split(CChar("#"))
                 Dim type As Integer = CInt(s(0))
                 Dim prop As String = s(1)
-                Dim selected As Integer = SelectSpell(prop, type, races, spellAvailResourcesFilter, res)
+                Dim selected As Integer = SelectSpell(prop, type, races, spellAvailResourcesFilter, res, selection)
                 If selected > -1 Then res.Add(randStack.AllSpells(selected).spellID)
                 If log.IsEnabled Then txt &= SpellMsgToLog(selected)
             Else
-                Dim selected As Integer = SelectSpell(L, -1, races, spellAvailResourcesFilter, res)
+                Dim selected As Integer = SelectSpell(L, -1, races, spellAvailResourcesFilter, res, selection)
                 If selected > -1 Then res.Add(randStack.AllSpells(selected).spellID)
                 If log.IsEnabled Then txt &= SpellMsgToLog(selected)
             End If
@@ -11098,19 +11003,11 @@ Public Class ObjectsContentSet
         End If
     End Function
     Private Function SelectSpell(ByRef sProperties As String, ByVal type As Integer, ByRef races() As String, _
-                                 ByVal spellAvailResourcesFilter() As Boolean, ByVal res As List(Of String)) As Integer
+                                 ByVal spellAvailResourcesFilter() As Boolean, ByVal res As List(Of String), _
+                                 ByVal selection As RandomSelection) As Integer
 
-        Dim level, race, racesList(), pRR As Integer
+        Dim level, race, racesList(), pRR, pSpellLevel As Integer
         Dim allowMass, ignoreAvailMana As Boolean
-        Dim selection As New List(Of Integer)
-        Dim pIDs(maxSpellLevel)() As List(Of Integer)
-
-        For i As Integer = 0 To maxSpellLevel Step 1
-            ReDim pIDs(i)(Environment.ProcessorCount - 1)
-            For j As Integer = 0 To Environment.ProcessorCount - 1 Step 1
-                pIDs(i)(j) = New List(Of Integer)
-            Next j
-        Next i
 
         Dim L As String = sProperties.ToUpper
         If L.Contains("T") Then
@@ -11139,37 +11036,26 @@ Public Class ObjectsContentSet
         Else
             racesList = New Integer() {race, -1}
         End If
+        If Not selection.Count = 0 Then Throw New Exception("Unexpected selection.Count: " & selection.Count)
         For p As Integer = 0 To 1 Step 1
             For rr As Integer = 0 To UBound(racesList) Step 1
                 pRR = rr
-                selection.Clear()
-                For i As Integer = 0 To maxSpellLevel Step 1
-                    For j As Integer = 0 To Environment.ProcessorCount - 1 Step 1
-                        pIDs(i)(j).Clear()
-                    Next j
-                Next i
-                Parallel.For(0, Environment.ProcessorCount, _
-                 Sub(proc As Integer)
-                     Dim add As Boolean
-                     Dim destLevel As Integer
-                     For u As Integer = proc To UBound(randStack.AllSpells) Step Environment.ProcessorCount
-                         add = True
-                         If type > -1 Then add = (randStack.AllSpells(u).category = type)
-                         If add Then add = Not res.Contains(randStack.AllSpells(u).spellID)
-                         If add Then destLevel = AddToSpellLevelArray(racesList(pRR), allowMass, spellAvailResourcesFilter, ignoreAvailMana, u)
-                         If add And destLevel > -1 Then pIDs(destLevel)(proc).Add(u)
-                     Next u
-                 End Sub)
-                For spellLevel As Integer = level To 1 Step -1
-                    selection = Common.MergeLists(pIDs(spellLevel))
+                For spellLevel As Integer = level To 0 Step -1
+                    pSpellLevel = spellLevel
+                    Parallel.For(0, Environment.ProcessorCount, _
+                     Sub(proc As Integer)
+                         Dim add As Boolean
+                         For u As Integer = proc To UBound(randStack.AllSpells) Step Environment.ProcessorCount
+                             add = True
+                             If type > -1 Then add = (randStack.AllSpells(u).category = type)
+                             If add Then add = Not res.Contains(randStack.AllSpells(u).spellID)
+                             If add Then add = AddToSpellLevelArray(racesList(pRR), allowMass, pSpellLevel, spellAvailResourcesFilter, ignoreAvailMana, u)
+                             If add Then selection.Add(u)
+                         Next u
+                     End Sub)
+                    Call selection.RefreshCount()
                     If selection.Count > 0 Then Exit For
                 Next spellLevel
-                If selection.Count = 0 Then
-                    For spellLevel As Integer = level + 1 To maxSpellLevel Step 1
-                        selection = Common.MergeLists(pIDs(spellLevel))
-                        If selection.Count > 0 Then Exit For
-                    Next spellLevel
-                End If
                 If selection.Count > 0 Then Exit For
             Next rr
             ignoreAvailMana = Not ignoreAvailMana
@@ -11177,21 +11063,23 @@ Public Class ObjectsContentSet
         Next p
         Return SelectListItem(selection)
     End Function
-    Private Function AddToSpellLevelArray(ByRef race As Integer, ByRef allowMass As Boolean, _
+    Private Function AddToSpellLevelArray(ByRef race As Integer, ByRef allowMass As Boolean, ByRef spelllevel As Integer, _
                                           ByRef spellAvailResourcesFilter() As Boolean, ByRef ignoreAvail As Boolean, _
-                                          ByRef spellID As Integer) As Integer
+                                          ByRef spellID As Integer) As Boolean
         Dim s As AllDataStructues.Spell = randStack.AllSpells(spellID)
-        If randStack.comm.IsAppropriateSpell(s) Then Return -1
+        If randStack.comm.IsAppropriateSpell(s) Then Return False
 
-        If Not allowMass And s.area > 998 Then Return -1
+        If Not allowMass And s.area > 998 Then Return False
 
-        If Not ignoreAvail And Not spellAvailResourcesFilter(spellID) Then Return -1
+        If spelllevel > 0 And Not s.level = spelllevel Then Return False
+
+        If Not ignoreAvail And Not spellAvailResourcesFilter(spellID) Then Return False
 
         If race > -1 Then
-            If Not spellOwnersRace(spellID).Contains(race) Then Return -1
+            If Not spellOwnersRace(spellID).Contains(race) Then Return False
         End If
 
-        Return s.level
+        Return True
     End Function
 #End Region
 #Region "Units merchant"
@@ -11206,25 +11094,19 @@ Public Class ObjectsContentSet
         Call AddToLog(log, LogID, "----Mercenaries creation started----")
 
         Dim res As New List(Of String)
-        Dim selection As New List(Of Integer)
-        Dim pIDs(Environment.ProcessorCount - 1) As List(Of Integer)
-        For i As Integer = 0 To Environment.ProcessorCount - 1 Step 1
-            pIDs(i) = New List(Of Integer)
-        Next i
+        Dim selection As New RandomSelection(randStack.AllUnits.Length, randStack.rndgen)
         Dim txt As String = ""
 
         For Each v As String In d.shopContent
             If log.IsEnabled Then txt = "In: " & v & " -> "
             If IsNumeric(v) Then
                 Dim bar As Integer = CInt(v)
-                Dim selected As Integer = SelectMercenary(bar, -1, res)
+                Dim selected As Integer = SelectMercenary(bar, -1, res, selection)
                 If selected > -1 Then res.Add(randStack.AllUnits(selected).unitID)
                 If log.IsEnabled Then txt &= UnitMsgToLog(selected)
             ElseIf randStack.comm.RaceIdentifierToSubrace(v, False) > -1 Then
+                If Not selection.Count = 0 Then Throw New Exception("Unexpected selection.Count: " & selection.Count)
                 Dim race As Integer = randStack.comm.RaceIdentifierToSubrace(v)
-                For i As Integer = 0 To Environment.ProcessorCount - 1 Step 1
-                    pIDs(i).Clear()
-                Next i
                 Parallel.For(0, Environment.ProcessorCount, _
                  Sub(proc As Integer)
                      Dim add As Boolean
@@ -11232,10 +11114,10 @@ Public Class ObjectsContentSet
                          add = (race = randStack.AllUnits(u).race)
                          If add Then add = randStack.comm.IsAppropriateFighter(randStack.AllUnits(u))
                          If add Then add = Not res.Contains(randStack.AllUnits(u).unitID)
-                         If add Then pIDs(proc).Add(u)
+                         If add Then selection.Add(u)
                      Next u
                  End Sub)
-                selection = Common.MergeLists(pIDs)
+                Call selection.RefreshCount()
                 Dim selected As Integer = SelectListItem(selection)
                 If selected > -1 Then res.Add(randStack.AllUnits(selected).unitID)
                 If log.IsEnabled Then txt &= UnitMsgToLog(selected)
@@ -11248,7 +11130,7 @@ Public Class ObjectsContentSet
                     race = randStack.comm.RaceIdentifierToSubrace(s(0))
                 End If
                 Dim bar As Integer = CInt(s(1))
-                Dim selected As Integer = SelectMercenary(bar, race, res)
+                Dim selected As Integer = SelectMercenary(bar, race, res, selection)
                 If selected > -1 Then res.Add(randStack.AllUnits(selected).unitID)
                 If log.IsEnabled Then txt &= UnitMsgToLog(selected)
             Else
@@ -11280,23 +11162,16 @@ Public Class ObjectsContentSet
             Return "nothing"
         End If
     End Function
-    Private Function SelectMercenary(ByVal bar As Integer, ByVal race As Integer, ByVal added As List(Of String)) As Integer
-
-        Dim selection As New List(Of Integer)
-        Dim pIDs(Environment.ProcessorCount - 1) As List(Of Integer)
-        For i As Integer = 0 To Environment.ProcessorCount - 1 Step 1
-            pIDs(i) = New List(Of Integer)
-        Next i
+    Private Function SelectMercenary(ByVal bar As Integer, ByVal race As Integer, ByVal added As List(Of String), _
+                                     ByVal selection As RandomSelection) As Integer
 
         Dim tolerance As Integer
         Dim dtolerance As Integer = 50
         Dim oneMore As Boolean = False
 
+        If Not selection.Count = 0 Then Throw New Exception("Unexpected selection.Count: " & selection.Count)
         Do While (selection.Count = 0 Or oneMore) And tolerance <= 10000
             tolerance += dtolerance
-            For i As Integer = 0 To Environment.ProcessorCount - 1 Step 1
-                pIDs(i).Clear()
-            Next i
             Parallel.For(0, Environment.ProcessorCount, _
              Sub(proc As Integer)
                  Dim add As Boolean
@@ -11309,13 +11184,16 @@ Public Class ObjectsContentSet
                                  add = (Math.Abs(randStack.AllUnits(u).EXPnext - 2 * bar) <= 2 * tolerance)
                              End If
                              If add And race > -1 Then add = (race = randStack.AllUnits(u).race)
-                             If add Then pIDs(proc).Add(u)
+                             If add Then selection.Add(u)
                          End If
                      End If
                  Next u
              End Sub)
-            selection = Common.MergeLists(pIDs)
-            If selection.Count > 0 Then oneMore = Not oneMore
+            Call selection.RefreshCount()
+            If selection.Count > 0 Then
+                oneMore = Not oneMore
+                If oneMore Then selection.Clear()
+            End If
         Loop
         'If selection.Count = 0 Then Throw New Exception("Не могу выбрать юнита в качестве наемника. Планка опыта: " & bar.ToString)
         Return SelectListItem(selection)
@@ -11337,11 +11215,7 @@ Public Class ObjectsContentSet
         'Call d.IGen.typesFilter.Initialize() - в генераторе товаров торговца есть свой механизм строгого сохранения типов
         Dim txt As String = ""
         Dim res As New List(Of String)
-        Dim selection As New List(Of Integer)
-        Dim pIDs(Environment.ProcessorCount - 1) As List(Of Integer)
-        For i As Integer = 0 To Environment.ProcessorCount - 1 Step 1
-            pIDs(i) = New List(Of Integer)
-        Next i
+        Dim selection As New RandomSelection(randStack.AllItems.Length, randStack.rndgen)
         Dim dCost As Integer = 0
         Dim itemsFilter As New RandStack.ItemsFilter(1, randStack, d.IGen, TypeCostRestriction, Nothing, -1)
         itemsFilter.ForceDisableStrictTypesFilter = True
@@ -11354,14 +11228,12 @@ Public Class ObjectsContentSet
             If log.IsEnabled Then txt = "In: " & v
             If IsNumeric(v) Then
                 Dim bar As Integer = CInt(v)
-                Dim selected As Integer = SelectItem(bar, -1, dCost, d, res.Count, TypeCostRestriction)
+                Dim selected As Integer = SelectItem(bar, -1, dCost, d, res.Count, TypeCostRestriction, selection)
                 If selected > -1 Then res.Add(randStack.AllItems(selected).itemID)
                 If log.IsEnabled Then txt &= ItemMsgToLog(selected, dCost, True)
             ElseIf randStack.comm.itemTypeID.ContainsKey(v.ToUpper) Then
+                If Not selection.Count = 0 Then Throw New Exception("Unexpected selection.Count: " & selection.Count)
                 Dim type As Integer = randStack.comm.itemTypeID.Item(v.ToUpper)
-                For i As Integer = 0 To Environment.ProcessorCount - 1 Step 1
-                    pIDs(i).Clear()
-                Next i
                 Parallel.For(0, Environment.ProcessorCount, _
                  Sub(proc As Integer)
                      Dim add As Boolean
@@ -11370,18 +11242,13 @@ Public Class ObjectsContentSet
                          If add Then add = (type = randStack.AllItems(u).type)
                          If add Then add = randStack.comm.IsAppropriateItem(randStack.AllItems(u))
                          If add Then add = itemsFilter.Filter(0, randStack.AllItems(u))
-                         If add Then pIDs(proc).Add(u)
+                         If add Then selection.Add(u)
                      Next u
                  End Sub)
-                selection = Common.MergeLists(pIDs)
+                Call selection.RefreshCount()
                 'If selection.Count = 0 Then Throw New Exception("Не могу выбрать предмет в качестве товара. Тип: " & v)
-                Dim selected As Integer
-                If selection.Count > 0 Then
-                    selected = randStack.comm.RandomSelection(selection, randStack.Global_ItemsWeightMultiplier, True)
-                    res.Add(randStack.AllItems(selected).itemID)
-                Else
-                    selected = -1
-                End If
+                Dim selected As Integer = SelectListItem(selection, randStack.Global_ItemsWeightMultiplier)
+                If selected > -1 Then res.Add(randStack.AllItems(selected).itemID)
                 If log.IsEnabled Then txt &= ItemMsgToLog(selected, dCost, False)
             ElseIf v.Contains("#") Then
                 Dim s() As String = v.Split(CChar("#"))
@@ -11392,10 +11259,10 @@ Public Class ObjectsContentSet
                     type = randStack.comm.itemTypeID.Item(s(0).ToUpper)
                 End If
                 Dim bar As Integer = CInt(s(1))
-                Dim selected As Integer = SelectItem(bar, type, dCost, d, res.Count, TypeCostRestriction)
+                Dim selected As Integer = SelectItem(bar, type, dCost, d, res.Count, TypeCostRestriction, selection)
                 If selected = -1 Then
                     If log.IsEnabled Then txt &= " (ignore type) "
-                    selected = SelectItem(bar, -1, dCost, d, res.Count, TypeCostRestriction)
+                    selected = SelectItem(bar, -1, dCost, d, res.Count, TypeCostRestriction, selection)
                 End If
                 If selected > -1 Then res.Add(randStack.AllItems(selected).itemID)
                 txt &= ItemMsgToLog(selected, dCost, True)
@@ -11423,13 +11290,8 @@ Public Class ObjectsContentSet
     End Function
     Private Function SelectItem(ByRef bar As Integer, ByVal type As Integer, ByRef dCost As Integer, _
                                 ByRef d As AllDataStructues.DesiredStats, ByRef addedCount As Integer, _
-                                ByRef TypeCostRestriction As Dictionary(Of Integer, AllDataStructues.Restriction)) As Integer
-        Dim selection As New List(Of Integer)
-        Dim pIDs(Environment.ProcessorCount - 1) As List(Of Integer)
-        For i As Integer = 0 To Environment.ProcessorCount - 1 Step 1
-            pIDs(i) = New List(Of Integer)
-        Next i
-
+                                ByRef TypeCostRestriction As Dictionary(Of Integer, AllDataStructues.Restriction), _
+                                ByVal selection As RandomSelection) As Integer
         Dim correctedBar As Integer = bar + CInt(dCost / Math.Max(d.shopContent.Count - addedCount, 1))
         If correctedBar <= 0 Then
             dCost += bar
@@ -11448,12 +11310,10 @@ Public Class ObjectsContentSet
         itemsFilter.presets(1).useSimple = True
         itemsFilter.presets(1).useTypeCost = True
 
+        If Not selection.Count = 0 Then Throw New Exception("Unexpected selection.Count: " & selection.Count)
         tolerance = 0
         Do While (selection.Count = 0 Or oneMore) And tolerance <= 10000
             tolerance += dtolerance
-            For i As Integer = 0 To Environment.ProcessorCount - 1 Step 1
-                pIDs(i).Clear()
-            Next i
             Parallel.For(0, Environment.ProcessorCount, _
              Sub(proc As Integer)
                  Dim add As Boolean
@@ -11470,21 +11330,19 @@ Public Class ObjectsContentSet
                      If add Then add = (Math.Abs(randStack.LootCost(randStack.AllItems(u)).Gold - correctedBar) <= tolerance)
                      If add Then add = itemsFilter.Filter(1, randStack.AllItems(u))
                      If add And type < 0 Then add = itemsFilter.Filter(0, randStack.AllItems(u))
-                     If add Then pIDs(proc).Add(u)
+                     If add Then selection.Add(u)
                  Next u
              End Sub)
-            selection = Common.MergeLists(pIDs)
-            If selection.Count > 0 Then oneMore = Not oneMore
+            Call selection.RefreshCount()
+            If selection.Count > 0 Then
+                oneMore = Not oneMore
+                If oneMore Then selection.Clear()
+            End If
         Loop
         dCost += bar
-        If selection.Count > 0 Then
-            Dim r As Integer = randStack.comm.RandomSelection(selection, randStack.Global_ItemsWeightMultiplier, True)
-            dCost -= randStack.AllItems(r).itemCost.Gold
-            Return r
-        Else
-            'Throw New Exception("Не могу выбрать предмет в качестве товара. Планка цены: " & bar.ToString)
-            Return -1
-        End If
+        Dim r As Integer = SelectListItem(selection, randStack.Global_ItemsWeightMultiplier)
+        If r > -1 Then dCost -= randStack.AllItems(r).itemCost.Gold
+        Return r
     End Function
     Private Function isExcludedItemTypeForMerchant(ByRef t As GenDefaultValues.ItemTypes) As Boolean
         If t = GenDefaultValues.ItemTypes.jewel Or t = GenDefaultValues.ItemTypes.special Then
@@ -11494,9 +11352,11 @@ Public Class ObjectsContentSet
         End If
     End Function
 #End Region
-    Private Function SelectListItem(ByRef IDs As List(Of Integer)) As Integer
-        If IDs.Count > 0 Then
-            Return IDs.Item(randStack.comm.rndgen.RndIntFast(0, IDs.Count - 1))
+    Private Function SelectListItem(ByRef selection As RandomSelection, Optional ByRef W() As Double = Nothing) As Integer
+        If selection.Count > 0 Then
+            Dim selected As Integer = selection.RandomSelection(W)
+            selection.Clear()
+            Return selected
         Else
             Return -1
         End If
@@ -11513,12 +11373,12 @@ Public Class ObjectsContentSet
     End Function
     Private Function GetRandomMode(ByRef input As List(Of String), ByRef weight() As Double, ByRef handler As getSettings) As List(Of String)
         Dim output As New List(Of String)
-        Dim ID As New List(Of Integer)
+        Dim ID As New RandomSelection(weight.Length, randStack.comm.rndgen)
         For i As Integer = 0 To UBound(weight) Step 1
             ID.Add(i)
         Next i
         For Each item In input
-            Dim r As Integer = randStack.comm.RandomSelection(ID, weight, True) + 1
+            Dim r As Integer = ID.RandomSelection(weight) + 1
             output.Add(handler(r, {item}).Item(0))
         Next item
         Return output
@@ -11528,11 +11388,11 @@ Public Class ObjectsContentSet
         Dim d As Double = (maxRange - minRange) / partsCount
         Dim max As Double = minRange + N * d
         Dim min As Double = max - d
-        Dim v As Double = randStack.rndgen.Rand(min, max, True)
+        Dim v As Double = randStack.rndgen.RndDbl(min, max)
         Dim p0 As Double = Math.Floor(v)
         Dim p1 As Double = v - p0
         If p1 > 0 Then
-            Dim r As Double = randStack.rndgen.Rand(0, 1, True)
+            Dim r As Double = randStack.rndgen.RndDbl(0, 1)
             If r <= p1 Then
                 p1 = 1
             Else
@@ -11621,7 +11481,7 @@ Public Class ObjectsContentSet
         For i As Integer = 1 To s.mageSpellsCount Step 1
             level = RndPart(s.mageSpellsMinLevel, s.mageSpellsMaxLevel, i, s.mageSpellsCount)
             If s.mageGlobalSpellsEnabled Then
-                If randStack.rndgen.RndInt(0, 1, True) = 1 Then
+                If randStack.rndgen.RndInt(0, 1) = 1 Then
                     canBeMass = "T"
                 Else
                     canBeMass = "F"
@@ -11688,7 +11548,8 @@ Public Class ObjectsContentSet
         Dim res As New List(Of String)
         Dim cost As Integer = s.merchItemsCost
         Dim selected, itemcost, minCost, maxCost As Integer
-        Dim addOnce, addedTypes, selection, exclude As New List(Of Integer)
+        Dim addOnce, exclude As New List(Of Integer)
+        Dim addedTypes, selection As New RandomSelection(System.Enum.GetValues(GetType(GenDefaultValues.ItemTypes)).Cast(Of Integer).Max + 1, randStack.comm.rndgen)
         addOnce.AddRange(New Integer() {GenDefaultValues.ItemTypes.attack_artifact, GenDefaultValues.ItemTypes.nonattack_artifact, _
                                         GenDefaultValues.ItemTypes.banner, GenDefaultValues.ItemTypes.boots, GenDefaultValues.ItemTypes.permanent_elixir, _
                                         GenDefaultValues.ItemTypes.relic, GenDefaultValues.ItemTypes.stuff, GenDefaultValues.ItemTypes.talisman})
@@ -11721,7 +11582,7 @@ Public Class ObjectsContentSet
                     If Not addOnce.Contains(v) OrElse Not addedTypes.Contains(v) Then selection.Add(v)
                 End If
             Next v
-            selected = randStack.comm.RandomSelection(selection, True)
+            selected = selection.RandomSelection()
             If randStack.comm.ConsumableItemsTypes.Contains(selected) Then
                 minCost = s.merchMinConsumableItemCost
                 maxCost = s.merchMaxConsumableItemCost
@@ -11730,7 +11591,7 @@ Public Class ObjectsContentSet
                 maxCost = s.merchMaxNonconsumableItemCost
             End If
             If cost > minCost Then
-                itemcost = randStack.rndgen.RndInt(minCost, maxCost, True)
+                itemcost = randStack.rndgen.RndInt(minCost, maxCost)
             Else
                 itemcost = cost
             End If
@@ -11802,7 +11663,7 @@ Public Class ObjectsContentSet
         Dim bar As Integer
         For i As Integer = 1 To s.mercenariesCount Step 1
             If m.board(x, y).locID(0) > nRaces Then
-                selected = randStack.comm.defValues.neutralRaces(randStack.rndgen.RndInt(0, UBound(randStack.comm.defValues.neutralRaces), True))
+                selected = randStack.comm.defValues.neutralRaces(randStack.rndgen.RndItemIndex(randStack.comm.defValues.neutralRaces))
                 raceID = randStack.comm.RaceIdentifierToSubrace(selected)
             Else
                 raceID = m.board(x, y).mapObject.objRace(0)
@@ -11827,7 +11688,7 @@ Public Class ObjectsContentSet
         Else
             r = randStack.comm.RaceIdentifierToSubrace(race.ToUpper)
         End If
-        Dim ids As New List(Of Integer)
+        Dim ids As New RandomSelection(randStack.comm.LordsRace.Count, randStack.rndgen)
         Dim lords(randStack.comm.LordsRace.Count - 1) As String
         Dim n As Integer = -1
         For Each lord As String In randStack.comm.LordsRace.Keys
@@ -11836,114 +11697,8 @@ Public Class ObjectsContentSet
             If randStack.comm.LordsRace.Item(lord) = r Then ids.Add(n)
         Next lord
         If ids.Count = 0 Then Throw New Exception("Нет ни одного лорда, соответствующего заданной расе")
-        Dim selected As Integer = randStack.comm.RandomSelection(ids, True)
+        Dim selected As Integer = ids.RandomSelection()
         Return lords(selected)
     End Function
 #End Region
-End Class
-
-Public Class VanillaSagaContentReplace
-
-    Dim RndStack As RandStack
-
-    Dim VanillaLoreUnits As List(Of String)
-
-    ''' <param name="RStack">Инициализированный класс</param>
-    Public Sub New(ByRef RStack As RandStack)
-        RndStack = RStack
-        'RStack.comm.ReadExcludedObjectsList(New String() {".\Resources\mod_settings_Vanilla\ExcludeIDs_ModLore.txt"})
-        'VanillaLoreUnits = RStack.comm.excludedObjects
-        MsgBox("Если вдруг класс понадобится, нужно сделать чтение файла с лорными юнитами ванили")
-    End Sub
-
-    Public Function ReplaceItem(ByRef ID As String) As String
-
-        Dim item As AllDataStructues.Item = RndStack.FindItemStats(ID)
-
-        If item.type = GenDefaultValues.ItemTypes.special Then Return ID
-
-        Dim selection As New List(Of Integer)
-        Dim dtolerance As Integer = 100
-        Dim tolerance As Integer = 0
-        Dim oneMore As Boolean = False
-        Dim add As Boolean
-
-        Do While (selection.Count = 0 Or oneMore) And tolerance <= 10000
-            tolerance += dtolerance
-            selection.Clear()
-            For u As Integer = 0 To UBound(RndStack.AllItems) Step 1
-                If RndStack.comm.IsAppropriateItem(RndStack.AllItems(u)) Then
-                    If Math.Abs(RndStack.LootCost(RndStack.AllItems(u)).Gold - RndStack.LootCost(item).Gold) <= tolerance Then
-                        If item.type = RndStack.AllItems(u).type Then
-                            add = True
-                        Else
-                            add = False
-                        End If
-                        If add Then selection.Add(u)
-                    End If
-                End If
-            Next u
-            If selection.Count > 0 Then oneMore = Not oneMore
-        Loop
-        If selection.Count > 0 Then
-            Dim r As Integer = RndStack.comm.RandomSelection(selection, True)
-            Return RndStack.AllItems(r).itemID
-        Else
-            Return ID
-        End If
-    End Function
-
-    Private Delegate Function UnitFilter(ByRef unit As AllDataStructues.Unit) As Boolean
-    Public Function ReplaceUnit(ByRef ID As String) As String
-
-        Dim unit As AllDataStructues.Unit = RndStack.FindUnitStats(ID)
-
-        If unit.unitBranch = GenDefaultValues.UnitClass.capitalGuard Then Return unit.unitID
-        If VanillaLoreUnits.Contains(unit.unitID) Then Return unit.unitID
-
-        Dim selection As New List(Of Integer)
-        Dim dtolerance As Integer = 100
-        Dim tolerance As Integer = 0
-        Dim oneMore As Boolean = False
-        Dim add As Boolean
-
-        Dim f As UnitFilter
-        If unit.unitBranch = GenDefaultValues.UnitClass.leader Then
-            f = AddressOf RndStack.comm.IsAppropriateLeader
-        Else
-            f = AddressOf RndStack.comm.IsAppropriateFighter
-        End If
-
-        Do While (selection.Count = 0 Or oneMore) And tolerance <= 10000
-            tolerance += dtolerance
-            selection.Clear()
-            For u As Integer = 0 To UBound(RndStack.AllUnits) Step 1
-                If f(RndStack.AllUnits(u)) Then
-                    If Math.Abs(RndStack.AllUnits(u).EXPkilled - unit.EXPkilled) <= tolerance Then
-                        add = True
-                        If add Then add = (RndStack.AllUnits(u).small = unit.small)
-                        If add Then add = (RndStack.AllUnits(u).waterOnly = unit.waterOnly)
-                        If add Then add = (RndStack.AllUnits(u).leadership = unit.leadership)
-                        If add Then
-                            If RndStack.AllUnits(u).reach = GenDefaultValues.UnitAttackReach.melee Then
-                                add = (RndStack.AllUnits(u).reach = unit.reach)
-                            Else
-                                add = Not (RndStack.AllUnits(u).reach = GenDefaultValues.UnitAttackReach.melee)
-                            End If
-                        End If
-                        If add Then add = (RndStack.AllUnits(u).race = unit.race)
-                        If add Then selection.Add(u)
-                    End If
-                End If
-            Next u
-            If selection.Count > 0 Then oneMore = Not oneMore
-        Loop
-        If selection.Count > 0 Then
-            Dim r As Integer = RndStack.comm.RandomSelection(selection, True)
-            Return RndStack.AllUnits(r).unitID
-        Else
-            Return unit.unitID
-        End If
-    End Function
-
 End Class

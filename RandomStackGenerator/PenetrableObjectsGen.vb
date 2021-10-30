@@ -44,9 +44,9 @@
                 If MayPlaceRoad(m, possible, x, y) Then
                     p = MakeNearestRoadTilesList(m, possible, x, y)
                     If p.Count > 0 Then
-                        If rndgen.PRand(0, 1) < settMap.RoadsAmount Then
+                        If rndgen.RndDbl(0, 1) < settMap.RoadsAmount Then
                             followng.Clear()
-                            followng.Add(p.Item(rndgen.RndPos(p.Count, True) - 1))
+                            followng.Add(p.Item(rndgen.RndItemIndex(p)))
                             Call SetRoad(m, settMap, x, y, True)
                             Call SetRoad(m, settMap, followng.Item(0).X, followng.Item(0).Y, True)
                             Do While followng.Count > 0
@@ -59,7 +59,7 @@
                                     p = MakeNearestRoadTilesList(m, possible, item.X, item.Y)
                                     nAdded = 0
                                     For Each pos As Point In p
-                                        If nAdded < 2 AndAlso rndgen.PRand(0, 1) < settMap.RoadsAmount Then
+                                        If nAdded < 2 AndAlso rndgen.RndDbl(0, 1) < settMap.RoadsAmount Then
                                             Call SetRoad(m, settMap, pos.X, pos.Y, True)
                                             followng.Add(pos)
                                             nAdded += 1
@@ -102,7 +102,7 @@
         Dim res As New List(Of Point)
         Dim n As Integer = p.Count - 1
         For i As Integer = 1 To n Step 1
-            Dim r As Integer = rndgen.RndPos(p.Count, True) - 1
+            Dim r As Integer = rndgen.RndItemIndex(p)
             res.Add(p.Item(r))
             p.RemoveAt(r)
         Next i
@@ -166,7 +166,7 @@
     Private Sub GenForest(ByRef m As Map, ByRef settMap As Map.SettingsMap, ByRef mustBeFree(,) As Boolean)
         For y As Integer = 0 To m.ySize Step 1
             For x As Integer = 0 To m.xSize Step 1
-                If isPossiblePos(m, x, y, mustBeFree) AndAlso rndgen.PRand(0, 1) < settMap.ForestAmount Then
+                If isPossiblePos(m, x, y, mustBeFree) AndAlso rndgen.RndDbl(0, 1) < settMap.ForestAmount Then
                     If m.symmID > -1 Then
                         Dim p() As Point = symm.ApplySymm(New Point(x, y), settMap.nRaces, m, 1)
                         For i As Integer = 0 To UBound(p) Step 1
@@ -204,7 +204,7 @@
                     Next j
                     If Not skip Then
                         If pos.Count > 0 Then
-                            Dim selected As Point = pos.Item(rndgen.RndPos(pos.Count, True) - 1)
+                            Dim selected As Point = pos.Item(rndgen.RndItemIndex(pos))
                             If m.symmID > -1 Then
                                 Dim p() As Point = symm.ApplySymm(selected, settMap.nRaces, m, 1)
                                 For i As Integer = 0 To UBound(p) Step 1

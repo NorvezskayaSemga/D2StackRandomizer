@@ -55,10 +55,10 @@ Public Class RndValueGenTest
 
 
     '''<summary>
-    '''A test for RndIntFast
+    '''A test for RndInt
     '''</summary>
     <TestMethod()> _
-    Public Sub RndIntFastTest1()
+    Public Sub RndIntTest1()
         Dim size As Integer = 1000
         Dim m As Integer = 123
         Dim generated() As Boolean
@@ -68,7 +68,7 @@ Public Class RndValueGenTest
                 ReDim generated(size)
                 Dim target As RndValueGen = New RndValueGen(-seed + (1 - seed) * Integer.MaxValue)
                 For i As Integer = 0 To 20 * size Step 1
-                    generated(target.RndIntFast(min, size + min) - min) = True
+                    generated(target.RndInt(min, size + min) - min) = True
                 Next i
                 For i As Integer = 0 To size Step 1
                     If Not generated(i) Then ok = False
@@ -80,15 +80,15 @@ Public Class RndValueGenTest
     End Sub
 
     '''<summary>
-    '''A test for RndIntFast
+    '''A test for RndInt
     '''</summary>
     <TestMethod()> _
-    Public Sub RndIntFastTest2()
+    Public Sub RndIntTest2()
         Dim target As RndValueGen = New RndValueGen()
         Dim ok As Boolean = True
         For min As Integer = 0 To 100 Step 1
             For max As Integer = min To 100 Step 1
-                Dim r As Integer = target.RndIntFast(min, max)
+                Dim r As Integer = target.RndInt(min, max)
                 If r < min Then ok = False
                 If r > max Then ok = False
             Next max
@@ -110,7 +110,7 @@ Public Class RndValueGenTest
             ReDim generated(size)
             Dim target As RndValueGen = New RndValueGen()
             For i As Integer = 0 To 50 * size Step 1
-                generated(target.RndInt(min, size + min, True) - min) = True
+                generated(target.RndInt(min, size + min) - min) = True
             Next i
             For i As Integer = 0 To size Step 1
                 If Not generated(i) Then ok = False

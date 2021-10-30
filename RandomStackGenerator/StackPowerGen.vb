@@ -225,7 +225,7 @@
                     If Not guards.Item(id).isPassGuard Then
                         Dim x As Integer = guards.Item(id).pos.X
                         Dim y As Integer = guards.Item(id).pos.Y
-                        Dim r As Double = rndgen.PRand(0.85, 1.15)
+                        Dim r As Double = rndgen.RndDbl(0.85, 1.15)
                         Dim t As Double = CapitalDistWeight(guards.Item(id).CapDist, minCapDist, maxCapDist)
                         If i >= settMap.nRaces Then t += CenterDistWeight(guards.Item(id).CenDist, minCenDist, maxCenDist)
                         t *= r
@@ -259,7 +259,7 @@
                 End If
                 Dim e As Double = stackPowerMultiplier * LocTotalExp(guards.Item(id).LocID - 1) * W.Item(id) / Wsum(guards.Item(id).LocID - 1)
                 expKilled.Add(id, e)
-                Dim t As Double = e * rndgen.PRand(minD, maxD)
+                Dim t As Double = e * rndgen.RndDbl(minD, maxD)
                 If m.board(x, y).mapObject.objectID = DefMapObjects.Types.Ruins Then
                     t *= settLoc(m.board(x, y).locID(0) - 1).ruinsWealthMultiplicator
                 ElseIf m.board(x, y).mapObject.objectID = DefMapObjects.Types.City Then
@@ -306,7 +306,7 @@
                     Next k
                     e = expSum / nearest.Count
                 Else
-                    e = rndgen.RndInt(200, 300, True)
+                    e = rndgen.RndInt(200, 300)
                 End If
                 expKilled.Add(id, e * settMap.PassGuardsPowerMultiplicator)
                 LootCost.Add(id, 0)
@@ -341,23 +341,23 @@ Class StackStatsGen
         Return StackStatsGen.GenDesiredStats(expKilled, LootCost, rndGen, defValues, -1)
     End Function
     Friend Shared Function GenDesiredStats(ByRef expKilled As Double, ByRef LootCost As Double, ByRef rndGen As RandomStackGenerator.RndValueGen, ByRef defValues As GenDefaultValues, ByRef groupID As Integer) As AllDataStructues.DesiredStats
-        Dim stackSize As Integer = rndGen.RndPos(defValues.maxStackSize, True)
-        Dim meleeCount As Integer = rndGen.RndPos(Math.Min(stackSize, 3), True)
+        Dim stackSize As Integer = rndGen.RndInt(1, defValues.maxStackSize)
+        Dim meleeCount As Integer = rndGen.RndInt(1, Math.Min(stackSize, 3))
         Dim maxGiants As Integer
         If stackSize < 2 Then
             maxGiants = 0
         ElseIf stackSize < defValues.maxStackSize - 2 Then
-            maxGiants = rndGen.RndPos(2, True) - 1
+            maxGiants = rndGen.RndInt(0, 1)
         ElseIf stackSize < defValues.maxStackSize Then
-            maxGiants = rndGen.RndPos(3, True) - 1
+            maxGiants = rndGen.RndInt(0, 2)
         Else
-            maxGiants = rndGen.RndPos(4, True) - 1
+            maxGiants = rndGen.RndInt(0, 3)
         End If
 
         Dim averageExpBar As Double = UnitExpKilledToExpBar(expKilled / (stackSize - 0.5 * maxGiants))
         Dim minExpBar As Double = Common.ValueLowerBound(defValues.expBarDispersion, averageExpBar)
         Dim maxExpBar As Double = Common.ValueUpperBound(defValues.expBarDispersion, averageExpBar)
-        Dim eBar As Integer = CInt(rndGen.PRand(minExpBar, maxExpBar))
+        Dim eBar As Integer = CInt(rndGen.RndDbl(minExpBar, maxExpBar))
 
         Return New AllDataStructues.DesiredStats With {.ExpStackKilled = Math.Max(CInt(expKilled), 5), _
                                                        .StackSize = stackSize, _
@@ -498,7 +498,7 @@ Public Class RaceGen
     End Function
     Private Function GenLocRace(ByRef m As Map, ByRef nRaces As Integer, ByRef PlayableRaces() As Integer, ByRef settLoc() As Map.SettingsLoc) As Integer()
         'выбор играбельных рас
-        Dim selectedRaces As New List(Of Integer)
+        Dim selectedRaces As New RandomSelection(comm.defValues.randomRaceID + 1, rndgen)
         If IsNothing(PlayableRaces) Then
             Dim AllPlayableRacesList(UBound(LRaces)) As Integer
             Dim n As Integer = -1
@@ -515,18 +515,18 @@ Public Class RaceGen
             ReDim Preserve AllPlayableRacesList(n)
             selectedRaces.AddRange(AllPlayableRacesList)
             For i As Integer = 0 To UBound(AllPlayableRacesList) - nRaces Step 1
-                Dim s As Integer = comm.RandomSelection(selectedRaces, True)
+                Dim s As Integer = selectedRaces.RandomSelection()
                 selectedRaces.Remove(s)
             Next i
         Else
             selectedRaces.AddRange(PlayableRaces)
             If PlayableRaces.Length < nRaces Then
                 For i = PlayableRaces.Length + 1 To nRaces Step 1
-                    selectedRaces.Add(GenDefaultValues.randomRaceID)
+                    selectedRaces.Add(comm.defValues.randomRaceID)
                 Next i
             ElseIf PlayableRaces.Length > nRaces Then
                 Do While selectedRaces.Count > nRaces
-                    selectedRaces.RemoveAt(rndgen.RndInt(0, selectedRaces.Count - 1, True))
+                    selectedRaces.RemoveAt(rndgen.RndItemIndex(selectedRaces))
                 Loop
             End If
         End If
@@ -534,21 +534,21 @@ Public Class RaceGen
             Throw New Exception("Количество рас не соответствует количеству столиц на карте")
             Return Nothing
         End If
-        Do While selectedRaces.Contains(GenDefaultValues.randomRaceID)
-            Dim s As New List(Of Integer)
+        Do While selectedRaces.Contains(comm.defValues.randomRaceID)
+            Dim s As New RandomSelection(comm.defValues.randomRaceID + 1, rndgen)
             For Each r As String In comm.defValues.playableRaces
                 Dim subrace As Integer = comm.RaceIdentifierToSubrace(r)
                 If Not selectedRaces.Contains(subrace) Then
                     s.Add(subrace)
                 End If
             Next r
-            selectedRaces.Remove(GenDefaultValues.randomRaceID)
-            selectedRaces.Add(comm.RandomSelection(s, True))
+            selectedRaces.Remove(comm.defValues.randomRaceID)
+            selectedRaces.Add(s.RandomSelection())
         Loop
         Dim LocR(UBound(m.Loc)) As Integer
         For i As Integer = 1 To nRaces Step 1
             If IsNothing(PlayableRaces) Then
-                Dim s As Integer = comm.RandomSelection(selectedRaces, True)
+                Dim s As Integer = selectedRaces.RandomSelection()
                 selectedRaces.Remove(s)
                 LocR(i - 1) = LRaces(s)
             Else
@@ -557,7 +557,7 @@ Public Class RaceGen
         Next i
 
         'выбор рас для обычных локаций
-        Dim ids As New List(Of Integer)
+        Dim ids As New RandomSelection(LRaces.Length, rndgen)
         For i As Integer = nRaces To UBound(LocR) Step 1
             If Not m.Loc(i).IsObtainedBySymmery Then
                 ids.Clear()
@@ -581,7 +581,7 @@ Public Class RaceGen
                         Next j
                     End If
                 End If
-                Dim R As Integer = LRaces(comm.RandomSelection(ids, LRacesWeight, True))
+                Dim R As Integer = LRaces(ids.RandomSelection(LRacesWeight))
                 If m.symmID > -1 Then
                     Dim pp() As Point = symm.ApplySymm(m.Loc(i).pos, nRaces, m, 1)
                     For Each p As Point In pp
@@ -633,7 +633,8 @@ Public Class RaceGen
     End Sub
     Private Sub SetCellRace(ByRef m As Map, ByRef LocR() As Integer, ByRef nRaces As Integer, ByRef races() As List(Of Integer), _
                             ByRef weight() As Double, ByRef x As Integer, ByRef y As Integer, ByRef settLoc() As Map.SettingsLoc)
-        Dim rO, rS, IDs As New List(Of Integer)
+        Dim rO, rS As New List(Of Integer)
+        Dim IDs As New RandomSelection(weight.Length, rndgen)
         Dim added As New List(Of String)
         Dim t As Integer = -1
         Dim isWaterCell As Boolean = MayBeWater(m, x, y)
@@ -663,7 +664,7 @@ Public Class RaceGen
                 If IsNothing(settLoc(m.board(x, y).locID(0) - 1).possibleRaces) Then
                     baseNeutralStacksRace = neutralI
                 Else
-                    Dim possibleRacesList As New List(Of Integer)
+                    Dim possibleRacesList As New RandomSelection(LRaces.Length, rndgen)
                     For Each race As String In settLoc(m.board(x, y).locID(0) - 1).possibleRaces
                         Dim rID As Integer = comm.RaceIdentifierToSubrace(race, False)
                         For j As Integer = 0 To UBound(LRaces) Step 1
@@ -678,7 +679,7 @@ Public Class RaceGen
                             possibleRacesList.Add(j)
                         Next j
                     End If
-                    baseNeutralStacksRace = comm.RandomSelection(possibleRacesList, LRacesWeight, True)
+                    baseNeutralStacksRace = possibleRacesList.RandomSelection(LRacesWeight)
                     possibleRacesList.Clear()
                 End If
                 Dim add As Boolean
@@ -692,7 +693,7 @@ Public Class RaceGen
             For i As Integer = 0 To t Step 1
                 IDs.Add(i)
             Next i
-            Dim s As Integer = comm.RandomSelection(IDs, weight, True) ' rndgen.RndPos(t + 1, True) - 1
+            Dim s As Integer = IDs.RandomSelection(weight)
 
             For Each item As Integer In races(s)
                 rS.Add(item)

@@ -82,6 +82,7 @@
     <Compile Include="CommonTest.vb" />
     <Compile Include="My Project\AssemblyInfo.vb" />
     <Compile Include="ObjectsContentSetTest.vb" />
+    <Compile Include="RandomSelectionTest.vb" />
     <Compile Include="RandStackTest.vb" />
     <Compile Include="RandStack_CostTest.vb" />
     <Compile Include="RndValueGenTest.vb" />

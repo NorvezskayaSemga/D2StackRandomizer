@@ -135,112 +135,6 @@ Public Class RandStackTest
     End Function
 
     '''<summary>
-    '''A test for RndPos
-    '''</summary>
-    <TestMethod(), _
-     DeploymentItem("RandomStackGenerator.dll")> _
-    Public Sub RndPosTest()
-        Dim target As RandStack_Accessor = CreateRandStack_Accessor()
-        Call target.ResetExclusions()
-
-        Dim serial_ok, parallel_ok As Boolean
-        serial_ok = True
-        parallel_ok = True
-        For n As Integer = 1 To 10 Step 1
-            Dim ok As Boolean
-            Dim r As Integer
-            For j As Integer = 1 To n Step 1
-                ok = False
-                For attempt = 0 To 100 * n Step 1
-                    r = target.rndgen.RndPos(n, True)
-                    If r = j Then
-                        ok = True
-                        Exit For
-                    End If
-                Next attempt
-                If Not ok Then
-                    serial_ok = False
-                    Exit For
-                End If
-            Next j
-            If Not serial_ok Then Exit For
-        Next n
-
-        Parallel.For(1, 10 + 1, _
-         Sub(n As Integer)
-             If Not parallel_ok Then Exit Sub
-             Dim ok As Boolean
-             Dim r As Integer
-             For j As Integer = 1 To n Step 1
-                 ok = False
-                 For attempt = 0 To 100 * n Step 1
-                     r = target.rndgen.RndPos(n, False)
-                     If r = j Then
-                         ok = True
-                         Exit For
-                     End If
-                 Next attempt
-                 If Not ok Then
-                     parallel_ok = False
-                     Exit For
-                 End If
-             Next j
-         End Sub)
-        If Not serial_ok Or Not parallel_ok Then Assert.Inconclusive("Verify the correctness of this test method.")
-    End Sub
-
-    '''<summary>
-    '''A test for Rand
-    '''</summary>
-    <TestMethod(), _
-     DeploymentItem("RandomStackGenerator.dll")> _
-    Public Sub RandTest()
-        Call PrepareToTest()
-        Dim target As Common_Accessor = New Common_Accessor(GenDefaultValues.DefaultMod)
-        Dim maxval As Integer = 10000
-        Dim ok, g(maxval / 10), tmpok As Boolean
-        ok = True
-        For j As Integer = 0 To 10 Step 1
-            For i As Integer = 0 To maxval * 10 Step 1
-                g(target.rndgen.Rand(0, CDbl(maxval), True) / 10) = True
-            Next i
-            tmpok = True
-            For i As Integer = 0 To maxval / 10 Step 1
-                If Not g(i) Then
-                    tmpok = False
-                    Exit For
-                End If
-            Next i
-            If tmpok Then Exit For
-        Next j
-        For i As Integer = 0 To maxval / 10 Step 1
-            If Not g(i) Then ok = False
-            g(i) = False
-        Next i
-
-        For j As Integer = 0 To 10 Step 1
-            Parallel.For(0, maxval * 10 + 1, _
-             Sub(i As Integer)
-                 g(target.rndgen.Rand(0, CDbl(maxval), False) / 10) = True
-             End Sub)
-            tmpok = True
-            For i As Integer = 0 To maxval / 10 Step 1
-                If Not g(i) Then
-                    tmpok = False
-                    Exit For
-                End If
-            Next i
-            If tmpok Then Exit For
-        Next j
-        For i As Integer = 0 To maxval / 10 Step 1
-            If Not g(i) Then ok = False
-            g(i) = False
-        Next i
-
-        If Not ok Then Assert.Inconclusive("Verify the correctness of this test method.")
-    End Sub
-
-    '''<summary>
     '''A test for Gen
     '''</summary>
     <TestMethod()> _
@@ -1050,12 +944,8 @@ Public Class RandStackTest
                             target.mapData.minesAmount = mana
                             For j As Integer = 0 To 11 Step 1
                                 For i As Integer = 0 To 1000 Step 10
-                                    input = New AllDataStructues.Cost With {.Gold = i, _
-                                                                            .Black = target.rndgen.RndPos(1001, True) - 1, _
-                                                                            .Blue = target.rndgen.RndPos(1001, True) - 1, _
-                                                                            .Green = target.rndgen.RndPos(1001, True) - 1, _
-                                                                            .Red = target.rndgen.RndPos(1001, True) - 1, _
-                                                                            .White = target.rndgen.RndPos(1001, True) - 1}
+                                    input = RndResource(target)
+                                    input.Gold = i
                                     result = target.GoldToMana(input, 1, 0.1 * CDbl(j))
                                     s1 = AllDataStructues.Cost.Sum(input)
                                     s2 = AllDataStructues.Cost.Sum(result)
@@ -1078,6 +968,13 @@ Public Class RandStackTest
 
         If Not ok Then Assert.Inconclusive("Verify the correctness of this test method.")
     End Sub
+    Private Function RndResource(ByRef target As RandStack_Accessor) As AllDataStructues.Cost
+        Dim result() As Integer = AllDataStructues.Cost.ToArray(New AllDataStructues.Cost)
+        For i As Integer = 0 To UBound(result) Step 1
+            result(i) = target.rndgen.RndInt(0, 1000)
+        Next i
+        Return AllDataStructues.Cost.ToCost(result)
+    End Function
 
     '''<summary>
     '''A test for Log
