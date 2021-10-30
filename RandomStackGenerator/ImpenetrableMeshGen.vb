@@ -5664,8 +5664,16 @@ Public Class shortMapFormat
                 End If
                 If m.board(x, y).surface.isForest Then
                     res.landscape(x, y).ground = TileState.GroundType.Forest
-                    Dim max As Integer = treesAmont(objContent.randStack.comm.RaceIdentifierToSubrace(res.landscape(x, y).owner)) - 1
-                    res.landscape(x, y).treeID = objContent.randStack.rndgen.RndInt(0, max, True)
+                    Dim max As Integer
+                    If objContent.randStack.comm.defValues.IsNeutralRace(res.landscape(x, y).owner) Then
+                        For Each r As String In objContent.randStack.comm.defValues.neutralRaces
+                            max = treesAmont(objContent.randStack.comm.RaceIdentifierToSubrace(r)) - 1
+                            If max > -1 Then Exit For
+                        Next r
+                    Else
+                        max = treesAmont(objContent.randStack.comm.RaceIdentifierToSubrace(res.landscape(x, y).owner)) - 1
+                    End If
+                    res.landscape(x, y).treeID = objContent.randStack.rndgen.RndInt(0, max)
                 ElseIf m.board(x, y).surface.isRoad Then
                     res.landscape(x, y).ground = TileState.GroundType.Road
                 Else
@@ -10165,7 +10173,7 @@ Public Class ImpenetrableObjects
                     For i As Integer = 0 To UBound(types) Step 1
                         IDs.Add(i)
                     Next i
-                    Dim r As Integer = comm.RandomSelection(IDs, True)
+                    Dim r As Integer = comm.RandomSelection(IDs, weights, True)
                     m.board(x, y).mapObject.objectName = types(r)
                 End If
             Next x
@@ -10773,11 +10781,11 @@ Public Class ImpenetrableObjects
          Sub(y As Integer)
              For x As Integer = 0 To tmpm.xSize Step 1
                  If f(x, y) And tmpm.board(x, y).passability.isBorder Then
-                     If IDs.Count > 0 Then
-                         'f(x, y) = False
-                         'tmpm.board(x, y).mapObject.objectName = "MOMNE0100"
-                         Call PlaceSingleMountain(tmpm, f, x, y, 1, Nothing)
-                     End If
+                     'If IDs.Count > 0 Then
+                     'f(x, y) = False
+                     'tmpm.board(x, y).mapObject.objectName = "MOMNE0100"
+                     Call PlaceSingleMountain(tmpm, f, x, y, 1, Nothing)
+                     'End If
                  End If
              Next x
          End Sub)

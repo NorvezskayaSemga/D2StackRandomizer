@@ -20,7 +20,7 @@ SymmetryClass	[Common_map_settings:Common_map_settings.ApplySymmetry=True]	[Inte
 xSize	[Common_map_settings]	[Integer]	24	144
 ySize	[Common_map_settings]	[Integer]	24	144
 
-RaceLocsDistTolerance	[Common_map_settings]	[Double]	0.1	10.0
+RaceLocsDistTolerance	[Common_map_settings]	[Double]	0.01	2.0
 
 PassageCreationChance	[Common_map_settings]	[Double]	0.0	1.0
 

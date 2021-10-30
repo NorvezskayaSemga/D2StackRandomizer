@@ -2622,7 +2622,7 @@ Public Class RndValueGen
     Private betTick, lastRAM As Double
     Private tempPat, delimiterBias As Integer
     Private fastModeSeed, fastModeTicks As Long
-    Private Const seedMaxVal As Long = Integer.MaxValue - 10
+    Private Const seedMaxVal As Long = Integer.MaxValue - 10000
 
     Public Sub New(Optional ByVal seed As Integer = -1)
         For i As Integer = 0 To 10 Step 1
@@ -5480,7 +5480,7 @@ Public Class GenDefaultValues
         Dim fields() As String = ClassFieldsHandler.GetFieldsNamesList(Me, {"myLog", "linked_Races", "RaceNumberToRaceChar", "playableRaces", "neutralRaces", _
                                                                             "generatorRaceToGameRace", "generatorRaceToCapitalID", "capitalToGeneratorRace", _
                                                                             "gameRaceToGeneratorRace", "selectedMod", "maxItemTypeID", "maxStackSize", _
-                                                                            "resReader"})
+                                                                            "resReader", "randomRaceID"})
 
         For Each f As String In fields
             If sendLinkedRaces.Contains(f.ToUpper) Then
@@ -5521,6 +5521,12 @@ Public Class GenDefaultValues
             Next f
         End If
 
+        Dim maxPlayableRaceID As Integer = -1
+        For i As Integer = 0 To UBound(playableRaces) Step 1
+            Dim id As Integer = linked_Races.Item(playableRaces(i).ToUpper)
+            maxPlayableRaceID = Math.Max(maxPlayableRaceID, id)
+        Next i
+        randomRaceID = maxPlayableRaceID + 1
     End Sub
     ''' <summary>Вернет список поддерживаемых модов</summary>
     Public Shared Function GetSupportedMods() As String()
@@ -5751,6 +5757,21 @@ Public Class GenDefaultValues
         Next name
     End Sub
 
+    Public Function IsPlayableRace(ByVal race As String) As Boolean
+        Dim r As Integer = linked_Races(race.ToUpper)
+        For i As Integer = 0 To UBound(playableRaces) Step 1
+            If r = linked_Races(playableRaces(i)) Then Return True
+        Next i
+        Return False
+    End Function
+    Public Function IsNeutralRace(ByVal race As String) As Boolean
+        Dim r As Integer = linked_Races(race.ToUpper)
+        For i As Integer = 0 To UBound(neutralRaces) Step 1
+            If r = linked_Races(neutralRaces(i)) Then Return True
+        Next i
+        Return False
+    End Function
+
     Enum TextLanguage
         Rus = 1
         Eng = 2
@@ -5805,7 +5826,7 @@ Public Class GenDefaultValues
     Public ReadOnly smallLocationRadius As Double
     Public ReadOnly LocRacesBlocks As String()
     Public ReadOnly StackRaceChance As Double()
-    Public Const randomRaceID As Integer = -10001
+    Public ReadOnly randomRaceID As Integer
 
 #Region "Keywords"
     'ключевые слова
