@@ -8,27 +8,30 @@ Friend Class StartForm
     Dim ObjectsSize As New Dictionary(Of String, Size)
 
     Private Sub GenMany_click() Handles GenManyButton.Click
+        Dim startTime As Integer = Environment.TickCount
         For i As Integer = 1 To 300 Step 1
             GenButton.PerformClick()
             Me.Refresh()
         Next i
-        MsgBox("Done")
+        Dim endTime As Integer = Environment.TickCount
+        MsgBox("Done. " & Math.Round((endTime - startTime) / 60, 0) & " minutes")
     End Sub
 
     Private Sub GenButton_Click() Handles GenButton.Click
         'Call StackLocationsGen.PassageGuardPlacer.speedBanchmark()
         'Call ImpenetrableMeshGen.ActiveObjectsPlacer.speedBanchmark()
 
-        Call Tests.ItemsGenTest_time()
+        'Call Tests.ItemsGenTest_time()
 
-        Dim tf As New TemplateForge(RandomStackGenerator.GenDefaultValues.TextLanguage.Rus)
-        tf.ReadCommonMapSettingsFromFile(".\Resources", "example_template_2_unsymm.txt")
+        If GenDefaultValues.writeToConsole Then
+            Dim tf As New TemplateForge(RandomStackGenerator.GenDefaultValues.TextLanguage.Rus)
+            tf.ReadCommonMapSettingsFromFile(".\Resources", "example_template_2_unsymm.txt")
 
-        For Each lang As GenDefaultValues.TextLanguage In System.Enum.GetValues(GetType(GenDefaultValues.TextLanguage))
-            Call TemplateForge.GetPermissibleParametersRange(lang)
-        Next lang
-
-        Dim param() As TemplateForge.Parameter = TemplateForge.GetPermissibleParametersRange(GenDefaultValues.TextLanguage.Rus)
+            For Each lang As GenDefaultValues.TextLanguage In System.Enum.GetValues(GetType(GenDefaultValues.TextLanguage))
+                Call TemplateForge.GetPermissibleParametersRange(lang)
+            Next lang
+            Dim param() As TemplateForge.Parameter = TemplateForge.GetPermissibleParametersRange(GenDefaultValues.TextLanguage.Rus)
+        End If
 
         Dim treesAmount() As Integer = {0, 20, 20, 20, 20, 20, 0, 0, 0, 0, 0, 0, 0, 0, 20}
 
@@ -86,15 +89,18 @@ Friend Class StartForm
         'gsettings.common_settMap.ForestAmount = 0
         '###
 
+        Dim startTime As Integer = Environment.TickCount
         grid = New MapGenWrapper(objplace).CommonGen(gsettings, genTimeLimit, GenDefaultValues.DefaultMod)
 
         If Not IsNothing(grid.board) Then
             Call ShowResult(grid)
             Call shortMapFormat.MapConversion(grid, gsettings, objSizeArray, objCont, True, True, treesAmount, GenDefaultValues.TextLanguage.Rus)
         End If
+        Dim endTime As Integer = Environment.TickCount
+        Console.WriteLine(endTime - startTime & " ms")
 
-        Console.WriteLine(grid.log.PrintAll)
-        LogTextBox.Text = grid.log.PrintAll
+        If GenDefaultValues.writeToConsole Then Console.WriteLine(grid.log.PrintAll)
+        If GenDefaultValues.writeToConsole Then LogTextBox.Text = grid.log.PrintAll
     End Sub
     Public Sub ShowResult(ByRef grid As Map)
         Dim t(grid.xSize, grid.ySize) As Integer

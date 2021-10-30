@@ -150,7 +150,7 @@
                 Next i
             End If
         Catch ex As Exception
-            Console.WriteLine(ex.Message)
+            If GenDefaultValues.writeToConsole Then Console.WriteLine(ex.Message)
             AddToLog(-1, "Names downloader: " & ex.Message)
         End Try
         Try
@@ -185,7 +185,7 @@
                 LordMinWeight = lordDonationThreshold / wsum
             End If
         Catch ex As Exception
-            Console.WriteLine(ex.Message)
+            If GenDefaultValues.writeToConsole Then Console.WriteLine(ex.Message)
             AddToLog(-1, "Names weight sum: " & ex.Message)
         End Try
         Try
@@ -264,7 +264,7 @@
                 exclude.Add(str(i).ToUpper)
             Next i
         Catch ex As Exception
-            Console.WriteLine(ex.Message)
+            If GenDefaultValues.writeToConsole Then Console.WriteLine(ex.Message)
             AddToLog(-1, "Exclusions reader: " & ex.Message)
         End Try
     End Sub

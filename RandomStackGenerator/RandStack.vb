@@ -3698,7 +3698,7 @@ Public Class DecorationPlacingProperties
                         id = comm.RaceIdentifierToSubrace(racesRow(i))
                         If Not race.Contains(id) Then race.Add(id)
                     Catch ex As Exception
-                        Console.WriteLine(ex.Message)
+                        If GenDefaultValues.writeToConsole Then Console.WriteLine(ex.Message)
                     End Try
                 End If
             End If
@@ -5780,6 +5780,7 @@ Public Class GenDefaultValues
     ''' <summary>Игра использует такую строку для неиспользуемых юнитов, предметов и т.д.</summary>
     Public Const emptyItem As String = "G000000000"
     Public ReadOnly maxItemTypeID As Integer = GetType(GenDefaultValues.ItemTypes).GetEnumValues.Cast(Of Integer).Max
+    Public Const writeToConsole As Boolean = False
 
     'stack info
     Friend busytransfer() As Integer = New Integer() {1, -1, 3, -1, 5, -1}
@@ -6170,6 +6171,7 @@ Public Class GenDefaultValues
             Next k
         End Sub
         Private Sub PrintValuesCount()
+            If Not GenDefaultValues.writeToConsole Then Exit Sub
             Dim d() As Dictionary(Of String, TxTList) = ToArray()
             Dim delimiter As String = "-----------------------"
             Console.WriteLine(delimiter)
@@ -6243,7 +6245,7 @@ Public Class ReasoucesReader
                 Try
                     myLog.Add("Reading " & name & " from " & path)
                 Catch ex As Exception
-                    Console.WriteLine("Reading " & name & "; external; " & ex.Message)
+                    If GenDefaultValues.writeToConsole Then Console.WriteLine("Reading " & name & "; external; " & ex.Message)
                 End Try
             End If
             Return String.Join(vbNewLine, Common.RecursiveReadFile(path))
@@ -6252,7 +6254,7 @@ Public Class ReasoucesReader
                 Try
                     myLog.Add("Couldn't find " & path & " ; Reading " & name & " from internal resources")
                 Catch ex As Exception
-                    Console.WriteLine("Reading " & name & "; internal; " & ex.Message)
+                    If GenDefaultValues.writeToConsole Then Console.WriteLine("Reading " & name & "; internal; " & ex.Message)
                 End Try
             End If
             Return String.Join(vbNewLine, Common.RecursiveReadFile(defaultValue.Split(CChar(vbNewLine))))

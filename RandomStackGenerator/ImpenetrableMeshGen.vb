@@ -674,8 +674,8 @@ Public Class TemplateForge
                 Next j
                 res(i).arrayDelimiter = d2
             End If
-            Console.WriteLine(res(i).description)
-            Console.WriteLine("----------------")
+            If GenDefaultValues.writeToConsole Then Console.WriteLine(res(i).description)
+            If GenDefaultValues.writeToConsole Then Console.WriteLine("----------------")
         Next i
         Dim info() As String = {My.Resources.template_header_keyword, _
                                 My.Resources.template_creation, _
@@ -1411,6 +1411,7 @@ clearandexit:
 #Region "Place locations"
     Public Function PlaceLocationsByTemplate(ByRef settGen As GenSettings, ByRef symmID As Integer, ByRef previousLogText As String) As Map
         Dim res As New Map(settGen.common_settMap.xSize, settGen.common_settMap.ySize, symmID, comm)
+        If Not GenDefaultValues.writeToConsole Then res.log.Disable()
         Call res.log.Add(previousLogText)
 
         Dim loc() As Location = Nothing
@@ -1592,6 +1593,7 @@ clearandexit:
 
     Private Function PlaceRaceLocations(ByRef settMap As Map.SettingsMap, ByRef settRaceLoc As Map.SettingsLoc, ByRef symmID As Integer, ByRef previousLogText As String) As Map
         Dim res As New Map(settMap.xSize, settMap.ySize, symmID, comm)
+        If Not GenDefaultValues.writeToConsole Then res.log.Disable()
         Call res.log.Add(previousLogText)
 
         Dim ok As Boolean = False
