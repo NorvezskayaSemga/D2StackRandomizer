@@ -9709,92 +9709,87 @@ Public Class ImpenetrableObjects
     End Sub
 
     Private Sub SetObjectsTags(ByRef m As Map, ByVal free(,) As Boolean)
-        Dim tmpm As Map = m
-        Dim pointID(tmpm.xSize, tmpm.ySize) As Integer
+        Dim pointID(m.xSize, m.ySize) As Integer
         Dim pointPos(pointID.Length - 1) As Point
+        Dim rndgen As New RndValueGen
+        Dim posPool, del As New List(Of Integer)
         Dim n As Integer = -1
-        For y As Integer = 0 To tmpm.ySize Step 1
-            For x As Integer = 0 To tmpm.xSize Step 1
+
+        For y As Integer = 0 To m.ySize Step 1
+            For x As Integer = 0 To m.xSize Step 1
                 n += 1
                 pointID(x, y) = n
                 pointPos(n) = New Point(x, y)
-                tmpm.board(x, y).mapObject.NewTagsList()
+                m.board(x, y).mapObject.NewTagsList()
             Next x
         Next y
-        Parallel.For(0, tmpm.Loc.Length, _
-         Sub(i As Integer)
-             Dim rndgen As New RndValueGen
-             Dim posPool, del As New List(Of Integer)
-             Dim minSublocationR As Double = Double.MaxValue
-             Dim locRace As Integer = tmpm.Loc(i).Race
-             For Each k As String In racesSublocations(locRace).Keys
-                 minSublocationR = Math.Min(minSublocationR, racesSublocations(locRace).Item(k).radius)
-             Next k
-             minSublocationR *= 0.75
-             For y As Integer = 0 To tmpm.ySize Step 1
-                 For x As Integer = 0 To tmpm.xSize Step 1
-                     If tmpm.board(x, y).passability.isBorder And free(x, y) And tmpm.board(x, y).locID(0) = tmpm.Loc(i).ID Then
-                         posPool.Add(pointID(x, y))
-                     End If
-                 Next x
-             Next y
-             While posPool.Count > 0
-                 Dim selectedPointID As Integer = posPool(rndgen.RndIntFast(0, posPool.Count - 1))
-                 Dim selectedTag As String = racesSublocations(locRace).Keys(rndgen.RndIntFast(0, racesSublocations(locRace).Count - 1))
-                 Dim r2Set As Double = racesSublocations(locRace).Item(selectedTag).radius ^ 2
-                 Dim r2Rem As Double = (racesSublocations(locRace).Item(selectedTag).radius + minSublocationR) ^ 2
-                 del.Clear()
-                 For Each pid As Integer In posPool
-                     If pointPos(pid).SqDist(pointPos(selectedPointID)) < r2Set Then
-                         tmpm.board(pointPos(selectedPointID).X, pointPos(selectedPointID).Y).mapObject.AddTag(selectedTag)
-                     End If
-                     If pointPos(pid).SqDist(pointPos(selectedPointID)) < r2Rem Then del.Add(pid)
-                 Next pid
-                 For Each pid As Integer In del
-                     posPool.Remove(pid)
-                 Next pid
-             End While
-             posPool.Clear()
-             For y As Integer = 0 To tmpm.ySize Step 1
-                 For x As Integer = 0 To tmpm.xSize Step 1
-                     If tmpm.board(x, y).locID(0) = tmpm.Loc(i).ID Then
-                         If tmpm.board(x, y).mapObject.TagsList.Count = 0 Then posPool.Add(pointID(x, y))
-                     End If
-                 Next x
-             Next y
-             If posPool.Count > 0 Then
-                 Do While posPool.Count > 0
-                     Dim tags As New List(Of String)
-                     Dim selectedPointID As Integer = posPool(rndgen.RndIntFast(0, posPool.Count - 1))
-                     Dim x As Integer = pointPos(selectedPointID).X
-                     Dim y As Integer = pointPos(selectedPointID).Y
-                     tags.Clear()
-                     Dim b As Location.Borders = ImpenetrableMeshGen.NearestXY(x, y, tmpm.xSize, tmpm.ySize, 1)
-                     For p As Integer = b.minY To b.maxY Step 1
-                         For q As Integer = b.minX To b.maxX Step 1
-                             If tmpm.board(q, p).mapObject.TagsList.Count > 0 Then
-                                 Dim tL As List(Of String) = tmpm.board(q, p).mapObject.TagsList
-                                 For Each t As String In tL
-                                     If Not tags.Contains(t) Then tags.Add(t)
-                                 Next t
-                             End If
-                         Next q
-                     Next p
-                     If tags.Count > 0 Then
-                         Dim t As String = tags(rndgen.RndIntFast(0, tags.Count - 1))
-                         tmpm.board(x, y).mapObject.AddTag(t)
-                         posPool.Remove(selectedPointID)
-                     End If
-                 Loop
-             End If
-         End Sub)
-        m = tmpm
     End Sub
 
-    Private Function makeIDs(ByRef a() As MapObject) As List(Of Integer)
-        Dim IDs As New List(Of Integer)
-        For i As Integer = 0 To UBound(plateau) Step 1
-            IDs.Add(i)
+        For i As Integer = 0 To UBound(m.Loc) Step 1
+            posPool.Clear()
+            del.Clear()
+            Dim minSublocationR As Double = Double.MaxValue
+            Dim locRace As Integer = m.Loc(i).Race
+            For Each k As String In racesSublocations(locRace).Keys
+                minSublocationR = Math.Min(minSublocationR, racesSublocations(locRace).Item(k).radius)
+            Next k
+            minSublocationR *= 0.75
+            For y As Integer = 0 To m.ySize Step 1
+                For x As Integer = 0 To m.xSize Step 1
+                    If m.board(x, y).passability.isBorder And free(x, y) And m.board(x, y).locID(0) = m.Loc(i).ID Then
+                        posPool.Add(pointID(x, y))
+                    End If
+                Next x
+            Next y
+            While posPool.Count > 0
+                Dim selectedPointID As Integer = posPool(rndgen.RndIntFast(0, posPool.Count - 1))
+                Dim selectedTag As String = racesSublocations(locRace).Keys(rndgen.RndIntFast(0, racesSublocations(locRace).Count - 1))
+                Dim r2Set As Double = racesSublocations(locRace).Item(selectedTag).radius ^ 2
+                Dim r2Rem As Double = (racesSublocations(locRace).Item(selectedTag).radius + minSublocationR) ^ 2
+                del.Clear()
+                For Each pid As Integer In posPool
+                    If pointPos(pid).SqDist(pointPos(selectedPointID)) < r2Set Then
+                        m.board(pointPos(selectedPointID).X, pointPos(selectedPointID).Y).mapObject.AddTag(selectedTag)
+                    End If
+                    If pointPos(pid).SqDist(pointPos(selectedPointID)) < r2Rem Then del.Add(pid)
+                Next pid
+                For Each pid As Integer In del
+                    posPool.Remove(pid)
+                Next pid
+            End While
+            posPool.Clear()
+            For y As Integer = 0 To m.ySize Step 1
+                For x As Integer = 0 To m.xSize Step 1
+                    If m.board(x, y).locID(0) = m.Loc(i).ID Then
+                        If m.board(x, y).mapObject.TagsList.Count = 0 Then posPool.Add(pointID(x, y))
+                    End If
+                Next x
+            Next y
+            If posPool.Count > 0 Then
+                Do While posPool.Count > 0
+                    Dim tags As New List(Of String)
+                    Dim selectedPointID As Integer = posPool(rndgen.RndIntFast(0, posPool.Count - 1))
+                    Dim x As Integer = pointPos(selectedPointID).X
+                    Dim y As Integer = pointPos(selectedPointID).Y
+                    tags.Clear()
+                    Dim b As Location.Borders = ImpenetrableMeshGen.NearestXY(x, y, m.xSize, m.ySize, 1)
+                    For p As Integer = b.minY To b.maxY Step 1
+                        For q As Integer = b.minX To b.maxX Step 1
+                            If m.board(q, p).mapObject.TagsList.Count > 0 Then
+                                Dim tL As List(Of String) = m.board(q, p).mapObject.TagsList
+                                For Each t As String In tL
+                                    If Not tags.Contains(t) Then tags.Add(t)
+                                Next t
+                            End If
+                        Next q
+                    Next p
+                    If tags.Count > 0 Then
+                        Dim t As String = tags(rndgen.RndIntFast(0, tags.Count - 1))
+                        m.board(x, y).mapObject.AddTag(t)
+                        posPool.Remove(selectedPointID)
+                    End If
+                Loop
+            End If
         Next i
         Return IDs
     End Function
@@ -9813,6 +9808,8 @@ Public Class ImpenetrableObjects
         End If
         Return IDs
     End Function
+
+    End Sub
 
 #Region "MayPlace"
     Private Function MayPlace(ByRef m As Map, ByRef x As Integer, ByRef y As Integer, _
