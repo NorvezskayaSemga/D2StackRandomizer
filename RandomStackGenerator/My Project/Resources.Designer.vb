@@ -282,10 +282,7 @@ Namespace My.Resources
         '''#крестьянин
         '''g000uu5001
         '''g000uu5101
-        '''#толстый бес
-        '''g000uu6004
-        '''g000uu6104
-        '''#ведьмино от [rest of string was truncated]&quot;;.
+        '''#тол [rest of string was truncated]&quot;;.
         '''</summary>
         Friend ReadOnly Property ExcludeIDsForNames() As String
             Get
@@ -658,6 +655,15 @@ Namespace My.Resources
         End Property
         
         '''<summary>
+        '''  Looks up a localized string similar to RemoveLine.
+        '''</summary>
+        Friend ReadOnly Property remove_keyword() As String
+            Get
+                Return ResourceManager.GetString("remove_keyword", resourceCulture)
+            End Get
+        End Property
+        
+        '''<summary>
         '''  Looks up a localized string similar to R.
         '''</summary>
         Friend ReadOnly Property spellRandomRace() As String
@@ -776,7 +782,7 @@ Namespace My.Resources
         '''# GGW   WWW    WW
         '''# WWW , GGW  и WG можно считать одинаковыми
         '''#              WG
-        '''#Делать блок нужно с учетом того, что объект будет в центр [rest of string was truncated]&quot;;.
+        '''#Делать блок нужно с учетом того, что объект буде [rest of string was truncated]&quot;;.
         '''</summary>
         Friend ReadOnly Property WaterBlocks3x3Objects() As String
             Get

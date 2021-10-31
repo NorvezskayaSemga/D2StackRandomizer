@@ -117,7 +117,7 @@ Public Class RandStack
             ''' <param name="modName">Название мода, на котором происходит генерация.
             ''' Ваианты можно получить из GenDefaultValues.GetSupportedMods</param>
             Public Shared Function GetDefaultExcludedObjects(ByRef log As Log, ByVal modName As String) As List(Of String)
-                Dim r As New ReasoucesReader(log, modName)
+                Dim r As New ResoucesReader(log, modName)
                 Dim lines() As String = Common.SettingsFileSplit(r.ExcludedIDs)
                 Return ToList(lines)
             End Function
@@ -126,7 +126,7 @@ Public Class RandStack
             ''' <param name="modName">Название мода, на котором происходит генерация.
             ''' Ваианты можно получить из GenDefaultValues.GetSupportedMods</param>
             Public Shared Function GetDefaultExcludedLoreObjects(ByRef log As Log, ByVal modName As String) As List(Of String)
-                Dim r As New ReasoucesReader(log, modName)
+                Dim r As New ResoucesReader(log, modName)
                 Dim lines() As String = Common.SettingsFileSplit(r.ExcludedIDs_ModLore)
                 Return ToList(lines)
             End Function
@@ -135,7 +135,7 @@ Public Class RandStack
             ''' <param name="modName">Название мода, на котором происходит генерация.
             ''' Ваианты можно получить из GenDefaultValues.GetSupportedMods</param>
             Public Shared Function GetDefaultPreservedObjects(ByRef log As Log, ByVal modName As String) As List(Of String)
-                Dim r As New ReasoucesReader(log, modName)
+                Dim r As New ResoucesReader(log, modName)
                 Dim lines() As String = Common.SettingsFileSplit(r.PreservedItems)
                 Return ToList(lines)
             End Function
@@ -144,7 +144,7 @@ Public Class RandStack
             ''' <param name="modName">Название мода, на котором происходит генерация.
             ''' Ваианты можно получить из GenDefaultValues.GetSupportedMods</param>
             Public Shared Function GetDefaultLootItemChanceMultiplier(ByRef log As Log, ByVal modName As String) As Dictionary(Of String, Double)
-                Dim r As New ReasoucesReader(log, modName)
+                Dim r As New ResoucesReader(log, modName)
                 Dim lines() As String = Common.SettingsFileSplit(r.LootItemChanceMultiplier)
                 Return ToDictionary(lines)
             End Function
@@ -3584,6 +3584,13 @@ Public Class Common
                     End If
                 Next k
                 r = Nothing
+            ElseIf content(i).ToLower.StartsWith(My.Resources.remove_keyword.ToLower) Then
+                p = content(i).Substring(My.Resources.remove_keyword.Length + 1).Replace(vbTab, " ").ToLower
+                For k As Integer = 0 To n Step 1
+                    If output(k).TrimStart(CChar(" "), CChar(vbTab)).Replace(vbTab, " ").ToLower.StartsWith(p) Then
+                        output(k) = ""
+                    End If
+                Next k
             Else
                 If Not content(i).Trim(CChar(" "), CChar(vbTab)) = "" Then
                     n += 1
@@ -5377,7 +5384,7 @@ Public Class GenDefaultValues
     Protected Friend linked_Races As New Dictionary(Of String, Integer)
     Friend RaceNumberToRaceChar As New Dictionary(Of Integer, String)
 
-    Public resReader As ReasoucesReader
+    Public resReader As ResoucesReader
 
     ''' <param name="log">Лог для записи отчета, можно nothing</param>
     ''' <param name="modName">Название мода, на котором происходит генерация.
@@ -5386,7 +5393,7 @@ Public Class GenDefaultValues
 
         myLog = log
         selectedMod = modName
-        resReader = New ReasoucesReader(myLog, selectedMod)
+        resReader = New ResoucesReader(myLog, selectedMod)
 
         Dim itemTypeID As New Dictionary(Of String, Integer)
         Dim itemTypeName As New Dictionary(Of Integer, String)
@@ -5848,6 +5855,9 @@ Public Class GenDefaultValues
     Public Shared Function wTemplate_RandomRaceLongKeyword() As String
         Return My.Resources.template_RandomRaceLongKeyword
     End Function
+    Public Shared Function wRemoveLineKeyword() As String
+        Return My.Resources.remove_keyword
+    End Function
 #End Region
 
     Public Enum ItemTypes As Integer
@@ -6177,7 +6187,7 @@ Public Class GenDefaultValues
     End Class
 End Class
 
-Public Class ReasoucesReader
+Public Class ResoucesReader
 
     ''' <summary>Название выбранного мода</summary>
     ''' <remarks></remarks>

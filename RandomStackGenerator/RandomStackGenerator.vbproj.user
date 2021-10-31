@@ -5,7 +5,7 @@
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'Debug|AnyCPU'">
     <StartAction>Program</StartAction>
-    <StartProgram>E:\Visual Studio Tools\RandomStackGenerator\RandomStackGenerator\bin\Debug\D2MapEdit.exe</StartProgram>
-    <StartWorkingDirectory>E:\Visual Studio Tools\RandomStackGenerator\RandomStackGenerator\bin\Debug\</StartWorkingDirectory>
+    <StartProgram>F:\Visual Studio\D2StackRandomizer\RandomStackGenerator\bin\Debug\D2MapEdit.exe</StartProgram>
+    <StartWorkingDirectory>F:\Visual Studio\D2StackRandomizer\RandomStackGenerator\bin\Debug</StartWorkingDirectory>
   </PropertyGroup>
 </Project>
