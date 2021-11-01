@@ -185,6 +185,7 @@ Public Class RandStack
 
     Private Const itemGenSigma As Double = 0.5
     Private Const multiItemGenSigmaMultiplier As Double = 1.5
+    Public ReadOnly maxUnitLevel As Integer
 
     Private UnitsArrayPos As New Dictionary(Of String, Integer)
     Friend AllUnits() As AllDataStructues.Unit
@@ -258,6 +259,8 @@ Public Class RandStack
             PlayableSubraces.Add(ValueConverter.StrToInt(item, "", ""))
         Next item
         Dim unitSubrace As Integer
+
+        maxUnitLevel = CInt(Math.Floor(UShort.MaxValue / data.AllUnitsList.Length))
 
         ReDim AllUnits(UBound(data.AllUnitsList)), ExpBar(UBound(data.AllUnitsList)), _
               ExpKilled(UBound(data.AllUnitsList)), multiplierUnitDesiredStats(UBound(data.AllUnitsList))
@@ -1656,17 +1659,28 @@ Public Class RandStack
             minUnitOverlevelCost = Math.Min(minUnitOverlevelCost, unitOverlevelCost(k))
         Next i
         Dim chance As Double = 1 / order.Length
+        Dim tolerance As Double
+        Dim previousOverlevel As Double = -1
         Do While True
+            If previousOverlevel = overlevel Then
+                tolerance += 0.1
+            Else
+                tolerance = 1
+            End If
+            previousOverlevel = overlevel
             Call rndgen.Shuffle(order)
             For i As Integer = 0 To u Step 1
                 k = order(i)
-                If 2 * overlevel >= unitOverlevelCost(k) AndAlso rndgen.RndDbl(0, 1) <= chance Then
-                    If overlevel >= unitOverlevelCost(k) OrElse unitOverlevelCost(k) * rndgen.RndDbl(0, 1) > overlevel Then
-                        overlevel -= unitOverlevelCost(k)
-                        stack.units(k).level += 1
+                If stack.units(k).level < maxUnitLevel Then
+                    If 2 * overlevel >= unitOverlevelCost(k) AndAlso rndgen.RndDbl(0, 1) <= chance * tolerance Then
+                        If overlevel >= unitOverlevelCost(k) OrElse unitOverlevelCost(k) * rndgen.RndDbl(0, 1) * tolerance > overlevel Then
+                            overlevel -= unitOverlevelCost(k)
+                            stack.units(k).level += 1
+                        End If
                     End If
                 End If
             Next i
+            If tolerance > 5 Then Exit Do
             If 2 * overlevel < minUnitOverlevelCost Then Exit Do
             If overlevel < minUnitOverlevelCost AndAlso minUnitOverlevelCost * rndgen.RndDbl(0, 1) > overlevel Then overlevel = 0
         Loop
