@@ -7984,7 +7984,7 @@ Public Class StackLocationsGen
 
             If IDs_UpperBound > 0 Then
                 Dim rnd As New RndValueGen(seed)
-                Call rnd.Shuffle(currentIDs)
+                Call rnd.Shuffle(currentIDs, False)
             End If
 
             ReDim disableWhenSelected(path.Size.X, path.Size.Y), _

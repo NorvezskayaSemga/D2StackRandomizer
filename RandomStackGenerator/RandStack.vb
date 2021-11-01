@@ -591,7 +591,6 @@ Public Class RandStack
         result.LootCost = AllDataStructues.Cost.Sum(LCost)
         result.IGen = GetItemsGenSettings(stack.items, isSettingsForRuins)
         If expKilledSum > 0 Then result.WeightedOverlevel = result.WeightedOverlevel * result.StackSize / expKilledSum
-
         Return result
     End Function
     ''' <summary>Определит настройки генерации новых предметов</summary>
@@ -656,8 +655,8 @@ Public Class RandStack
             Return inValue
         End If
     End Function
-    Private Sub AddModificatorEffect(ByRef addTo As Double, ByRef effect As Double, _
-                                     ByRef weight As Double, ByRef weightSum As Double)
+    Private Shared Sub AddModificatorEffect(ByRef addTo As Double, ByRef effect As Double,
+                                            ByRef weight As Double, ByRef weightSum As Double)
         addTo *= 1 + (effect - 1) * weight / weightSum
     End Sub
 #End Region
@@ -1528,7 +1527,7 @@ Public Class RandStack
             Next i
         End If
         Call ApplyOverlevel(result, GenSettings)
-        Call ApplyModificators(result, GenSettings)
+        Call New RecursiveApplyModificator(result, GenSettings, Me).ApplyModificators()
         result.order = GenStackOrder(GenSettings)
 
         Call log.Add("Input order: " & AllDataStructues.Stack.StackOrder.Print(GenSettings.order))
@@ -1685,125 +1684,135 @@ Public Class RandStack
             If overlevel < minUnitOverlevelCost AndAlso minUnitOverlevelCost * rndgen.RndDbl(0, 1) > overlevel Then overlevel = 0
         Loop
     End Sub
-    Private Sub ApplyModificators(ByRef stack As AllDataStructues.Stack, ByRef GenSettings As AllDataStructues.CommonStackCreationSettings)
-        If stack.leaderPos > -1 And GenSettings.StackStats.LeaderModificators.Count > 0 Then
-            For Each m As String In GenSettings.StackStats.LeaderModificators
-                stack.units(stack.leaderPos).modificators.Add(m)
-            Next m
-        End If
-        If GenSettings.StackStats.UnitsModificators.Count > 0 Then
-            Dim preservedUnit, notPreservedUnit As New List(Of Integer)
-            For i As Integer = 0 To UBound(stack.units) Step 1
-                If Not stack.units(i).unit.unitID.ToUpper = GenDefaultValues.emptyItem Then
-                    If Not stack.units(i).unit.unitBranch = GenDefaultValues.UnitClass.leader Then
-                        If stack.units(i).isPreserved Then
-                            preservedUnit.Add(i)
-                        Else
-                            notPreservedUnit.Add(i)
-                        End If
-                    End If
-                End If
-            Next i
-            If preservedUnit.Count + notPreservedUnit.Count > 0 Then
-                Dim rData As New RecursiveApplyModificatorsData(stack, GenSettings, Me, preservedUnit, notPreservedUnit)
-                'Dim t0 As Integer = Environment.TickCount
-                Call RecursiveApplyModificators(rData, 0)
-                'Dim t1 As Integer = Environment.TickCount - t0
-                'Dim attempts As Integer = rData.totalAttempts
-                For i As Integer = 0 To UBound(rData.modificators) Step 1
-                    stack.units(rData.bestResult(i)).modificators.Add(rData.modificators(i).id.ToUpper)
-                Next i
-            Else
-                For Each m As String In GenSettings.StackStats.UnitsModificators
-                    stack.units(stack.leaderPos).modificators.Add(m)
-                Next m
-            End If
-        End If
-    End Sub
-    Private Class RecursiveApplyModificatorsData
-        Public units() As AllDataStructues.Stack.UnitInfo
-        Public preservedUnit() As Integer
-        Public notPreservedUnit() As Integer
-        Public modificators() As AllDataStructues.Modificator
-        Public currentResult() As Integer
-        Public bestResult() As Integer
-        Public bestValue As Double
-        Public wantFValue As Double
-        Public totalAttempts As Integer
-        Public forceExit As Boolean
-        Public baseUnitStats() As AllDataStructues.UnitBattleNumericValues
-        Public baseUnitPower() As Double
-        Public baseModificators() As List(Of AllDataStructues.Modificator)
-        Public basePowerChange() As Double
-        Public unitWeight() As Double
-        Public weightSum As Double
-        Public PowerChangeSingleMod(,) As Double
-        Public multithreadOnN As List(Of Integer)
 
-        Public Sub New()
-        End Sub
-        Public Sub New(ByRef stack As AllDataStructues.Stack, _
-                       ByRef GenSettings As AllDataStructues.CommonStackCreationSettings, _
-                       ByRef R As RandStack, ByRef preservedUnitList As List(Of Integer), _
-                       ByRef notPreservedUnitList As List(Of Integer))
+    Public Class RecursiveApplyModificator
+
+        Private ReadOnly stack As AllDataStructues.Stack
+        Private ReadOnly GenSettings As AllDataStructues.CommonStackCreationSettings
+        Private ReadOnly RandStack As RandStack
+
+        Public ReadOnly units() As AllDataStructues.Stack.UnitInfo
+        Public ReadOnly baseUnitStats() As AllDataStructues.UnitBattleNumericValues
+        Public ReadOnly baseUnitPower() As Double
+        Public ReadOnly baseModificators() As List(Of AllDataStructues.Modificator)
+        Public ReadOnly basePowerChange() As Double
+        Public ReadOnly multithreadOnN As List(Of Integer)
+        Public ReadOnly preservedUnit() As Integer
+        Public ReadOnly notPreservedUnit() As Integer
+        Public ReadOnly modificators() As AllDataStructues.Modificator
+        Public ReadOnly wantValue As Double
+        Public ReadOnly unitWeight() As Double
+        Public ReadOnly weightSum As Double
+        Public ReadOnly PowerChangeSingleMod(,) As Double
+        Public ReadOnly SetAs() As Integer
+
+        Private Const attemptsToStartParallelLayer As Integer = 5000
+        Private Const attemptsToModificatorsCombining As Integer = 50000
+
+        Public Class ThreadData
+            Public currentResult() As Integer
+            Public bestResult() As Integer
+            Public bestValue As Double
+            Public totalAttempts As Integer
+            Public forceExit As Boolean
+
+            Public Sub Init(ByRef GenSettings As AllDataStructues.CommonStackCreationSettings)
+                Dim m As Integer = GenSettings.StackStats.UnitsModificators.Count - 1
+                ReDim currentResult(m), bestResult(m)
+                bestValue = -1
+            End Sub
+
+            Public Function Copy() As ThreadData
+                Return New ThreadData With {
+                .currentResult = CType(currentResult.Clone, Integer()),
+                .bestResult = CType(bestResult.Clone, Integer()),
+                .bestValue = bestValue,
+                .totalAttempts = totalAttempts,
+                .forceExit = forceExit}
+            End Function
+        End Class
+
+        Public Sub New(ByRef _stack As AllDataStructues.Stack,
+                       ByRef _GenSettings As AllDataStructues.CommonStackCreationSettings,
+                       ByRef _RandStack As RandStack)
+            stack = _stack
+            GenSettings = _GenSettings
+            RandStack = _RandStack
+
+            If GenSettings.StackStats.UnitsModificators.Count = 0 Then Exit Sub
+
+            preservedUnit = MakeUnitsPreservatinTypeList(True)
+            notPreservedUnit = MakeUnitsPreservatinTypeList(False)
+
             units = stack.units
             ReDim modificators(GenSettings.StackStats.UnitsModificators.Count - 1)
             Dim q As Integer = -1
             For Each m As String In GenSettings.StackStats.UnitsModificators
                 q += 1
-                modificators(q) = R.FindModificatorStats(m)
+                modificators(q) = RandStack.FindModificatorStats(m)
             Next m
-            preservedUnit = preservedUnitList.ToArray
-            notPreservedUnit = notPreservedUnitList.ToArray
-            ReDim currentResult(UBound(modificators)), _
-                  bestResult(UBound(modificators)), _
-                  baseUnitStats(UBound(stack.units)), _
-                  baseUnitPower(UBound(stack.units)), _
-                  baseModificators(UBound(stack.units)), _
-                  basePowerChange(UBound(stack.units)), _
+            ReDim baseUnitStats(UBound(stack.units)),
+                  baseUnitPower(UBound(stack.units)),
+                  baseModificators(UBound(stack.units)),
+                  basePowerChange(UBound(stack.units)),
                   unitWeight(UBound(stack.units))
-            multithreadOnN = New List(Of Integer)
             For i As Integer = 0 To UBound(units) Step 1
                 baseModificators(i) = New List(Of AllDataStructues.Modificator)
                 If Not stack.units(i).unit.unitID.ToUpper = GenDefaultValues.emptyItem Then
                     baseUnitStats(i) = AllDataStructues.UnitBattleNumericValues.BaseBattleNumericStats(stack.units(i))
                     baseUnitPower(i) = AllDataStructues.UnitBattleNumericValues.UnitPower(baseUnitStats(i))
-                    Call AllDataStructues.Modificator.AddModificators(baseModificators(i), stack.units(i).modificators, R)
-                    basePowerChange(i) = AllDataStructues.Modificator.UnitPowerChange(stack.units(i), R)
+                    Call AllDataStructues.Modificator.AddModificators(baseModificators(i), stack.units(i).modificators, RandStack)
+                    basePowerChange(i) = AllDataStructues.Modificator.UnitPowerChange(stack.units(i), RandStack)
                     unitWeight(i) = units(i).unit.EXPkilled + units(i).unit.GetExpKilledOverlevel(units(i).level)
                     weightSum += unitWeight(i)
                 End If
             Next i
-            bestValue = -1
-            wantFValue = GenSettings.StackStats.ModificatorsEffect
-
-            ReDim PowerChangeSingleMod(UBound(stack.units), UBound(modificators))
+            wantValue = GenSettings.StackStats.ModificatorsEffect
+            PowerChangeSingleMod = MakePowerChangeSingleMod()
+            Dim threadsN() As Integer = MakeThreadsN()
+            SetAs = MakeSetAs(threadsN)
+            multithreadOnN = MakeMultithreadLayersList(threadsN)
+        End Sub
+        Private Function MakeUnitsPreservatinTypeList(ByVal makePreserved As Boolean) As Integer()
+            Dim result As New List(Of Integer)
+            For i As Integer = 0 To UBound(stack.units) Step 1
+                If Not stack.units(i).unit.unitID.ToUpper = GenDefaultValues.emptyItem And
+                   Not stack.units(i).unit.unitBranch = GenDefaultValues.UnitClass.leader Then
+                    If stack.units(i).isPreserved = makePreserved Then result.Add(i)
+                End If
+            Next i
+            Return result.ToArray
+        End Function
+        Private Function MakePowerChangeSingleMod() As Double(,)
+            Dim result(UBound(stack.units), UBound(modificators)) As Double
             Dim unitPos As Integer
             Dim v As Double
             For n As Integer = 0 To UBound(modificators) Step 1
                 For i As Integer = 0 To UBound(notPreservedUnit) Step 1
                     unitPos = notPreservedUnit(i)
-                    v = AllDataStructues.Modificator.UnitPowerChange(units(unitPos).unit, _
-                                                                     baseUnitStats(unitPos), _
-                                                                     baseUnitPower(unitPos), _
-                                                                     baseModificators(unitPos), _
-                                                                     basePowerChange(unitPos), _
+                    v = AllDataStructues.Modificator.UnitPowerChange(units(unitPos).unit,
+                                                                     baseUnitStats(unitPos),
+                                                                     baseUnitPower(unitPos),
+                                                                     baseModificators(unitPos),
+                                                                     basePowerChange(unitPos),
                                                                      modificators(n))
-                    PowerChangeSingleMod(unitPos, n) = v
+                    result(unitPos, n) = v
                 Next i
                 For i As Integer = 0 To UBound(preservedUnit) Step 1
                     unitPos = preservedUnit(i)
-                    v = AllDataStructues.Modificator.UnitPowerChange(units(unitPos).unit, _
-                                                                     baseUnitStats(unitPos), _
-                                                                     baseUnitPower(unitPos), _
-                                                                     baseModificators(unitPos), _
-                                                                     basePowerChange(unitPos), _
+                    v = AllDataStructues.Modificator.UnitPowerChange(units(unitPos).unit,
+                                                                     baseUnitStats(unitPos),
+                                                                     baseUnitPower(unitPos),
+                                                                     baseModificators(unitPos),
+                                                                     basePowerChange(unitPos),
                                                                      modificators(n))
-                    PowerChangeSingleMod(unitPos, n) = v
+                    result(unitPos, n) = v
                 Next i
             Next n
-
-            Dim threadsN(UBound(modificators)) As Integer
+            Return result
+        End Function
+        Private Function MakeThreadsN() As Integer()
+            Dim threadsN(UBound(modificators)), unitPos As Integer
             For n As Integer = 0 To UBound(modificators) Step 1
                 For i As Integer = 0 To UBound(notPreservedUnit) Step 1
                     unitPos = notPreservedUnit(i)
@@ -1823,163 +1832,419 @@ Public Class RandStack
                     threadsN(n) = 1
                 End If
             Next n
-            Dim nAttempts As Integer = 1
-            Dim threads As Integer = 1
-            For n As Integer = UBound(modificators) To 0 Step -1
-                If nAttempts < 1000 Then nAttempts *= threadsN(n)
-                If nAttempts > 1000 And threads < Environment.ProcessorCount Then
-                    threads *= threadsN(n)
-                    multithreadOnN.Add(n)
-                End If
+            Return threadsN
+        End Function
+        Private Function MakeSetAs(ByRef threadsN() As Integer) As Integer()
+            Dim result(UBound(modificators)) As Integer
+            Dim effect() As Double = Nothing
+            Dim canUnite(,) As Boolean = Nothing
+            Dim equal()() As Integer = Nothing
+            Dim blockEffect() As Double = Nothing
+            Dim expectedAttempts As Long
+            Dim multiplyTo As Long = CLng(Math.Floor(Long.MaxValue / RandStack.comm.defValues.maxStackSize))
+
+            Dim mod1, mod2 As Integer
+            Dim minMultI, minMultJ, minMultR As Integer
+            Dim minMult, m As Double
+            Dim somethingChanged As Boolean = True
+
+            For n As Integer = 0 To UBound(modificators) Step 1
+                result(n) = -1
             Next n
-            If multithreadOnN.Count = 0 Then
+
+            Do While somethingChanged
+                somethingChanged = False
+
+                expectedAttempts = 1
                 For n As Integer = 0 To UBound(modificators) Step 1
-                    If threadsN(n) > 1 Then
-                        multithreadOnN.Add(n)
+                    If expectedAttempts < multiplyTo Then
+                        expectedAttempts *= CLng(threadsN(n))
+                    Else
                         Exit For
                     End If
                 Next n
+                If expectedAttempts < attemptsToModificatorsCombining Then Exit Do
+
+                If IsNothing(effect) Then
+                    ReDim effect(UBound(modificators)), _
+                          canUnite(UBound(modificators), UBound(modificators)), _
+                          blockEffect(UBound(modificators))
+                    For n As Integer = 0 To UBound(modificators) Step 1
+                        effect(n) = ModEffectRaw(modificators(n))
+                        blockEffect(n) = effect(n)
+                        For k As Integer = n + 1 To UBound(modificators) Step 1
+                            canUnite(n, k) = CanBeUnited(modificators(n), modificators(k))
+                            canUnite(k, n) = canUnite(n, k)
+                        Next k
+                    Next n
+
+                    Dim equalList As New Dictionary(Of String, Integer())
+                    Dim key As String
+                    For n As Integer = 0 To UBound(modificators) Step 1
+                        If threadsN(n) > 1 Then
+                            key = ""
+                            For i As Integer = 0 To UBound(units) Step 1
+                                If PowerChangeSingleMod(i, n) = 1 Then
+                                    key &= "T"
+                                Else
+                                    key &= "F"
+                                End If
+                            Next i
+                            If Not equalList.ContainsKey(key) Then equalList.Add(key, New Integer() {})
+                            ReDim Preserve equalList.Item(key)(equalList.Item(key).Length)
+                            equalList.Item(key)(UBound(equalList.Item(key))) = n
+                        End If
+                    Next n
+                    Dim r As Integer = -1
+                    ReDim equal(equalList.Count - 1)
+                    For Each e As Integer() In equalList.Values
+                        r += 1
+                        equal(r) = e
+                    Next e
+                End If
+
+                'объединяем модификаторы
+                minMult = -1
+                For r As Integer = 0 To UBound(equal) Step 1
+                    If equal(r).Length > 1 Then
+                        For i As Integer = 0 To UBound(equal(r)) - 1 Step 1
+                            mod1 = equal(r)(i)
+                            If result(mod1) < 0 Then
+                                For j As Integer = i + 1 To UBound(equal(r)) Step 1
+                                    mod2 = equal(r)(j)
+                                    If result(mod2) = -1 Then
+                                        Dim can As Boolean = canUnite(mod1, mod2)
+                                        If can Then
+                                            For k As Integer = i + 1 To UBound(equal(r)) Step 1
+                                                If result(equal(r)(k)) = mod1 Then
+                                                    If Not canUnite(equal(r)(k), mod2) Then
+                                                        can = False
+                                                        Exit For
+                                                    End If
+                                                End If
+                                            Next k
+                                            If can Then
+                                                m = Math.Abs(1 - blockEffect(mod1) * effect(mod2))
+                                                If Not m = 1 And (minMult > m Or minMult < 0) Then
+                                                    minMult = m
+                                                    minMultI = i
+                                                    minMultJ = j
+                                                    minMultR = r
+                                                End If
+                                            End If
+                                        End If
+                                    End If
+                                Next j
+                            End If
+                        Next i
+                    End If
+                Next r
+                If minMult > 0 Then
+                    mod1 = equal(minMultR)(minMultI)
+                    mod2 = equal(minMultR)(minMultJ)
+                    If result(mod1) = -1 Or result(mod1) = -2 Then
+                        result(mod1) = -2
+                    Else
+                        Throw New Exception("Unexpected result(mod1)")
+                    End If
+                    result(mod2) = mod1
+                    blockEffect(mod1) *= effect(mod2)
+                    somethingChanged = True
+                End If
+                If minMult = -1 Then
+                    'объединяем блоки
+                    For r As Integer = 0 To UBound(equal) Step 1
+                        If equal(r).Length > 1 Then
+                            For i As Integer = 0 To UBound(equal(r)) - 1 Step 1
+                                mod1 = equal(r)(i)
+                                If result(mod1) = -2 Then
+                                    For j As Integer = i + 1 To UBound(equal(r)) Step 1
+                                        mod2 = equal(r)(j)
+                                        If result(mod2) = -2 Then
+                                            Dim can As Boolean = canUnite(mod1, mod2)
+                                            If can Then
+                                                For k As Integer = i + 1 To UBound(equal(r)) Step 1
+                                                    If result(equal(r)(k)) = mod1 Then
+                                                        For q As Integer = j + 1 To UBound(equal(r)) Step 1
+                                                            If result(equal(r)(q)) = mod2 Then
+                                                                If Not canUnite(equal(r)(k), equal(r)(q)) Then
+                                                                    can = False
+                                                                    Exit For
+                                                                End If
+                                                            End If
+                                                        Next q
+                                                        If Not can Then Exit For
+                                                    End If
+                                                Next k
+                                                If can Then
+                                                    m = Math.Abs(1 - blockEffect(mod1) * blockEffect(mod2))
+                                                    If Not m = 1 And (minMult > m Or minMult < 0) Then
+                                                        minMult = m
+                                                        minMultI = i
+                                                        minMultJ = j
+                                                        minMultR = r
+                                                    End If
+                                                End If
+                                            End If
+                                        End If
+                                    Next j
+                                End If
+                            Next i
+                        End If
+                    Next r
+                    If minMult > 0 Then
+                        mod1 = equal(minMultR)(minMultI)
+                        mod2 = equal(minMultR)(minMultJ)
+                        If Not result(mod1) = -2 Or Not result(mod2) = -2 Then
+                            Throw New Exception("Unexpected result(mod1) or result(mod2)")
+                        End If
+                        result(mod2) = mod1
+                        For n As Integer = 0 To UBound(modificators) Step 1
+                            If result(n) = mod2 Then result(n) = mod1
+                        Next n
+                        blockEffect(mod1) *= blockEffect(mod2)
+                        somethingChanged = True
+                    End If
+                End If
+                For n As Integer = 0 To UBound(modificators) Step 1
+                    If result(n) > -1 Then threadsN(n) = 1
+                Next n
+            Loop
+            Return result
+        End Function
+        Private Function CanBeUnited(ByRef mod1 As AllDataStructues.Modificator, _
+                                     ByRef mod2 As AllDataStructues.Modificator) As Boolean
+            Dim ISource, IClass As New List(Of Integer)
+            For Each eff As AllDataStructues.Modificator.ModifEffect In mod1.effect
+                If eff.type = AllDataStructues.Modificator.ModifEffect.EffectType.ImmunitySource Then
+                    ISource.Add(eff.immunASource)
+                ElseIf eff.type = AllDataStructues.Modificator.ModifEffect.EffectType.ImmunityClass Then
+                    IClass.Add(eff.immunAClass)
+                End If
+            Next eff
+            For Each eff As AllDataStructues.Modificator.ModifEffect In mod2.effect
+                If eff.type = AllDataStructues.Modificator.ModifEffect.EffectType.ImmunitySource Then
+                    If ISource.Contains(eff.immunASource) Then Return False
+                ElseIf eff.type = AllDataStructues.Modificator.ModifEffect.EffectType.ImmunityClass Then
+                    If IClass.Contains(eff.immunAClass) Then Return False
+                End If
+            Next eff
+            Return True
+        End Function
+        Private Function ModEffectRaw(ByRef m As AllDataStructues.Modificator) As Double
+            Dim r As Double = 1
+            For Each e As AllDataStructues.Modificator.ModifEffect In m.effect
+                If e.type = AllDataStructues.Modificator.ModifEffect.EffectType.ImmunitySource Then
+                    If e.immunASourceCat = AllDataStructues.Modificator.ModifEffect.ImmunityCat.Resistance Then
+                        r *= AllDataStructues.Modificator.SourceResistEffect
+                    ElseIf e.immunASourceCat = AllDataStructues.Modificator.ModifEffect.ImmunityCat.Immunity Then
+                        r *= AllDataStructues.Modificator.SourceImmuEffect
+                    Else
+                        Throw New Exception("Unexpected IMMUNECAT")
+                    End If
+                ElseIf e.type = AllDataStructues.Modificator.ModifEffect.EffectType.ImmunityClass Then
+                    If e.immunAClassCat = AllDataStructues.Modificator.ModifEffect.ImmunityCat.Resistance Then
+                        r *= AllDataStructues.Modificator.ClassResistEffect
+                    ElseIf e.immunAClassCat = AllDataStructues.Modificator.ModifEffect.ImmunityCat.Immunity Then
+                        r *= AllDataStructues.Modificator.ClassImmuEffect
+                    Else
+                        Throw New Exception("Unexpected IMMUNECAT")
+                    End If
+                ElseIf e.type = AllDataStructues.Modificator.ModifEffect.EffectType.Accuracy Then
+                    r *= 1 + 0.01 * e.percent
+                ElseIf e.type = AllDataStructues.Modificator.ModifEffect.EffectType.Armor Then
+                    r *= 1 / (1 - 0.01 * Math.Min(e.number, 99))
+                ElseIf e.type = AllDataStructues.Modificator.ModifEffect.EffectType.Damage Then
+                    r *= 1 + 0.01 * e.percent
+                ElseIf e.type = AllDataStructues.Modificator.ModifEffect.EffectType.HitPoints Then
+                    If e.number = 1 Then
+                        r *= 1 + 0.01 * e.percent
+                    ElseIf e.number = 2 Then
+                        r *= 1 + 0.005 * e.percent
+                    Else
+                        Throw New Exception("Unexpected NUMBER field in type " & e.type)
+                    End If
+                ElseIf e.type = AllDataStructues.Modificator.ModifEffect.EffectType.Initiative Then
+                    r *= 1 + 0.01 * e.percent
+                ElseIf e.type = AllDataStructues.Modificator.ModifEffect.EffectType.Vampirism Then
+                    r *= 1 + 0.005 * e.percent
+                End If
+            Next e
+            Return r
+        End Function
+        Private Function MakeMultithreadLayersList(ByRef threadsN() As Integer) As List(Of Integer)
+            Dim result As New List(Of Integer)
+            Dim nAttempts As Integer = 1
+            Dim threads As Integer = 1
+            For n As Integer = UBound(modificators) To 0 Step -1
+                If threadsN(n) > 1 Then
+                    If nAttempts <= attemptsToStartParallelLayer Then nAttempts *= threadsN(n)
+                    If nAttempts >= attemptsToStartParallelLayer _
+                    And (threads * threadsN(n) <= Environment.ProcessorCount Or threads = 1) Then
+                        threads *= threadsN(n)
+                        result.Add(n)
+                    End If
+                End If
+            Next n
+            If result.Count = 0 Then
+                For n As Integer = 0 To UBound(modificators) Step 1
+                    If threadsN(n) > 1 Then
+                        If threads * threadsN(n) <= Environment.ProcessorCount Or threads = 1 Then
+                            threads *= threadsN(n)
+                            result.Add(n)
+                        End If
+                    End If
+                Next n
+            End If
+            Return result
+        End Function
+
+        Public Sub ApplyModificators()
+            If stack.leaderPos > -1 And GenSettings.StackStats.LeaderModificators.Count > 0 Then
+                For Each m As String In GenSettings.StackStats.LeaderModificators
+                    stack.units(stack.leaderPos).modificators.Add(m)
+                Next m
+            End If
+            If GenSettings.StackStats.UnitsModificators.Count > 0 Then
+                If preservedUnit.Count + notPreservedUnit.Count > 0 Then
+                    Dim rData As New ThreadData()
+                    Call rData.Init(GenSettings)
+                    'Dim t0 As Integer = Environment.TickCount
+                    Call RecursiveApplyModificators(rData, 0)
+                    'Dim elapsedTime As Integer = Environment.TickCount - t0
+                    'Dim attempts As Integer = rData.totalAttempts
+                    For i As Integer = 0 To UBound(modificators) Step 1
+                        stack.units(rData.bestResult(i)).modificators.Add(modificators(i).id.ToUpper)
+                    Next i
+                Else
+                    For Each m As String In GenSettings.StackStats.UnitsModificators
+                        stack.units(stack.leaderPos).modificators.Add(m)
+                    Next m
+                End If
             End If
         End Sub
 
-        Public Function FastCopy() As RecursiveApplyModificatorsData
-            Dim r As New RecursiveApplyModificatorsData
-            r.units = units
-            r.preservedUnit = preservedUnit
-            r.notPreservedUnit = notPreservedUnit
-            r.modificators = modificators
-            r.currentResult = CType(currentResult.Clone, Integer())
-            r.bestResult = CType(bestResult.Clone, Integer())
-            r.bestValue = bestValue
-            r.wantFValue = wantFValue
-            r.totalAttempts = totalAttempts
-            r.forceExit = forceExit
-            r.baseUnitStats = baseUnitStats
-            r.baseUnitPower = baseUnitPower
-            r.baseModificators = baseModificators
-            r.basePowerChange = basePowerChange
-            r.unitWeight = unitWeight
-            r.weightSum = weightSum
-            r.PowerChangeSingleMod = PowerChangeSingleMod
-            r.multithreadOnN = multithreadOnN
-            Return r
-        End Function
-
-    End Class
-    Private Sub RecursiveApplyModificators(ByRef rData As RecursiveApplyModificatorsData, ByVal n As Integer)
-        If rData.forceExit Then Exit Sub
-        If n <= UBound(rData.modificators) Then
-            Dim skipPreserved As Boolean = False
-            Dim skipRandom As Boolean = False
-            Call RecurseLayer(rData, n, rData.notPreservedUnit, skipPreserved, skipRandom)
-            If Not skipPreserved Then
-                Call RecurseLayer(rData, n, rData.preservedUnit, skipPreserved, skipRandom)
-            End If
-            If Not skipRandom Then
-                Dim r As Integer = rndgen.RndInt(0, rData.notPreservedUnit.Length + rData.preservedUnit.Length - 1)
-                Dim unitPos As Integer
-                If r > UBound(rData.notPreservedUnit) Then
-                    unitPos = rData.preservedUnit(r - UBound(rData.notPreservedUnit))
-                Else
-                    unitPos = rData.notPreservedUnit(r)
-                End If
-                rData.currentResult(n) = unitPos
-                Call RecursiveApplyModificators(rData, n + 1)
-            End If
-        Else
-            rData.totalAttempts += 1
-            Dim total As Double = 1
-            Dim v As Double
-            Dim mods(UBound(rData.units)) As List(Of AllDataStructues.Modificator)
-            For i As Integer = 0 To UBound(mods) Step 1
-                mods(i) = New List(Of AllDataStructues.Modificator)
-            Next i
-            For i As Integer = 0 To UBound(rData.currentResult) Step 1
-                mods(rData.currentResult(i)).Add(rData.modificators(i))
-            Next i
-            For i As Integer = 0 To UBound(mods) Step 1
-                v = AllDataStructues.Modificator.UnitPowerChange(rData.units(i).unit, _
-                                                                 rData.baseUnitStats(i), _
-                                                                 rData.baseUnitPower(i), _
-                                                                 rData.baseModificators(i), _
-                                                                 rData.basePowerChange(i), _
-                                                                 mods(i))
-                Call AddModificatorEffect(total, v, rData.unitWeight(i), rData.weightSum)
-            Next i
-            Dim replace As Boolean
-            If rData.bestValue < 0 Then
-                replace = True
-            ElseIf Math.Abs(rData.wantFValue - total) < Math.Abs(rData.wantFValue - rData.bestValue) Then
-                replace = True
-            ElseIf Math.Abs(rData.wantFValue - total) = Math.Abs(rData.wantFValue - rData.bestValue) Then
-                If rndgen.RndDbl(0, 1) > 0.5 Then replace = True
-            Else
-                replace = False
-            End If
-            If replace Then
-                rData.bestValue = total
-                For i As Integer = 0 To UBound(rData.currentResult) Step 1
-                    rData.bestResult(i) = rData.currentResult(i)
-                Next i
-            End If
-
-            Dim d As Double = Math.Abs(rData.bestValue / rData.wantFValue - 1)
-            If (d < 0.001 And rData.totalAttempts > 1000) _
-            OrElse (d < 0.005 And rData.totalAttempts > 10000) _
-            OrElse (d < 0.01 And rData.totalAttempts > 100000) _
-            OrElse (d < 0.1 And rData.totalAttempts > 500000) _
-            OrElse (rData.totalAttempts > 1000000) Then
-                rData.forceExit = True
-            End If
-        End If
-    End Sub
-    Private Sub RecurseLayer(ByRef rData As RecursiveApplyModificatorsData, ByVal n As Integer, _
-                             ByVal unitPos() As Integer, ByRef skipPreserved As Boolean, ByRef skipRandom As Boolean)
-        If rData.multithreadOnN.Contains(n) Then
-            Dim pRData(UBound(unitPos)) As RecursiveApplyModificatorsData
-            For i As Integer = 0 To UBound(unitPos) Step 1
-                If Not rData.PowerChangeSingleMod(unitPos(i), n) = 1 Then
-                    skipPreserved = True
-                    skipRandom = True
-                    Exit For
-                End If
-            Next i
-            Dim trData As RecursiveApplyModificatorsData = rData
-            Parallel.For(0, unitPos.Length, _
-             Sub(i As Integer)
-                 If Not trData.PowerChangeSingleMod(unitPos(i), n) = 1 Then
-                     pRData(i) = trData.FastCopy
-                     pRData(i).currentResult(n) = unitPos(i)
-                     Call RecursiveApplyModificators(pRData(i), n + 1)
-                 End If
-             End Sub)
-            Dim parallelAttempts As Integer = 0
-            For i As Integer = 0 To UBound(unitPos) Step 1
-                If Not IsNothing(pRData(i)) Then
-                    rData.forceExit = pRData(i).forceExit
-                    parallelAttempts += pRData(i).totalAttempts - rData.totalAttempts
-                    If Math.Abs(rData.wantFValue - pRData(i).bestValue) <= Math.Abs(rData.wantFValue - rData.bestValue) Then
-                        rData.bestValue = pRData(i).bestValue
-                        For k As Integer = 0 To UBound(rData.currentResult) Step 1
-                            rData.bestResult(k) = pRData(i).bestResult(k)
-                        Next k
+        Private Sub RecursiveApplyModificators(ByRef rData As ThreadData, ByVal n As Integer)
+            If rData.forceExit Then Exit Sub
+            If n <= UBound(modificators) Then
+                If SetAs(n) < 0 Then
+                    Dim skipPreserved As Boolean = False
+                    Dim skipRandom As Boolean = False
+                    Call RecurseLayer(rData, n, notPreservedUnit, skipPreserved, skipRandom)
+                    If Not skipPreserved Then
+                        Call RecurseLayer(rData, n, preservedUnit, skipPreserved, skipRandom)
                     End If
-                End If
-            Next i
-            rData.totalAttempts += parallelAttempts
-        Else
-            For i As Integer = 0 To UBound(unitPos) Step 1
-                If Not rData.PowerChangeSingleMod(unitPos(i), n) = 1 Then
-                    skipPreserved = True
-                    skipRandom = True
-                    rData.currentResult(n) = unitPos(i)
+                    If Not skipRandom Then
+                        Dim r As Integer = RandStack.rndgen.RndInt(0, notPreservedUnit.Length + preservedUnit.Length - 1)
+                        Dim unitPos As Integer
+                        If r > UBound(notPreservedUnit) Then
+                            unitPos = preservedUnit(r - UBound(notPreservedUnit))
+                        Else
+                            unitPos = notPreservedUnit(r)
+                        End If
+                        rData.currentResult(n) = unitPos
+                        Call RecursiveApplyModificators(rData, n + 1)
+                    End If
+                Else
+                    rData.currentResult(n) = rData.currentResult(SetAs(n))
                     Call RecursiveApplyModificators(rData, n + 1)
                 End If
-            Next i
-        End If
-    End Sub
+            Else
+                rData.totalAttempts += 1
+                Dim total As Double = 1
+                Dim v As Double
+                Dim mods(UBound(units)) As List(Of AllDataStructues.Modificator)
+                For i As Integer = 0 To UBound(mods) Step 1
+                    mods(i) = New List(Of AllDataStructues.Modificator)
+                Next i
+                For i As Integer = 0 To UBound(rData.currentResult) Step 1
+                    mods(rData.currentResult(i)).Add(modificators(i))
+                Next i
+                For i As Integer = 0 To UBound(mods) Step 1
+                    v = AllDataStructues.Modificator.UnitPowerChange(units(i).unit,
+                                                                     baseUnitStats(i),
+                                                                     baseUnitPower(i),
+                                                                     baseModificators(i),
+                                                                     basePowerChange(i),
+                                                                     mods(i))
+                    Call AddModificatorEffect(total, v, unitWeight(i), weightSum)
+                Next i
+                Dim replace As Boolean
+                If rData.bestValue < 0 Then
+                    replace = True
+                ElseIf Math.Abs(wantValue - total) < Math.Abs(wantValue - rData.bestValue) Then
+                    replace = True
+                ElseIf Math.Abs(wantValue - total) = Math.Abs(wantValue - rData.bestValue) Then
+                    If RandStack.rndgen.RndInt(1, 100) > 50 Then replace = True
+                Else
+                    replace = False
+                End If
+                If replace Then
+                    rData.bestValue = total
+                    For i As Integer = 0 To UBound(rData.currentResult) Step 1
+                        rData.bestResult(i) = rData.currentResult(i)
+                    Next i
+                End If
 
-    Private Function GenStackMultithread(ByVal GenSettings As AllDataStructues.CommonStackCreationSettings, _
+                Dim d As Double = Math.Abs(rData.bestValue / wantValue - 1)
+                If (d < 0.02 And rData.totalAttempts > 100) _
+            OrElse (d < 0.05 And rData.totalAttempts > 5000) _
+            OrElse (d < 0.15 And rData.totalAttempts > 10000) _
+            OrElse (d < 0.25 And rData.totalAttempts > 50000) _
+            OrElse (rData.totalAttempts > 100000) Then
+                    rData.forceExit = True
+                End If
+            End If
+        End Sub
+        Private Sub RecurseLayer(ByRef rData As ThreadData, ByVal n As Integer,
+                                 ByVal unitPos() As Integer, ByRef skipPreserved As Boolean, ByRef skipRandom As Boolean)
+            If multithreadOnN.Contains(n) Then
+                Dim pRData(UBound(unitPos)) As ThreadData
+                For i As Integer = 0 To UBound(unitPos) Step 1
+                    If Not PowerChangeSingleMod(unitPos(i), n) = 1 Then
+                        skipPreserved = True
+                        skipRandom = True
+                        Exit For
+                    End If
+                Next i
+                Dim trData As ThreadData = rData
+                Parallel.For(0, unitPos.Length,
+                 Sub(i As Integer)
+                     If Not PowerChangeSingleMod(unitPos(i), n) = 1 Then
+                         pRData(i) = trData.Copy
+                         pRData(i).currentResult(n) = unitPos(i)
+                         Call RecursiveApplyModificators(pRData(i), n + 1)
+                     End If
+                 End Sub)
+                Dim parallelAttempts As Integer = 0
+                For i As Integer = 0 To UBound(unitPos) Step 1
+                    If Not IsNothing(pRData(i)) Then
+                        rData.forceExit = pRData(i).forceExit
+                        parallelAttempts += pRData(i).totalAttempts - rData.totalAttempts
+                        If Math.Abs(wantValue - pRData(i).bestValue) <= Math.Abs(wantValue - rData.bestValue) Then
+                            rData.bestValue = pRData(i).bestValue
+                            For k As Integer = 0 To UBound(rData.currentResult) Step 1
+                                rData.bestResult(k) = pRData(i).bestResult(k)
+                            Next k
+                        End If
+                    End If
+                Next i
+                rData.totalAttempts += parallelAttempts
+            Else
+                For i As Integer = 0 To UBound(unitPos) Step 1
+                    If Not PowerChangeSingleMod(unitPos(i), n) = 1 Then
+                        skipPreserved = True
+                        skipRandom = True
+                        rData.currentResult(n) = unitPos(i)
+                        Call RecursiveApplyModificators(rData, n + 1)
+                    End If
+                Next i
+            End If
+        End Sub
+
+    End Class
+
+    Private Function GenStackMultithread(ByVal GenSettings As AllDataStructues.CommonStackCreationSettings,
                                          ByVal BakDynStackStats As AllDataStructues.DesiredStats) As AllDataStructues.Stack
 
         Dim units(11)() As AllDataStructues.Stack.UnitInfo
@@ -1995,7 +2260,7 @@ Public Class RandStack
 
         If Not GenSettings.noLeader Then ReDim leaderExpKilled(UBound(units))
 
-        Parallel.For(0, units.Length, _
+        Parallel.For(0, units.Length,
         Sub(jobID As Integer)
             'For jobID As Integer = 0 To UBound(units) Step 1
             log.MAdd(jobID, "--------Attempt " & jobID + 1 & " started--------")
@@ -2004,8 +2269,8 @@ Public Class RandStack
             Dim preservedSlots As Integer = GenSettings.StackStats.PreservedSlots
             DynStackStats(jobID) = AllDataStructues.DesiredStats.Copy(BakDynStackStats)
 
-            Dim SelectedLeader As AllDataStructues.Stack.UnitInfo = GenLeader( _
-                   GenSettings, DynStackStats(jobID), FreeMeleeSlots, _
+            Dim SelectedLeader As AllDataStructues.Stack.UnitInfo = GenLeader(
+                   GenSettings, DynStackStats(jobID), FreeMeleeSlots,
                    MapLordsRaces, CDbl(jobID / units.Length), jobID)
             BaseStackSize = DynStackStats(jobID).StackSize
 
@@ -2030,9 +2295,9 @@ Public Class RandStack
 
             Dim deltaExpKilled As Integer = 0
             Dim SelectedFighters As List(Of AllDataStructues.Stack.UnitInfo) _
-                = GenFingters(GenSettings, DynStackStats(jobID), FreeMeleeSlots, _
-                              SelectedLeader, BaseStackSize, _
-                              MapLordsRaces, deltaExpKilled, _
+                = GenFingters(GenSettings, DynStackStats(jobID), FreeMeleeSlots,
+                              SelectedLeader, BaseStackSize,
+                              MapLordsRaces, deltaExpKilled,
                               CDbl(jobID / units.Length), jobID)
             units(jobID) = GenUnitsList(SelectedFighters, SelectedLeader)
 
@@ -2044,7 +2309,7 @@ Public Class RandStack
                     slotsInUse += 2
                 End If
             Next u
-            If slotsInUse > comm.defValues.maxStackSize Then ThrowStackCreationException( _
+            If slotsInUse > comm.defValues.maxStackSize Then ThrowStackCreationException(
                 "Unexpected slots used: " & slotsInUse, GenSettings, DynStackStats(jobID))
             If Not GenSettings.StackStats.ExpStackKilled = 0 Then
                 DynStackStats(jobID).LootCost = CInt(CDbl(DynStackStats(jobID).LootCost) _
@@ -2739,15 +3004,25 @@ Public Class RndValueGen
 
     ''' <summary>Перемешает массив</summary>
     ''' <param name="v">Массив</param>
-    Public Sub Shuffle(ByRef v() As Integer)
+    Public Sub Shuffle(ByRef v() As Integer, Optional ByVal runParallel As Boolean = True)
         'Dim rnd As New RndValueGen(seed)
         If UBound(v) < 1 Then Exit Sub
-        Dim t, m As Integer
+        Dim t As Integer
         Dim u As Integer = UBound(v)
-        For i As Integer = 0 To 3 * UBound(v) Step 1
-            m = RndInt(0, u - 1)
-            t = v(m)
-            v(m) = v(u)
+        Dim rndValues(3 * u) As Integer
+        If runParallel Then
+            Parallel.For(0, rndValues.Length, _
+             Sub(i As Integer)
+                 rndValues(i) = RndInt(0, u - 1)
+             End Sub)
+        Else
+            For i As Integer = 0 To UBound(rndValues) Step 1
+                rndValues(i) = RndInt(0, u - 1)
+            Next i
+        End If
+        For i As Integer = 0 To UBound(rndValues) Step 1
+            t = v(rndValues(i))
+            v(rndValues(i)) = v(u)
             v(u) = t
         Next i
     End Sub
@@ -3033,12 +3308,12 @@ Public Class RandomSelection
         End Sub
 
         Public Function MoveNext() As Boolean Implements IEnumerator.MoveNext
-            If currentIndex > -1 AndAlso currentIndexAmount < Checked(currentIndex) Then
+            If currentIndex > -1 AndAlso currentIndexAmount < checked(currentIndex) Then
                 currentIndexAmount += 1
                 Return True
             End If
             For i As Integer = currentIndex + 1 To upperBound Step 1
-                If Checked(i) > 0 Then
+                If checked(i) > 0 Then
                     currentIndex = i
                     currentIndexAmount = 1
                     Return True
@@ -4763,6 +5038,11 @@ Public Class AllDataStructues
         ''' </summary>
         Public effect As New List(Of ModifEffect)
 
+        Friend Const SourceResistEffect As Double = 1.09
+        Friend Const SourceImmuEffect As Double = 1.15
+        Friend Const ClassResistEffect As Double = 1.04
+        Friend Const ClassImmuEffect As Double = 1.06
+
         Public Enum Type
             ''' <summary>
             ''' L_UNIT
@@ -4807,7 +5087,7 @@ Public Class AllDataStructues
             ''' <summary>
             ''' Поле IMMUNECAT в GmodifL
             ''' </summary>
-            Public immunASourceCat As Integer
+            Public immunASourceCat As ImmunityCat
             ''' <summary>
             ''' Поле IMMUNITYC в GmodifL
             ''' </summary>
@@ -4815,7 +5095,7 @@ Public Class AllDataStructues
             ''' <summary>
             ''' Поле IMMUNECATC в GmodifL
             ''' </summary>
-            Public immunAClassCat As Integer
+            Public immunAClassCat As ImmunityCat
             ''' <summary>
             ''' Поле Move в GmodifL
             ''' </summary>
@@ -4838,6 +5118,11 @@ Public Class AllDataStructues
                 Vampirism = 15
                 FastRetreat = 16
                 LowerPurchaseCost = 17
+            End Enum
+            Public Enum ImmunityCat
+                None = 0
+                Resistance = 2
+                Immunity = 3
             End Enum
         End Class
 
@@ -4942,10 +5227,10 @@ Public Class AllDataStructues
                 End If
             Next e
         End Sub
-        Private Shared Function TotalSourceWards(ByRef modificators As List(Of Modificator)) As Dictionary(Of Integer, Integer)
-            Dim result As New Dictionary(Of Integer, Integer)
+        Private Shared Function TotalSourceWards(ByRef modificators As List(Of Modificator)) As Dictionary(Of Integer, ModifEffect.ImmunityCat)
+            Dim result As New Dictionary(Of Integer, ModifEffect.ImmunityCat)
             For Each m As Modificator In modificators
-                Dim r As Dictionary(Of Integer, Integer) = m.GetSourceWards
+                Dim r As Dictionary(Of Integer, ModifEffect.ImmunityCat) = m.GetSourceWards
                 If r.Count > 0 Then
                     For Each k As Integer In r.Keys
                         If Not result.ContainsKey(k) Then
@@ -4959,8 +5244,8 @@ Public Class AllDataStructues
             Next m
             Return result
         End Function
-        Private Function GetSourceWards() As Dictionary(Of Integer, Integer)
-            Dim result As New Dictionary(Of Integer, Integer)
+        Private Function GetSourceWards() As Dictionary(Of Integer, ModifEffect.ImmunityCat)
+            Dim result As New Dictionary(Of Integer, ModifEffect.ImmunityCat)
             For Each e As ModifEffect In effect
                 If e.type = ModifEffect.EffectType.ImmunitySource Then
                     result.Add(e.immunASource, e.immunASourceCat)
@@ -4968,10 +5253,10 @@ Public Class AllDataStructues
             Next e
             Return result
         End Function
-        Private Shared Function TotalClassWards(ByRef modificators As List(Of Modificator)) As Dictionary(Of Integer, Integer)
-            Dim result As New Dictionary(Of Integer, Integer)
+        Private Shared Function TotalClassWards(ByRef modificators As List(Of Modificator)) As Dictionary(Of Integer, ModifEffect.ImmunityCat)
+            Dim result As New Dictionary(Of Integer, ModifEffect.ImmunityCat)
             For Each m As Modificator In modificators
-                Dim r As Dictionary(Of Integer, Integer) = m.GetClassWards
+                Dim r As Dictionary(Of Integer, ModifEffect.ImmunityCat) = m.GetClassWards
                 If r.Count > 0 Then
                     For Each k As Integer In r.Keys
                         If Not result.ContainsKey(k) Then
@@ -4985,8 +5270,8 @@ Public Class AllDataStructues
             Next m
             Return result
         End Function
-        Private Function GetClassWards() As Dictionary(Of Integer, Integer)
-            Dim result As New Dictionary(Of Integer, Integer)
+        Private Function GetClassWards() As Dictionary(Of Integer, ModifEffect.ImmunityCat)
+            Dim result As New Dictionary(Of Integer, ModifEffect.ImmunityCat)
             For Each e As ModifEffect In effect
                 If e.type = ModifEffect.EffectType.ImmunityClass Then
                     result.Add(e.immunAClass, e.immunAClassCat)
@@ -4995,22 +5280,22 @@ Public Class AllDataStructues
             Return result
         End Function
         Private Shared Function WardsEffect(ByRef unit As Unit, _
-                                            ByRef sourceWards As Dictionary(Of Integer, Integer), _
-                                            ByRef classWards As Dictionary(Of Integer, Integer)) As Double
+                                            ByRef sourceWards As Dictionary(Of Integer, ModifEffect.ImmunityCat), _
+                                            ByRef classWards As Dictionary(Of Integer, ModifEffect.ImmunityCat)) As Double
             Dim multiplier As Double = 1
             For Each k As Integer In sourceWards.Keys
                 Dim type As Integer = k
-                Dim cat As Integer = sourceWards.Item(k)
-                Dim resBonus As Double = 1.09
-                Dim immBonus As Double = 1.15
+                Dim cat As ModifEffect.ImmunityCat = sourceWards.Item(k)
+                Dim resBonus As Double = SourceResistEffect
+                Dim immBonus As Double = SourceImmuEffect
                 If unit.ASourceImmunity.ContainsKey(type) Then
                     If cat > unit.ASourceImmunity.Item(type) Then
                         multiplier *= immBonus / resBonus
                     End If
                 Else
-                    If cat = 2 Then
+                    If cat = ModifEffect.ImmunityCat.Resistance Then
                         multiplier *= resBonus
-                    ElseIf cat = 3 Then
+                    ElseIf cat = ModifEffect.ImmunityCat.Immunity Then
                         multiplier *= immBonus
                     Else
                         Throw New Exception("Unexpected IMMUNECAT field in type " & type)
@@ -5019,17 +5304,17 @@ Public Class AllDataStructues
             Next k
             For Each k As Integer In classWards.Keys
                 Dim type As Integer = k
-                Dim cat As Integer = classWards.Item(k)
-                Dim resBonus As Double = 1.04
-                Dim immBonus As Double = 1.06
+                Dim cat As ModifEffect.ImmunityCat = classWards.Item(k)
+                Dim resBonus As Double = ClassResistEffect
+                Dim immBonus As Double = ClassImmuEffect
                 If unit.AClassImmunity.ContainsKey(type) Then
                     If cat > unit.AClassImmunity.Item(type) Then
                         multiplier *= immBonus / resBonus
                     End If
                 Else
-                    If cat = 2 Then
+                    If cat = ModifEffect.ImmunityCat.Resistance Then
                         multiplier *= resBonus
-                    ElseIf cat = 3 Then
+                    ElseIf cat = ModifEffect.ImmunityCat.Immunity Then
                         multiplier *= immBonus
                     Else
                         Throw New Exception("Unexpected IMMUNECATC field in type " & type)
@@ -5764,7 +6049,7 @@ Public Class GenDefaultValues
     ''' <summary>Игра использует такую строку для неиспользуемых юнитов, предметов и т.д.</summary>
     Public Const emptyItem As String = "G000000000"
     Public ReadOnly maxItemTypeID As Integer = GetType(GenDefaultValues.ItemTypes).GetEnumValues.Cast(Of Integer).Max
-    Public Const writeToConsole As Boolean = False
+    Public Const writeToConsole As Boolean = True
 
     'stack info
     Friend busytransfer() As Integer = New Integer() {1, -1, 3, -1, 5, -1}

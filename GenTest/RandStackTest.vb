@@ -817,6 +817,7 @@ Public Class RandStackTest
         Dim p()() As String = {p1, p2, p3, p4, p5, p6, p7, p8, p9}
         Dim ok As Boolean = True
 
+        Dim t0 As Integer = Environment.TickCount
         For i As Integer = 0 To UBound(p) Step 1
             preservedUnits.Clear()
             preservedUnits.AddRange(p(i))
@@ -860,6 +861,7 @@ Public Class RandStackTest
             Next m
             If Not ok Then Exit For
         Next i
+        Dim elapsedTime As Integer = Environment.TickCount - t0
 
         If Not ok Then Assert.Inconclusive("Verify the correctness of this test method.")
     End Sub

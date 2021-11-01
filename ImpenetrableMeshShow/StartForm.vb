@@ -21,7 +21,7 @@ Friend Class StartForm
         'Call StackLocationsGen.PassageGuardPlacer.speedBanchmark()
         'Call ImpenetrableMeshGen.ActiveObjectsPlacer.speedBanchmark()
 
-        'Call Tests.ItemsGenTest_time()
+        'Call Tests.ModificatorsSpeedTest()
 
         If GenDefaultValues.writeToConsole Then
             Dim tf As New TemplateForge(RandomStackGenerator.GenDefaultValues.TextLanguage.Rus)
@@ -646,4 +646,40 @@ Class Tests
         Next p
         Return Environment.TickCount - t
     End Function
+
+    Public Shared Sub ModificatorsSpeedTest()
+
+        Dim r As New RandStack(TestDataRead.DefaultGenData)
+
+        Dim commonModificators() As String = _
+            {"g000um2002", "g000um2002", "g000um2101", "g000um4017", "g000um4017", "g000um4017", _
+             "g000um7545", "g000um7545", "g100um0030", "g100um0030", "g100um0030", "g200um0018"}
+        Dim wards() As String = {"g100um0002", "g000um9014"}
+        Dim damage() As String = {"g002um0070", "g002um0071", "g005um0187", "g005um0187"}
+
+        Dim testStack As New AllDataStructues.Stack
+        ReDim testStack.units(5)
+        testStack.units(0) = New AllDataStructues.Stack.UnitInfo("g000uu0017", 5, New List(Of String), r) 'хил
+        testStack.units(1) = New AllDataStructues.Stack.UnitInfo("g000uu0151", 5, New List(Of String), r) 'хил
+        testStack.units(2) = New AllDataStructues.Stack.UnitInfo("g000uu8218", 5, New List(Of String), r) 'хил
+        testStack.units(3) = New AllDataStructues.Stack.UnitInfo("g000uu7587", 5, New List(Of String), r) 'урон
+        testStack.units(4) = New AllDataStructues.Stack.UnitInfo("g000uu0053", 5, New List(Of String), r) 'урон
+        testStack.units(5) = New AllDataStructues.Stack.UnitInfo("g000uu8021", 5, New List(Of String), r) 'урон
+
+        For i As Integer = 0 To UBound(testStack.units) Step 1
+            testStack.units(i).modificators.AddRange(commonModificators)
+        Next i
+        For i As Integer = 1 To UBound(testStack.units) - 1 Step 1
+            testStack.units(i).modificators.AddRange(wards)
+        Next i
+        For i As Integer = 3 To UBound(testStack.units) Step 1
+            testStack.units(i).modificators.AddRange(damage)
+        Next i
+
+        Dim stats As AllDataStructues.DesiredStats = r.StackStats(testStack, False)
+        Dim genSettings As New AllDataStructues.CommonStackCreationSettings
+        genSettings.StackStats = stats
+
+        Call New RandStack.RecursiveApplyModificator(testStack, genSettings, r).ApplyModificators()
+    End Sub
 End Class
