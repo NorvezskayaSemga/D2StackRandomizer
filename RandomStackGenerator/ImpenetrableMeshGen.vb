@@ -8653,16 +8653,24 @@ Public Class WaterGen
             Return WaterAmount
         End Function
 
-        Public Function MakeWaterSufaceTestArray(ByRef pos As Point, ByRef w As WaterPlacer_2.WaterBlock) As Boolean(,)
-            Dim result(m.xSize, m.ySize) As Boolean
-            For y As Integer = 0 To m.ySize Step 1
-                For x As Integer = 0 To m.xSize Step 1
-                    result(x, y) = m.board(x, y).surface.isWater
-                Next x
-            Next y
+        Public Function MakeWaterSufaceTestArray(ByRef pos As Point, ByRef w As WaterPlacer_2.WaterBlock, _
+                                                 Optional ByRef currentWaterSurface(,) As Boolean = Nothing, _
+                                                 Optional ByRef wasGround(,) As Boolean = Nothing) As Boolean(,)
+            Dim result(,) As Boolean
+            If IsNothing(currentWaterSurface) Then
+                ReDim result(m.xSize, m.ySize)
+                For y As Integer = 0 To m.ySize Step 1
+                    For x As Integer = 0 To m.xSize Step 1
+                        result(x, y) = m.board(x, y).surface.isWater
+                    Next x
+                Next y
+            Else
+                result = currentWaterSurface
+            End If
             For y As Integer = 0 To w.yMax Step 1
                 For x As Integer = 0 To w.xMax Step 1
                     If w.GetValue(x, y) Then
+                        If Not IsNothing(wasGround) And Not result(pos.X + x, pos.Y + y) Then wasGround(x, y) = True
                         If m.symmID > -1 Then
                             Dim pp() As Point = owner.symm.ApplySymm(New Point(pos.X + x, pos.Y + y), settMap.nRaces, m, 1)
                             For k As Integer = 0 To UBound(pp) Step 1
@@ -8949,6 +8957,9 @@ Public Class WaterGen
         Public settMap As Map.SettingsMap
 
         Private wBlocks, objWBlocks, unacceptWBlocks As Dictionary(Of String, WaterBlock)
+        Private wBlocksKeys() As String
+        Private wBlockMaxXSize As Integer
+        Private wBlockMaxYSize As Integer
 
         Public Class WaterBlock
             ''' <summary>
@@ -9117,6 +9128,11 @@ Public Class WaterGen
             wBlocks = ReadWaterBlocks(owner.comm.defValues.resReader.WaterBlocksCommon, False)
             objWBlocks = ReadWaterBlocks(owner.comm.defValues.resReader.WaterBlocks3x3Objects, True)
             unacceptWBlocks = ReadWaterBlocks(owner.comm.defValues.resReader.WaterBlocksUnacceptable, False)
+            wBlocksKeys = wBlocks.Keys.ToArray
+            For Each b As WaterBlock In wBlocks.Values
+                wBlockMaxXSize = Math.Max(wBlockMaxXSize, b.xMax)
+                wBlockMaxYSize = Math.Max(wBlockMaxYSize, b.yMax)
+            Next b
         End Sub
         Private Function ReadWaterBlocks(ByVal blocksText As String, ByVal isObjBlock As Boolean) As Dictionary(Of String, WaterBlock)
             Dim result As New Dictionary(Of String, WaterBlock)
@@ -9246,23 +9262,43 @@ Public Class WaterGen
 
         Private Sub AddWaterCommon(ByVal loc As Location, ByVal fpInfo As FreePointsInfo, ByRef WaterAmount As Integer)
             Dim possibleWaterPlaces As New Dictionary(Of String, Integer)
+            Dim pPossibleWaterPlaces(Environment.ProcessorCount - 1) As Dictionary(Of String, Integer)
+            Dim currentWaterSurface(UBound(pPossibleWaterPlaces))(,), wasGround(UBound(pPossibleWaterPlaces))(,) As Boolean
+            Dim pWaterAmount As Integer
+            For k As Integer = 0 To UBound(pPossibleWaterPlaces) Step 1
+                pPossibleWaterPlaces(k) = New Dictionary(Of String, Integer)
+                ReDim currentWaterSurface(k)(m.xSize, m.ySize), wasGround(k)(wBlockMaxXSize, wBlockMaxYSize)
+            Next k
             possibleWaterPlaces.Add("---", 0)
-            Dim addsWaterAmount(UBound(fpInfo.points)), pWaterAmount As Integer
-            Dim pKey As String
-            Do While WaterAmount > 0 And possibleWaterPlaces.Count > 0
+           Do While WaterAmount > 0 And possibleWaterPlaces.Count > 0
                 possibleWaterPlaces.Clear()
-                For Each k As String In wBlocks.Keys
-                    pKey = k
-                    pWaterAmount = WaterAmount
-                    Parallel.For(0, fpInfo.points.Length, _
-                     Sub(i As Integer)
-                         addsWaterAmount(i) = CanAddWatherAmount(loc, fpInfo, pWaterAmount, fpInfo.points(i), pKey, False)
-                     End Sub)
-                    For i As Integer = 0 To UBound(fpInfo.points) Step 1
-                        If addsWaterAmount(i) > 0 Then
-                            possibleWaterPlaces.Add(k & "_" & fpInfo.points(i).X & "_" & fpInfo.points(i).Y, addsWaterAmount(i))
-                        End If
-                    Next i
+                pWaterAmount = WaterAmount
+                Parallel.For(0, Environment.ProcessorCount, _
+                 Sub(proc As Integer)
+                     pPossibleWaterPlaces(proc).Clear()
+                     Dim a As Integer
+                     For y As Integer = 0 To m.ySize Step 1
+                         For x As Integer = 0 To m.xSize Step 1
+                             currentWaterSurface(proc)(x, y) = m.board(x, y).surface.isWater
+                         Next x
+                     Next y
+                     For k As Integer = proc To UBound(wBlocksKeys) Step Environment.ProcessorCount
+                         For i As Integer = 0 To UBound(fpInfo.points) Step 1
+                             a = CanAddWatherAmount(loc, fpInfo, pWaterAmount, fpInfo.points(i), _
+                                                    wBlocksKeys(k), False, False, _
+                                                    currentWaterSurface(proc), wasGround(proc))
+                             If a > 0 Then
+                                 pPossibleWaterPlaces(proc).Add(wBlocksKeys(k) & "_" & _
+                                                               fpInfo.points(i).X & "_" & _
+                                                               fpInfo.points(i).Y, a)
+                             End If
+                         Next i
+                     Next k
+                 End Sub)
+                For k As Integer = 0 To UBound(pPossibleWaterPlaces) Step 1
+                    For Each key As String In pPossibleWaterPlaces(k).Keys
+                        possibleWaterPlaces.Add(key, pPossibleWaterPlaces(k).Item(key))
+                    Next key
                 Next k
                 If possibleWaterPlaces.Count > 0 Then
                     Dim idsArray() As String = possibleWaterPlaces.Keys.ToArray
@@ -9297,7 +9333,9 @@ Public Class WaterGen
         End Function
         Private Function CanAddWatherAmount(ByRef loc As Location, ByRef fpInfo As FreePointsInfo, ByRef WaterAmount As Integer, _
                                             ByRef p As Point, ByRef key As String, ByVal useObjWBlocks As Boolean, _
-                                            Optional ByVal IgnoreSize As Boolean = False) As Integer
+                                            ByVal IgnoreSize As Boolean, _
+                                            Optional ByRef currentWaterSurface(,) As Boolean = Nothing, _
+                                            Optional ByRef wasGround(,) As Boolean = Nothing) As Integer
             Dim w As WaterBlock = GetWaterBlock(key, useObjWBlocks)
 
             Dim x2 As Integer = p.X + w.xMax
@@ -9333,10 +9371,34 @@ Public Class WaterGen
             If Not hasGroundTileToWater Then Return 0
             If WaterAmount + 2 < addsWaterAmount Then Return 0
             If addsWaterAmount > 0 Then
-                Dim wTest(,) As Boolean = owner.wpCommon.MakeWaterSufaceTestArray(p, w)
+                Dim wTest(,) As Boolean = owner.wpCommon.MakeWaterSufaceTestArray(p, w, currentWaterSurface, wasGround)
+                Dim returnZero As Boolean = False
                 For Each u As WaterBlock In unacceptWBlocks.Values
-                    If TestByUnacceptableBlock(wTest, u, w, p) Then Return 0
+                    If TestByUnacceptableBlock(wTest, u, w, p) Then
+                        returnZero = True
+                        Exit For
+                    End If
                 Next u
+                If Not IsNothing(currentWaterSurface) Then
+                    For y As Integer = 0 To w.yMax Step 1
+                        For x As Integer = 0 To w.xMax Step 1
+                            If wasGround(x, y) Then
+                                wasGround(x, y) = False
+                                If m.symmID > -1 Then
+                                    Dim pp() As Point = owner.symm.ApplySymm(New Point(p.X + x, p.Y + y), settMap.nRaces, m, 1)
+                                    For k As Integer = 0 To UBound(pp) Step 1
+                                        Dim tx As Integer = pp(k).X
+                                        Dim ty As Integer = pp(k).Y
+                                        currentWaterSurface(tx, ty) = False
+                                    Next k
+                                Else
+                                    currentWaterSurface(p.X + x, p.Y + y) = False
+                                End If
+                            End If
+                        Next x
+                    Next y
+                End If
+                If returnZero Then addsWaterAmount = 0
             End If
             Return addsWaterAmount
         End Function
