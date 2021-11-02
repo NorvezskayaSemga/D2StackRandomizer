@@ -680,6 +680,19 @@ Class Tests
         Dim genSettings As New AllDataStructues.CommonStackCreationSettings
         genSettings.StackStats = stats
 
-        Call New RandStack.RecursiveApplyModificator(testStack, genSettings, r).ApplyModificators()
+        Dim s As New AllDataStructues.Stack
+        ReDim s.units(UBound(testStack.units))
+
+        Dim t0 As Integer = Environment.TickCount
+        For k As Integer = 0 To 1000 Step 1
+            For i As Integer = 0 To UBound(testStack.units) Step 1
+                s.units(i) = AllDataStructues.Stack.UnitInfo.Copy(testStack.units(i))
+                s.units(i).modificators.Clear()
+            Next i
+            Call New RandStack.RecursiveApplyModificator(s, genSettings, r).ApplyModificators()
+        Next k
+        Dim t1 As Integer = Environment.TickCount - t0
+        '39000
+
     End Sub
 End Class

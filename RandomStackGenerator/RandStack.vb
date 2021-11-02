@@ -327,6 +327,21 @@ Public Class RandStack
             Next i
         End If
 
+        'dynupgrlevel
+        'варды
+        Dim ws, wc As Integer
+        Dim t As Boolean = False
+        For i As Integer = 0 To UBound(AllUnits) Step 1
+            If AllUnits(i).dynUpgradeLevel = 0 Then
+                If Not t Then MsgBox("dynUpgradeLevel = 0 " & AllUnits(i).unitID)
+                t = True
+            End If
+            ws += AllUnits(i).ASourceImmunity.Count
+            wc += AllUnits(i).AClassImmunity.Count
+        Next i
+        If ws = 0 Then MsgBox("See no units attack source wards")
+        If wc = 0 Then MsgBox("See no units attack class wards")
+
         Call ResetExclusions()
     End Sub
     Private Function ItemTypeWeight(ByRef wList As Dictionary(Of String, String), ByRef itemType As String, ByRef cost As Double) As Double
@@ -1761,7 +1776,9 @@ Public Class RandStack
                 If Not stack.units(i).unit.unitID.ToUpper = GenDefaultValues.emptyItem Then
                     baseUnitStats(i) = AllDataStructues.UnitBattleNumericValues.BaseBattleNumericStats(stack.units(i))
                     baseUnitPower(i) = AllDataStructues.UnitBattleNumericValues.UnitPower(baseUnitStats(i))
-                    Call AllDataStructues.Modificator.AddModificators(baseModificators(i), stack.units(i).modificators, RandStack)
+                    For Each id As String In stack.units(i).modificators
+                        baseModificators(i).Add(RandStack.FindModificatorStats(id))
+                    Next id
                     basePowerChange(i) = AllDataStructues.Modificator.UnitPowerChange(stack.units(i), RandStack)
                     unitWeight(i) = units(i).unit.EXPkilled + units(i).unit.GetExpKilledOverlevel(units(i).level)
                     weightSum += unitWeight(i)
@@ -2153,20 +2170,15 @@ Public Class RandStack
                 rData.totalAttempts += 1
                 Dim total As Double = 1
                 Dim v As Double
-                Dim mods(UBound(units)) As List(Of AllDataStructues.Modificator)
-                For i As Integer = 0 To UBound(mods) Step 1
-                    mods(i) = New List(Of AllDataStructues.Modificator)
-                Next i
-                For i As Integer = 0 To UBound(rData.currentResult) Step 1
-                    mods(rData.currentResult(i)).Add(modificators(i))
-                Next i
-                For i As Integer = 0 To UBound(mods) Step 1
+                For i As Integer = 0 To UBound(units) Step 1
                     v = AllDataStructues.Modificator.UnitPowerChange(units(i).unit,
                                                                      baseUnitStats(i),
                                                                      baseUnitPower(i),
                                                                      baseModificators(i),
                                                                      basePowerChange(i),
-                                                                     mods(i))
+                                                                     modificators, _
+                                                                     rData.currentResult, _
+                                                                     i)
                     Call AddModificatorEffect(total, v, unitWeight(i), weightSum)
                 Next i
                 Dim replace As Boolean
@@ -2187,10 +2199,11 @@ Public Class RandStack
                 End If
 
                 Dim d As Double = Math.Abs(rData.bestValue / wantValue - 1)
-                If (d < 0.02 And rData.totalAttempts > 100) _
-            OrElse (d < 0.05 And rData.totalAttempts > 5000) _
-            OrElse (d < 0.15 And rData.totalAttempts > 10000) _
-            OrElse (d < 0.25 And rData.totalAttempts > 50000) _
+                If (d < 0.001 And rData.totalAttempts > 1) _
+            OrElse (d < 0.01 And rData.totalAttempts > 100) _
+            OrElse (d < 0.03 And rData.totalAttempts > 5000) _
+            OrElse (d < 0.1 And rData.totalAttempts > 10000) _
+            OrElse (d < 0.2 And rData.totalAttempts > 50000) _
             OrElse (rData.totalAttempts > 100000) Then
                     rData.forceExit = True
                 End If
@@ -2219,7 +2232,7 @@ Public Class RandStack
                 Dim parallelAttempts As Integer = 0
                 For i As Integer = 0 To UBound(unitPos) Step 1
                     If Not IsNothing(pRData(i)) Then
-                        rData.forceExit = pRData(i).forceExit
+                        rData.forceExit = rData.forceExit Or pRData(i).forceExit
                         parallelAttempts += pRData(i).totalAttempts - rData.totalAttempts
                         If Math.Abs(wantValue - pRData(i).bestValue) <= Math.Abs(wantValue - rData.bestValue) Then
                             rData.bestValue = pRData(i).bestValue
@@ -5063,6 +5076,7 @@ Public Class AllDataStructues
         End Enum
 
         Public Class ModifEffect
+#Const ImmuneCatIsEnum = True
             ''' <summary>
             ''' Тип модификатора
             ''' </summary>
@@ -5085,17 +5099,28 @@ Public Class AllDataStructues
             ''' </summary>
             Public immunASource As Integer
             ''' <summary>
+            ''' Поле IMMUNITYC в GmodifL
+            ''' </summary>
+            Public immunAClass As Integer
+#If ImmuneCatIsEnum Then
+            ''' <summary>
             ''' Поле IMMUNECAT в GmodifL
             ''' </summary>
             Public immunASourceCat As ImmunityCat
             ''' <summary>
-            ''' Поле IMMUNITYC в GmodifL
-            ''' </summary>
-            Public immunAClass As Integer
-            ''' <summary>
             ''' Поле IMMUNECATC в GmodifL
             ''' </summary>
             Public immunAClassCat As ImmunityCat
+#Else
+            ''' <summary>
+            ''' Поле IMMUNECAT в GmodifL
+            ''' </summary>
+            Public immunASourceCat As Integer
+            ''' <summary>
+            ''' Поле IMMUNECATC в GmodifL
+            ''' </summary>
+            Public immunAClassCat As Integer
+#End If
             ''' <summary>
             ''' Поле Move в GmodifL
             ''' </summary>
@@ -5149,8 +5174,10 @@ Public Class AllDataStructues
             Dim b As UnitBattleNumericValues = UnitBattleNumericValues.BaseBattleNumericStats(unit)
             Dim p As Double = UnitBattleNumericValues.UnitPower(b)
             Dim m As New List(Of Modificator)
-            Call AddModificators(m, unit.modificators, R)
-            Return UnitPowerChange(unit.unit, b, p, m)
+            For Each id As String In unit.modificators
+                m.Add(R.FindModificatorStats(id))
+            Next id
+            Return UnitPowerChange(unit.unit, b, p, {m})
         End Function
         Public Shared Function UnitPowerChange(ByRef unit As Unit, _
                                                ByRef base As UnitBattleNumericValues, _
@@ -5169,38 +5196,80 @@ Public Class AllDataStructues
                                                ByRef basePowerChange As Double, _
                                                ByRef modificators As List(Of Modificator)) As Double
             If modificators.Count = 0 Then Return 1
-            Dim m As New List(Of Modificator)
-            Call AddModificators(m, baseModificators)
-            Call AddModificators(m, modificators)
-            Dim n2 As Double = UnitPowerChange(unit, base, baseUnitPower, m)
+            Dim n2 As Double = UnitPowerChange(unit, base, baseUnitPower, {baseModificators, modificators})
             Return n2 / basePowerChange
         End Function
         Public Shared Function UnitPowerChange(ByRef unit As Unit, _
                                                ByRef base As UnitBattleNumericValues, _
                                                ByRef baseUnitPower As Double, _
-                                               ByRef modificators As List(Of Modificator)) As Double
+                                               ByRef baseModificators As List(Of Modificator), _
+                                               ByRef basePowerChange As Double, _
+                                               ByRef allModificators() As Modificator, _
+                                               ByRef applyModificatorTo() As Integer, _
+                                               ByRef myID As Integer) As Double
+            Dim calc As Boolean = False
+            For i As Integer = 0 To UBound(applyModificatorTo) Step 1
+                If applyModificatorTo(i) = myID Then
+                    calc = True
+                    Exit For
+                End If
+            Next i
+            If Not calc Then Return 1
+            Dim n2 As Double = UnitPowerChange(unit, base, baseUnitPower, baseModificators, _
+                                               allModificators, applyModificatorTo, myID)
+            Return n2 / basePowerChange
+        End Function
+        Public Shared Function UnitPowerChange(ByRef unit As Unit, _
+                                               ByRef base As UnitBattleNumericValues, _
+                                               ByRef baseUnitPower As Double, _
+                                               ByRef modificators() As List(Of Modificator)) As Double
             Dim r As Double = 1
-            If modificators.Count > 0 Then
+            Dim calc As Boolean = False
+            For i As Integer = 0 To UBound(modificators) Step 1
+                If modificators(i).Count > 0 Then
+                    calc = True
+                    Exit For
+                End If
+            Next i
+            If calc Then
                 Dim modif As UnitBattleNumericValues = UnitNumericValues.Copy(base)
-                For Each m As Modificator In modificators
-                    Call ModifyNumericStats(m.effect, modif)
-                Next m
+                For i As Integer = 0 To UBound(modificators) Step 1
+                    For Each m As Modificator In modificators(i)
+                        Call ModifyNumericStats(m.effect, modif)
+                    Next m
+                Next i
                 Dim n As Double = UnitBattleNumericValues.UnitPower(modif) / baseUnitPower
                 Dim w As Double = WardsEffect(unit, TotalSourceWards(modificators), TotalClassWards(modificators))
                 r = n * w
             End If
             Return r
         End Function
-        Public Shared Sub AddModificators(ByRef dest As List(Of Modificator), ByRef content As List(Of String), ByRef R As RandStack)
-            For Each id As String In content
-                dest.Add(R.FindModificatorStats(id))
-            Next id
-        End Sub
-        Public Shared Sub AddModificators(ByRef dest As List(Of Modificator), ByRef content As List(Of Modificator))
-            For Each modif As Modificator In content
-                dest.Add(modif)
-            Next modif
-        End Sub
+        Public Shared Function UnitPowerChange(ByRef unit As Unit, _
+                                               ByRef base As UnitBattleNumericValues, _
+                                               ByRef baseUnitPower As Double, _
+                                               ByRef modificatorsA As List(Of Modificator), _
+                                               ByRef modificatorsB() As Modificator, _
+                                               ByRef applyModificatorTo() As Integer, _
+                                               ByRef myID As Integer) As Double
+            Dim r As Double = 1
+            Dim modif As UnitBattleNumericValues = UnitNumericValues.Copy(base)
+            For Each m As Modificator In modificatorsA
+                Call ModifyNumericStats(m.effect, modif)
+            Next m
+            For i As Integer = 0 To UBound(applyModificatorTo) Step 1
+                If applyModificatorTo(i) = myID Then
+                    Call ModifyNumericStats(modificatorsB(i).effect, modif)
+                End If
+            Next i
+            Dim n As Double = UnitBattleNumericValues.UnitPower(modif) / baseUnitPower
+            Dim w As Double = WardsEffect(unit, _
+                                          TotalSourceWards(modificatorsA, modificatorsB, _
+                                                           applyModificatorTo, myID), _
+                                          TotalClassWards(modificatorsA, modificatorsB, _
+                                                          applyModificatorTo, myID))
+            r = n * w
+            Return r
+        End Function
 
         Private Shared Sub ModifyNumericStats(ByRef effect As List(Of ModifEffect), _
                                               ByRef modif As UnitBattleNumericValues)
@@ -5227,58 +5296,157 @@ Public Class AllDataStructues
                 End If
             Next e
         End Sub
-        Private Shared Function TotalSourceWards(ByRef modificators As List(Of Modificator)) As Dictionary(Of Integer, ModifEffect.ImmunityCat)
+        Private Shared Function TotalSourceWards(ByRef modificators() As List(Of Modificator)) As Dictionary(Of Integer, ModifEffect.ImmunityCat)
             Dim result As New Dictionary(Of Integer, ModifEffect.ImmunityCat)
-            For Each m As Modificator In modificators
-                Dim r As Dictionary(Of Integer, ModifEffect.ImmunityCat) = m.GetSourceWards
-                If r.Count > 0 Then
-                    For Each k As Integer In r.Keys
-                        If Not result.ContainsKey(k) Then
-                            result.Add(k, r.Item(k))
-                        ElseIf r.Item(k) > result.Item(k) Then
-                            result.Remove(k)
-                            result.Add(k, r.Item(k))
+            For i As Integer = 0 To UBound(modificators) Step 1
+                For Each m As Modificator In modificators(i)
+                    For Each e As ModifEffect In m.effect
+                        If e.type = ModifEffect.EffectType.ImmunitySource Then
+                            If Not result.ContainsKey(e.immunASource) Then
+#If ImmuneCatIsEnum Then
+                                result.Add(e.immunASource, e.immunASourceCat)
+#Else
+                                result.Add(e.immunASource, CType(e.immunASourceCat, ModifEffect.ImmunityCat))
+#End If
+                            ElseIf e.immunASourceCat > result.Item(e.immunASource) Then
+                                result.Remove(e.immunASource)
+#If ImmuneCatIsEnum Then
+                                result.Add(e.immunASource, e.immunASourceCat)
+#Else
+                                result.Add(e.immunASource, CType(e.immunASourceCat, ModifEffect.ImmunityCat))
+#End If
+                            End If
                         End If
-                    Next k
-                End If
-            Next m
+                    Next e
+                Next m
+            Next i
             Return result
         End Function
-        Private Function GetSourceWards() As Dictionary(Of Integer, ModifEffect.ImmunityCat)
+        Private Shared Function TotalSourceWards(ByRef modificatorsA As List(Of Modificator), _
+                                                 ByRef modificatorsB() As Modificator, _
+                                                 ByRef applyModificatorTo() As Integer, _
+                                                 ByRef myID As Integer) As Dictionary(Of Integer, ModifEffect.ImmunityCat)
             Dim result As New Dictionary(Of Integer, ModifEffect.ImmunityCat)
-            For Each e As ModifEffect In effect
-                If e.type = ModifEffect.EffectType.ImmunitySource Then
-                    result.Add(e.immunASource, e.immunASourceCat)
-                End If
-            Next e
-            Return result
-        End Function
-        Private Shared Function TotalClassWards(ByRef modificators As List(Of Modificator)) As Dictionary(Of Integer, ModifEffect.ImmunityCat)
-            Dim result As New Dictionary(Of Integer, ModifEffect.ImmunityCat)
-            For Each m As Modificator In modificators
-                Dim r As Dictionary(Of Integer, ModifEffect.ImmunityCat) = m.GetClassWards
-                If r.Count > 0 Then
-                    For Each k As Integer In r.Keys
-                        If Not result.ContainsKey(k) Then
-                            result.Add(k, r.Item(k))
-                        ElseIf r.Item(k) > result.Item(k) Then
-                            result.Remove(k)
-                            result.Add(k, r.Item(k))
+            For Each m As Modificator In modificatorsA
+                For Each e As ModifEffect In m.effect
+                    If e.type = ModifEffect.EffectType.ImmunitySource Then
+                        If Not result.ContainsKey(e.immunASource) Then
+#If ImmuneCatIsEnum Then
+                            result.Add(e.immunASource, e.immunASourceCat)
+#Else
+                            result.Add(e.immunASource, CType(e.immunASourceCat, ModifEffect.ImmunityCat))
+#End If
+                        ElseIf e.immunASourceCat > result.Item(e.immunASource) Then
+                            result.Remove(e.immunASource)
+#If ImmuneCatIsEnum Then
+                            result.Add(e.immunASource, e.immunASourceCat)
+#Else
+                            result.Add(e.immunASource, CType(e.immunASourceCat, ModifEffect.ImmunityCat))
+#End If
                         End If
-                    Next k
-                End If
+                    End If
+                Next e
             Next m
-            Return result
-        End Function
-        Private Function GetClassWards() As Dictionary(Of Integer, ModifEffect.ImmunityCat)
-            Dim result As New Dictionary(Of Integer, ModifEffect.ImmunityCat)
-            For Each e As ModifEffect In effect
-                If e.type = ModifEffect.EffectType.ImmunityClass Then
-                    result.Add(e.immunAClass, e.immunAClassCat)
+            For i As Integer = 0 To UBound(applyModificatorTo) Step 1
+                If applyModificatorTo(i) = myID Then
+                    For Each e As ModifEffect In modificatorsB(i).effect
+                        If e.type = ModifEffect.EffectType.ImmunitySource Then
+                            If Not result.ContainsKey(e.immunASource) Then
+#If ImmuneCatIsEnum Then
+                                result.Add(e.immunASource, e.immunASourceCat)
+#Else
+                                result.Add(e.immunASource, CType(e.immunASourceCat, ModifEffect.ImmunityCat))
+#End If
+                            ElseIf e.immunASourceCat > result.Item(e.immunASource) Then
+                                result.Remove(e.immunASource)
+#If ImmuneCatIsEnum Then
+                                result.Add(e.immunASource, e.immunASourceCat)
+#Else
+                                result.Add(e.immunASource, CType(e.immunASourceCat, ModifEffect.ImmunityCat))
+#End If
+                            End If
+                        End If
+                    Next e
                 End If
-            Next e
+            Next i
             Return result
         End Function
+        Private Shared Function TotalClassWards(ByRef modificators() As List(Of Modificator)) As Dictionary(Of Integer, ModifEffect.ImmunityCat)
+            Dim result As New Dictionary(Of Integer, ModifEffect.ImmunityCat)
+            For i As Integer = 0 To UBound(modificators) Step 1
+                For Each m As Modificator In modificators(i)
+                    For Each e As ModifEffect In m.effect
+                        If e.type = ModifEffect.EffectType.ImmunityClass Then
+                            If Not result.ContainsKey(e.immunAClass) Then
+#If ImmuneCatIsEnum Then
+                                result.Add(e.immunASource, e.immunAClassCat)
+#Else
+                                result.Add(e.immunASource, CType(e.immunAClassCat, ModifEffect.ImmunityCat))
+#End If
+                            ElseIf e.immunAClassCat > result.Item(e.immunAClass) Then
+                                result.Remove(e.immunAClass)
+#If ImmuneCatIsEnum Then
+                                result.Add(e.immunASource, e.immunAClassCat)
+#Else
+                                result.Add(e.immunASource, CType(e.immunAClassCat, ModifEffect.ImmunityCat))
+#End If
+                            End If
+                        End If
+                    Next e
+                Next m
+            Next i
+            Return result
+        End Function
+        Private Shared Function TotalClassWards(ByRef modificatorsA As List(Of Modificator), _
+                                                ByRef modificatorsB() As Modificator, _
+                                                ByRef applyModificatorTo() As Integer, _
+                                                ByRef myID As Integer) As Dictionary(Of Integer, ModifEffect.ImmunityCat)
+            Dim result As New Dictionary(Of Integer, ModifEffect.ImmunityCat)
+            For Each m As Modificator In modificatorsA
+                For Each e As ModifEffect In m.effect
+                    If e.type = ModifEffect.EffectType.ImmunityClass Then
+                        If Not result.ContainsKey(e.immunAClass) Then
+#If ImmuneCatIsEnum Then
+                            result.Add(e.immunASource, e.immunAClassCat)
+#Else
+                            result.Add(e.immunASource, CType(e.immunAClassCat, ModifEffect.ImmunityCat))
+#End If
+                        ElseIf e.immunAClassCat > result.Item(e.immunAClass) Then
+                            result.Remove(e.immunAClass)
+#If ImmuneCatIsEnum Then
+                            result.Add(e.immunASource, e.immunAClassCat)
+#Else
+                            result.Add(e.immunASource, CType(e.immunAClassCat, ModifEffect.ImmunityCat))
+#End If
+                        End If
+                    End If
+                Next e
+            Next m
+            For i As Integer = 0 To UBound(applyModificatorTo) Step 1
+                If applyModificatorTo(i) = myID Then
+                    For Each e As ModifEffect In modificatorsB(i).effect
+                        If e.type = ModifEffect.EffectType.ImmunityClass Then
+                            If Not result.ContainsKey(e.immunAClass) Then
+#If ImmuneCatIsEnum Then
+                                result.Add(e.immunASource, e.immunAClassCat)
+#Else
+                                result.Add(e.immunASource, CType(e.immunAClassCat, ModifEffect.ImmunityCat))
+#End If
+                            ElseIf e.immunAClassCat > result.Item(e.immunAClass) Then
+                                result.Remove(e.immunAClass)
+#If ImmuneCatIsEnum Then
+                                result.Add(e.immunASource, e.immunAClassCat)
+#Else
+                                result.Add(e.immunASource, CType(e.immunAClassCat, ModifEffect.ImmunityCat))
+#End If
+                            End If
+                        End If
+                    Next e
+                End If
+            Next i
+            Return result
+        End Function
+
         Private Shared Function WardsEffect(ByRef unit As Unit, _
                                             ByRef sourceWards As Dictionary(Of Integer, ModifEffect.ImmunityCat), _
                                             ByRef classWards As Dictionary(Of Integer, ModifEffect.ImmunityCat)) As Double
