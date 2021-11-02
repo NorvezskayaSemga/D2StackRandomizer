@@ -5379,16 +5379,16 @@ Public Class AllDataStructues
                         If e.type = ModifEffect.EffectType.ImmunityClass Then
                             If Not result.ContainsKey(e.immunAClass) Then
 #If ImmuneCatIsEnum Then
-                                result.Add(e.immunASource, e.immunAClassCat)
+                                result.Add(e.immunAClass, e.immunAClassCat)
 #Else
-                                result.Add(e.immunASource, CType(e.immunAClassCat, ModifEffect.ImmunityCat))
+                                result.Add(e.immunAClass, CType(e.immunAClassCat, ModifEffect.ImmunityCat))
 #End If
                             ElseIf e.immunAClassCat > result.Item(e.immunAClass) Then
                                 result.Remove(e.immunAClass)
 #If ImmuneCatIsEnum Then
-                                result.Add(e.immunASource, e.immunAClassCat)
+                                result.Add(e.immunAClass, e.immunAClassCat)
 #Else
-                                result.Add(e.immunASource, CType(e.immunAClassCat, ModifEffect.ImmunityCat))
+                                result.Add(e.immunAClass, CType(e.immunAClassCat, ModifEffect.ImmunityCat))
 #End If
                             End If
                         End If
@@ -5407,16 +5407,16 @@ Public Class AllDataStructues
                     If e.type = ModifEffect.EffectType.ImmunityClass Then
                         If Not result.ContainsKey(e.immunAClass) Then
 #If ImmuneCatIsEnum Then
-                            result.Add(e.immunASource, e.immunAClassCat)
+                            result.Add(e.immunAClass, e.immunAClassCat)
 #Else
-                            result.Add(e.immunASource, CType(e.immunAClassCat, ModifEffect.ImmunityCat))
+                            result.Add(e.immunAClass, CType(e.immunAClassCat, ModifEffect.ImmunityCat))
 #End If
                         ElseIf e.immunAClassCat > result.Item(e.immunAClass) Then
                             result.Remove(e.immunAClass)
 #If ImmuneCatIsEnum Then
-                            result.Add(e.immunASource, e.immunAClassCat)
+                            result.Add(e.immunAClass, e.immunAClassCat)
 #Else
-                            result.Add(e.immunASource, CType(e.immunAClassCat, ModifEffect.ImmunityCat))
+                            result.Add(e.immunAClass, CType(e.immunAClassCat, ModifEffect.ImmunityCat))
 #End If
                         End If
                     End If
@@ -5428,16 +5428,16 @@ Public Class AllDataStructues
                         If e.type = ModifEffect.EffectType.ImmunityClass Then
                             If Not result.ContainsKey(e.immunAClass) Then
 #If ImmuneCatIsEnum Then
-                                result.Add(e.immunASource, e.immunAClassCat)
+                                result.Add(e.immunAClass, e.immunAClassCat)
 #Else
-                                result.Add(e.immunASource, CType(e.immunAClassCat, ModifEffect.ImmunityCat))
+                                result.Add(e.immunAClass, CType(e.immunAClassCat, ModifEffect.ImmunityCat))
 #End If
                             ElseIf e.immunAClassCat > result.Item(e.immunAClass) Then
                                 result.Remove(e.immunAClass)
 #If ImmuneCatIsEnum Then
-                                result.Add(e.immunASource, e.immunAClassCat)
+                                result.Add(e.immunAClass, e.immunAClassCat)
 #Else
-                                result.Add(e.immunASource, CType(e.immunAClassCat, ModifEffect.ImmunityCat))
+                                result.Add(e.immunAClass, CType(e.immunAClassCat, ModifEffect.ImmunityCat))
 #End If
                             End If
                         End If
