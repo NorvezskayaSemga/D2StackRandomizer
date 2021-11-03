@@ -8687,23 +8687,28 @@ Public Class WaterGen
             Return result
         End Function
 
-        Public Sub SetWaterCellSymm(ByRef x As Integer, ByRef y As Integer, ByRef freeCell(,) As Boolean, ByRef WaterAmount As Integer)
+        Public Sub SetWaterCellSymm(ByRef x As Integer, ByRef y As Integer, ByRef freeCell(,) As Boolean, ByRef WaterAmount As Integer, Optional ByRef isWaterSurface()(,) As Boolean = Nothing)
             If m.symmID > -1 Then
                 Dim changeWaterAmount As Boolean = True
                 Dim pp() As Point = owner.symm.ApplySymm(New Point(x, y), settMap.nRaces, m, 1)
                 For k As Integer = 0 To UBound(pp) Step 1
                     Dim tx As Integer = pp(k).X
                     Dim ty As Integer = pp(k).Y
-                    Call SetWaterCell(tx, ty, freeCell, WaterAmount, changeWaterAmount)
+                    Call SetWaterCell(tx, ty, freeCell, WaterAmount, changeWaterAmount, isWaterSurface)
                     changeWaterAmount = False
                 Next k
             Else
-                Call SetWaterCell(x, y, freeCell, WaterAmount, True)
+                Call SetWaterCell(x, y, freeCell, WaterAmount, True, isWaterSurface)
             End If
         End Sub
-        Private Sub SetWaterCell(ByRef x As Integer, ByRef y As Integer, ByRef freeCell(,) As Boolean, ByRef WaterAmount As Integer, ByVal changeWaterAmount As Boolean)
+        Private Sub SetWaterCell(ByRef x As Integer, ByRef y As Integer, ByRef freeCell(,) As Boolean, ByRef WaterAmount As Integer, ByVal changeWaterAmount As Boolean, Optional ByRef isWaterSurface()(,) As Boolean = Nothing)
             If Not IsNothing(freeCell) Then freeCell(x, y) = False
             If Not m.board(x, y).surface.isWater Then
+                If Not IsNothing(isWaterSurface) Then
+                    For i As Integer = 0 To UBound(isWaterSurface) Step 1
+                        isWaterSurface(i)(x, y) = True
+                    Next i
+                End If
                 m.board(x, y).surface.isWater = True
                 If changeWaterAmount Then WaterAmount -= 1
             End If
@@ -9268,8 +9273,14 @@ Public Class WaterGen
             For k As Integer = 0 To UBound(pPossibleWaterPlaces) Step 1
                 pPossibleWaterPlaces(k) = New Dictionary(Of String, Integer)
                 ReDim currentWaterSurface(k)(m.xSize, m.ySize), wasGround(k)(wBlockMaxXSize, wBlockMaxYSize)
+                For y As Integer = 0 To m.ySize Step 1
+                    For x As Integer = 0 To m.xSize Step 1
+                        currentWaterSurface(k)(x, y) = m.board(x, y).surface.isWater
+                    Next x
+                Next y
             Next k
             possibleWaterPlaces.Add("---", 0)
+
            Do While WaterAmount > 0 And possibleWaterPlaces.Count > 0
                 possibleWaterPlaces.Clear()
                 pWaterAmount = WaterAmount
@@ -9277,11 +9288,6 @@ Public Class WaterGen
                  Sub(proc As Integer)
                      pPossibleWaterPlaces(proc).Clear()
                      Dim a As Integer
-                     For y As Integer = 0 To m.ySize Step 1
-                         For x As Integer = 0 To m.xSize Step 1
-                             currentWaterSurface(proc)(x, y) = m.board(x, y).surface.isWater
-                         Next x
-                     Next y
                      For k As Integer = proc To UBound(wBlocksKeys) Step Environment.ProcessorCount
                          For i As Integer = 0 To UBound(fpInfo.points) Step 1
                              a = CanAddWatherAmount(loc, fpInfo, pWaterAmount, fpInfo.points(i), _
@@ -9310,7 +9316,7 @@ Public Class WaterGen
                     Dim key As String = k(0)
                     Dim x As Integer = CInt(k(1))
                     Dim y As Integer = CInt(k(2))
-                    Call AddWater(WaterAmount, key, x, y, False)
+                    Call AddWater(WaterAmount, key, x, y, False, currentWaterSurface)
                 End If
             Loop
         End Sub
@@ -9432,7 +9438,7 @@ Public Class WaterGen
             Next y
             Return False
         End Function
-        Private Sub AddWater(ByRef WaterAmount As Integer, ByRef key As String, ByRef x As Integer, ByRef y As Integer, ByVal useObjWBlocks As Boolean)
+        Private Sub AddWater(ByRef WaterAmount As Integer, ByRef key As String, ByRef x As Integer, ByRef y As Integer, ByVal useObjWBlocks As Boolean,  Optional ByRef isWaterSurface()(,) As Boolean = Nothing)
             Dim w As WaterBlock = GetWaterBlock(key, useObjWBlocks)
             Dim x2 As Integer = x + w.xMax
             Dim y2 As Integer = y + w.yMax
@@ -9441,7 +9447,7 @@ Public Class WaterGen
                     For i As Integer = x To x2 Step 1
                         If XFilter(i) Then
                             If w.GetValue(i - x, j - y) Then
-                                Call owner.wpCommon.SetWaterCellSymm(i, j, Nothing, WaterAmount)
+                                Call owner.wpCommon.SetWaterCellSymm(i, j, Nothing, WaterAmount, isWaterSurface)
                             End If
                         End If
                     Next i
