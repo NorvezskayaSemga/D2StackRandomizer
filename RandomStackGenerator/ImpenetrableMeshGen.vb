@@ -1411,7 +1411,7 @@ clearandexit:
 #Region "Place locations"
     Public Function PlaceLocationsByTemplate(ByRef settGen As GenSettings, ByRef symmID As Integer, ByRef previousLogText As String) As Map
         Dim res As New Map(settGen.common_settMap.xSize, settGen.common_settMap.ySize, symmID, comm)
-        If Not GenDefaultValues.writeToConsole Then res.log.Disable()
+        If Not GenDefaultValues.writeToLog Then res.log.Disable()
         Call res.log.Add(previousLogText)
 
         Dim loc() As Location = Nothing
@@ -1593,7 +1593,7 @@ clearandexit:
 
     Private Function PlaceRaceLocations(ByRef settMap As Map.SettingsMap, ByRef settRaceLoc As Map.SettingsLoc, ByRef symmID As Integer, ByRef previousLogText As String) As Map
         Dim res As New Map(settMap.xSize, settMap.ySize, symmID, comm)
-        If Not GenDefaultValues.writeToConsole Then res.log.Disable()
+        If Not GenDefaultValues.writeToLog Then res.log.Disable()
         Call res.log.Add(previousLogText)
 
         Dim ok As Boolean = False

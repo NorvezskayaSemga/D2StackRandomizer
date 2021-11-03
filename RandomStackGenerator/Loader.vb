@@ -99,7 +99,7 @@
         Dim grid As New Map(0, 0, -1, comm)
         Dim copiedSettings() As Map.SettingsLoc
 
-        If Not GenDefaultValues.writeToConsole Then grid.log.Disable()
+        If Not GenDefaultValues.writeToLog Then grid.log.Disable()
         grid.log.Add(GenDefaultValues.PrintVersion)
 
         Dim invalidSettings As Boolean = False

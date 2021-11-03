@@ -100,7 +100,7 @@ Friend Class StartForm
         Console.WriteLine(endTime - startTime & " ms")
 
         If GenDefaultValues.writeToConsole Then Console.WriteLine(grid.log.PrintAll)
-        If GenDefaultValues.writeToConsole Then LogTextBox.Text = grid.log.PrintAll
+        If GenDefaultValues.writeToLog Then LogTextBox.Text = grid.log.PrintAll
     End Sub
     Public Sub ShowResult(ByRef grid As Map)
         Dim t(grid.xSize, grid.ySize) As Integer

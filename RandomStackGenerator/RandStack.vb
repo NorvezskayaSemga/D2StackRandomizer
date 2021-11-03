@@ -6217,7 +6217,8 @@ Public Class GenDefaultValues
     ''' <summary>Игра использует такую строку для неиспользуемых юнитов, предметов и т.д.</summary>
     Public Const emptyItem As String = "G000000000"
     Public ReadOnly maxItemTypeID As Integer = GetType(GenDefaultValues.ItemTypes).GetEnumValues.Cast(Of Integer).Max
-    Public Const writeToConsole As Boolean = True
+    Public Const writeToConsole As Boolean = False
+    Public Const writeToLog As Boolean = True
 
     'stack info
     Friend busytransfer() As Integer = New Integer() {1, -1, 3, -1, 5, -1}
@@ -6683,7 +6684,7 @@ Public Class ResoucesReader
         If IO.File.Exists(path) Then
             If Not IsNothing(myLog) Then
                 Try
-                    myLog.Add("Reading " & name & " from " & path)
+                    If GenDefaultValues.writeToLog Then myLog.Add("Reading " & name & " from " & path)
                 Catch ex As Exception
                     If GenDefaultValues.writeToConsole Then Console.WriteLine("Reading " & name & "; external; " & ex.Message)
                 End Try
@@ -6692,7 +6693,7 @@ Public Class ResoucesReader
         Else
             If Not IsNothing(myLog) Then
                 Try
-                    myLog.Add("Couldn't find " & path & " ; Reading " & name & " from internal resources")
+                    If GenDefaultValues.writeToLog Then myLog.Add("Couldn't find " & path & " ; Reading " & name & " from internal resources")
                 Catch ex As Exception
                     If GenDefaultValues.writeToConsole Then Console.WriteLine("Reading " & name & "; internal; " & ex.Message)
                 End Try
