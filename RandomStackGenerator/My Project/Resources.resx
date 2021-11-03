@@ -214,9 +214,6 @@
   <data name="PlateauConstructor" type="System.Resources.ResXFileRef, System.Windows.Forms">
     <value>..\resources\mod_settings_mns\plateauconstructor.txt;System.String, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089;windows-1251</value>
   </data>
-  <data name="Races" type="System.Resources.ResXFileRef, System.Windows.Forms">
-    <value>..\resources\mod_settings_mns\races.txt;System.String, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089;windows-1251</value>
-  </data>
   <data name="RaceSublocations" type="System.Resources.ResXFileRef, System.Windows.Forms">
     <value>..\resources\mod_settings_vanilla\racesublocations.txt;System.String, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089;utf-8</value>
   </data>
@@ -224,9 +221,6 @@
     <value>..\resources\template_48x48_unsymm_simple.txt;System.String, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089;windows-1251</value>
   </data>
   <data name="Capitals" type="System.Resources.ResXFileRef, System.Windows.Forms">
-    <value>..\resources\common_game_data\capitals.txt;System.String, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089;utf-8</value>
-  </data>
-  <data name="Capitals1" type="System.Resources.ResXFileRef, System.Windows.Forms">
     <value>..\resources\common_game_data\capitals.txt;System.String, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089;utf-8</value>
   </data>
   <data name="ExcludeIDsForNames" type="System.Resources.ResXFileRef, System.Windows.Forms">
@@ -261,5 +255,8 @@
   </data>
   <data name="remove_keyword" xml:space="preserve">
     <value>RemoveLine</value>
+  </data>
+  <data name="Races" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\resources\mod_settings_mns\races.txt;System.String, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089;windows-1251</value>
   </data>
 </root>

@@ -3391,8 +3391,10 @@ Public Class Common
     Protected Friend onExcludedListChanged As RefreshExcluded = Nothing
 
     ''' <param name="modName">Название мода, на котором происходит генерация.
-    ''' Ваианты можно получить из GenDefaultValues.GetSupportedMods</param>
-    Public Sub New(ByVal modName As String)
+    ''' Ваианты можно получить из GenDefaultValues.GetSupportedMods.
+    ''' Если передать nothing, то не будет возможности читать настройки из файлов.
+    ''' Список обозначений рас будет взят из MNS</param>
+    Public Sub New(Optional ByVal modName As String = Nothing)
         Call ReadingLog.Enable()
 
         defValues = New GenDefaultValues(ReadingLog, modName)
@@ -3400,13 +3402,13 @@ Public Class Common
         'Dim splitedFields() As String = TxtSplit(defValues.StackStatsFields)
         'ReDim StatFields(CInt(splitedFields.Length / 2 - 1))
 
-        Dim racesList As String = ""
-        Dim splitedRace() As String = defValues.resReader.Races.Replace(Chr(10), Chr(13)).Split(Chr(13))
-        For i As Integer = 0 To UBound(splitedRace) Step 1
-            If splitedRace(i).Length > 1 AndAlso Not splitedRace(i).Substring(0, 1) = "#" Then
-                racesList &= splitedRace(i) & vbNewLine
-            End If
-        Next i
+        'Dim racesList As String = ""
+        'Dim splitedRace() As String = defValues.resReader.Races.Replace(Chr(10), Chr(13)).Split(Chr(13))
+        'For i As Integer = 0 To UBound(splitedRace) Step 1
+        '    If splitedRace(i).Length > 1 AndAlso Not splitedRace(i).Substring(0, 1) = "#" Then
+        '        racesList &= splitedRace(i) & vbNewLine
+        '    End If
+        'Next i
         'Dim valConv As New ValueConverter
         'Dim k As Integer
         'For i As Integer = 0 To UBound(splitedFields) Step 2
@@ -3419,7 +3421,12 @@ Public Class Common
         '    StatFields(k).description = StatFields(k).description.Replace("$newline$", vbNewLine)
         'Next i
 
-        Dim lords() As String = TxtSplit(defValues.resReader.Lords)
+        Dim lords() As String
+        If Not IsNothing(defValues.resReader) Then
+            lords = TxtSplit(defValues.resReader.Lords)
+        Else
+            lords = TxtSplit(ResoucesReader.sLords)
+        End If
         For i As Integer = 0 To UBound(lords) Step 1
             Dim s() As String = lords(i).Split(CChar(" "))
             LordsRace.Add(s(0).ToUpper, RaceIdentifierToSubrace(s(1)))
@@ -5855,12 +5862,14 @@ Public Class GenDefaultValues
 
     ''' <param name="log">Лог для записи отчета, можно nothing</param>
     ''' <param name="modName">Название мода, на котором происходит генерация.
-    ''' Ваианты можно получить из GenDefaultValues.GetSupportedMods</param>
+    ''' Ваианты можно получить из GenDefaultValues.GetSupportedMods.
+    ''' Если передать nothing, то не будет возможности читать настройки из файлов.
+    ''' Список обозначений рас будет взят из MNS</param>
     Public Sub New(ByRef log As Log, ByVal modName As String)
 
         myLog = log
         selectedMod = modName
-        resReader = New ResoucesReader(myLog, selectedMod)
+        If Not IsNothing(modName) Then resReader = New ResoucesReader(myLog, selectedMod)
 
         Dim itemTypeID As New Dictionary(Of String, Integer)
         Dim itemTypeName As New Dictionary(Of Integer, String)
@@ -5868,9 +5877,14 @@ Public Class GenDefaultValues
         Call ParseRaces(linked_Races, RaceNumberToRaceChar)
 
         '#####################
-        Dim allRaces() As String = ValueConverter.TxtSplit(resReader.Races)
-        Dim allLords() As String = ValueConverter.TxtSplit(resReader.Lords)
-
+        Dim allRaces(), allLords() As String
+        If Not IsNothing(resReader) Then
+            allRaces = ValueConverter.TxtSplit(resReader.Races)
+            allLords = ValueConverter.TxtSplit(resReader.Lords)
+        Else
+            allRaces = ValueConverter.TxtSplit(ResoucesReader.sRaces)
+            allLords = ValueConverter.TxtSplit(ResoucesReader.sLords)
+        End If
         Dim lordsRaceID As New List(Of Integer)
         For Each line As String In allLords
             Dim s As Integer = linked_Races.Item(line.Split(CChar(" "))(1))
@@ -5888,7 +5902,12 @@ Public Class GenDefaultValues
             End If
         Next line
 
-        Dim capitalRace() As String = ValueConverter.TxtSplit(resReader.Capitals)
+        Dim capitalRace() As String
+        If Not IsNothing(resReader) Then
+            capitalRace = ValueConverter.TxtSplit(resReader.Capitals)
+        Else
+            capitalRace = ValueConverter.TxtSplit(ResoucesReader.sCapitals)
+        End If
         generatorRaceToGameRace = New Dictionary(Of String, String)
         generatorRaceToCapitalID = New Dictionary(Of String, String)
         capitalToGeneratorRace = New Dictionary(Of String, String)
@@ -5904,58 +5923,59 @@ Public Class GenDefaultValues
             gameRaceToGeneratorRace.Add(gameR, genR)
         Next line
         '#####################
+        If Not IsNothing(resReader) Then
+            Dim RConstants As Dictionary(Of String, String) = PropertiesArrayToDictionary(ValueConverter.TxtSplit(resReader.Constants(), "/"))
+            Dim DConstants As Dictionary(Of String, String) = PropertiesArrayToDictionary(ValueConverter.TxtSplit(Common.RecursiveReadFile( _
+                                                                My.Resources.Constants.Replace(Chr(13), Chr(10)).Split(CChar(Chr(10)))), "/"))
 
-        Dim RConstants As Dictionary(Of String, String) = PropertiesArrayToDictionary(ValueConverter.TxtSplit(resReader.Constants(), "/"))
-        Dim DConstants As Dictionary(Of String, String) = PropertiesArrayToDictionary(ValueConverter.TxtSplit(Common.RecursiveReadFile( _
-                                                            My.Resources.Constants.Replace(Chr(13), Chr(10)).Split(CChar(Chr(10)))), "/"))
-
-        Dim HasSynonyms, sendLinkedRaces As New List(Of String)
-        HasSynonyms.AddRange({"StackRaceChance".ToUpper})
-        sendLinkedRaces.AddRange({"StackRaceChance".ToUpper})
+            Dim HasSynonyms, sendLinkedRaces As New List(Of String)
+            HasSynonyms.AddRange({"StackRaceChance".ToUpper})
+            sendLinkedRaces.AddRange({"StackRaceChance".ToUpper})
 
 
-        Dim fields() As String = ClassFieldsHandler.GetFieldsNamesList(Me, {"myLog", "linked_Races", "RaceNumberToRaceChar", "playableRaces", "neutralRaces", _
-                                                                            "generatorRaceToGameRace", "generatorRaceToCapitalID", "capitalToGeneratorRace", _
-                                                                            "gameRaceToGeneratorRace", "selectedMod", "maxItemTypeID", "maxStackSize", _
-                                                                            "resReader", "randomRaceID"})
-
-        For Each f As String In fields
-            If sendLinkedRaces.Contains(f.ToUpper) Then
-                Call SetProperty(ClassFieldsHandler.GetField(Me, f), RConstants, DConstants, linked_Races, HasSynonyms.Contains(f.ToUpper))
-            Else
-                Call SetProperty(ClassFieldsHandler.GetField(Me, f), RConstants, DConstants, itemTypeID, HasSynonyms.Contains(f.ToUpper))
-            End If
-        Next f
-
-        Dim commonRacesBlock As String = ""
-        Call SetProperty(commonRacesBlock, "commonRacesBlock", RConstants, DConstants)
-
-        For i As Integer = 0 To UBound(LocRacesBlocks) Step 1
-            If Not LocRacesBlocks(i).EndsWith(":") Then LocRacesBlocks(i) &= ","
-            LocRacesBlocks(i) = (LocRacesBlocks(i) & commonRacesBlock).Replace("*", ",")
-        Next i
-
-        If Not IsNothing(log) AndAlso log.IsEnabled Then
-
-            Dim spaces As String = "       "
-            Dim splitValue As New List(Of String)
-            Dim delimiter As Char
-            splitValue.AddRange({"Global_ItemType_ChanceMultiplier".ToUpper})
-
-            Dim StackRaceChanceStr As String = ""
-            For Each i As Integer In RaceNumberToRaceChar.Keys
-                StackRaceChanceStr &= vbNewLine & spaces & _
-                  RaceNumberToRaceChar.Item(i) & " (" & i & ") = " & StackRaceChance(i)
-            Next i
+            Dim fields() As String = ClassFieldsHandler.GetFieldsNamesList(Me, {"myLog", "linked_Races", "RaceNumberToRaceChar", "playableRaces", "neutralRaces", _
+                                                                                "generatorRaceToGameRace", "generatorRaceToCapitalID", "capitalToGeneratorRace", _
+                                                                                "gameRaceToGeneratorRace", "selectedMod", "maxItemTypeID", "maxStackSize", _
+                                                                                "resReader", "randomRaceID"})
 
             For Each f As String In fields
-                If splitValue.Contains(f.ToUpper) Then
-                    delimiter = CChar(";")
+                If sendLinkedRaces.Contains(f.ToUpper) Then
+                    Call SetProperty(ClassFieldsHandler.GetField(Me, f), RConstants, DConstants, linked_Races, HasSynonyms.Contains(f.ToUpper))
                 Else
-                    delimiter = CChar("")
+                    Call SetProperty(ClassFieldsHandler.GetField(Me, f), RConstants, DConstants, itemTypeID, HasSynonyms.Contains(f.ToUpper))
                 End If
-                log.Add(PrintItemsSettings(ClassFieldsHandler.GetField(Me, f), itemTypeName, spaces, delimiter))
             Next f
+
+            Dim commonRacesBlock As String = ""
+            Call SetProperty(commonRacesBlock, "commonRacesBlock", RConstants, DConstants)
+
+            For i As Integer = 0 To UBound(LocRacesBlocks) Step 1
+                If Not LocRacesBlocks(i).EndsWith(":") Then LocRacesBlocks(i) &= ","
+                LocRacesBlocks(i) = (LocRacesBlocks(i) & commonRacesBlock).Replace("*", ",")
+            Next i
+
+            If Not IsNothing(log) AndAlso log.IsEnabled Then
+
+                Dim spaces As String = "       "
+                Dim splitValue As New List(Of String)
+                Dim delimiter As Char
+                splitValue.AddRange({"Global_ItemType_ChanceMultiplier".ToUpper})
+
+                Dim StackRaceChanceStr As String = ""
+                For Each i As Integer In RaceNumberToRaceChar.Keys
+                    StackRaceChanceStr &= vbNewLine & spaces & _
+                      RaceNumberToRaceChar.Item(i) & " (" & i & ") = " & StackRaceChance(i)
+                Next i
+
+                For Each f As String In fields
+                    If splitValue.Contains(f.ToUpper) Then
+                        delimiter = CChar(";")
+                    Else
+                        delimiter = CChar("")
+                    End If
+                    log.Add(PrintItemsSettings(ClassFieldsHandler.GetField(Me, f), itemTypeName, spaces, delimiter))
+                Next f
+            End If
         End If
 
         Dim maxPlayableRaceID As Integer = -1
@@ -6174,7 +6194,12 @@ Public Class GenDefaultValues
 
     Protected Friend Sub ParseRaces(ByRef outRaces As Dictionary(Of String, Integer), _
                                     ByRef outRaceNumberToRaceChar As Dictionary(Of Integer, String))
-        Dim splitedRace() As String = ValueConverter.TxtSplit(resReader.Races)
+        Dim splitedRace() As String
+        If Not IsNothing(resReader) Then
+            splitedRace = ValueConverter.TxtSplit(resReader.Races)
+        Else
+            splitedRace = ValueConverter.TxtSplit(ResoucesReader.sRaces)
+        End If
         Dim srow() As String
         For Each item As String In splitedRace
             srow = item.Split(CChar(" "))
@@ -6771,6 +6796,17 @@ Public Class ResoucesReader
     End Function
     Public Function WaterBlocksUnacceptable() As String
         Return ReadResources("WaterBlocksUnacceptable", My.Resources.WaterBlocksUnacceptable, False)
+    End Function
+
+    'shared data
+    Protected Friend Shared Function sLords() As String
+        Return My.Resources.Lords
+    End Function
+    Protected Friend Shared Function sRaces() As String
+        Return My.Resources.Races
+    End Function
+    Protected Friend Shared Function sCapitals() As String
+        Return My.Resources.Capitals
     End Function
 End Class
 

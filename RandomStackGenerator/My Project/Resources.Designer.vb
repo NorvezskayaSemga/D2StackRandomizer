@@ -80,38 +80,16 @@ Namespace My.Resources
         
         '''<summary>
         '''  Looks up a localized string similar to #строка, начинающаяся с решетки, игнорируется
-        '''#Соответствие между расами, ID рас в игре и ID столиц
-        '''
-        '''    G000FT0000HU0  H G000RR0000
-        '''    G000FT0000DWC0 C G000RR0001
-        '''    G000FT0000HE0  L G000RR0002
-        '''    G000FT0000UN0  U G000RR0003
-        '''    G000FT0000NE0  N G000RR0004
-        '''    G000FT0000EL0  E G000RR0005
-        '''.
-        '''</summary>
-        Friend ReadOnly Property Capitals1() As String
-            Get
-                Return ResourceManager.GetString("Capitals1", resourceCulture)
-            End Get
-        End Property
-        
-        '''<summary>
-        '''  Looks up a localized string similar to #строка, начинающаяся с решетки, игнорируется
         '''#с помощью ReadFromFile &apos;пробел&apos; &apos;путь к файлу&apos; можно прочитать данные из другого файла.
+        '''#с помощью RemoveLine &apos;пробел&apos; &apos;текст&apos; можно удалить из уже прочтенных данных строки,
+        '''#которые начинаются с заданного текста без учета регистра.
         '''#файл, определяющий константы, используемые генератором
         '''#Параметр (без пробелов), значение (без пробелов), разделитель таб или пробел
         '''#слэш - перенос строки
         '''
         '''ReadFromFile .\Resources\mod_settings_MNS\Constants.txt
         '''
-        '''#Humans             H
-        '''#Undead             U
-        '''#Legions            L
-        '''#Clans              C
-        '''#Elves              E
-        '''#Neutral            N
-        '''#Greenskins      [rest of string was truncated]&quot;;.
+        '''#Humans [rest of string was truncated]&quot;;.
         '''</summary>
         Friend ReadOnly Property Constants() As String
             Get
@@ -359,19 +337,15 @@ Namespace My.Resources
         '''<summary>
         '''  Looks up a localized string similar to #ЯРПНЙЮ, МЮВХМЮЧЫЮЪЯЪ Я ПЕЬЕРЙХ, ХЦМНПХПСЕРЯЪ
         '''#Я ОНЛНЫЭЧ ReadFromFile &apos;ОПНАЕК&apos; &apos;ОСРЭ Й ТЮИКС&apos; ЛНФМН ОПНВХРЮРЭ ДЮММШЕ ХГ ДПСЦНЦН ТЮИКЮ.
+        '''#Я ОНЛНЫЭЧ RemoveLine &apos;ОПНАЕК&apos; &apos;РЕЙЯР&apos; ЛНФМН СДЮКХРЭ ХГ СФЕ ОПНВРЕММШУ ДЮММШУ ЯРПНЙХ,
+        '''#ЙНРНПШЕ МЮВХМЮЧРЯЪ Я ГЮДЮММНЦН РЕЙЯРЮ АЕГ СВЕРЮ ПЕЦХЯРПЮ.
         '''#оЕПБШИ ЯРНКАЕЖ - ХДЕМРХТХЙЮРНПШ НАЗЕЙРНБ.
         '''#б НЯРЮКЭМШУ - ДНОСЯРХЛШЕ ЛЕЯРЮ ПЮЯЯРЮМНБЙХ НАЗЕЙРНБ (G - ГЕЛКЪ, W - БНДЮ) Х ПЮЯШ
         '''# Б РЕЦЕ НАЪГЮРЕКЕМ ГМЮЙ %
         '''
         '''#ГДЮМХЪ
         '''g000mg0001	G	H C E N S		%religious% %natural%
-        '''g000mg0002	G	C				%building%
-        '''g000mg0003	G	H N S			%building%
-        '''g000mg0004	G	L				%building% %natural%
-        '''g000mg0005	G	L				%building% %natural%
-        '''
-        '''#БНДНОЮДШ
-        '''#g000m [rest of string was truncated]&quot;;.
+        '''g000mg0002	G	C	 [rest of string was truncated]&quot;;.
         '''</summary>
         Friend ReadOnly Property MapObjectRace() As String
             Get
@@ -427,15 +401,13 @@ Namespace My.Resources
         '''<summary>
         '''  Looks up a localized string similar to #строка, начинающаяся с решетки, игнорируется
         '''#с помощью ReadFromFile &apos;пробел&apos; &apos;путь к файлу&apos; можно прочитать данные из другого файла.
+        '''#с помощью RemoveLine &apos;пробел&apos; &apos;текст&apos; можно удалить из уже прочтенных данных строки,
+        '''#которые начинаются с заданного текста без учета регистра.
         '''#ID объекта, в остальных столбцах возможные названия
         '''#разделитель - _
         '''
         '''#лорды Humans Clans Legions Undead Elvens (имена доллжны походить как девочкам, так и мальчикам. За исключением Кланов)
-        '''g000LR0001_Алексис_Лотай_Келли_Моар_Дориа
-        '''g000LR0002_Алексис_Лотай_Келли_Моар_Дориа
-        '''g000LR0003_Алексис_Лотай_Келли_Моар_Дориа
-        '''g000LR0004_Орхтар_Дархорд_Фуррт_Бордольт_Неромт
-        '''g0 [rest of string was truncated]&quot;;.
+        '''g000LR0001_Алексис_Лотай_Келли_Мо [rest of string was truncated]&quot;;.
         '''</summary>
         Friend ReadOnly Property ObjectsText_Eng() As String
             Get
@@ -446,13 +418,14 @@ Namespace My.Resources
         '''<summary>
         '''  Looks up a localized string similar to #строка, начинающаяся с решетки, игнорируется
         '''#с помощью ReadFromFile &apos;пробел&apos; &apos;путь к файлу&apos; можно прочитать данные из другого файла.
+        '''#с помощью RemoveLine &apos;пробел&apos; &apos;текст&apos; можно удалить из уже прочтенных данных строки,
+        '''#которые начинаются с заданного текста без учета регистра.
         '''#ID объекта, в остальных столбцах возможные названия
         '''#разделитель - _
         '''
         '''ReadFromFile .\Resources\mod_settings_Vanilla\ObjectsText_Rus.txt
         '''
-        '''#руины (названия такие, чтобы можно было их использовать безотносительно того, кто сидит внитри. При этом названия разные. Вероятно, это понадобится при добавлении квестов)
-        '''G000RU0000011_Врата Бездны_Пылающий разлом_Огненное капище [rest of string was truncated]&quot;;.
+        '''#руины (названия такие, чтобы можно было их использовать безотносительно того, кто си [rest of string was truncated]&quot;;.
         '''</summary>
         Friend ReadOnly Property ObjectsText_Rus() As String
             Get
@@ -526,21 +499,15 @@ Namespace My.Resources
         '''<summary>
         '''  Looks up a localized string similar to #строка, начинающаяся с решетки, игнорируется
         '''#с помощью ReadFromFile &apos;пробел&apos; &apos;путь к файлу&apos; можно прочитать данные из другого файла.
+        '''#с помощью RemoveLine &apos;пробел&apos; &apos;текст&apos; можно удалить из уже прочтенных данных строки,
+        '''#которые начинаются с заданного текста без учета регистра.
         '''#Первый столбец - идентификаторы объектов.
         '''#В остальных - как скреплять объекты
         '''#U = 1/-1 1/0
         '''#D = 1/2 1/3
         '''#L = -1/1 0/1
         '''#R = 2/1 3/1
-        '''#B - должна быть граница карты (указывается только одна точка, которая не находится в углу объекта)
-        '''#UB = 1/0
-        '''#DB = 1/2
-        '''#LB = 0/1
-        '''#RB = 2/1
-        '''#W = водопад
-        '''
-        '''ReadFromFile .\Resources\mod_settings_Vanilla\PlateauConstructor.txt
-        '''.
+        '''#B - должна быть граница карты (указывается только одна точка, которая не находится в уг [rest of string was truncated]&quot;;.
         '''</summary>
         Friend ReadOnly Property PlateauConstructor() As String
             Get
@@ -573,6 +540,8 @@ Namespace My.Resources
         '''<summary>
         '''  Looks up a localized string similar to #строка, начинающаяся с решетки, игнорируется
         '''#с помощью ReadFromFile &apos;пробел&apos; &apos;путь к файлу&apos; можно прочитать данные из другого файла.
+        '''#с помощью RemoveLine &apos;пробел&apos; &apos;текст&apos; можно удалить из уже прочтенных данных строки,
+        '''#которые начинаются с заданного текста без учета регистра.
         '''#ID предметов, юнитов и заклинаний, которые генератор должен оставлять на месте в отрядах, сундуках и у торговцев
         '''
         '''#ПРЕДМЕТЫ
@@ -586,19 +555,7 @@ Namespace My.Resources
         '''#Тиара чистоты
         '''G000IG2006
         '''
-        '''#Книга войны
-        '''G000IG4005
-        '''
-        '''#Книга тайного знания
-        '''G000IG4007
-        '''
-        '''#типы предметов
-        '''special
-        '''
-        '''#ЮНИТЫ
-        '''
-        '''#ЗАКЛИНАНИЯ
-        '''.
+        '''#Кни [rest of string was truncated]&quot;;.
         '''</summary>
         Friend ReadOnly Property PreservedObjects() As String
             Get
@@ -609,8 +566,11 @@ Namespace My.Resources
         '''<summary>
         '''  Looks up a localized string similar to #строка, начинающаяся с решетки, игнорируется
         '''#с помощью ReadFromFile &apos;пробел&apos; &apos;путь к файлу&apos; можно прочитать данные из другого файла.
+        '''#с помощью RemoveLine &apos;пробел&apos; &apos;текст&apos; можно удалить из уже прочтенных данных строки,
+        '''#которые начинаются с заданного текста без учета регистра.
         '''#Идентификаторы рас.
         '''#В конце каждой строки ID, на который будут заменяться все остальные ID строки
+        '''
         '''Humans			H	6	1
         '''Undead			U	2
         '''Legions			L	3
@@ -618,16 +578,7 @@ Namespace My.Resources
         '''Elves			E	7	14
         '''Neutral			N	5
         '''Greenskins		G	O	8
-        '''Dragons			D	9
-        '''Swamp			S	10
-        '''Water			W	11
-        '''Barbarians		B	12
-        '''Animals			A	13
-        '''AnimalSpider	AS	15
-        '''AnimalSnowTerr	AST	16
-        '''AnimalWolf		AW	18
-        '''AnimalGriffin	AG	19
-        '''.
+        '''Dragons			D	9        ''' [rest of string was truncated]&quot;;.
         '''</summary>
         Friend ReadOnly Property Races() As String
             Get
@@ -638,15 +589,14 @@ Namespace My.Resources
         '''<summary>
         '''  Looks up a localized string similar to #строка, начинающаяся с решетки, игнорируется
         '''#с помощью ReadFromFile &apos;пробел&apos; &apos;путь к файлу&apos; можно прочитать данные из другого файла.
+        '''#с помощью RemoveLine &apos;пробел&apos; &apos;текст&apos; можно удалить из уже прочтенных данных строки,
+        '''#которые начинаются с заданного текста без учета регистра.
         '''#Идентификаторы рас. список возможных тэгов, через : - радиус подзоны
         '''# в теге обязателен знак %
         '''
         '''H %natural%:4 %building%:4 %religious%:3 %marshes%:3 %graveyard%:2 %empbuilding%:4
         '''L %natural%:4 %building%:4 
-        '''C %natural%:4 %building%:4 %religious%:2
-        '''U %natural%:4 %building%:4							 %graveyard%:4					%undbuilding%:4 %undelfbuilding%:4
-        '''E %natural%:4 %building%:4
-        '''N % [rest of string was truncated]&quot;;.
+        '''C %natural%:4  [rest of string was truncated]&quot;;.
         '''</summary>
         Friend ReadOnly Property RaceSublocations() As String
             Get
