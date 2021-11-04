@@ -267,6 +267,7 @@ Public Class RandStack
         For i As Integer = 0 To UBound(data.AllUnitsList) Step 1
             AllUnits(i) = AllDataStructues.Unit.Copy(data.AllUnitsList(i))
             UnitsArrayPos.Add(AllUnits(i).unitID.ToUpper, i)
+            AllUnits(i).unitIndex = i
 
             unitSubrace = AllUnits(i).race
 
@@ -343,6 +344,7 @@ Public Class RandStack
         If wc = 0 Then MsgBox("See no units attack class wards")
 
         Call ResetExclusions()
+        Call ResetSoleUnits()
     End Sub
     Private Function ItemTypeWeight(ByRef wList As Dictionary(Of String, String), ByRef itemType As String, ByRef cost As Double) As Double
         If Not wList.ContainsKey(itemType) Then Return 1
@@ -415,6 +417,22 @@ Public Class RandStack
                     AllSpells(i).useState = GenDefaultValues.ExclusionState.excluded
                 Else
                     AllSpells(i).useState = GenDefaultValues.ExclusionState.canUse
+                End If
+            Next i
+        End If
+    End Sub
+    Private Sub ResetSoleUnits()
+        If Not IsNothing(AllUnits) Then
+            For i As Integer = 0 To UBound(AllUnits) Step 1
+                If comm.SoleUnits.ContainsKey(AllUnits(i).unitID) Then
+                    ReDim AllUnits(i).isIncompatible(UBound(AllUnits))
+                    For j As Integer = 0 To UBound(AllUnits) Step 1
+                        If comm.SoleUnits.Item(AllUnits(i).unitID).Contains(AllUnits(j).unitID) Then
+                            AllUnits(i).isIncompatible(j) = True
+                        End If
+                    Next j
+                Else
+                    AllUnits(i).isIncompatible = Nothing
                 End If
             Next i
         End If
@@ -1604,11 +1622,11 @@ Public Class RandStack
     Private Function SelectPossibleLeader(ByRef leaderID As Integer, ByRef Tolerance As Double, _
                                           ByRef GenSettings As AllDataStructues.CommonStackCreationSettings, _
                                           ByRef DynStackStats As AllDataStructues.DesiredStats, _
-                                          ByRef MapLordsRaces As List(Of Integer), _
+                                          ByRef isMapLordRace() As Boolean, _
                                           ByRef preservedSlotsCount As Integer) As Boolean
         If Not comm.IsAppropriateLeader(AllUnits(leaderID)) Then Return False
 
-        If AllUnits(leaderID).fromRaceBranch AndAlso MapLordsRaces.Contains(AllUnits(leaderID).race) Then Return False
+        If AllUnits(leaderID).fromRaceBranch And isMapLordRace(AllUnits(leaderID).race) Then Return False
 
         If Not settings.ignoreUnitRace Then
             If Not DynStackStats.Race.Contains(AllUnits(leaderID).race) Then Return False
@@ -2264,10 +2282,10 @@ Public Class RandStack
         Dim DynStackStats(UBound(units)) As AllDataStructues.DesiredStats
         Call log.MRedim(units.Length)
         Dim leaderExpKilled() As Integer = Nothing
-        Dim MapLordsRaces As New List(Of Integer)
+        Dim isMapLordRace(comm.defValues.maxRaceIndex) As Boolean
         If Not IsNothing(mapData.mapLords) And Not settings.addUnitsFromBranchesToStacks Then
             For i As Integer = 0 To UBound(mapData.mapLords) Step 1
-                MapLordsRaces.Add(comm.LordsRace(mapData.mapLords(i).ToUpper))
+                isMapLordRace(comm.LordsRace(mapData.mapLords(i).ToUpper)) = True
             Next i
         End If
 
@@ -2284,7 +2302,7 @@ Public Class RandStack
 
             Dim SelectedLeader As AllDataStructues.Stack.UnitInfo = GenLeader(
                    GenSettings, DynStackStats(jobID), FreeMeleeSlots,
-                   MapLordsRaces, CDbl(jobID / units.Length), jobID)
+                   isMapLordRace, CDbl(jobID / units.Length), jobID)
             BaseStackSize = DynStackStats(jobID).StackSize
 
             If Not GenSettings.noLeader And Not GenSettings.StackStats.HasPreservedLeader Then
@@ -2310,7 +2328,7 @@ Public Class RandStack
             Dim SelectedFighters As List(Of AllDataStructues.Stack.UnitInfo) _
                 = GenFingters(GenSettings, DynStackStats(jobID), FreeMeleeSlots,
                               SelectedLeader, BaseStackSize,
-                              MapLordsRaces, deltaExpKilled,
+                              isMapLordRace, deltaExpKilled,
                               CDbl(jobID / units.Length), jobID)
             units(jobID) = GenUnitsList(SelectedFighters, SelectedLeader)
 
@@ -2353,7 +2371,7 @@ Public Class RandStack
     Private Function GenLeader(ByRef GenSettings As AllDataStructues.CommonStackCreationSettings, _
                                ByRef DynStackStats As AllDataStructues.DesiredStats, _
                                ByRef FreeMeleeSlots As Integer, _
-                               ByRef MapLordsRaces As List(Of Integer), _
+                               ByRef isMapLordRace() As Boolean, _
                                ByRef Bias As Double, ByRef LogID As Integer) As AllDataStructues.Stack.UnitInfo
         If GenSettings.noLeader Then Return Nothing
 
@@ -2394,7 +2412,7 @@ Public Class RandStack
         Do While selector.Count < 3
             selector.Clear()
             For i As Integer = 0 To UBound(AllUnits) Step 1
-                If SelectPossibleLeader(i, Tolerance, GenSettings, DynStackStats, MapLordsRaces, preservedSlots) Then selector.Add(i)
+                If SelectPossibleLeader(i, Tolerance, GenSettings, DynStackStats, isMapLordRace, preservedSlots) Then selector.Add(i)
             Next i
             If Tolerance > 2 And selector.Count > 0 Then Exit Do
 
@@ -2463,7 +2481,7 @@ Public Class RandStack
                                  ByRef FreeMeleeSlots As Integer, _
                                  ByRef SelectedLeader As AllDataStructues.Stack.UnitInfo, _
                                  ByRef BaseStackSize As Integer, _
-                                 ByRef MapLordsRaces As List(Of Integer), _
+                                 ByRef isMapLordRace() As Boolean, _
                                  ByRef output_delta_expKilled As Integer, _
                                  ByRef Bias As Double, ByRef LogID As Integer) As List(Of AllDataStructues.Stack.UnitInfo)
         Dim SelectedFighters As New List(Of AllDataStructues.Stack.UnitInfo)
@@ -2474,13 +2492,13 @@ Public Class RandStack
             Do While DynStackStats.StackSize > 0
                 'создаем список воинов, которых можно использовать
                 fighter = SelectFighters(False, False, GenSettings, DynStackStats, FreeMeleeSlots, SelectedLeader, _
-                                         SelectedFighters, BaseStackSize, MapLordsRaces, Bias, LogID)
+                                         SelectedFighters, BaseStackSize, isMapLordRace, Bias, LogID)
                 If IsNothing(fighter) Then
                     fighter = SelectFighters(True, False, GenSettings, DynStackStats, FreeMeleeSlots, SelectedLeader, _
-                                             SelectedFighters, BaseStackSize, MapLordsRaces, Bias, LogID)
+                                             SelectedFighters, BaseStackSize, isMapLordRace, Bias, LogID)
                     If IsNothing(fighter) Then
                         fighter = SelectFighters(True, True, GenSettings, DynStackStats, FreeMeleeSlots, SelectedLeader, _
-                                                 SelectedFighters, BaseStackSize, MapLordsRaces, Bias, LogID)
+                                                 SelectedFighters, BaseStackSize, isMapLordRace, Bias, LogID)
                     End If
                 End If
                 If IsNothing(fighter) Then
@@ -2680,7 +2698,7 @@ Public Class RandStack
                                     ByRef DynStackStats As AllDataStructues.DesiredStats, ByRef FreeMeleeSlots As Integer, _
                                     ByRef SelectedLeader As AllDataStructues.Stack.UnitInfo, _
                                     ByRef SelectedFighters As List(Of AllDataStructues.Stack.UnitInfo), _
-                                    ByRef BaseStackSize As Integer, ByRef MapLordsRaces As List(Of Integer), _
+                                    ByRef BaseStackSize As Integer, ByRef isMapLordRace() As Boolean, _
                                     ByRef Bias As Double, ByRef LogID As Integer) As AllDataStructues.Stack.UnitInfo
 
         'Dim TExpStack As Double = DynStackStats.ExpStackKilled / DynStackStats.StackSize
@@ -2690,7 +2708,7 @@ Public Class RandStack
         'Do While PossibleFighters.Count = 0 'And TExpStack < 1.1 * DynStackStats.ExpStackKilled
         For j As Integer = 0 To UBound(AllUnits) Step 1
             If SelectPossibleFighter(skipfilter1, skipfilter2, j, DynStackStats, FreeMeleeSlots, _
-                                     SelectedLeader, SelectedFighters, BaseStackSize, MapLordsRaces) Then selector.Add(j)
+                                     SelectedLeader, SelectedFighters, BaseStackSize, isMapLordRace) Then selector.Add(j)
         Next j
         '    TExpStack += 0.1 * DynStackStats.ExpStackKilled / DynStackStats.StackSize
         '    nloops += 1
@@ -2722,16 +2740,16 @@ Public Class RandStack
                                            ByRef SelectedLeader As AllDataStructues.Stack.UnitInfo, _
                                            ByRef SelectedFighters As List(Of AllDataStructues.Stack.UnitInfo), _
                                            ByRef BaseStackSize As Integer, _
-                                           ByRef MapLordsRaces As List(Of Integer)) As Boolean
+                                           ByRef isMapLordRace() As Boolean) As Boolean
         If Not comm.IsAppropriateFighter(AllUnits(fighterID)) Then Return False
 
-        If AllUnits(fighterID).fromRaceBranch AndAlso MapLordsRaces.Contains(AllUnits(fighterID).race) Then Return False
+        If AllUnits(fighterID).fromRaceBranch And isMapLordRace(AllUnits(fighterID).race) Then Return False
 
-        If comm.SoleUnits.ContainsKey(AllUnits(fighterID).unitID) Then
-            Dim sole As List(Of String) = comm.SoleUnits.Item(AllUnits(fighterID).unitID)
-            If Not IsNothing(SelectedLeader) AndAlso sole.Contains(SelectedLeader.unit.unitID) Then Return False
+        Dim inc() As Boolean = AllUnits(fighterID).isIncompatible
+        If Not IsNothing(inc) Then
+            If Not IsNothing(SelectedLeader) AndAlso inc(SelectedLeader.unit.unitIndex) Then Return False
             For Each u As AllDataStructues.Stack.UnitInfo In SelectedFighters
-                If sole.Contains(u.unit.unitID) Then Return False
+                If inc(u.unit.unitIndex) Then Return False
             Next u
         End If
 
@@ -3386,9 +3404,10 @@ Public Class Common
     Friend ConsumableItemsTypes, NonconsumableItemsTypes, JewelItemsTypes As New List(Of Integer)
     Friend ItemTypesLists() As List(Of Integer)
 
-    Protected Friend Delegate Sub RefreshExcluded()
+    Protected Friend Delegate Sub NoArgumentsSub()
 
-    Protected Friend onExcludedListChanged As RefreshExcluded = Nothing
+    Protected Friend onExcludedListChanged As NoArgumentsSub = Nothing
+    Protected Friend onSoleUnitsListChanged As NoArgumentsSub = Nothing
 
     ''' <param name="modName">Название мода, на котором происходит генерация.
     ''' Ваианты можно получить из GenDefaultValues.GetSupportedMods.
@@ -3747,6 +3766,7 @@ Public Class Common
     ''' Не воспринимает ключевые слова</param>
     Protected Friend Sub ReadSoleUnits(ByRef SoleUnitsList As List(Of String))
         Call ReadFile(ReadMode.SoleUnits, SoleUnitsList)
+        If Not IsNothing(onSoleUnitsListChanged) Then Call onSoleUnitsListChanged()
     End Sub
     ''' <summary>Читает список юнитов, которые могут находиться в отряде начиная с заданного количества слотов</summary>
     Protected Friend Sub ReadBigStackUnits()
@@ -4462,6 +4482,9 @@ Public Class AllDataStructues
         ''' </summary>
         Public AClassImmunity As New Dictionary(Of Integer, Integer)
 
+        Friend isIncompatible() As Boolean = Nothing
+        Friend unitIndex As Integer = -1
+
         Public Shared Shadows Function Copy(ByVal v As Unit) As Unit
             Return New Unit With {.name = v.name, _
                                   .level = v.level, _
@@ -4487,7 +4510,9 @@ Public Class AllDataStructues
                                   .accuracy = v.accuracy, _
                                   .initiative = v.initiative, _
                                   .ASourceImmunity = CopyDictionaty(v.ASourceImmunity), _
-                                  .AClassImmunity = CopyDictionaty(v.AClassImmunity)}
+                                  .AClassImmunity = CopyDictionaty(v.AClassImmunity), _
+                                  .isIncompatible = v.isIncompatible, _
+                                  .unitIndex = v.unitIndex}
         End Function
 
         ''' <summary>Вернет прибавку к опыту за убийство юнита при получении им оверлевелов</summary>
@@ -5936,7 +5961,7 @@ Public Class GenDefaultValues
             Dim fields() As String = ClassFieldsHandler.GetFieldsNamesList(Me, {"myLog", "linked_Races", "RaceNumberToRaceChar", "playableRaces", "neutralRaces", _
                                                                                 "generatorRaceToGameRace", "generatorRaceToCapitalID", "capitalToGeneratorRace", _
                                                                                 "gameRaceToGeneratorRace", "selectedMod", "maxItemTypeID", "maxStackSize", _
-                                                                                "resReader", "randomRaceID"})
+                                                                                "resReader", "randomPlayableRaceID", "maxRaceIndex"})
 
             For Each f As String In fields
                 If sendLinkedRaces.Contains(f.ToUpper) Then
@@ -5983,7 +6008,8 @@ Public Class GenDefaultValues
             Dim id As Integer = linked_Races.Item(playableRaces(i).ToUpper)
             maxPlayableRaceID = Math.Max(maxPlayableRaceID, id)
         Next i
-        randomRaceID = maxPlayableRaceID + 1
+        randomPlayableRaceID = maxPlayableRaceID + 1
+        maxRaceIndex = RaceNumberToRaceChar.Keys.Max
     End Sub
     ''' <summary>Вернет список поддерживаемых модов</summary>
     Public Shared Function GetSupportedMods() As String()
@@ -6290,7 +6316,8 @@ Public Class GenDefaultValues
     Public ReadOnly smallLocationRadius As Double
     Public ReadOnly LocRacesBlocks As String()
     Public ReadOnly StackRaceChance As Double()
-    Public ReadOnly randomRaceID As Integer
+    Public ReadOnly randomPlayableRaceID As Integer
+    Public ReadOnly maxRaceIndex As Integer
 
 #Region "Keywords"
     'ключевые слова

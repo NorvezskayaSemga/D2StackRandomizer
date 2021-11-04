@@ -21,7 +21,7 @@ Friend Class StartForm
         'Call StackLocationsGen.PassageGuardPlacer.speedBanchmark()
         'Call ImpenetrableMeshGen.ActiveObjectsPlacer.speedBanchmark()
 
-        'Call Tests.ModificatorsSpeedTest()
+        'Call Tests.StackCreationRateTest()
 
         If GenDefaultValues.writeToConsole Then
             Dim tf As New TemplateForge(RandomStackGenerator.GenDefaultValues.TextLanguage.Rus)
@@ -695,4 +695,44 @@ Class Tests
         '39000
 
     End Sub
+
+    Public Shared Sub StackCreationRateTest()
+
+        Dim target As RandStack = CreateRandStack()
+        target.log.Disable()
+
+        Dim t As Integer = Environment.TickCount
+
+        Dim s As New AllDataStructues.Stack With {.units = AllDataStructues.Stack.UnitInfo.CreateArray( _
+                                                     New String() {"g000uu5017", "g000uu5117", "g000uu5018", _
+                                                                   "g000uu5018", "G000000000", "g000uu5018"}, _
+                                                     New Integer() {1, 1, 5, 1, 0, 10}, Nothing, target), _
+                                                  .items = New List(Of String)}
+        Dim stats As AllDataStructues.DesiredStats = target.StackStats(s, False)
+        stats.LootCost = 2000
+        stats.IGen = New AllDataStructues.LootGenSettings(False) With {.ConsumableItems = New AllDataStructues.ItemGenSettings With {.amount = 2}, _
+                                                                       .NonconsumableItems = New AllDataStructues.ItemGenSettings With {.costPart = 0.333}, _
+                                                                       .JewelItems = New AllDataStructues.ItemGenSettings With {.exclude = True, .costPart = 0.9}}
+
+        Dim gs As AllDataStructues.CommonStackCreationSettings = TestGenSettings(stats)
+
+        Dim stack As AllDataStructues.Stack
+        For i As Integer = 1 To 2000 Step 1
+            stack = target.Gen(gs)
+        Next i
+        Dim dt As Integer = Environment.TickCount - t
+        '7660
+        '5770
+    End Sub
+    Private Shared Function TestGenSettings(ByRef d As AllDataStructues.DesiredStats, Optional ByVal GroundTile As Boolean = True) As AllDataStructues.CommonStackCreationSettings
+        Return New AllDataStructues.CommonStackCreationSettings _
+            With {.StackStats = d, _
+                  .deltaLeadership = 0, _
+                  .groundTile = GroundTile, _
+                  .noLeader = False, _
+                  .pos = New Point(1, 1), _
+                  .order = New AllDataStructues.Stack.StackOrder(AllDataStructues.Stack.StackOrder.OrderType.Stand, AllDataStructues.Stack.StackOrder.Settings.NoTarget, _
+                                                                 AllDataStructues.Stack.StackOrder.OrderType.Normal, AllDataStructues.Stack.StackOrder.Settings.NoTarget)}
+    End Function
+
 End Class

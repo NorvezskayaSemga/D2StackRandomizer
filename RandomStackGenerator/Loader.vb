@@ -149,7 +149,7 @@
             For i As Integer = 0 To UBound(settGen.common_settMap.PlayersRaces) Step 1
                 If settGen.common_settMap.PlayersRaces(i).ToUpper = GenDefaultValues.wTemplate_RandomRaceLongKeyword.ToUpper Or _
                    settGen.common_settMap.PlayersRaces(i).ToUpper = GenDefaultValues.wTemplate_RandomRaceShortKeyword.ToUpper Then
-                    PlayersRaces(i) = comm.defValues.randomRaceID
+                    PlayersRaces(i) = comm.defValues.randomPlayableRaceID
                 Else
                     PlayersRaces(i) = genmesh.comm.RaceIdentifierToSubrace(settGen.common_settMap.PlayersRaces(i))
                     ok = False

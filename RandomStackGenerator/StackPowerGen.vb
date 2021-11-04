@@ -498,7 +498,7 @@ Public Class RaceGen
     End Function
     Private Function GenLocRace(ByRef m As Map, ByRef nRaces As Integer, ByRef PlayableRaces() As Integer, ByRef settLoc() As Map.SettingsLoc) As Integer()
         'выбор играбельных рас
-        Dim selectedRaces As New RandomSelection(comm.defValues.randomRaceID + 1, rndgen)
+        Dim selectedRaces As New RandomSelection(comm.defValues.randomPlayableRaceID + 1, rndgen)
         If IsNothing(PlayableRaces) Then
             Dim AllPlayableRacesList(UBound(LRaces)) As Integer
             Dim n As Integer = -1
@@ -522,7 +522,7 @@ Public Class RaceGen
             selectedRaces.AddRange(PlayableRaces)
             If PlayableRaces.Length < nRaces Then
                 For i = PlayableRaces.Length + 1 To nRaces Step 1
-                    selectedRaces.Add(comm.defValues.randomRaceID)
+                    selectedRaces.Add(comm.defValues.randomPlayableRaceID)
                 Next i
             ElseIf PlayableRaces.Length > nRaces Then
                 Do While selectedRaces.Count > nRaces
@@ -534,15 +534,15 @@ Public Class RaceGen
             Throw New Exception("Количество рас не соответствует количеству столиц на карте")
             Return Nothing
         End If
-        Do While selectedRaces.Contains(comm.defValues.randomRaceID)
-            Dim s As New RandomSelection(comm.defValues.randomRaceID + 1, rndgen)
+        Do While selectedRaces.Contains(comm.defValues.randomPlayableRaceID)
+            Dim s As New RandomSelection(comm.defValues.randomPlayableRaceID + 1, rndgen)
             For Each r As String In comm.defValues.playableRaces
                 Dim subrace As Integer = comm.RaceIdentifierToSubrace(r)
                 If Not selectedRaces.Contains(subrace) Then
                     s.Add(subrace)
                 End If
             Next r
-            selectedRaces.Remove(comm.defValues.randomRaceID)
+            selectedRaces.Remove(comm.defValues.randomPlayableRaceID)
             selectedRaces.Add(s.RandomSelection())
         Loop
         Dim LocR(UBound(m.Loc)) As Integer
