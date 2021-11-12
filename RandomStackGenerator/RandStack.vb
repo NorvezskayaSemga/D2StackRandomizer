@@ -7051,6 +7051,8 @@ Public Class ClassFieldsHandler
 
     Public Const defaultSearchFieldsSettings As Reflection.BindingFlags = Reflection.BindingFlags.Public Or Reflection.BindingFlags.Instance Or Reflection.BindingFlags.IgnoreCase
     Public Const subfieldsDelimiter As Char = CChar(".")
+    Public Const dictionaryKeyStart As Char = CChar("{")
+    Public Const dictionaryKeyEnd As Char = CChar("}")
 
     Public Class GetFieldResult
         ''' <summary>Найденная информация о поле</summary>
@@ -7084,8 +7086,15 @@ Public Class ClassFieldsHandler
         If IsNothing(fieldValue) Then
             info.searchResultField.SetValue(info.LastParent, Nothing)
         ElseIf Not IsNothing(info.searchResult) Then
-            Dim T As Type = info.searchResultField.FieldType
-            info.searchResultField.SetValue(info.LastParent, CTypeDynamic(fieldValue, T))
+            Dim s() As String = fieldName.Split(subfieldsDelimiter)
+            If s(UBound(s)).StartsWith(dictionaryKeyStart) And s(UBound(s)).EndsWith(dictionaryKeyEnd) Then
+                Dim key As String = s(UBound(s)).Substring(1, s(UBound(s)).Length - 2)
+                CType(info.parents(UBound(info.parents)), IDictionary).Remove(key)
+                CType(info.parents(UBound(info.parents)), IDictionary).Add(key, fieldValue)
+            Else
+                Dim T As Type = info.searchResultField.FieldType
+                info.searchResultField.SetValue(info.LastParent, CTypeDynamic(fieldValue, T))
+            End If
         Else
             info.searchResultField.SetValue(info.LastParent, fieldValue)
         End If
@@ -7100,7 +7109,11 @@ Public Class ClassFieldsHandler
     Public Shared Function GetFieldValue(parent As Object, ByVal fieldName As String) As Object
         Dim info As GetFieldResult = GetField(parent, fieldName)
         If Not IsNothing(info.searchResult) Then
-            Return info.searchResultField.GetValue(info.parents(UBound(info.parents)))
+            If Not IsNothing(info.searchResultField) Then
+                Return info.searchResultField.GetValue(info.parents(UBound(info.parents)))
+            Else
+                Return info.searchResult
+            End If
         Else
             Return Nothing
         End If
@@ -7118,7 +7131,7 @@ Public Class ClassFieldsHandler
             Dim s() As String = fieldName.Split(subfieldsDelimiter)
             Dim res As New GetFieldResult
             ReDim res.parents(UBound(s))
-            Dim fields(UBound(s)) As Reflection.FieldInfo
+            Dim fields(UBound(res.parents)) As Reflection.FieldInfo
             For i As Integer = 0 To UBound(s) Step 1
                 If i = 0 Then
                     fields(i) = parent.GetType().GetField(s(i), searchSettings)
@@ -7127,14 +7140,25 @@ Public Class ClassFieldsHandler
                         res.parents(i + 1) = fields(i).GetValue(parent)
                     End If
                 Else
-                    fields(i) = res.parents(i).GetType().GetField(s(i), searchSettings)
-                    If i < UBound(s) Then
-                        res.parents(i + 1) = fields(i).GetValue(res.parents(i))
+                    If s(i).StartsWith(dictionaryKeyStart) And s(i).EndsWith(dictionaryKeyEnd) Then
+                        If i < UBound(s) Then
+                            res.parents(i + 1) = CType(res.parents(i), IDictionary).Item(s(i).Substring(1, s(i).Length - 2))
+                        End If
+                    Else
+                        fields(i) = res.parents(i).GetType().GetField(s(i), searchSettings)
+                        If i < UBound(s) Then
+                            res.parents(i + 1) = fields(i).GetValue(res.parents(i))
+                        End If
                     End If
                 End If
             Next i
-            res.searchResultField = fields(UBound(fields))
-            res.searchResult = fields(UBound(s)).GetValue(res.parents(UBound(s)))
+            If s(UBound(s)).StartsWith(dictionaryKeyStart) And s(UBound(s)).EndsWith(dictionaryKeyEnd) Then
+                res.searchResultField = Nothing
+                res.searchResult = CType(res.parents(UBound(s)), IDictionary).Item(s(UBound(s)).Substring(1, s(UBound(s)).Length - 2))
+            Else
+                res.searchResultField = fields(UBound(fields))
+                res.searchResult = fields(UBound(s)).GetValue(res.parents(UBound(s)))
+            End If
             Return res
         Catch ex As Exception
             Return New GetFieldResult With {.parents = Nothing, .searchResult = Nothing, .searchResultField = Nothing, .throwedExcetion = ex}
@@ -7190,7 +7214,25 @@ Public Class ClassFieldsHandler
                                           Optional ByVal searchSettings As Reflection.BindingFlags = defaultSearchFieldsSettings)
         Dim fields() As String = GetFieldsNamesList(obj.searchResult, Nothing, searchSettings)
         If IsNothing(fields) OrElse fields.Length = 0 OrElse TypeOf obj.searchResult Is [Enum] Then
-            output.Add(parentsChain & obj.searchResultField.Name)
+            If Not IsNothing(obj.searchResult) AndAlso TypeOf obj.searchResult Is IDictionary Then
+                Dim d As IDictionary = CType(obj.searchResult, Collections.IDictionary)
+                Dim keys(d.Keys.Count - 1) As Object
+                Call d.Keys.CopyTo(keys, 0)
+                For Each k In keys
+                    Dim itemFields() As String = GetFieldsNamesList(d.Item(k))
+                    If IsNothing(itemFields) OrElse itemFields.Length = 0 OrElse TypeOf d.Item(k) Is [Enum] Then
+                        output.Add(parentsChain & obj.searchResultField.Name & subfieldsDelimiter & dictionaryKeyStart & k.ToString & dictionaryKeyEnd)
+                    Else
+                        Dim f As GetFieldResult
+                        For Each fname As String In itemFields
+                            f = GetField(d.Item(k), fname, searchSettings)
+                            Call GetObjectSubfields(output, f, parentsChain & obj.searchResultField.Name & subfieldsDelimiter & dictionaryKeyStart & k.ToString & dictionaryKeyEnd & subfieldsDelimiter, searchSettings)
+                        Next fname
+                    End If
+                Next k
+            Else
+                output.Add(parentsChain & obj.searchResultField.Name)
+            End If
         Else
             Dim f As GetFieldResult
             For Each fname As String In fields
