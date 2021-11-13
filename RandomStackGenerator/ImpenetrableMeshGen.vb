@@ -3346,7 +3346,7 @@ clearandexit:
                  End If
                  Dim dDispersion As Double = 0
                  Dim maxDDisp As Double = 0.5 * Math.Sqrt((settMap.xSize + 1) ^ 2 + (settMap.ySize + 1) ^ 2) - distDispersion
-                 Do While possiblePoints(i).Count = 0 And distDispersion < maxDDisp
+                 Do While possiblePoints(i).Count = 0 And dDispersion < maxDDisp
                      For j As Integer = 0 To UBound(freePoints(i)) Step 1
                          If Math.Abs(dist(i)(j) - R) <= distDispersion + dDispersion Then
                              possiblePoints(i).Add(freePoints(i)(j))
