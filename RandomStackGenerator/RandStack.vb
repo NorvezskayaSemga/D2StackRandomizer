@@ -2928,7 +2928,7 @@ Public Class RndValueGen
 #Region "RndItemIndex"
     '''<summary>Returns random value with uniform distribution from 0 to items count - 1.</summary>
     Public Function RndItemIndex(ByRef v As RandomSelection) As Integer
-        Return v.RandomSelection
+        Return RndInt(v.Count - 1)
     End Function
     '''<summary>Returns random value with uniform distribution from 0 to items count - 1.</summary>
     Public Function RndItemIndex(ByRef v() As ImpenetrableMeshGen.GenSettings) As Integer
