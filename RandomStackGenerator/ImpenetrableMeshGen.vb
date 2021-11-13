@@ -1317,7 +1317,9 @@ Public Class ImpenetrableMeshGen
         End If
 
         Do While AttemptsN < 5
+#If EnableTryCatch = True Then
             Try
+#End If
 newtry:
                 copiedSettings = Nothing
                 selectedSymmetryClass = SelectSymmetryClass(settGen.common_settMap)
@@ -1373,6 +1375,7 @@ newtry:
                     Call m.log.Add("Impenetrable mesh gen: time limit termination")
                 End If
                 nTry = 0
+#If EnableTryCatch Then
             Catch ex As Exception
                 Call m.log.Add("Some error occured in ImpenetrableMeshGen: " & vbNewLine & ex.Message & vbNewLine & ex.StackTrace)
                 m.Clear()
@@ -1382,6 +1385,7 @@ newtry:
                     nTry += 1
                 End If
             End Try
+#End If
         Loop
 clearandexit:
         m.Clear()
@@ -2842,9 +2846,15 @@ clearandexit:
             Dim freeSizeX As Integer = UBound(freeCells, 1)
             Dim freeSizeY As Integer = UBound(freeCells, 2)
 
+            Dim maxShiftX, maxShiftY As Integer
+            For i As Integer = 0 To UBound(placingObjects) Step 1
+                maxShiftX = Math.Max(maxShiftX, ShiftCoordinate(0, i))
+                maxShiftY = Math.Max(maxShiftY, ShiftCoordinate(0, i))
+            Next i
+
             ReDim bestOutput(UBound(placingObjects)), output(UBound(placingObjects)), _
-                  distance(UBound(freeCells, 1), UBound(freeCells, 2)), mayPlaceIfClean(UBound(placingObjects)), _
-                  weightLayer(1)
+                  distance(freeSizeX + maxShiftX, freeSizeY + maxShiftY), _
+                  mayPlaceIfClean(UBound(placingObjects)), weightLayer(1)
             ReDim joinedOutput(UBound(output))
             For i As Integer = 0 To UBound(placingObjects) Step 1
                 output(i) = -1
@@ -3334,11 +3344,16 @@ clearandexit:
                  ElseIf R < d(i).min Then
                      R = d(i).min
                  End If
-                 For j As Integer = 0 To UBound(freePoints(i)) Step 1
-                     If Math.Abs(dist(i)(j) - R) <= distDispersion Then
-                         possiblePoints(i).Add(freePoints(i)(j))
-                     End If
-                 Next j
+                 Dim dDispersion As Double = 0
+                 Dim maxDDisp As Double = 0.5 * Math.Sqrt((settMap.xSize + 1) ^ 2 + (settMap.ySize + 1) ^ 2) - distDispersion
+                 Do While possiblePoints(i).Count = 0 And distDispersion < maxDDisp
+                     For j As Integer = 0 To UBound(freePoints(i)) Step 1
+                         If Math.Abs(dist(i)(j) - R) <= distDispersion + dDispersion Then
+                             possiblePoints(i).Add(freePoints(i)(j))
+                         End If
+                     Next j
+                     dDispersion += 1
+                 Loop
              End Sub)
 
             Dim attempts As Integer
@@ -4000,7 +4015,7 @@ clearandexit:
                 Parallel.For(0, settMap.nRaces, _
                  Sub(i As Integer)
                      Call ObjectsPlacingVariants(places(i), i + 1, tmpm, settMap, tmpLocsPlacing, _
-                                                 tmpLocFreeCells(i), CapitalPrefferedPositions(LocId - 1), _
+                                                 tmpLocFreeCells(i), CapitalPrefferedPositions(i), _
                                                  v(i), CLng(Math.Max(1000, maxTime / 3)))
                  End Sub)
             End If
@@ -4173,7 +4188,9 @@ exitfunction:
     End Sub
     Private Function MakeLabyrinth(ByRef m As Map, ByRef settMap As Map.SettingsMap, ByRef settLoc() As Map.SettingsLoc, _
                                    ByRef LocId As Integer, ByRef Term As TerminationCondition) As String
+#If EnableTryCatch Then
         Try
+#End If
             Dim b As New Location.Borders With {.minX = Integer.MaxValue, .minY = Integer.MaxValue, _
                                                 .maxX = Integer.MinValue, .maxY = Integer.MinValue}
             Dim n As Location.Borders
@@ -4303,9 +4320,11 @@ exitfunction:
                     End If
                 Next x
             Next y
+#If EnableTryCatch Then
         Catch ex As Exception
             Return ex.Message
         End Try
+#End If
         Return ""
     End Function
     Private Sub LifeAlgo(ByRef m As Map, ByRef settMap As Map.SettingsMap, ByRef settLoc() As Map.SettingsLoc, _

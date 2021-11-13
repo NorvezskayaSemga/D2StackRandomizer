@@ -212,16 +212,20 @@ again:
             Return grid
         End If
 
+#If EnableTryCatch Then
         Try
+#End If
             Call stackstats.Gen(grid, settGen.common_settMap, copiedSettings)
             Call watergenerator.Gen(grid, settGen.common_settMap, {"%default%"}, genmesh)
             Call racegen.Gen(grid, PlayersRaces, copiedSettings)
             Call objPlace.Gen(grid, settGen.common_settMap, copiedSettings)
             Call penOnjGen.Gen(grid, settGen.common_settMap)
+#If EnableTryCatch Then
         Catch ex As Exception
             grid.log.Add(ex.Message & vbNewLine & ex.StackTrace)
             GoTo again
         End Try
+#End If
 
         Call grid.log.Add(vbNewLine & "Total generation time: " & Environment.TickCount - t0 & " ms")
 
