@@ -21,7 +21,7 @@ Friend Class StartForm
         'Call StackLocationsGen.PassageGuardPlacer.speedBanchmark()
         'Call ImpenetrableMeshGen.ActiveObjectsPlacer.speedBanchmark()
 
-        'Call Tests.StackCreationRateTest()
+        Call Tests.WaterCreation()
 
         If GenDefaultValues.writeToConsole Then
             Dim tf As New TemplateForge(RandomStackGenerator.GenDefaultValues.TextLanguage.Rus)
@@ -734,5 +734,32 @@ Class Tests
                   .order = New AllDataStructues.Stack.StackOrder(AllDataStructues.Stack.StackOrder.OrderType.Stand, AllDataStructues.Stack.StackOrder.Settings.NoTarget, _
                                                                  AllDataStructues.Stack.StackOrder.OrderType.Normal, AllDataStructues.Stack.StackOrder.Settings.NoTarget)}
     End Function
+
+    Public Shared Sub WaterCreation()
+        Dim watergenerator As New WaterGen
+        Dim comm As New Common(GenDefaultValues.DefaultMod)
+        Dim settMap As New Map.SettingsMap With {.xSize = 52, _
+                                                 .ySize = 52, _
+                                                 .WaterAmount = 0.15, _
+                                                 .nRaces = 1}
+        Call settMap.Check()
+
+        Dim grid As New Map(settMap.xSize - 1, settMap.ySize - 1, True, comm) With {.comm = comm}
+        grid.Loc = {New Location(New Point(0, 0), 1, 1, 0, 1, False)}
+        For y As Integer = 0 To grid.ySize Step 1
+            For x As Integer = 0 To grid.xSize Step 1
+                grid.board(x, y).locID = {1}
+            Next x
+        Next y
+        grid.complited.StacksDesiredStatsGen_Done = True
+
+        Dim genmesh As New ImpenetrableMeshGen(comm)
+
+        Dim t As Integer = Environment.TickCount
+        Call watergenerator.Gen(grid, settMap, genmesh)
+        Dim dt As Integer = Environment.TickCount - t
+        '12153
+        '10779
+    End Sub
 
 End Class

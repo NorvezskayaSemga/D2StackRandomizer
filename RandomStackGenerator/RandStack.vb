@@ -2913,15 +2913,15 @@ Public Class RandStack
 End Class
 
 Public Class RndValueGen
-    Private fastModeSeed, fastModeTicks As Long
+    Private rndIntSeed, rndIntTicks As Long
     Private Const seedMaxVal As Long = Integer.MaxValue - 10000
 
     Public Sub New(Optional ByVal seed As Integer = -1)
         If seed = -1 Then
-            fastModeSeed = Math.Min(CLng(Math.Abs(Environment.TickCount)) + _
+            rndIntSeed = Math.Min(CLng(Math.Abs(Environment.TickCount)) + _
                                     CLng((Threading.Thread.CurrentThread.ManagedThreadId + 17) ^ 3), seedMaxVal)
         Else
-            fastModeSeed = Math.Min(Math.Abs(seed), seedMaxVal)
+            rndIntSeed = Math.Min(Math.Abs(seed), seedMaxVal)
         End If
     End Sub
 
@@ -2991,16 +2991,16 @@ Public Class RndValueGen
 
         Dim tid As Long = Threading.Thread.CurrentThread.ManagedThreadId
 
-        Dim c1 As Long = fastModeTicks + fastModeSeed + 11
-        Dim c2 As Long = fastModeTicks + b + tid
-        Dim c3 As Long = fastModeTicks + 112
+        Dim c1 As Long = rndIntTicks + rndIntSeed + 11
+        Dim c2 As Long = rndIntTicks + b + tid
+        Dim c3 As Long = rndIntTicks + 112
         Dim c4 As Long = b + b + 1 + tid * tid
         Dim c5 As Long = b + 1021
 
-        Dim d1 As Long = fastModeSeed + b + 1
-        Dim d2 As Long = fastModeTicks + 3
+        Dim d1 As Long = rndIntSeed + b + 1
+        Dim d2 As Long = rndIntTicks + 3
 
-        Dim e1 As Long = CLng(0.5 * fastModeSeed)
+        Dim e1 As Long = CLng(0.5 * rndIntSeed)
 
         If c1 > seedMaxVal Then c1 -= seedMaxVal
         If c1 > seedMaxVal Then c1 -= seedMaxVal
@@ -3026,9 +3026,9 @@ Public Class RndValueGen
 
         m = s1 + s2 + e1
 
-        fastModeSeed = (fastModeSeed + m + fastModeTicks) Mod seedMaxVal
-        fastModeTicks += 1
-        If fastModeTicks > seedMaxVal Then fastModeTicks -= seedMaxVal
+        rndIntSeed = (rndIntSeed + m + rndIntTicks) Mod seedMaxVal
+        rndIntTicks += 1
+        If rndIntTicks > seedMaxVal Then rndIntTicks -= seedMaxVal
 
         Return CInt(m Mod (max + 1))
     End Function

@@ -216,7 +216,7 @@ again:
         Try
 #End If
             Call stackstats.Gen(grid, settGen.common_settMap, copiedSettings)
-            Call watergenerator.Gen(grid, settGen.common_settMap, {"%default%"}, genmesh)
+            Call watergenerator.Gen(grid, settGen.common_settMap, genmesh)
             Call racegen.Gen(grid, PlayersRaces, copiedSettings)
             Call objPlace.Gen(grid, settGen.common_settMap, copiedSettings)
             Call penOnjGen.Gen(grid, settGen.common_settMap)
