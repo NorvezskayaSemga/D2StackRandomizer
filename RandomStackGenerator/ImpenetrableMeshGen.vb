@@ -1228,7 +1228,7 @@ Public Class ImpenetrableMeshGen
                                               New AttendedObject(1, DefMapObjects.Types.Mine)}
     End Sub
 
-    Private Function ActiveObjectsSet(ByRef settMap As Map.SettingsMap, ByRef symmId As Integer) As Map.Cell()(,)
+    Public Function ActiveObjectsSet(ByRef settMap As Map.SettingsMap, ByRef symmId As Integer) As Map.Cell()(,)
         Dim symm As New SymmetryOperations
         Dim result(UBound(ActiveObjects))(,) As Map.Cell
         For i As Integer = 1 To UBound(ActiveObjects) Step 1
@@ -8981,9 +8981,7 @@ Public Class WaterGen
         Public settMap As Map.SettingsMap
 
         Private wBlocks, objWBlocks, unacceptWBlocks As Dictionary(Of String, WaterBlock)
-        Private wBlocksKeys() As String
-        Private wBlockMaxSize As Point
-        Private wBlockUnacceptMaxSize As Point
+        Private wBlockMaxSize, objBlockMaxSize, wBlockUnacceptMaxSize As Point
 
         Public Class WaterBlock
             ''' <summary>
@@ -9153,28 +9151,43 @@ Public Class WaterGen
             Public weight() As Double
             Public itemID(,) As Integer
             Public itemPos()() As Integer
+            Public myBlocksKeys() As String
 
-            Public Sub New(ByRef m As Map, ByRef w As WaterPlacer_2, ByRef fpInfo As FreePointsInfo)
-                selector = New RandomSelection(w.wBlocksKeys.Length * fpInfo.points.Length, w.owner.rndgen)
-                ReDim addsWaterAmount(UBound(w.wBlocksKeys), UBound(fpInfo.points)), _
-                      itemID(UBound(w.wBlocksKeys), UBound(fpInfo.points)), _
-                      isChanged(m.xSize, m.ySize), _
+            Public Sub New(ByRef w As WaterPlacer_2, ByRef pointsAmount As Integer, ByRef commonPlacing As Boolean)
+                If commonPlacing Then
+                    myBlocksKeys = w.wBlocks.Keys.ToArray
+                    ReDim isChanged(w.m.xSize, w.m.ySize)
+                    For y As Integer = 0 To w.m.ySize Step 1
+                        For x As Integer = 0 To w.m.xSize Step 1
+                            isChanged(x, y) = True
+                        Next x
+                    Next y
+                Else
+                    myBlocksKeys = w.objWBlocks.Keys.ToArray
+                End If
+
+                selector = New RandomSelection(myBlocksKeys.Length * pointsAmount, w.owner.rndgen)
+                ReDim addsWaterAmount(UBound(myBlocksKeys), pointsAmount - 1), _
+                      itemID(UBound(myBlocksKeys), pointsAmount - 1), _
                       weight(selector.upperBound), _
                       itemPos(selector.upperBound)
                 For k As Integer = 0 To Environment.ProcessorCount - 1 Step 1
-                    ReDim currentWaterSurface(k)(m.xSize, m.ySize), _
-                          wasGround(k)(w.wBlockMaxSize.X, w.wBlockMaxSize.Y)
-                    For y As Integer = 0 To m.ySize Step 1
-                        For x As Integer = 0 To m.xSize Step 1
-                            currentWaterSurface(k)(x, y) = m.board(x, y).surface.isWater
-                            isChanged(x, y) = True
+                    ReDim currentWaterSurface(k)(w.m.xSize, w.m.ySize)
+                    If commonPlacing Then
+                        ReDim wasGround(k)(w.wBlockMaxSize.X, w.wBlockMaxSize.Y)
+                    Else
+                        ReDim wasGround(k)(w.objBlockMaxSize.X, w.objBlockMaxSize.Y)
+                    End If
+                    For y As Integer = 0 To w.m.ySize Step 1
+                        For x As Integer = 0 To w.m.xSize Step 1
+                            currentWaterSurface(k)(x, y) = w.m.board(x, y).surface.isWater
                         Next x
                     Next y
                 Next k
                 Dim n As Integer = -1
                 Dim e As Integer = System.Enum.GetValues(GetType(itemPosData)).Cast(Of Integer).Max
-                For k As Integer = 0 To UBound(w.wBlocksKeys) Step 1
-                    For i As Integer = 0 To UBound(fpInfo.points) Step 1
+                For k As Integer = 0 To UBound(myBlocksKeys) Step 1
+                    For i As Integer = 0 To pointsAmount - 1 Step 1
                         n += 1
                         ReDim itemPos(n)(e)
                         itemPos(n)(itemPosData.wBlocksKeysIndex) = k
@@ -9185,20 +9198,20 @@ Public Class WaterGen
                 Next k
             End Sub
 
-            Public Sub SetAddsWaterAmount(ByRef value As Integer, ByRef waterAmount As Integer, _
+            Public Sub SetAddsWaterAmount(ByRef addsWaterTiles As Integer, ByRef waterAmount As Integer, _
                                           ByRef wBlocksKeysIndex As Integer, ByRef pointIndex As Integer)
-                addsWaterAmount(wBlocksKeysIndex, pointIndex) = value
-                weight(itemID(wBlocksKeysIndex, pointIndex)) = GetWeight(value, waterAmount)
-            End Sub
-            Public Shared Function GetWeight(ByRef addsWaterTiles As Integer, ByRef waterAmount As Integer) As Double
+                addsWaterAmount(wBlocksKeysIndex, pointIndex) = addsWaterTiles
+                Dim w As Double = 0
                 If addsWaterTiles > 0 Then
-                    Dim w As Double = addsWaterTiles ^ 2
+                    w = addsWaterTiles ^ 2
                     If addsWaterTiles > waterAmount Then w /= (addsWaterTiles - waterAmount)
-                    Return w
-                Else
-                    Return 0
                 End If
-            End Function
+                Call SetCustomWeight(w, wBlocksKeysIndex, pointIndex)
+            End Sub
+
+            Public Sub SetCustomWeight(ByRef w As Double, ByRef wBlocksKeysIndex As Integer, ByRef pointIndex As Integer)
+                weight(itemID(wBlocksKeysIndex, pointIndex)) = w
+            End Sub
 
             Public Function SelectItem() As Integer
                 Return selector.RandomSelection(weight)
@@ -9224,20 +9237,18 @@ Public Class WaterGen
             wBlocks = ReadWaterBlocks(owner.comm.defValues.resReader.WaterBlocksCommon, False)
             objWBlocks = ReadWaterBlocks(owner.comm.defValues.resReader.WaterBlocks3x3Objects, True)
             unacceptWBlocks = ReadWaterBlocks(owner.comm.defValues.resReader.WaterBlocksUnacceptable, False)
-            wBlocksKeys = wBlocks.Keys.ToArray
-            Dim x, y As Integer
-            For Each b As WaterBlock In wBlocks.Values
-                x = Math.Max(x, b.xMax)
-                y = Math.Max(y, b.yMax)
-            Next b
-            wBlockMaxSize = New Point(x, y)
-            x = 0 : y = 0
-            For Each b As WaterBlock In unacceptWBlocks.Values
-                x = Math.Max(x, b.xMax)
-                y = Math.Max(y, b.yMax)
-            Next b
-            wBlockUnacceptMaxSize = New Point(x, y)
+            wBlockMaxSize = GetMaxSize(wBlocks)
+            objBlockMaxSize = GetMaxSize(objWBlocks)
+            wBlockUnacceptMaxSize = GetMaxSize(unacceptWBlocks)
         End Sub
+        Private Function GetMaxSize(ByRef d As Dictionary(Of String, WaterBlock)) As Point
+            Dim x, y As Integer
+            For Each b As WaterBlock In d.Values
+                x = Math.Max(x, b.xMax)
+                y = Math.Max(y, b.yMax)
+            Next b
+            Return New Point(x, y)
+        End Function
         Private Function ReadWaterBlocks(ByVal blocksText As String, ByVal isObjBlock As Boolean) As Dictionary(Of String, WaterBlock)
             Dim result As New Dictionary(Of String, WaterBlock)
             Dim lines() As String = Common.TxtSplit(blocksText)
@@ -9293,11 +9304,8 @@ Public Class WaterGen
             Dim HaveToBeGround_bak(,) As Boolean = CType(owner.wpCommon.HaveToBeGround.Clone, Boolean(,))
             Dim isFree_bak(,) As Boolean = CType(fpInfo.isFree.Clone, Boolean(,))
             Dim objID As Integer
-            Dim selector As New RandomSelection(objWBlocks.Count, owner.rndgen)
-            Dim weight(selector.upperBound) As Double
-            Dim addsWaterAmount(selector.upperBound) As Integer
-            Dim keys() As String = objWBlocks.Keys.ToArray
-
+            Dim cData As New CommonWaterPlacingData(Me, 1, False)
+           
             For Each p As Point In pList
                 owner.wpCommon.HaveToBeGround = CType(HaveToBeGround_bak.Clone, Boolean(,))
                 fpInfo.isFree = CType(isFree_bak.Clone, Boolean(,))
@@ -9319,17 +9327,20 @@ Public Class WaterGen
 
                 Dim pWaterAmount As Integer = WaterAmount
                 Dim pp As Point = p
-                Parallel.For(0, keys.Length, _
-                 Sub(i As Integer)
-                     Dim pos As Point = ObjectWaterPos(pp, objID, GetWaterBlock(keys(i), True))
-                     addsWaterAmount(i) = CanAddWatherAmount(loc, fpInfo, pWaterAmount, pos, keys(i), True, True)
-                     weight(i) = CommonWaterPlacingData.GetWeight(addsWaterAmount(i), pWaterAmount)
+                Parallel.For(0, Environment.ProcessorCount, _
+                 Sub(proc As Integer)
+                     Dim a As Integer
+                     For i As Integer = proc To UBound(cData.myBlocksKeys) Step Environment.ProcessorCount
+                         Dim pos As Point = ObjectWaterPos(pp, objID, GetWaterBlock(cData.myBlocksKeys(i), True))
+                         a = CanAddWatherAmount(loc, fpInfo, pWaterAmount, pos, cData.myBlocksKeys(i), True, True, cData, proc, i, 0)
+                         Call cData.SetAddsWaterAmount(a, pWaterAmount, i, 0)
+                     Next i
                  End Sub)
-
-                If weight.Sum > 0 Then
-                    Dim selected As Integer = selector.RandomSelection(weight)
-                    Dim key As String = keys(selected)
-                    Dim pos As Point = ObjectWaterPos(pp, objID, GetWaterBlock(keys(selected), True))
+                
+                If cData.weight.Sum > 0 Then
+                    Dim selected As Integer = cData.SelectItem()
+                    Dim key As String = cData.myBlocksKeys(cData.GetWBlocksKeysIndex(selected))
+                    Dim pos As Point = ObjectWaterPos(pp, objID, GetWaterBlock(key, True))
                     Call AddWater(WaterAmount, key, pos.X, pos.Y, True)
                 End If
             Next p
@@ -9355,27 +9366,71 @@ Public Class WaterGen
 
         Private Sub AddWaterCommon(ByVal loc As Location, ByVal fpInfo As FreePointsInfo, ByRef WaterAmount As Integer)
             Dim pWaterAmount As Integer
-            Dim cData As New CommonWaterPlacingData(m, Me, fpInfo)
+            Dim cData As New CommonWaterPlacingData(Me, fpInfo.points.Length, True)
             Dim weightSum As Double = 1
+            Dim selectedPointID As Integer
+            Dim minDCoord, maxDCoord As Integer
+            Dim isInCheckArea(UBound(fpInfo.points)), allPointsChecked As Boolean
 
             Do While WaterAmount > 0 And weightSum > 0
                 pWaterAmount = WaterAmount
-                Parallel.For(0, Environment.ProcessorCount, _
-                 Sub(proc As Integer)
-                     Dim a As Integer
-                     For k As Integer = proc To UBound(wBlocksKeys) Step Environment.ProcessorCount
+                selectedPointID = owner.rndgen.RndItemIndex(fpInfo.points)
+                weightSum = 0 : minDCoord = -1
+                allPointsChecked = False
+                For i As Integer = 0 To UBound(fpInfo.points) Step 1
+                    isInCheckArea(i) = False
+                Next i
+                Do While weightSum = 0 And Not allPointsChecked
+                    If minDCoord = -1 Then
+                        minDCoord = 0
+                        maxDCoord = 4
+                    Else
+                        minDCoord = maxDCoord + 1
+                        maxDCoord = minDCoord
+                    End If
+                    Parallel.For(0, Environment.ProcessorCount, _
+                     Sub(proc As Integer)
+                         Dim a, dx, dy As Integer
+                         Dim isIn As Boolean
                          For i As Integer = 0 To UBound(fpInfo.points) Step 1
-                             a = CanAddWatherAmount(loc, fpInfo, pWaterAmount, fpInfo.points(i), _
-                                                    wBlocksKeys(k), False, False, _
-                                                    cData, proc, k, i)
-                             Call cData.SetAddsWaterAmount(a, pWaterAmount, k, i)
+                             dx = Math.Abs(fpInfo.points(selectedPointID).X - fpInfo.points(i).X)
+                             dy = Math.Abs(fpInfo.points(selectedPointID).Y - fpInfo.points(i).Y)
+                             If dx < minDCoord And dy < minDCoord Then
+                                 isIn = False
+                             ElseIf dx <= maxDCoord And dy <= maxDCoord Then
+                                 isIn = True
+                             Else
+                                 isIn = False
+                             End If
+                             If isIn Then
+                                 For k As Integer = proc To UBound(cData.myBlocksKeys) Step Environment.ProcessorCount
+                                     a = CanAddWatherAmount(loc, fpInfo, pWaterAmount, fpInfo.points(i), _
+                                                            cData.myBlocksKeys(k), False, False, _
+                                                            cData, proc, k, i)
+                                     Call cData.SetAddsWaterAmount(a, pWaterAmount, k, i)
+                                 Next k
+                                 isInCheckArea(i) = True
+                             Else
+                                 For k As Integer = proc To UBound(cData.myBlocksKeys) Step Environment.ProcessorCount
+                                     Call cData.SetCustomWeight(0, k, i)
+                                 Next k
+                             End If
                          Next i
-                     Next k
-                 End Sub)
-                weightSum = cData.weight.Sum
+                     End Sub)
+                    weightSum = cData.weight.Sum
+                    If weightSum = 0 Then
+                        allPointsChecked = True
+                        For i As Integer = 0 To UBound(fpInfo.points) Step 1
+                            If Not isInCheckArea(i) Then
+                                allPointsChecked = False
+                                Exit For
+                            End If
+                        Next i
+                    End If
+                Loop
                 If weightSum > 0 Then
                     Dim selected As Integer = cData.SelectItem
-                    Dim key As String = wBlocksKeys(cData.GetWBlocksKeysIndex(selected))
+                    Dim key As String = cData.myBlocksKeys(cData.GetWBlocksKeysIndex(selected))
                     Dim x As Integer = fpInfo.points(cData.GetPointIndex(selected)).X
                     Dim y As Integer = fpInfo.points(cData.GetPointIndex(selected)).Y
                     Call AddWater(WaterAmount, key, x, y, False, cData.currentWaterSurface)
@@ -9393,10 +9448,10 @@ Public Class WaterGen
         Private Function CanAddWatherAmount(ByRef loc As Location, ByRef fpInfo As FreePointsInfo, ByRef WaterAmount As Integer, _
                                             ByRef p As Point, ByRef key As String, ByVal useObjWBlocks As Boolean, _
                                             ByVal IgnoreSize As Boolean, _
-                                            Optional ByRef cData As CommonWaterPlacingData = Nothing, _
-                                            Optional ByVal proc As Integer = -1, _
-                                            Optional ByVal wBlockIndex As Integer = -1, _
-                                            Optional ByVal pointIndex As Integer = -1) As Integer
+                                            ByRef cData As CommonWaterPlacingData, _
+                                            ByVal proc As Integer, _
+                                            ByVal wBlockIndex As Integer, _
+                                            ByVal pointIndex As Integer) As Integer
 
             Dim w As WaterBlock = GetWaterBlock(key, useObjWBlocks)
 
@@ -9409,7 +9464,7 @@ Public Class WaterGen
                 If y2 > fpInfo.yMax Then Return 0
             End If
 
-            If Not IsNothing(cData) Then
+            If Not IsNothing(cData.isChanged) Then
                 Dim changed As Boolean = False
                 For j As Integer = p.Y To y2 Step 1
                     If Not IgnoreSize Or YFilter(j) Then

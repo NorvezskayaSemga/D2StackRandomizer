@@ -741,19 +741,26 @@ Class Tests
         Dim settMap As New Map.SettingsMap With {.xSize = 52, _
                                                  .ySize = 52, _
                                                  .WaterAmount = 0.15, _
-                                                 .nRaces = 1}
+                                                 .nRaces = 1, _
+                                                 .SymmetryClass = -1}
         Call settMap.Check()
 
-        Dim grid As New Map(settMap.xSize - 1, settMap.ySize - 1, True, comm) With {.comm = comm}
+        Dim grid As New Map(settMap.xSize - 1, settMap.ySize - 1, -1, comm)
         grid.Loc = {New Location(New Point(0, 0), 1, 1, 0, 1, False)}
         For y As Integer = 0 To grid.ySize Step 1
             For x As Integer = 0 To grid.xSize Step 1
                 grid.board(x, y).locID = {1}
             Next x
         Next y
+        grid.board(3, 3).mapObject.objectID = DefMapObjects.Types.Ruins
+        grid.board(10, 4).mapObject.objectID = DefMapObjects.Types.Ruins
+        grid.board(3, 15).mapObject.objectID = DefMapObjects.Types.Ruins
+        grid.board(20, 40).mapObject.objectID = DefMapObjects.Types.Ruins
+
         grid.complited.StacksDesiredStatsGen_Done = True
 
         Dim genmesh As New ImpenetrableMeshGen(comm)
+        genmesh.ObjectBlank = genmesh.ActiveObjectsSet(settMap, settMap.SymmetryClass)
 
         Dim t As Integer = Environment.TickCount
         Call watergenerator.Gen(grid, settMap, genmesh)
