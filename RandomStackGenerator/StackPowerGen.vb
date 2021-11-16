@@ -726,7 +726,7 @@ Public Class RaceGen
         Next q
     End Sub
     Friend Shared Function MayBeWater(ByRef m As Map, ByRef x As Integer, ByRef y As Integer) As Boolean
-        Dim b As Location.Borders = ImpenetrableMeshGen.NearestXY(x, y, m.xSize, m.ySize, 1)
+        Dim b As Location.Borders = Location.Borders.Make(x, y, m, 1)
         For q As Integer = b.minY To b.maxY Step 1
             For p As Integer = b.minX To b.maxX Step 1
                 If Not m.board(p, q).surface.isWater Then Return False

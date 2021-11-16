@@ -190,7 +190,7 @@
                 If Not m.Loc(m.board(x, y).locID(0) - 1).IsObtainedBySymmery And m.board(x, y).mapObject.objectID = DefMapObjects.Types.Mine Then
                     skip = False
                     pos.Clear()
-                    Dim b As Location.Borders = ImpenetrableMeshGen.NearestXY(x, y, m.xSize, m.ySize, 1)
+                    Dim b As Location.Borders = Location.Borders.Make(x, y, m, 1)
                     For j As Integer = b.minY To b.maxY Step 1
                         For i As Integer = b.minX To b.maxX Step 1
                             If mustBeFree(i, j) Then

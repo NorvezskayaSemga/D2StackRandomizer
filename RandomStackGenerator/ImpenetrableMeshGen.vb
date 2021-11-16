@@ -1571,7 +1571,7 @@ clearandexit:
             Next y
         Next x
         For Each p As Point In plist
-            b = NearestXY(p, m, 2)
+            b = Location.Borders.Make(p, m, 2)
             For x As Integer = b.minX To b.maxX Step 1
                 For y As Integer = b.minY To b.maxY Step 1
                     If m.board(x, y).locID.Count = 0 Then
@@ -1583,17 +1583,6 @@ clearandexit:
             Next x
         Next p
     End Sub
-    Friend Shared Function NearestXY(ByRef x As Integer, ByRef y As Integer, _
-                                     ByRef xSize As Integer, ByRef ySize As Integer, _
-                                     ByRef tolerance As Integer) As Location.Borders
-        Return New Location.Borders With {.minx = Math.Max(x - tolerance, 0), _
-                                          .maxx = Math.Min(x + tolerance, xSize), _
-                                          .miny = Math.Max(y - tolerance, 0), _
-                                          .maxy = Math.Min(y + tolerance, ySize)}
-    End Function
-    Friend Shared Function NearestXY(ByRef P As Point, ByRef M As Map, ByRef tolerance As Integer) As Location.Borders
-        Return NearestXY(P.X, P.Y, M.xSize, M.ySize, tolerance)
-    End Function
 
     Private Function PlaceRaceLocations(ByRef settMap As Map.SettingsMap, ByRef settRaceLoc As Map.SettingsLoc, ByRef symmID As Integer, ByRef previousLogText As String) As Map
         Dim res As New Map(settMap.xSize, settMap.ySize, symmID, comm)
@@ -1962,7 +1951,7 @@ clearandexit:
                                 possibleLocs.Clear()
                                 Dim t As Integer = 1
                                 Do While t < Math.Max(m.xSize, m.ySize)
-                                    Dim b As Location.Borders = NearestXY(p.X, p.Y, m.xSize, m.ySize, t)
+                                    Dim b As Location.Borders = Location.Borders.Make(p, m, t)
                                     For i As Integer = b.minX To b.maxX Step 1
                                         For j As Integer = b.minY To b.maxY Step 1
                                             If m.board(i, j).locID.Count > 0 Then
@@ -2024,7 +2013,7 @@ clearandexit:
                 If idlist.Contains(pID) Then idlist.Remove(pID)
             Next p
             For Each p As Point In selectedPoints
-                Dim b As Location.Borders = NearestXY(p.X, p.Y, m.xSize, m.ySize, 1)
+                Dim b As Location.Borders = Location.Borders.Make(p, m, 1)
                 For j As Integer = b.minY To b.maxY Step 1
                     For i As Integer = b.minX To b.maxX Step 1
                         Call makePointsList_handlePoint(m, idlist, i, j, allPoints, pointID, weight, weightSum)
@@ -2048,7 +2037,7 @@ clearandexit:
         If m.board(x, y).locID.Count = 0 Then
             Dim pID As Integer = pointID(x, y)
             Dim locID As Integer
-            Dim b As Location.Borders = NearestXY(x, y, m.xSize, m.ySize, 1)
+            Dim b As Location.Borders = Location.Borders.Make(x, y, m, 1)
             For j As Integer = b.minY To b.maxY Step 1
                 For i As Integer = b.minX To b.maxX Step 1
                     If m.board(i, j).locID.Count > 0 Then
@@ -2104,7 +2093,7 @@ clearandexit:
         For y As Integer = 0 To tmpm.ySize Step 1
             For x As Integer = 0 To tmpm.xSize Step 1
                 If borderRadius(x, y) = -1 Then
-                    Dim b As Location.Borders = NearestXY(x, y, tmpm.xSize, tmpm.ySize, 1)
+                    Dim b As Location.Borders = Location.Borders.Make(x, y, tmpm, 1)
                     Dim id As Integer = tmpm.board(x, y).locID(0)
                     Dim isBorder As Boolean = False
                     For i As Integer = b.minX To b.maxX Step 1
@@ -2133,7 +2122,7 @@ clearandexit:
                 If borderRadius(x, y) > -1 Then
                     Dim id As Integer = tmpm.board(x, y).locID(0)
                     freeze(x, y) = True
-                    Dim b As Location.Borders = NearestXY(x, y, tmpm.xSize, tmpm.ySize, borderRadius(x, y))
+                    Dim b As Location.Borders = Location.Borders.Make(x, y, tmpm, borderRadius(x, y))
                     For i As Integer = b.minX To b.maxX Step 1
                         For j As Integer = b.minY To b.maxY Step 1
                             tmpm.board(i, j).passability.isBorder = True
@@ -2158,7 +2147,7 @@ clearandexit:
                  For x As Integer = 0 To tmpm.xSize Step 1
                      If Not freeze(x, y) Then
                          n = 0
-                         b = NearestXY(x, y, tmpm.xSize, tmpm.ySize, 1)
+                         b = Location.Borders.Make(x, y, tmpm, 1)
                          For i As Integer = b.minX To b.maxX Step 1
                              For j As Integer = b.minY To b.maxY Step 1
                                  If Not tmpm.board(i, j).passability.isBorder Then
@@ -2216,7 +2205,7 @@ clearandexit:
             For x As Integer = 0 To tmpm.xSize Step 1
                 If tmpm.board(x, y).passability.isBorder Then
                     Dim id As Integer = tmpm.board(x, y).locID(0)
-                    Dim b As Location.Borders = NearestXY(x, y, tmpm.xSize, tmpm.ySize, 1)
+                    Dim b As Location.Borders = Location.Borders.Make(x, y, tmpm, 1)
                     For i As Integer = b.minX To b.maxX Step 1
                         For j As Integer = b.minY To b.maxY Step 1
                             Dim n As Integer = tmpm.board(i, j).locID(0)
@@ -2254,7 +2243,7 @@ clearandexit:
                     For Each k As String In LocBorders(i, j).Keys
                         Dim p As Point = LocBorders(i, j).Item(k)
                         Dim minD As Double = 2 * settMap.minPassWidth + 1 + dR
-                        Dim b As Location.Borders = NearestXY(p.X, p.Y, tmpm.xSize, tmpm.ySize, CInt(Math.Ceiling(minD)))
+                        Dim b As Location.Borders = Location.Borders.Make(p, tmpm, CInt(Math.Ceiling(minD)))
                         minD *= minD
                         nearRLocs.Clear()
                         For x As Integer = b.minX To b.maxX Step 1
@@ -2448,7 +2437,7 @@ clearandexit:
                  If tmpm.board(x, y).passability.isPass Then
                      If settMap.AddGuardsBetweenLocations Then
                          Dim removePathStatus As Boolean = True
-                         Dim b As Location.Borders = NearestXY(x, y, tmpm.xSize, tmpm.ySize, 1)
+                         Dim b As Location.Borders = Location.Borders.Make(x, y, tmpm, 1)
                          For j As Integer = b.minY To b.maxY Step 1
                              For i As Integer = b.minX To b.maxX Step 1
                                  If Not tmpm.board(x, y).locID(0) = tmpm.board(i, j).locID(0) And Not tmpm.board(i, j).passability.isBorder Then
@@ -2521,7 +2510,7 @@ clearandexit:
         If makeIntermediatePoint Then
             Dim dist As Double = init.Dist(dest)
             Dim r As Location.Borders
-            r = NearestXY(init, m, CInt(Math.Ceiling(dist)))
+            r = Location.Borders.Make(init, m, CInt(Math.Ceiling(dist)))
             Dim minDist As Double = Double.MaxValue
             Dim p As New Point(-1, -1)
             For y As Integer = r.minY To r.maxY Step 1
@@ -2560,7 +2549,7 @@ clearandexit:
         For r As Integer = 0 To n Step 1
             tx = intermediate.X + CDbl(r) * vx
             ty = intermediate.Y + CDbl(r) * vy
-            b = NearestXY(CInt(tx), CInt(ty), m.xSize, m.ySize, CInt(2 * (0.5 * settMap.minPassWidth + 1)))
+            b = Location.Borders.Make(CInt(tx), CInt(ty), m, CInt(2 * (0.5 * settMap.minPassWidth + 1)))
             For y As Integer = b.minY To b.maxY Step 1
                 For x As Integer = b.minX To b.maxX Step 1
                     If m.board(x, y).passability.isBorder Then
@@ -2569,7 +2558,7 @@ clearandexit:
                             Dim c1 As Integer = Math.Max(Math.Min(x, m.xSize - 1), 1)
                             Dim c2 As Integer = Math.Max(Math.Min(y, m.ySize - 1), 1)
                             setAsPath = False
-                            Dim b2 As Location.Borders = NearestXY(c1, c2, m.xSize, m.ySize, 1)
+                            Dim b2 As Location.Borders = Location.Borders.Make(c1, c2, m, 1)
                             For j As Integer = b2.minY To b2.maxY Step 1
                                 For i As Integer = b2.minX To b2.maxX Step 1
                                     If Not m.board(c1, c2).locID(0) = m.board(i, j).locID(0) Then
@@ -2590,7 +2579,7 @@ clearandexit:
                                     m.board(item.X, item.Y).passability.isBorder = False
                                     m.board(item.X, item.Y).passability.isPass = setAsPath
                                 ElseIf m.board(item.X, item.Y).passability.isAttended Then
-                                    Dim tb As Location.Borders = NearestXY(item, m, 1)
+                                    Dim tb As Location.Borders = Location.Borders.Make(item, m, 1)
                                     For yy As Integer = tb.minY To tb.maxY Step 1
                                         For xx As Integer = tb.minX To tb.maxX Step 1
                                             If m.board(xx, yy).passability.isBorder Then
@@ -2617,7 +2606,7 @@ clearandexit:
             For j As Integer = 0 To m.ySize Step 1
                 For i As Integer = 0 To m.xSize Step 1
                     If check(i, j) Then
-                        Dim b As Location.Borders = NearestXY(i, j, m.xSize, m.ySize, 1)
+                        Dim b As Location.Borders = Location.Borders.Make(i, j, m, 1)
                         For x As Integer = b.minX To b.maxX Step 1
                             For y As Integer = b.minY To b.maxY Step 1
                                 If Not m.board(x, y).passability.isBorder And Not connected(x, y) Then
@@ -2687,7 +2676,7 @@ clearandexit:
             For y As Integer = 0 To m.ySize Step 1
                 If Not m.board(x, y).passability.isBorder Then
                     init = New Point(x, y)
-                    Dim b As Location.Borders = NearestXY(x, y, m.xSize, m.ySize, 1)
+                    Dim b As Location.Borders = Location.Borders.Make(x, y, m, 1)
 
                     For i As Integer = b.minX To b.maxX Step 1
                         For j As Integer = b.minY To b.maxY Step 1
@@ -2720,7 +2709,7 @@ clearandexit:
                     If Not settLoc(m.board(x, y).locID(0) - 1).ConnectWithAllNeighboringLocations Then
                         If Not m.Loc(m.board(x, y).locID(0) - 1).IsObtainedBySymmery Then
                             addedTo.Clear()
-                            Dim b As Location.Borders = NearestXY(x, y, m.xSize, m.ySize, 1)
+                            Dim b As Location.Borders = Location.Borders.Make(x, y, m, 1)
                             For i As Integer = b.minX To b.maxX Step 1
                                 For j As Integer = b.minY To b.maxY Step 1
                                     If Not settLoc(m.board(i, j).locID(0) - 1).ConnectWithAllNeighboringLocations Then
@@ -3482,7 +3471,7 @@ clearandexit:
                                  Dim ty As Integer = p(i).Y - dy
                                  If Not tx = x Or Not ty = y Then
                                      If tx > -1 And ty > -1 And tx <= UBound(freeCells, 1) And ty <= UBound(freeCells, 2) Then
-                                         Dim b As Location.Borders = NearestXY(tx, ty, UBound(freeCells, 1), UBound(freeCells, 2), 1)
+                                         Dim b As Location.Borders = Location.Borders.Make(tx, ty, freeCells, 1)
                                          For q As Integer = b.minY To b.maxY Step 1
                                              For w As Integer = b.minX To b.maxX Step 1
                                                  freeCells(w, q) = False
@@ -3499,7 +3488,7 @@ clearandexit:
              For y As Integer = 0 To UBound(freeCells, 2) Step 1
                  For x As Integer = 0 To UBound(freeCells, 1) Step 1
                      If freeCells(x, y) AndAlso ActiveObjectsPlacer.MayPlaceObject(freeCells, DefMapObjects.Types.Mine, x, y, ActiveObjects) Then
-                         Dim b As Location.Borders = NearestXY(x, y, UBound(freeCells, 1), UBound(freeCells, 2), 1)
+                         Dim b As Location.Borders = Location.Borders.Make(x, y, freeCells, 1)
                          For q As Integer = b.minY To b.maxY Step 1
                              For p As Integer = b.minX To b.maxX Step 1
                                  PlaceCells(p, q) = True
@@ -4203,7 +4192,7 @@ exitfunction:
                         b.maxY = Math.Max(b.maxY, y)
                         m.board(x, y).passability.isPass = False
                         If Not m.board(x, y).passability.isBorder And Not m.board(x, y).passability.isAttended Then
-                            n = NearestXY(x, y, m.xSize, m.ySize, 1)
+                            n = Location.Borders.Make(x, y, m, 1)
                             For j As Integer = n.minY To n.maxY Step 1
                                 For i As Integer = n.minX To n.maxX Step 1
                                     If Not m.board(i, j).locID(0) = LocId Then
@@ -4287,7 +4276,7 @@ exitfunction:
                     If m.board(x, y).locID(0) = LocId And Not m.board(x, y).passability.isAttended _
                     And Not m.board(x, y).passability.isBorder And m.board(x, y).passability.isPass _
                     And Not m.board(x, y).stack.ObjectGuard And Not m.board(x, y).stack.PassGuardLoc And Not m.board(x, y).stack.GuardLoc Then
-                        n = NearestXY(x, y, m.xSize, m.ySize, 1)
+                        n = Location.Borders.Make(x, y, m, 1)
                         makeBorder = True
                         For j As Integer = n.minY To n.maxY Step 1
                             For i As Integer = n.minX To n.maxX Step 1
@@ -4382,7 +4371,7 @@ exitfunction:
             For y As Integer = 0 To ySize Step 1
                 For x As Integer = 0 To xSize Step 1
                     If isLifeField(x, y) Then
-                        Dim b As Location.Borders = NearestXY(x, y, xSize, ySize, 1)
+                        Dim b As Location.Borders = Location.Borders.Make(x, y, xSize, ySize, 1)
                         Dim ndead As Integer = 9 - (b.maxX - b.minX + 1) * (b.maxY - b.minY + 1)
                         If Not free(x, y) Then ndead -= 1
                         For j As Integer = b.minY To b.maxY Step 1
@@ -4419,7 +4408,7 @@ exitfunction:
             For x As Integer = 1 To xSize - 1 Step 1
                 W(x, y) = 0
                 If isLifeField(x, y) And free(x, y) Then
-                    Dim b As Location.Borders = NearestXY(x, y, xSize, ySize, 1)
+                    Dim b As Location.Borders = Location.Borders.Make(x, y, xSize, ySize, 1)
                     Dim ndead As Integer = 0
                     For j As Integer = b.minY To b.maxY Step 1
                         For i As Integer = b.minX To b.maxX Step 1
@@ -4515,7 +4504,7 @@ exitfunction:
                         If rndgen.RndDbl(0, 1) < moveChance Then
                             nearestList.Clear()
                             Dim d As Double = p.SqDist(movingPoints(n))
-                            Dim b As Location.Borders = NearestXY(movingPoints(n).X, movingPoints(n).Y, xSize, ySize, 1)
+                            Dim b As Location.Borders = Location.Borders.Make(movingPoints(n), xSize, ySize, 1)
                             For j As Integer = b.minY To b.maxY Step 1
                                 For i As Integer = b.minX To b.maxX Step 1
                                     If free(i, j) And isLifeField(i, j) AndAlso p.SqDist(i, j) < d Then
@@ -4977,8 +4966,32 @@ Public Class Location
     ''' <summary>True, если получена операцией симметрии</summary>
     Public IsObtainedBySymmery As Boolean
 
-    Friend Structure Borders
-        Dim maxX, minX, maxY, minY As Integer
+    Public Structure Borders
+        Public maxX, minX, maxY, minY As Integer
+
+        Public Shared Function Make(ByRef x As Integer, ByRef y As Integer, _
+                                         ByRef xUpperBound As Integer, ByRef yUpperBound As Integer, _
+                                         ByRef tolerance As Integer) As Location.Borders
+            Return New Location.Borders With {.minx = Math.Max(x - tolerance, 0), _
+                                              .maxx = Math.Min(x + tolerance, xUpperBound), _
+                                              .miny = Math.Max(y - tolerance, 0), _
+                                              .maxy = Math.Min(y + tolerance, yUpperBound)}
+        End Function
+        Public Shared Function Make(ByRef p As Point, ByRef m As Map, ByRef tolerance As Integer) As Location.Borders
+            Return Make(p.X, p.Y, m.xSize, m.ySize, tolerance)
+        End Function
+        Public Shared Function Make(ByRef p As Point, ByRef xUpperBound As Integer, ByRef yUpperBound As Integer, ByRef tolerance As Integer) As Location.Borders
+            Return Make(p.X, p.Y, xUpperBound, yUpperBound, tolerance)
+        End Function
+        Public Shared Function Make(ByRef x As Integer, ByRef y As Integer, ByRef m As Map, ByRef tolerance As Integer) As Location.Borders
+            Return Make(x, y, m.xSize, m.ySize, tolerance)
+        End Function
+        Public Shared Function Make(ByRef x As Integer, ByRef y As Integer, ByRef a(,) As Boolean, ByRef tolerance As Integer) As Location.Borders
+            Return Make(x, y, UBound(a, 1), UBound(a, 2), tolerance)
+        End Function
+        Public Shared Function Make(ByRef x As Integer, ByRef y As Integer, ByRef a(,) As Integer, ByRef tolerance As Integer) As Location.Borders
+            Return Make(x, y, UBound(a, 1), UBound(a, 2), tolerance)
+        End Function
     End Structure
 
     ''' <summary>Возвращает угол поворота локации</summary>
@@ -7277,7 +7290,7 @@ Public Class StackLocationsGen
                     'Else
                     '    d1 = mDistC
                     'End If
-                    Dim t As Location.Borders = ImpenetrableMeshGen.NearestXY(x, y, m.xSize, m.ySize, tolerance)
+                    Dim t As Location.Borders = Location.Borders.Make(x, y, m, tolerance)
                     For j As Integer = t.minY To t.maxY Step 1
                         For i As Integer = t.minX To t.maxX Step 1
                             If m.board(i, j).stack.GuardLoc And (Not x = i Or Not y = j) Then
@@ -7384,7 +7397,7 @@ Public Class StackLocationsGen
         For y As Integer = 0 To ySize Step 1
             For x As Integer = 0 To xSize Step 1
                 If isPossiblePoint(x, y) Then
-                    Dim t As Location.Borders = ImpenetrableMeshGen.NearestXY(x, y, xSize, ySize, CInt(Math.Ceiling(settLoc.minStackToStackDist)))
+                    Dim t As Location.Borders = Location.Borders.Make(x, y, xSize, ySize, CInt(Math.Ceiling(settLoc.minStackToStackDist)))
                     For j As Integer = t.minY To t.maxY Step 1
                         For i As Integer = t.minX To t.maxX Step 1
                             If m.board(i + LPos.X, j + LPos.Y).stack.GuardLoc _
@@ -7507,7 +7520,7 @@ Public Class StackLocationsGen
             output.Add(PossiblePoints(r))
             IDs.Remove(r)
             PosPID(PossiblePoints(r).X, PossiblePoints(r).Y) = -1
-            Dim t As Location.Borders = ImpenetrableMeshGen.NearestXY(PossiblePoints(r).X, PossiblePoints(r).Y, xSize, ySize, tolerance)
+            Dim t As Location.Borders = Location.Borders.Make(PossiblePoints(r), xSize, ySize, tolerance)
             For j As Integer = t.minY To t.maxY Step 1
                 For i As Integer = t.minX To t.maxX Step 1
                     If PosPID(i, j) > -1 AndAlso PossiblePoints(r).SqDist(i, j) < minDistSq Then
@@ -7566,7 +7579,7 @@ Public Class StackLocationsGen
                          passages(i).passTiles(x - minx, y - miny) = -1
                      End If
                      If Not connected(i)(x, y) And Not m.board(x, y).passability.isBorder And Not m.board(x, y).passability.isAttended Then
-                         Dim b As Location.Borders = ImpenetrableMeshGen.NearestXY(x, y, m.xSize, m.ySize, 1)
+                         Dim b As Location.Borders = Location.Borders.Make(x, y, m, 1)
                          For q As Integer = b.minY To b.maxY Step 1
                              For p As Integer = b.minX To b.maxX Step 1
                                  If connected(i)(p, q) And Not m.board(x, y).passability.isBorder And Not m.board(x, y).passability.isAttended Then
@@ -8018,7 +8031,7 @@ Public Class StackLocationsGen
                             disableEdgePointOnSelectionList(x, y)(i) = New List(Of Integer)
                         Next i
                         disableWhenSelected(x, y) = New List(Of Point)
-                        Dim b As Location.Borders = ImpenetrableMeshGen.NearestXY(x, y, path.Size.X, path.Size.Y, 1)
+                        Dim b As Location.Borders = Location.Borders.Make(x, y, path.Size.X, path.Size.Y, 1)
                         For j As Integer = b.minY To b.maxY Step 1
                             For i As Integer = b.minX To b.maxX Step 1
                                 If path.passTiles(i, j) > -1 Then disableWhenSelected(x, y).Add(New Point(i, j))
@@ -8037,7 +8050,7 @@ Public Class StackLocationsGen
                             End If
                         Next i
                     End If
-                    bordersT1(x, y) = ImpenetrableMeshGen.NearestXY(x, y, path.Size.X, path.Size.Y, 1)
+                    bordersT1(x, y) = Location.Borders.Make(x, y, path.Size.X, path.Size.Y, 1)
                 Next x
             Next y
 
@@ -8340,7 +8353,7 @@ Public Class StackLocationsGen
     '
     '    For id As Integer = 0 To UBound(guards) Step 1
     '        If Not excluded.Contains(id) Then
-    '            Dim b As Location.Borders = ImpenetrableMeshGen.NearestXY(guards(id), m, 1)
+    '            Dim b As Location.Borders= Location.Borders.NearestXY(guards(id), m, 1)
     '            For x As Integer = b.minX To b.maxX Step 1
     '                For y As Integer = b.minY To b.maxY Step 1
     '                    If m.symmID > -1 Then
@@ -8526,7 +8539,7 @@ Public Class WaterGen
         Next k1
     End Sub
 
-    Public Class FreePointsInfo       
+    Public Class FreePointsInfo
         ''' <summary>
         ''' True, если:
         '''  Not owner.wpCommon.HaveToBeGround
@@ -8566,7 +8579,7 @@ Public Class WaterGen
             Next i
             Return points
         End Function
-     End Class
+    End Class
     Public Class WaterPlacer_Common
         Public owner As WaterGen
         Public m As Map
@@ -8588,7 +8601,7 @@ Public Class WaterGen
                     If m.board(i, j).passability.isAttended Or m.board(i, j).passability.isPenetrable Then HaveToBeGround(i, j) = True
                     If m.board(i, j).mapObject.objectID = DefMapObjects.Types.Mine Then
                         'вокруг шахт обязательно земля
-                        Dim b As Location.Borders = ImpenetrableMeshGen.NearestXY(i, j, m.xSize, m.ySize, 1)
+                        Dim b As Location.Borders = Location.Borders.Make(i, j, m, 1)
                         For x As Integer = b.minX To b.maxX Step 1
                             For y As Integer = b.minY To b.maxY Step 1
                                 HaveToBeGround(x, y) = True
@@ -8626,7 +8639,7 @@ Public Class WaterGen
                 For j As Integer = 0 To m.ySize Step 1
                     p = New Point(i, j)
                     locationFilter = False
-                    b = ImpenetrableMeshGen.NearestXY(i, j, m.xSize, m.ySize, locationBorderTolerance)
+                    b = Location.Borders.Make(i, j, m, locationBorderTolerance)
                     For x As Integer = b.minX To b.maxX Step 1
                         For y As Integer = b.minY To b.maxY Step 1
                             If m.board(x, y).locID(0) = loc.ID And Not owner.wpCommon.HaveToBeGround(x, y) AndAlso p.Dist(x, y) <= locationBorderTolerance Then
@@ -8639,7 +8652,7 @@ Public Class WaterGen
                     If locationFilter Then
                         If m.board(i, j).passability.isBorder Then
                             surfaceFilter = False
-                            b = ImpenetrableMeshGen.NearestXY(i, j, m.xSize, m.ySize, 1)
+                            b = Location.Borders.Make(i, j, m, 1)
                             For x As Integer = b.minX To b.maxX Step 1
                                 For y As Integer = b.minY To b.maxY Step 1
                                     If Not m.board(x, y).passability.isBorder And Not owner.wpCommon.HaveToBeGround(x, y) Then
@@ -8837,7 +8850,7 @@ Public Class WaterGen
             For p As Integer = 0 To 1 Step 1
                 For Each i As Integer In fpInfo.IDs
                     add = True
-                    b = ImpenetrableMeshGen.NearestXY(fpInfo.points(i), m, CInt(lakeDist))
+                    b = Location.Borders.Make(fpInfo.points(i), m, CInt(lakeDist))
                     For x As Integer = b.minX To b.maxX Step 1
                         For y As Integer = b.minY To b.maxY Step 1
                             If m.board(x, y).surface.isWater AndAlso (p = 1 OrElse fpInfo.points(i).SqDist(x, y) < lakeDist * lakeDist) Then
@@ -8872,7 +8885,7 @@ Public Class WaterGen
             For L As Integer = 0 To 1 Step 1
                 For Each p As Point In waterTiles
                     If m.board(p.X, p.Y).surface.isWater Then
-                        Dim b As Location.Borders = ImpenetrableMeshGen.NearestXY(p, m, 1)
+                        Dim b As Location.Borders = Location.Borders.Make(p, m, 1)
                         For x As Integer = b.minX To b.maxX Step 1
                             For y As Integer = b.minY To b.maxY Step 1
                                 If Not m.board(x, y).surface.isWater Then
@@ -8900,7 +8913,7 @@ Public Class WaterGen
             For Each p As Point In waterTiles
                 If m.board(p.X, p.Y).surface.isWater Then
                     Dim maybe As Boolean = True
-                    Dim b As Location.Borders = ImpenetrableMeshGen.NearestXY(p, m, 1)
+                    Dim b As Location.Borders = Location.Borders.Make(p, m, 1)
                     For x As Integer = b.minX To b.maxX Step 1
                         For y As Integer = b.minY To b.maxY Step 1
                             If Not m.board(x, y).surface.isWater Then
@@ -8934,7 +8947,7 @@ Public Class WaterGen
             For i As Integer = 0 To m.xSize Step 1
                 For j As Integer = 0 To m.ySize Step 1
                     If m.board(i, j).surface.isWater Then
-                        Dim b As Location.Borders = ImpenetrableMeshGen.NearestXY(i, j, m.xSize, m.ySize, 1)
+                        Dim b As Location.Borders = Location.Borders.Make(i, j, m, 1)
                         n = 0
                         var.Clear()
                         For x As Integer = b.minX To b.maxX Step 1
@@ -8959,7 +8972,7 @@ Public Class WaterGen
             For i As Integer = 0 To m.xSize Step 1
                 For j As Integer = 0 To m.ySize Step 1
                     If m.board(i, j).surface.isWater Then
-                        Dim b As Location.Borders = ImpenetrableMeshGen.NearestXY(i, j, m.xSize, m.ySize, 1)
+                        Dim b As Location.Borders = Location.Borders.Make(i, j, m, 1)
                         n = 0
                         For x As Integer = b.minX To b.maxX Step 1
                             For y As Integer = b.minY To b.maxY Step 1
@@ -9305,7 +9318,7 @@ Public Class WaterGen
             Dim isFree_bak(,) As Boolean = CType(fpInfo.isFree.Clone, Boolean(,))
             Dim objID As Integer
             Dim cData As New CommonWaterPlacingData(Me, 1, False)
-           
+
             For Each p As Point In pList
                 owner.wpCommon.HaveToBeGround = CType(HaveToBeGround_bak.Clone, Boolean(,))
                 fpInfo.isFree = CType(isFree_bak.Clone, Boolean(,))
@@ -9336,7 +9349,7 @@ Public Class WaterGen
                          Call cData.SetAddsWaterAmount(a, pWaterAmount, i, 0)
                      Next i
                  End Sub)
-                
+
                 If cData.weight.Sum > 0 Then
                     Dim selected As Integer = cData.SelectItem()
                     Dim key As String = cData.myBlocksKeys(cData.GetWBlocksKeysIndex(selected))
@@ -9568,7 +9581,7 @@ Public Class WaterGen
             Next y
             Return False
         End Function
-        Private Sub AddWater(ByRef WaterAmount As Integer, ByRef key As String, ByRef x As Integer, ByRef y As Integer, ByVal useObjWBlocks As Boolean,  Optional ByRef isWaterSurface()(,) As Boolean = Nothing)
+        Private Sub AddWater(ByRef WaterAmount As Integer, ByRef key As String, ByRef x As Integer, ByRef y As Integer, ByVal useObjWBlocks As Boolean, Optional ByRef isWaterSurface()(,) As Boolean = Nothing)
             Dim w As WaterBlock = GetWaterBlock(key, useObjWBlocks)
             Dim x2 As Integer = x + w.xMax
             Dim y2 As Integer = y + w.yMax
@@ -10023,7 +10036,7 @@ Public Class ImpenetrableObjects
                     Dim x As Integer = pointPos(selectedPointID).X
                     Dim y As Integer = pointPos(selectedPointID).Y
                     tags.Clear()
-                    Dim b As Location.Borders = ImpenetrableMeshGen.NearestXY(x, y, m.xSize, m.ySize, 1)
+                    Dim b As Location.Borders = Location.Borders.Make(x, y, m, 1)
                     For p As Integer = b.minY To b.maxY Step 1
                         For q As Integer = b.minX To b.maxX Step 1
                             If m.board(q, p).mapObject.TagsList.Count > 0 Then
@@ -10188,7 +10201,7 @@ Public Class ImpenetrableObjects
             Next i
         Next j
     End Sub
-  
+
     Private Sub RemoveObject(ByRef free(,) As Boolean, ByRef x As Integer, ByRef y As Integer, ByRef obj As MapObject)
         Call PlaceObject(free, x, y, obj.xSize, obj.ySize, True)
     End Sub
@@ -10214,7 +10227,7 @@ Public Class ImpenetrableObjects
         Dim maxW As Double = 0.5
         Dim L As Integer = 12
         Dim dW As Double = (maxW - minW) / ((L * L + 1) ^ 2)
-        Dim b As Location.Borders = ImpenetrableMeshGen.NearestXY(x, y, m.xSize, m.ySize, L)
+        Dim b As Location.Borders = Location.Borders.Make(x, y, m, L)
         Dim dx, dy As Integer
         For p As Integer = b.minY To b.maxY Step 1
             dy = p - y : dy = dy * dy + 1
@@ -10860,7 +10873,7 @@ Public Class ImpenetrableObjects
                 If tmp(i, j) > 0 Then
                     Return False
                 ElseIf Not t Then
-                    Dim b As Location.Borders = ImpenetrableMeshGen.NearestXY(i, j, UBound(tmp, 1), UBound(tmp, 2), 1)
+                    Dim b As Location.Borders = Location.Borders.Make(i, j, tmp, 1)
                     For p As Integer = b.minY To b.maxY Step 1
                         For q As Integer = b.minX To b.maxX Step 1
                             If tmp(q, p) > size Then
@@ -10900,7 +10913,7 @@ Public Class ImpenetrableObjects
         If Not free(x, y) Then Return False
         If Not m.board(x, y).passability.isBorder Then Return False
         If m.board(x, y).surface.isWater Then
-            Dim b As Location.Borders = ImpenetrableMeshGen.NearestXY(x, y, m.xSize, m.ySize, 1)
+            Dim b As Location.Borders = Location.Borders.Make(x, y, m, 1)
             For p As Integer = b.minY To b.maxY Step 1
                 For q As Integer = b.minX To b.maxX Step 1
                     If m.board(q, p).surface.isWater And (m.board(q, p).stack.GuardLoc Or _
@@ -10946,7 +10959,7 @@ Public Class ImpenetrableObjects
             For i As Integer = x To x + size - 1 Step 1
                 If Not TestCellForMountain(m, free, i, j) Then Return False
                 If Not t Then
-                    Dim b As Location.Borders = ImpenetrableMeshGen.NearestXY(i, j, m.xSize, m.ySize, 1)
+                    Dim b As Location.Borders = Location.Borders.Make(i, j, m, 1)
                     For p As Integer = b.minY To b.maxY Step 1
                         For q As Integer = b.minX To b.maxX Step 1
                             If ismountain(q, p) Then
