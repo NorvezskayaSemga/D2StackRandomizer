@@ -567,7 +567,7 @@ Public Class RandStack
                 unit = FindUnitStats(stack.units(i).unit.unitID)
                 If unit.unitID = "" Then Throw New Exception("Неизвестный id юнита: " & stack.units(i).unit.unitID)
                 If Not result.Race.Contains(unit.race) Then result.Race.Add(unit.race)
-                If unit.unitBranch = GenDefaultValues.UnitClass.leader Then result.WaterOnly = unit.waterOnly
+                If GenDefaultValues.IsStackLeader(unit) Then result.WaterOnly = unit.waterOnly
                 If Not comm.IsPreserved(unit) Then
                     result.ExpStackKilled += unit.EXPkilled
                     result.ExpBarAverage += unit.EXPnext
@@ -602,7 +602,7 @@ Public Class RandStack
                 If Not comm.IsPreserved(unit) Then
                     If Not IsNothing(stack.units(i).modificators) Then
                         For Each m As String In stack.units(i).modificators
-                            If unit.unitBranch = GenDefaultValues.UnitClass.leader Then
+                            If GenDefaultValues.IsStackLeader(unit) Then
                                 result.LeaderModificators.Add(m)
                             Else
                                 result.UnitsModificators.Add(m)
@@ -1593,7 +1593,7 @@ Public Class RandStack
             For Each u As AllDataStructues.Stack.UnitInfo In g.StackStats.preservedUnits
                 pExpKilled += u.unit.EXPkilled
                 pExpBarAverage += u.unit.EXPnext
-                If u.unit.unitBranch = GenDefaultValues.UnitClass.leader Then hasLeader = True
+                If GenDefaultValues.IsStackLeader(u.unit) Then hasLeader = True
             Next u
             If GenSettings.StackStats.StackSize = 0 And ssm > 1 Then
                 g.deltaLeadership += 1
@@ -1812,7 +1812,7 @@ Public Class RandStack
             Dim result As New List(Of Integer)
             For i As Integer = 0 To UBound(stack.units) Step 1
                 If Not stack.units(i).unit.unitID.ToUpper = GenDefaultValues.emptyItem And
-                   Not stack.units(i).unit.unitBranch = GenDefaultValues.UnitClass.leader Then
+                   Not GenDefaultValues.IsStackLeader(stack.units(i).unit) Then
                     If stack.units(i).isPreserved = makePreserved Then result.Add(i)
                 End If
             Next i
@@ -2379,7 +2379,7 @@ Public Class RandStack
         If GenSettings.StackStats.HasPreservedLeader Then
             Dim removeAt As Integer = -1
             For i As Integer = 0 To DynStackStats.preservedUnits.Count - 1 Step 1
-                If DynStackStats.preservedUnits.Item(i).unit.unitBranch = GenDefaultValues.UnitClass.leader Then
+                If GenDefaultValues.IsStackLeader(DynStackStats.preservedUnits.Item(i).unit) Then
                     removeAt = i
                     Exit For
                 End If
@@ -4066,7 +4066,7 @@ Public Class AllDataStructues
             If preservedUnits.Count = 0 Then Return False
             For Each u As Stack.UnitInfo In preservedUnits
                 If Not u.unit.unitID = GenDefaultValues.emptyItem Then
-                    If u.unit.unitBranch = GenDefaultValues.UnitClass.leader Then Return True
+                    If GenDefaultValues.IsStackLeader(u.unit) Then Return True
                 End If
             Next u
             Return False
@@ -6319,6 +6319,16 @@ Public Class GenDefaultValues
         Return My.Resources.remove_keyword
     End Function
 #End Region
+
+    Public Shared Function IsStackLeader(ByRef unit As AllDataStructues.Unit) As Boolean
+        If unit.unitBranch = UnitClass.leader _
+        Or unit.unitBranch = UnitClass.thief _
+        Or unit.unitBranch = UnitClass.summon Then
+            Return True
+        Else
+            Return False
+        End If
+    End Function
 
     Public Enum ItemTypes As Integer
         nonattack_artifact = 0
