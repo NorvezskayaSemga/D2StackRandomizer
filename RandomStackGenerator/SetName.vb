@@ -155,6 +155,101 @@
             If GenDefaultValues.writeToConsole Then Console.WriteLine(ex.Message)
             AddToLog(-1, "Names downloader: " & ex.Message)
         End Try
+        If IsNothing(TableContent) Then
+            Dim t As String = _
+            "Патрик+0.123702668266555+g000000000" & vbNewLine & _
+            "rus4661+0.123702668266555+g000000000" & vbNewLine & _
+            "mak+1.23702668266555+g000000000" & vbNewLine & _
+            "Олесь Гайдуков+1.26795234973218+g000000000" & vbNewLine & _
+            "Вячеслав+0.556662007199495+g000000000" & vbNewLine & _
+            "Гласан+0.154628335333193+g000000000" & vbNewLine & _
+            "Григорий Львов+0.618513341332773+g000000000" & vbNewLine & _
+            "DaryaDEMO+0.0494810673066218+g000000000" & vbNewLine & _
+            "Вадим Цымбал+0.742216009599327+g000000000" & vbNewLine & _
+            "Eker+0.123702668266555+g000000000" & vbNewLine & _
+            "Vilgeforc+0.989621346132436+g000000000" & vbNewLine & _
+            "CetusSantis+0.278331003599748+g000000000" & vbNewLine & _
+            "Андрей+0.123702668266555+g000000000" & vbNewLine & _
+            "ОторвиГолову+2.47405336533109+g000000000" & vbNewLine & _
+            "Котейка+2.42457229802447+g000000000" & vbNewLine & _
+            "Rock Wolf+0.247405336533109+g000000000" & vbNewLine & _
+            "Руслан+0.123702668266555+g000000000" & vbNewLine & _
+            "Grog+0.123702668266555+g000000000" & vbNewLine & _
+            "Maksoncheggg+0.123702668266555+g000000000" & vbNewLine & _
+            "FIdGer10rus+0.00618513341332773+g000000000" & vbNewLine & _
+            "Илья+0.123702668266555+g000000000" & vbNewLine & _
+            "Semga+0.123702668266555+g000uu8268" & vbNewLine & _
+            "Gufi Sadness+0.593772807679462+g000000000" & vbNewLine & _
+            "Берлога Зверя+0.0309256670666386+g000000000" & vbNewLine & _
+            "Константин+0.123702668266555+g000000000" & vbNewLine & _
+            "Kvetzakoml+0.618513341332773+g000000000" & vbNewLine & _
+            "Nazar+0.0309256670666386+g000000000" & vbNewLine & _
+            "EugenScorpion+0.618513341332773+g000uu5108" & vbNewLine & _
+            "Zeriosis+0.432959338932941+g000000000" & vbNewLine & _
+            "Rico+1.97924269226487+g000000000" & vbNewLine & _
+            "Sned+0.154628335333193+g000000000" & vbNewLine & _
+            "Exactor+0.618513341332773+g000000000" & vbNewLine & _
+            "Nexx Darkholme+0.927770011999159+g000000000" & vbNewLine & _
+            "Даниил+0.123702668266555+g000000000" & vbNewLine & _
+            "AstralLein+0.247405336533109+g000uu8257" & vbNewLine & _
+            "Sergey Belokur+1.1380645480523+g000uu2023" & vbNewLine & _
+            "xstokx(popLimfo)+0.618513341332773+g000000000" & vbNewLine & _
+            "Anatoly Levchik+2.85753163695741+g000000000" & vbNewLine & _
+            "Виктор+0.123702668266555+g000000000" & vbNewLine & _
+            "Светлаха+0.247405336533109+g000000000" & vbNewLine & _
+            "Артемиус+0.123702668266555+g000000000" & vbNewLine & _
+            "Сергей+0.123702668266555+g000000000" & vbNewLine & _
+            "Pavel+0.123702668266555+g000000000" & vbNewLine & _
+            "Андрей Копылов+0.927770011999159+g000000000" & vbNewLine & _
+            "SpyroTF+0.371108004799664+g000000000" & vbNewLine & _
+            "Dustik+0.0618513341332773+g000000000" & vbNewLine & _
+            "Nameless Raven+0.0618513341332773+g000000000" & vbNewLine & _
+            "Sunshinetsoy+1.23702668266555+g000000000" & vbNewLine & _
+            "Wiktorderelf+0.123702668266555+g000000000" & vbNewLine & _
+            "Злой Виталик+0.432959338932941+g000000000" & vbNewLine & _
+            "Кирь+0.371108004799664+g000000000" & vbNewLine & _
+            "Findme+3.21626937493042+g000uu5126" & vbNewLine & _
+            "Efremov+18.5554002399832+g000000000" & vbNewLine & _
+            "tyrgor+0.123702668266555+g000000000" & vbNewLine & _
+            "Father Patrick+0.0618513341332773+g000000000" & vbNewLine & _
+            "Leonik+0.0618513341332773+g000000000" & vbNewLine & _
+            "Feduan+0.123702668266555+g000000000" & vbNewLine & _
+            "MerovingianOff+0.402033671866302+g000uu8208" & vbNewLine & _
+            "Ave_Mne!+0.618513341332773+g000000000" & vbNewLine & _
+            "NornaGest+0.296886403839731+g000000000" & vbNewLine & _
+            "Leo+0.123702668266555+g000000000" & vbNewLine & _
+            "Кирилл САН+0.0865918677865882+g000000000" & vbNewLine & _
+            "BiTAyT+6.92734942292705+g000000000" & vbNewLine & _
+            "Rave+1.23702668266555+g000000000" & vbNewLine & _
+            "FC Bayern+0.0804067343732604+g000000000" & vbNewLine & _
+            "Мотлин+0.556662007199495+g000000000" & vbNewLine & _
+            "Team+0.123702668266555+g000000000" & vbNewLine & _
+            "XAOC+0.0618513341332773+g000000000" & vbNewLine & _
+            "Mirown+1.23702668266555+g000000000" & vbNewLine & _
+            "Andary+1.75534086270241+g000000000" & vbNewLine & _
+            "НеНормал+0.123702668266555+g000000000" & vbNewLine & _
+            "Roger Fun+0.0432959338932941+g000000000" & vbNewLine & _
+            "Honests Pony+0.247405336533109+g000000000" & vbNewLine & _
+            "UnveN+1.23702668266555+g000000000" & vbNewLine & _
+            "Risemyself+0.185554002399832+g000000000" & vbNewLine & _
+            "Bollocks+12.1228614901223+g000000000" & vbNewLine & _
+            "Diiwane Crew+21.0294536053143+g000000000" & vbNewLine & _
+            "lentiX+1.38546988458541+g000000000" & vbNewLine & _
+            "Александр Хлынов+0.371108004799664+g000000000"
+
+            Dim splited() As String = t.Replace(Chr(13), Chr(10)).Replace(Chr(10) & Chr(10), Chr(10)).Split(Chr(10))
+            ReDim TableContent(UBound(splited))
+            Dim s() As String
+            For i As Integer = 0 To UBound(splited) Step 1
+                s = splited(i).Split(CChar("+"))
+                If Not UBound(s) = 2 Then Throw New Exception("Invalid columns count")
+                ReDim TableContent(i)(3)
+                TableContent(i)(0) = s(0)
+                TableContent(i)(1) = s(1)
+                TableContent(i)(2) = "0"
+                TableContent(i)(3) = s(2)
+            Next i
+        End If
         Try
             If Not IsNothing(TableContent) Then
                 Dim added As New Dictionary(Of String, Integer)
