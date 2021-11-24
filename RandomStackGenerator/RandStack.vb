@@ -3888,23 +3888,43 @@ Public Class Common
     ''' <summary>Прочитает файл и если встретит в нем ReadFromFile, прочитает и из указанного файла, 
     ''' разместив результат в том месте, где встретилось это ключевое слово</summary>
     ''' <param name="path">Путь к файлу</param>
-    Public Shared Function RecursiveReadFile(ByVal path As String) As String()
-        If Not IO.File.Exists(path) Then Throw New Exception("Could find file " & path)
+    ''' <param name="pathList">Список уже прочитанных файлов. Используется для проверки на зацикленность чтения</param>
+    Public Shared Function RecursiveReadFile(ByVal path As String, Optional ByRef pathList As List(Of String) = Nothing) As String()
+        If IsNothing(pathList) Then pathList = New List(Of String)
+        path = path.Replace(Environment.CurrentDirectory, ".")
+        Dim errorMsg As String = ""
+        If pathList.Contains(path.ToLower) Then
+            errorMsg = "Repeated file reading detected:"
+        ElseIf Not IO.File.Exists(path) Then
+            errorMsg = "Could not find file:"
+        Else
+            pathList.Add(path.ToLower)
+        End If
+        If Not errorMsg = "" Then
+            pathList.Add(path.ToLower)
+            For Each item As String In pathList
+                errorMsg &= vbNewLine & item
+                If item = path.ToLower Then errorMsg &= " <----"
+            Next item
+            MsgBox(errorMsg)
+            Throw New Exception(errorMsg)
+        End If
         Dim content() As String = IO.File.ReadAllLines(path)
-        Dim output() As String = RecursiveReadFile(content)
+        Dim output() As String = RecursiveReadFile(content, pathList)
         Return output
     End Function
     ''' <summary>Прочитает файл и если встретит в нем ReadFromFile, прочитает и из указанного файла, 
     ''' разместив результат в том месте, где встретилось это ключевое слово.
     ''' Пропускает пустые строки</summary>
     ''' <param name="content">Содержимое файла</param>
-    Public Shared Function RecursiveReadFile(ByVal content() As String) As String()
+    ''' <param name="pathList">Список уже прочитанных файлов. Используется для проверки на зацикленность чтения</param>
+    Public Shared Function RecursiveReadFile(ByVal content() As String, Optional ByRef pathList As List(Of String) = Nothing) As String()
         Dim output(UBound(content)), r(), p As String
         Dim n As Integer = -1
         For i As Integer = 0 To UBound(content) Step 1
             If content(i).ToLower.StartsWith(My.Resources.template_read_from_file.ToLower) Then
                 p = content(i).Substring(My.Resources.template_read_from_file.Length + 1)
-                r = RecursiveReadFile(p)
+                r = RecursiveReadFile(p, pathList)
                 ReDim Preserve output(UBound(output) + r.Length)
                 For k As Integer = 0 To UBound(r) Step 1
                     If Not r(k).Trim(CChar(" "), CChar(vbTab)) = "" Then

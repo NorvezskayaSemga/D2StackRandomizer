@@ -6503,7 +6503,7 @@ Public Class Map
                 ReDim Preserve res(blockNumber - 1)
                 res(blockNumber - 1) = New ExtendedBlockData
                 res(blockNumber - 1).data = ReadBlock(txt, GenDefaultValues.wTemplate_LocationKeyword, blockNumber, dataColumn, _
-                                                      False, baseFilePath, True, res(blockNumber - 1).label)
+                                                      False, baseFilePath, True, Nothing, res(blockNumber - 1).label)
                 If IsNothing(res(blockNumber - 1).data) Then nextLoop = False
             Loop
             If UBound(res) > -1 Then ReDim Preserve res(UBound(res) - 1)
@@ -6745,6 +6745,7 @@ Public Class Map
                                                ByRef throwExceptionIfNoBlock As Boolean, _
                                                ByRef baseFilePath As String, _
                                                ByRef AddReadFromFileIfExists As Boolean, _
+                                               Optional ByRef pathList As List(Of String) = Nothing, _
                                                Optional ByRef blockLabel As String = "") As Dictionary(Of String, String)
         Dim startLine As Integer = -1
         Dim n As Integer = 0
@@ -6779,7 +6780,7 @@ Public Class Map
                 Else
                     searchBlockLabel = s(2)
                 End If
-                Call ReadFromOtherFile(baseFilePath, fileName, blockType, searchBlockLabel, readColumn, fields)
+                Call ReadFromOtherFile(baseFilePath, fileName, blockType, searchBlockLabel, readColumn, fields, pathList)
             Else
                 Call AddParameter(fields, s, blockType, blockNumber, readColumn, baseFilePath)
             End If
@@ -6798,8 +6799,29 @@ Public Class Map
     End Sub
     Protected Friend Shared Sub ReadFromOtherFile(ByRef baseFile As String, ByRef readFromFile As String, _
                                                   ByRef blockType As String, ByRef searchField As String, _
-                                                  ByRef readColumn As Integer, ByRef readTo As Dictionary(Of String, String))
+                                                  ByRef readColumn As Integer, ByRef readTo As Dictionary(Of String, String), _
+                                                  ByRef pathList As List(Of String))
+        If IsNothing(pathList) Then pathList = New List(Of String)
+        Dim key As String = (readFromFile & " : " & blockType & " : " & searchField).ToLower
         Dim f As String = IO.Path.GetDirectoryName(baseFile) & "\" & readFromFile
+        Dim errorMsg As String = ""
+        If pathList.Contains(key) Then
+            errorMsg = "Repeated file reading detected:"
+        ElseIf Not IO.File.Exists(f) Then
+            errorMsg = "Could not find file:"
+        Else
+            pathList.Add(key)
+        End If
+        If Not errorMsg = "" Then
+            errorMsg &= vbNewLine & baseFile
+            pathList.Add(key)
+            For Each item As String In pathList
+                errorMsg &= vbNewLine & item
+                If item = key Then errorMsg &= " <----"
+            Next item
+            MsgBox(errorMsg)
+            Throw New Exception(errorMsg)
+        End If
         Dim fileContent() As String = ValueConverter.TxtSplit(IO.File.ReadAllText(f))
         Dim blockN As Integer = 0
         Dim blockName As String = ""
@@ -6823,7 +6845,7 @@ Public Class Map
         Next i
 
         Dim data As Dictionary(Of String, String) = ReadBlock(fileContent, _
-            blockName.Replace(GenDefaultValues.wTemplate_NewBlockKeyword, ""), blockN, readColumn, True, f, False)
+            blockName.Replace(GenDefaultValues.wTemplate_NewBlockKeyword, ""), blockN, readColumn, True, f, False, pathList)
         For Each k As String In data.Keys
             If readTo.ContainsKey(k.ToUpper) Then readTo.Remove(k.ToUpper)
             readTo.Add(k.ToUpper, data.Item(k))
