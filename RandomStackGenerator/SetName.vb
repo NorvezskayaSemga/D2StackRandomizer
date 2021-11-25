@@ -76,7 +76,11 @@
 
         If Not IsNothing(users) Then
             For i As Integer = 0 To UBound(users) Step 1
+<<<<<<< HEAD
                 If IsNothing(users(i).unit) OrElse users(i).unit = "" Then users(i).unit = GenDefaultValues.emptyItem.ToUpper
+=======
+                If IsNothing(users(i).unit) OrElse users(i).unit = "" Then users(i).unit = GenDefaultValues.emptyItem.ToLower
+>>>>>>> origin/master
             Next i
             ReDim Preserve users(users.Length)
         Else
