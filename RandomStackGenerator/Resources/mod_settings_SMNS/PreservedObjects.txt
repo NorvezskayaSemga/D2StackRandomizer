@@ -4,7 +4,7 @@
 #которые начинаются с заданного текста без учета регистра.
 #ID предметов, юнитов и заклинаний, которые генератор должен оставлять на месте в отрядах, сундуках и у торговцев
 
-ReadFromFile .\Resources\mod_settings_MNS\PreservedItems.txt
+ReadFromFile .\Resources\mod_settings_MNS\PreservedObjects.txt
 
 #ПРЕДМЕТЫ
 
