@@ -542,7 +542,7 @@ Class Tests
             End If
             For p As Integer = 1 To 10 Step 1
                 For strictFilter As Integer = 0 To 1 Step 1
-                    target.settings.ApplyStrictTypesFilter = (strictFilter = 1)
+                    target.settings.applyStrictTypesFilter = (strictFilter = 1)
                     For i As Integer = 0 To UBound(inputItems) Step 1
                         Call target.ResetAddedItems()
                         Call target.ResetItemWeightMultiplier()
