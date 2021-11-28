@@ -77,7 +77,7 @@ Public Class RandStack
             ''' При перегенерации предметов если в луте было знамя, то и после перегенерации будет какое-то знамя. 
             ''' Если были сапоги - будут какие-нибудь сапоги.
             ''' </summary>
-            Public ApplyStrictTypesFilter As Boolean
+            Public applyStrictTypesFilter As Boolean
 
             '''<summary>
             ''' Если отряд имеет приказ "Стоять" (L_STAND) и он не принадлежит играбельной расе,
@@ -86,6 +86,18 @@ Public Class RandStack
             ''' По умолчанию L_STAND=1, L_NORMAL=0, L_GUARD=0, L_BEZERK=0, L_ROAM=0
             ''' </summary>
             Public neutralOrderWeight As New Dictionary(Of String, Double)
+
+            ''' <summary>
+            ''' Насколько сильно генератор отрядов будет стремиться создавать отряды, в которых будут юниты примерно равной силы.
+            ''' Как оно работает:
+            ''' Создается 12 отрядов, соответствующих заданным параметрам генерации (естественно, они соответствуют в разной степени)
+            ''' Из созданных отрядов случайным образом выбирается тот, что будет помещен на карту,
+            ''' чем лучше отряд соответствует заданным параметрам, тем больше стат. вес.
+            ''' unitsStrengthUniformity - выбираем как обычно.
+            ''' unitsStrengthUniformity больше 0 - у отрядов с меньшим разбросом силы юнитов будет увеличенный стат. вес.
+            ''' unitsStrengthUniformity меньше 0 - у отрядов с большим разбросом силы юнитов будет увеличенный стат. вес.
+            ''' </summary>
+            Public unitsStrengthUniformity As Double
 
             Public Sub New()
                 neutralOrderWeight.Add(AllDataStructues.Stack.StackOrder.OrderType.Stand, 1)
@@ -633,7 +645,7 @@ Public Class RandStack
     ''' Для остальных объектов (False) генератор будет обязан добавить хоть какой-то предмет, если
     ''' до перегенерации в награде были предметы, не входящие в список PreservedItems.txt</param>
     Public Function GetItemsGenSettings(ByRef items As List(Of String), ByVal isSettingsForRuins As Boolean) As AllDataStructues.LootGenSettings
-        If IsNothing(items) Then Return New AllDataStructues.LootGenSettings(settings.ApplyStrictTypesFilter)
+        If IsNothing(items) Then Return New AllDataStructues.LootGenSettings(settings.applyStrictTypesFilter)
         Dim result As New AllDataStructues.LootGenSettings(settings.ApplyStrictTypesFilter) With { _
             .ConsumableItems = New AllDataStructues.ItemGenSettings With {.exclude = True}, _
             .NonconsumableItems = New AllDataStructues.ItemGenSettings With {.exclude = True}, _
@@ -2356,7 +2368,7 @@ Public Class RandStack
         Call log.Add(log.MPrintAll())
         Call log.MRedim(0)
 
-        Dim selected As Integer = SelectStack(GenSettings, DynStackStats, leaderExpKilled)
+        Dim selected As Integer = SelectStack(GenSettings, DynStackStats, leaderExpKilled, units)
 
         If log.IsEnabled Then
             Dim txt As String = ""
@@ -2629,7 +2641,8 @@ Public Class RandStack
     End Function
     Private Function SelectStack(ByRef GenSettings As AllDataStructues.CommonStackCreationSettings, _
                                  ByRef DynStackStats() As AllDataStructues.DesiredStats, _
-                                 ByRef leaderExpKilled() As Integer) As Integer
+                                 ByRef leaderExpKilled() As Integer, _
+                                 ByRef units()() As AllDataStructues.Stack.UnitInfo) As Integer
         Dim possible1, possible2 As New RandomSelection(DynStackStats.Length, rndgen)
         Dim SizeTolerance As Integer = 0
         Do While possible1.Count < 0.5 * DynStackStats.Length
@@ -2660,7 +2673,7 @@ Public Class RandStack
             maxExpDelta = Math.Max(maxExpDelta, Math.Abs(DynStackStats(i).ExpStackKilled))
         Next i
 
-        Dim weight(UBound(DynStackStats)) As Double
+        Dim weight(UBound(DynStackStats)), averageExpKilled, expKilledDispersion, uniformityMultiplier As Double
         For Each i As Integer In possible2
             Dim m As Double
             If Not IsNothing(leaderExpKilled) Then
@@ -2668,8 +2681,20 @@ Public Class RandStack
             Else
                 m = 1
             End If
+            averageExpKilled = 0
+            For j As Integer = 0 To UBound(units(i)) Step 1
+                averageExpKilled += units(i)(j).unit.EXPkilled
+            Next j
+            averageExpKilled /= units(i).Length
+            expKilledDispersion = 0
+            For j As Integer = 0 To UBound(units(i)) Step 1
+                expKilledDispersion += (units(i)(j).unit.EXPkilled - averageExpKilled) ^ 2
+            Next j
+            expKilledDispersion /= averageExpKilled ^ 2
+            uniformityMultiplier = 1 + Math.Abs(settings.unitsStrengthUniformity * expKilledDispersion)
+            If settings.unitsStrengthUniformity > 0 Then uniformityMultiplier = 1 / uniformityMultiplier
             'weight(i) = m / (1 + Math.Abs(DynStackStats(i).ExpStackKilled)) 'old
-            weight(i) = m / (1 + (1 + Math.Abs(DynStackStats(i).ExpStackKilled)) / (1 + maxExpDelta)) 'new
+            weight(i) = m * uniformityMultiplier / (1 + (1 + Math.Abs(DynStackStats(i).ExpStackKilled)) / (1 + maxExpDelta)) 'new
         Next i
         Dim selected As Integer = possible2.RandomSelection(weight)
         Return selected

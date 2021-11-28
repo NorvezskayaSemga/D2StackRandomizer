@@ -5832,7 +5832,13 @@ Public Class shortMapFormat
                           .groundTile = isGround, _
                           .noLeader = False, _
                           .pos = New Point(x, y)}
+                If m.board(x, y).stack.PassGuardLoc Then
+                    objContent.randStack.settings.unitsStrengthUniformity = 2
+                ElseIf m.board(x, y).stack.ObjectGuard Then
+                    objContent.randStack.settings.unitsStrengthUniformity = 1
+                End If
                 Dim stack As AllDataStructues.Stack = objContent.randStack.Gen(gs)
+                objContent.randStack.settings.unitsStrengthUniformity = 0
                 If isGround Then
                     If stack.units(stack.leaderPos).unit.waterOnly Then
                         Dim txt As String = "Water only leader on ground! Pos: " & x & " " & y
@@ -5883,6 +5889,7 @@ Public Class shortMapFormat
         m.log.Add("Total stacks count: " & stackArray.Length & vbNewLine)
         Return res
     End Function
+
     Private Shared Sub AddObject(ByRef AddTo() As simpleObject, ByRef x As Integer, ByRef y As Integer, ByRef name As String, _
                                  ByRef size As Size)
         ReDim Preserve AddTo(AddTo.Length)

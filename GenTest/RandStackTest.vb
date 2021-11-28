@@ -319,7 +319,7 @@ Public Class RandStackTest
                 inputItems = ImpenetrableMeshShow.TestDataRead.ReadTestBags
             End If
             For strictFilter As Integer = 0 To 1 Step 1
-                target.settings.ApplyStrictTypesFilter = (strictFilter = 1)
+                target.settings.applyStrictTypesFilter = (strictFilter = 1)
                 For i As Integer = 0 To UBound(inputItems) Step 1
                     Call target.ResetAddedItems()
                     Call target.ResetItemWeightMultiplier()
@@ -379,7 +379,7 @@ Public Class RandStackTest
         For Each i As Integer In oCommonTypes
             If Not iCommonTypes.Contains(i) Then Return False
         Next i
-        If target.settings.ApplyStrictTypesFilter Then
+        If target.settings.applyStrictTypesFilter Then
             For Each i As Integer In oTypes
                 If Not iTypes.Contains(i) Then Return False
             Next i
