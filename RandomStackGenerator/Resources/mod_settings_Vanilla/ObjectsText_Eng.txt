@@ -5,103 +5,226 @@
 #ID объекта, в остальных столбцах возможные названия
 #разделитель - _
 
-#лорды Humans Clans Legions Undead Elvens (имена доллжны походить как девочкам, так и мальчикам. За исключением Кланов)
-g000LR0001_Алексис_Лотай_Келли_Моар_Дориа
-g000LR0002_Алексис_Лотай_Келли_Моар_Дориа
-g000LR0003_Алексис_Лотай_Келли_Моар_Дориа
-g000LR0004_Орхтар_Дархорд_Фуррт_Бордольт_Неромт
-g000LR0005_Орхтар_Дархорд_Фуррт_Бордольт_Неромт
-g000LR0006_Орхтар_Дархорд_Фуррт_Бордольт_Неромт
-g000LR0007_Дхагот_Ишангхти_Ароглет_Сагорат_Мерфет
-g000LR0008_Дхагот_Ишангхти_Ароглет_Сагорат_Мерфет
-g000LR0009_Дхагот_Ишангхти_Ароглет_Сагорат_Мерфет
-g000LR0010_Заориш_Сагот_Интар_Талуг_Фатеш
-g000LR0011_Заориш_Сагот_Интар_Талуг_Фатеш
-g000LR0012_Заориш_Сагот_Интар_Талуг_Фатеш
-g000LR0016_Лата'аль_Име'ель_Рха'ане_Гиндель_Си'имиэль
-g000LR0017_Лата'аль_Име'ель_Рха'ане_Гиндель_Си'имиэль
-g000LR0018_Лата'аль_Име'ель_Рха'ане_Гиндель_Си'имиэль
+#лорды Humans Clans Legions Undead Elvens (имена должны походить как девочкам, так и мальчикам. За исключением Кланов)
+g000LR0001_Alexis_Lotay_Kelly_Moar_Doria
+g000LR0002_Alexis_Lotay_Kelly_Moar_Doria
+g000LR0003_Alexis_Lotay_Kelly_Moar_Doria
+g000LR0004_Orhtar_Darhord_Furrt_Bordolt_Neromt
+g000LR0005_Orhtar_Darhord_Furrt_Bordolt_Neromt
+g000LR0006_Orhtar_Darhord_Furrt_Bordolt_Neromt
+g000LR0007_Dhagot_Ishangkhti_Aroglet_Sagorat_Murphet
+g000LR0008_Dhagot_Ishangkhti_Aroglet_Sagorat_Murphet
+g000LR0009_Dhagot_Ishangkhti_Aroglet_Sagorat_Murphet
+g000LR0010_Zaorish_Сагот_Intar_Talug_Fatesh
+g000LR0011_Zaorish_Сагот_Intar_Talug_Fatesh
+g000LR0012_Zaorish_Сагот_Intar_Talug_Fatesh
+g000LR0016_Lata'al_Ime'el_Rha'ane_Gindel_Si'imiel_Efrem' Ov_Dii' Wane
+g000LR0017_Lata'al_Ime'el_Rha'ane_Gindel_Si'imiel_Efrem' Ov_Dii' Wane
+g000LR0018_Lata'al_Ime'el_Rha'ane_Gindel_Si'imiel_Efrem' Ov_Dii' Wane
 
 #столицы Humans Clans Legions Undead Neutrals Elvens
-G000FT0000HU0_Эрайдрейpим_Эмбертал_Майтстарн_Сивеллион
-G000FT0000DWC0_Гилвейн_Терфар_Хундерс_Дарн Дорал_Каг Гаром_Тарнур_Гал Дарим
-G000FT0000HE0_Шантир_Гергерон_Даргдорт_Кархемот_Мефертет
-G000FT0000UN0_Хензадор_Черосс_Шарльех_Иштал_Тахиосс_Жулзотт_Заркутт Ул
+G000FT0000HU0_Eridreyreem_Emberthal_Maitstarn_Sivellion_Icallion_Galissia_Nallidrim
+G000FT0000DWC0_Gilwain_Terfar_Hunders_Darn Doral_Kag Garom_Tarnur_Gal Darim
+G000FT0000HE0_Shanthir_Hergeron_Dargdort_Karchemot_Meferthet_Kegorfret_Shat Kutreg
+G000FT0000UN0_Henzador_Cheross_Charlech_Ishtal_Tachyss_Julzott_Zarcutt Ul
 G000FT0000NE0_NeutralCapitalName
-G000FT0000EL0_Лилан Асари_Энинлеон_Йамсиль_Аллтамиль_Каатас Эси_Литиэс
+G000FT0000EL0_Lilan Asari_Eninleon_Yamsil_Alltamil_Kaatas Esi_Lithies_Lanima Etal
 
 #города  Humans Clans Legions Undead Neutrals Elvens Swamp, после @ указана раса, на чьей земле находится город
-G000FT0000NE@H_Элдхам_Холсмвот_Орилон_Астральния_Димрэль_Гилмур_Дортэл_Бекстед_Саншайнет
-G000FT0000NE@C_Форстрод_Кальд_Норфолк_Фернсвот_Хэрмстэд_Ярфотт_Боллокс
-G000FT0000NE@L_Беркорт_Думброкт_Дрэйкотт_Гортхорт_Рокдорт_Кародорн
-G000FT0000NE@U_Озротет_Сахосс_Хаш_Гацальс_Харсес_Озультс_Шиталм_Даркхольм
-G000FT0000NE@N_Аруг_Вироз_Горкзак_Чолзард_Оргаг_Чамзул_Излуд_Рагол_Чурког_Волграс_Друзгакх_Хадзир_Еркох_Уггор
-G000FT0000NE@E_Айрит_Суолиэс_Арэлис_Ялисс_Андари_Ильтан_Мальвис_Сирншэр
-G000FT0000NE@S_Полдер_Ортон_Ирритон_Дарратан_Дардер_Тонмар_Бэйвтон_Тарнан_Малгон_Кашдер_Омальдер
+G000FT0000NE@H_Eldham_Holsmwot_Orilon_Astralnia_Dimrel_Gilmour_Dortel_Backtead_Sunshinet_Ogold_Mirown
+G000FT0000NE@C_Forstrod_Cald_Norfolk_Fernswot_Hermstead_Yarfott_Bollocks_Burlough_Tommort_Frotfold
+G000FT0000NE@L_Burcourt_Dumbroct_Draycott_Gorthort_Rockdort_Carodorn_Karrog_Zargor_Barokt_Raktar
+G000FT0000NE@U_Ozroteth_Sahoss_Khash_Gatsals_Harses_Ozults_Shitalm_Darkholm_Nurtt_Gahiss
+G000FT0000NE@N_Arug_Viroz_Gorkzak_Cholzard_Orgag_Chamzul_Izlud_Ragol_Churkog_Volgrass_Druzgakh_Hadzir_Yerkoh_Uggor_Gallok
+G000FT0000NE@E_Airith_Suolies_Aralis_Yaliss_Andary_Iltan_Malvis_Sirnsher_Bitayt_Lamil
+G000FT0000NE@S_Polder_Orton_Irriton_Darrathan_Darder_Tonmar_Baveton_Tarnan_Malgon_Cashder_Omalder_Dattol_Walder_Cortak_Motkop
 
 #руины (названия такие, чтобы можно было их использовать безотносительно того, кто сидит внитри. При этом названия разные. Вероятно, это понадобится при добавлении квестов)
-G000RU0000000_Разрушенная церковь_Брошенная церковь_Сарай_Брошенная ферма_Ферма
-G000RU0000001_Брошенноя поместье_Темные руины
-G000RU0000002_Разрушенное поместью_Забытое имение_Старое владение
-G000RU0000003_Забытый храм_Падшее святилище_Заросший алтарь
-G000RU0000004_Башня отлученных_Башня
-G000RU0000005_Запретное хранилище_Древняя библиотека
-G000RU0000006_Загадочная башня
-G000RU0000007_Собор_Брошенный собор
-G000RU0000008_Снежная крепость_Рунный форт
-G000RU0000009_Затопленный храм
-G000RU0000010_Волшебный сад_Магические сады
+G000RU0000000_Ruined church_Abandoned church_Barn_Abandoned Farm_Farm
+G000RU0000001_Abandoned domain_Dark ruins
+G000RU0000002_Destroyed estate_Forgotten estate_Old domain
+G000RU0000003_Forgotten Temple_Fallen shrine_Overgrown Altar
+G000RU0000004_Tower of excommunicated_Tower
+G000RU0000005_Forbidden vault_Ancient library
+G000RU0000006_Mysterious Tower
+G000RU0000007_Cathedral_Abandoned cathedral
+G000RU0000008_Snow fortress_Rune fort
+G000RU0000009_Flooded temple
+G000RU0000010_Enchantment Garden_Magic Gardens
 
-G000RU0000000_Покинутая кузница_Покинутое зернохранилище_Старая кладовая_Старая часовня_Дом контрабандистов
-G000RU0000001_Ветряная застава_Руины Ханскельма_Старые катакомбы_Руины Маргинхольда_Последнее присталище
-G000RU0000002_Сгоревший дом_Заброшенный особняк_Брошенный дом егеря_Проклятый дом_Заброшенный приют
-G000RU0000003_Оскверненные сады_Место жертвоприношений_Алтарь Дорагона_Забытый фонтан_Руины Зирста
-G000RU0000004_Туманная застава_Старый дозорный пост_Брошенный пост_Лунная застава_Старая башня
-G000RU0000005_Пыточная_Брошенный пост Инквизиции_Старая библиотека_Старый дом ордена_Усыпальнца
-G000RU0000006_Древний курган_Проклятая башня_Костлявый шпиль_Руины Фердока_Оплот мертвеца
-G000RU0000007_Место стоянки_Древння усыпальца_Покинутый лазарет_Склад провизии_Покинутый крематорий
-G000RU0000008_Скала холодного ветра_Заснеженный храм_Руиный гномьего форта_Старая шахта гномов_Морозные пещеры
-G000RU0000009_Алтарь Солониэль_Храм воды_Древнее святилище_Речной оплот_Соленый храм
+G000RU0000000_Abandoned forge_Abandoned granary_Old larder_Old chapel_Smuggler's house
+G000RU0000001_Windy outpost_Hanskelm ruins_Old catacombs_Morninghold ruins_Last refuge
+G000RU0000002_Burnt down house_Abandoned mansion_Abandoned huntsman house_Cursed house_Abandoned shelter
+G000RU0000003_Fel Gardens_Place of sacrifices_Altar of Doragon_Forgotten fountain_Zierst ruins
+G000RU0000004_Fog outpost_Old sentinel post_Abandoned post_Moon outpost_Old tower
+G000RU0000005_Torture_Desolate inquisition post_Old library_Old house of the Order_Tomb
+G000RU0000006_Ancient mound_Cursed tower_Bone spire_Ruins Фердока_Deadman bulwark
+G000RU0000007_Site of ancients_Ancient shrine_Abandoned infirmary_Supply depot_Abandoned crematorium
+G000RU0000008_Cold Wind Rock_Snow-swept temple_Ruined dwarfs fort_Old dwarf mine_Frozen caves
+G000RU0000009_Altar of Soloniel_Temple of Water_Ancient Sanctuary_River stronghold_Salt temple
+
+G000RU0000000_Rotten Armory_Altered barracks_Supply storage
+G000RU0000001_Family castle_Burnt magistrate_Rogue cache_Citadel of Hatred
+G000RU0000002_Defiled monastery_Ruined town hall_Knight's outpost_Devastated treasury
+G000RU0000003_Gathering place of cult_Place of execution_Manor ruins
+G000RU0000004_Watchtower_Dark Tower_Adventurers' Residence
+G000RU0000005_Forbidden Library_Manuscript Repository_Black Scriptures House
+G000RU0000006_Bone stronghold_Enchanted palace_Mausoleum of dark desires
+G000RU0000007_Former cathedral_Ruined Arena_Sages Council halls
+G000RU0000008_Shelter of recluses_Mountain fortification_Dilapidated forge_Observation point
+G000RU0000009_The flooded altar_Memorial of the drowned_Chapel of dried tears
+G000RU0000010_Tree of knowledge_Sacred arboretum_Fired viridarium
+
+G000RU0000010_Grove of rebirth_Hall of conciliation_Chambers of thought
 
 #башня мага (названия такие, чтобы можно было их использовать безотносительно того, что продается)
-G000SI0000MAGE00_Башня Таволиона_Башня Назаррона_Башня Анатолиуса
-G000SI0000MAGE01_Башня Файндмирра_Башня Меровингиана_Башня Леоника
-G000SI0000MAGE02_Башня Милио_Башня Арамина_Башня Зериосиса
-G000SI0000MAGE03_Башня Обскуруса_Башня вечного Хаоса_Башня Тариуса
+G000SI0000MAGE00_Tavolion's tower_Nazarron tower_Anatolius tower_Fahss tower of secrets
+G000SI0000MAGE01_Findmeer tower_Merovingian tower_Leonik tower
+G000SI0000MAGE02_Milio's tower_Aramin's tower_Zeriosis tower_Honretts Great library
+G000SI0000MAGE03_Obscurus tower_Tower of eternal Chaos_Tariuses tower
+
+G000SI0000MAGE00_Lahird's mystical library_Star Gorgool's mysterium_Librarium eternum_Feo's Magic Workshop
+G000SI0000MAGE01_Baltharux's Black Spire_Glacial Magnuses tower_Master Vulk's Archives_Librum of Conclave of Needles_Librum elementum
+G000SI0000MAGE02_Uruk's magic tower_Magicus Librarium_Fiery Mer's magikum_Zarasses tower of secrets
+G000SI0000MAGE03_Master Olf's Illusorium_Librum Mysteria_AstralLein's Magicum_Mage Gorudus Lyceum_Mysterium of Rotkua the Gray
 
 #торговец (названия такие, чтобы можно было их использовать безотносительно того, что продается)
-G000SI0000MERH00_Мельница Сантиса_Лавка Гласана_Лавка Норны
-G000SI0000MERH01_Таверна "Оторванная голова"_Таверна "Логово кракена"_Таверна "Дыхание адского пса"
-G000SI0000MERH02_Лавка Тагрина_Таверна "Веселый Роджер"_Таверна Бильбо_Лавка Баруда_Таверна "Печальный Гуфи"
-G000SI0000MERH03_Таверна "У веселого тролля"_Лавка Кортулла_Таверна "Красный мак"_Таверна "Нравственный ублюдок"
-G000SI0000MERH04_Лавка Двагга_Лавка Торне_Лавка Мотлина_Лавка Гульви_Лавка Рины
-G000SI0000MERH05_Лавка Фолли_Лавка Архи_Лавка Рико_Лавка Итил
-G000SI0000MERH06_Лавка Варутта_Лавка Барги_Лавка Снэда_Лавка Кассии
-G000SI0000MERH07_Лавка Тарфена_Лавка Рагарика_Таверна "Честнейший пони"_Таверна "Сытый Йорм"
+G000SI0000MERH00_Mill of Santis_Glasan's store_Norna's store_"Fat imp" Pub
+G000SI0000MERH01_Tavern "Severed head"_Pub "Kraken's Lair"_Tavern "Breath of Hellhound"_"Blind mare" Tavern
+G000SI0000MERH02_Tagrin's store_Pub "Jolly Roger"_Bilbo's tavern_Barud's store_"Sad Gufi" Tavern
+G000SI0000MERH03_Trattoria "At the merry troll"_Cortull's store_Pub "Red poppy"_Tavern "Ethic bastard"_Trattoria "Derafetia"
+G000SI0000MERH04_Dwagg's pub_Torn's store_Ghoulv's store_Rina's store
+G000SI0000MERH05_Folly's store_Archi store_Rico's store_Ithil's store_Trattoria "Juicy boar"
+G000SI0000MERH06_Varutta's store_Barga's store_Snad's store_Cassia's store
+G000SI0000MERH07_Tarfen's pub_Ragarik's store_Tavern "Honest pony"_Tavern "Well-fed Yorm"_Eatery "Flying goblin"
+
+G000SI0000MERH00_Tavern "Wing and hat"_Eatery  "Passage in the mountains"_Inn "Two сopper coins"_Eatery "Stubborn rooster"_Inn "Barefoot Knight"
+G000SI0000MERH01_Eatery  "Three skeletons"_Inn "Elf and Dwarf"_Tavern "Drunken goblin"_Cantina "One-legged beauty"
+G000SI0000MERH02_Store "By the weeping willow"_Lukavik's eatery_Tavern "Flattened headа"_Cantina "Ballad of a Pony"_Shalman "Aft"
+G000SI0000MERH03_Lex's trading house_Agraik's travel trivia_Trattoria "Happy beggar"_Trattoria "Fire barrel"
+G000SI0000MERH04_Taghrud's Fair_Elwart's fair of curiosities_Bazaar "Al-Kamun"_Bazaar "By the brook"_Old Zhur fair
+G000SI0000MERH05_Norveg's fish shop_Boreal's Miracles and potions_Milton's Hundred Trinkets in a trip_"Cunning elf" trade house
+G000SI0000MERH06_Tavern "Weeping maiden"_Screborm's fair_Market at Crooked Rock
+G000SI0000MERH07_Tavern "Nineteen misses"_Inn "Well-fed dwarf"_Tavern "Knot-Beard"_Pub "Skinny bull"
+
+G000SI0000MERH00_Eatery of Sticky Varier
+G000SI0000MERH01_Eatery "Rotten cave"_Spiteful Zerit's shalman
+G000SI0000MERH02_Shalman of Fat Druy
+G000SI0000MERH03_Tavern "Smoked boar"
+G000SI0000MERH04_Tavern "Mustache in honey"
+G000SI0000MERH05_Bormont's trade house_Trade Guild presence
+G000SI0000MERH06_Market "At hot rocks"_Pogg's mobile market_Wandering merchant parking lot_Black market
+G000SI0000MERH07_One-eyed Torg's inn
 
 #наемники (названия такие, чтобы можно было их использовать безотносительно того, кого можно нанять)
-G000SI0000MERC00_Лагерь Ламмара_Лагерь Лимфо_Лагерь Аве
-G000SI0000MERC01_Лагерь Касорса_Лагерь Виллиджфорса_Лагерь Релио
-G000SI0000MERC02_Лагерь Нарра_Лагерь Рэйва
-G000SI0000MERC03_Лагерь Эриона
-G000SI0000MERC04_Лагерь Геллиса_Лагерь Кветзакомла
+G000SI0000MERC00_Lammar's cantonment_Limfo's camp_Avy's bivouac
+G000SI0000MERC01_Cassors's camp_Vilgeforc's camp_Relio's bivouac
+G000SI0000MERC02_Narra's camp_Rave's camp_Torl's camp
+G000SI0000MERC03_Erion's camp_Scorpion's camp_Varala's camp
+G000SI0000MERC04_Gellis's camp_Kvetzakoml's camp_Leviss's camp
+
+G000SI0000MERC00_Borus's mercenaries camp_Camp of "Speechless"_Unven's camp
+G000SI0000MERC01_Brotherhood of blades_Bivouac "Followers of Destruction"_Cantonment of "Thunder fists"
+G000SI0000MERC02_Nasal Pym's camp_Bivouac "Bone ravens"_Cantonment of "Dashing servant"
+G000SI0000MERC03_"Bastards of War" camp_Camp "Gold chains"_"Fiery martens" camp
+G000SI0000MERC04_"Three pikes" camp_"Black hearts" camp_"Heirs of Ragnarok" camp
 
 #тренер
-G000SI0000TRAI00_Лагерь Ерти_Лагерь Юджина
-G000SI0000TRAI01_Лагерь Чагорра_Лагерь Амфри
-G000SI0000TRAI02_Лагерь Харпса_Лагерь Экера_Лагерь Райка
-G000SI0000TRAI03_Лагерь Леона_Лагерь Ризо_Лагерь Экзактора
+G000SI0000TRAI00_Erti's camp_Eugene's camp_Hanroht's cantonment
+G000SI0000TRAI01_Chagorr's camp_Amphri's camp_Dargen's camp_Motlin's shooting range
+G000SI0000TRAI02_Harps's camp_Eker's camp_Raik's camp_Di'iv An's camp
+G000SI0000TRAI03_Leon's camp_Rizo's camp_Exactor's camp_Sarrt's camp
 
+G000SI0000TRAI00_Gladiatorium de Victorum_Rubus's gladiatorium_Tarang's shooting range_Bivouac of "Steel rat"
+G000SI0000TRAI01_Arena "Three daggers"_Bivouac of Desperate Woolley_Kars's training field
+G000SI0000TRAI02_Arena of Ordinary Raxakukis_"Sand pit" arena_Sobrus's arena
+G000SI0000TRAI03_Sulmon's camp_Xox's gladiatorium_Gloomy Vept's camp
 
 #ОПИСАНИЯ - начинаются с D
 
-DG000SI0000MAGE_Магия нынче в моде, торопись пока у меня все не раскупили!
+DG000SI0000MAGE_Magic is valuable these days, hurry up until everything is sold out!
+DG000SI0000MAGE_I will teach you new spells, but for a fee.
+DG000SI0000MAGE_My knowledge will open up incredible opportunities for you!
+DG000SI0000MAGE_Fools kicked me out of the Empire academy! Now I sell their knowledge to everyone.
+DG000SI0000MAGE_I've learned these spells for years ... But all you have to do is pay well.
+DG000SI0000MAGE_I have learned many secrets in my travels and am ready to share them for a fee.
+DG000SI0000MAGE_A fool spends years reading manuscripts - a smart one buys it from me.
+DG000SI0000MAGE_Magic can do a lot! Pay and I'll show you.
+DG000SI0000MAGE_Even all the gold in the world does not give you even a fraction of the power of my spells.
+DG000SI0000MAGE_I believe that there are no priceless secrets, but there is not enough gold.
+DG000SI0000MAGE_A warrior can miss, but magic can not!
+DG000SI0000MAGE_One spell can turn the tide of battle. Get ahead of the enemy - buy first.
+DG000SI0000MAGE_My knowledge is priceless! But for you, I'll make an exception.
+DG000SI0000MAGE_I share this knowledge with everyone who is able to pay decently.
+DG000SI0000MAGE_Our doors are open to all those who suffer secret knowledge!
+DG000SI0000MAGE_The lord of all elements welcomes you to the shop of miracles! Here are the strongest of my spells!
+DG000SI0000MAGE_Magical power, for despicable gold. Not everyone gets that chance.
+DG000SI0000MAGE_My personal library stores a lot of knowledge and I am ready to share it. For a fee, of course.
+DG000SI0000MAGE_My knowledge will not make you equal to the Gods. But they will rid you of your enemies.
 
-DG000SI0000MERH_В удачный поход - мои предметы!
-DG000SI0000MERH_Ты покупаешь, я продаю, кошелек пополняю и снова всех жду!
-DG000SI0000MERH_Эликсиры и настойки на любой вкус, заходи!
+DG000SI0000MERH_On a successful trip - my items!
+DG000SI0000MERH_You buy, I sell, I replenish my wallet and wait for everyone again!
+DG000SI0000MERH_Elixirs and tinctures for every taste, come in!
+DG000SI0000MERH_My merchandise are the best in the area! Come in, you won't regret it.
+DG000SI0000MERH_I trade with everyone, but first show your gold.
+DG000SI0000MERH_Come in, don't stand in the aisle! No one else has such a goods.
+DG000SI0000MERH_Buy faster before I don't solds out everything.
+DG000SI0000MERH_Hard coins for me and the best goods for you.
+DG000SI0000MERH_The Merchants Guild works with all who pay honestly!
+DG000SI0000MERH_Treasures from my shelves will help you on your trip much better than hard coins!
+DG000SI0000MERH_My goods sells well on in the cities on Merchant Sea coast. Try it yourself and you won't regret it!
+DG000SI0000MERH_Any goods even prohibited! Buy before I leave.
+DG000SI0000MERH_My goods at the most delicious prices, just for you!
+DG000SI0000MERH_Everything in the world has a price. My prices are quite reasonable.
+DG000SI0000MERH_My doors are open around the clock! Come in and buy something!
+DG000SI0000MERH_In my store, the only thing to be wary of is prices, and there may be a dragon in the ruins nearby.
+DG000SI0000MERH_I have a goods if you have gold.
+ 
+DG000SI0000MERC_My camp has the best fighters you can find.
+DG000SI0000MERC_Ready to join your ranks with my finest warriors?
+DG000SI0000MERC_I broke their will. They will obey any order.
+DG000SI0000MERC_My fighters are ready to serve their new master!
+DG000SI0000MERC_We will follow you to the ends of the world if you are willing to pay generously.
+DG000SI0000MERC_Your generosity is the best guarantee of our loyalty.
+DG000SI0000MERC_Make a treaty with me and my servants will be yours.
+DG000SI0000MERC_Enough with us to fight for the whims of the gods! Now we only follow the clink of coins.
+DG000SI0000MERC_They are slaves. They will follow whoever I point out.
+DG000SI0000MERC_My whip made them nicer than any mongrel. See for yourself.
+DG000SI0000MERC_Just pay and choose target. We don't need anything else.
+DG000SI0000MERC_Only I have the best slaves straight from the Fighting Pits of the Scorched Lands.
+DG000SI0000MERC_My guys will help you with any problems.
+DG000SI0000MERC_A good and reliable company will come in handy when traveling.
+DG000SI0000MERC_We will bring you more money than you spend on hiring.
+DG000SI0000MERC_Why spend money on wands when you can spend it on an invincible army?
+DG000SI0000MERC_Expensive? Master, a good mercenary, is worth no more than life.
+DG000SI0000MERC_If you don't have time to hire them now, your enemy will do it tomorrow.
+DG000SI0000MERC_We know our worth! Pay or leave for now.
+DG000SI0000MERC_These lands have not known rest for a long time. We will accompany you for a reasonable fee.
+DG000SI0000MERC_There are rumors that a hungry Hort is roaming the area. Protect yourself - hire security.
 
-DG000SI0000MERC_В моем лагере лучшие бойцы, каких ты только сможешь найти
+DG000SI0000TRAI_Give your weaklings here and I will make real warriors out of them, but first pay ...
+DG000SI0000TRAI_Float like a butterfly, sting like a scorpion.
+DG000SI0000TRAI_Are you ready to turn your fighters into a real army?
+DG000SI0000TRAI_As a blacksmith hardens steel - I temper the spirit!
+DG000SI0000TRAI_My training is equivalent to dozens of battles!
+DG000SI0000TRAI_Good preparation can save lives! Don't spare your coins, my friend.
+DG000SI0000TRAI_Under my careful guidance, we will make your squad a real threat to enemies!
+DG000SI0000TRAI_Magic did not save Galean from defeat! Therefore, do not skimp on training.
+DG000SI0000TRAI_Who said learning is easy? Give your fighters here and I will prove the opposite.
+DG000SI0000TRAI_I will turn your fighters into real professionals in a matter of hours.
+DG000SI0000TRAI_The more sweat you shed now, the less blood you will bleed tommorow.
+DG000SI0000TRAI_After my training, any battle like child's fun.
+DG000SI0000TRAI_With me you will become the most terrifying army in the area.
+DG000SI0000TRAI_Enemies are in awe of the fighters who have trained with me.
+DG000SI0000TRAI_Warrior, leave me your soldiers for a day, and tomorrow they will conquer the whole kingdom for you
+DG000SI0000TRAI_Experience is never easy, tomorrow you won't have time to exchange it for your gold ...
+DG000SI0000TRAI_You cannot be ready for everything. But the prepared chances to withstand more.
+DG000SI0000TRAI_I trained the Emperor's Guard! But for private lessons, the fees are higher.
 
-DG000SI0000TRAI_Давай сюда своих дохляков и я сделаю из них настоящих воинов, но сначала заплати...
-DG000SI0000TRAI_Порхай, как бабочка, жаль, как скорпион!
+DG000SI0000MAGE_Once upon a time there lived a magician. No more. Now I'm going to sell his junk. Are you buying?
+DG000SI0000MAGE_Why did you disturb me? Spells? Well, buy it and don't bother me.
+DG000SI0000MAGE_Even clan loremasters would envy my assortment! Take a look.
+DG000SI0000MAGE_My magical research is expensive. Therefore, I am ready to sell some of my knowledge.
+
+DG000SI0000MERH_Come on! Do not be shy. The best goods in the area!
+DG000SI0000MERH_Everything that you see on the counter is for sale. It remains to agree on a price.

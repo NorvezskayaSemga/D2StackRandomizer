@@ -6625,38 +6625,33 @@ Public Class GenDefaultValues
             Next i
 
             Dim allNames, allDescriptions As New List(Of String)
+            Dim lenErrors, duplErrors, caseErrors As String
+            lenErrors = ""
+            duplErrors = ""
+            caseErrors = ""
             For i As Integer = 0 To UBound(d) Step 1
                 For Each k As String In d(i).Keys
                     For Each v As String In d(i).Item(k).ToArray
-                        If v.Length > maxNameLen(i) Then
-                            Throw New Exception("Name of " & k & " is too long: " & v)
-                        ElseIf allNames.Contains(v.ToUpper) Then
-                            If Not k.ToUpper.StartsWith(key(0).ToUpper) Then
-                                Throw New Exception("Duplicated name: " & v)
-                            End If
-                        Else
-                            If Not v.Substring(0, 1) = v.Substring(0, 1).ToUpper Then
-                                Throw New Exception("Name must start with upper case: " & v)
-                            End If
-                            allNames.Add(v.ToUpper)
-                        End If
+                        If v.Length > maxNameLen(i) Then lenErrors &= vbNewLine & v & " (max len is " & maxNameLen(i) & ")"
+                        If allNames.Contains(v.ToUpper) And Not k.ToUpper.StartsWith(key(0).ToUpper) Then duplErrors &= vbNewLine & v
+                        If Not v.Substring(0, 1) = v.Substring(0, 1).ToUpper Then caseErrors &= vbNewLine & v
+                        allNames.Add(v.ToUpper)
                     Next v
                 Next k
             Next i
             For Each k As String In Descriptions.Keys
                 For Each v As String In GetArray(Descriptions, k)
-                    If v.Length > SetName.DescriptionMaxLen Then
-                        Throw New Exception("Description of " & k & " is too long: " & v)
-                    ElseIf allDescriptions.Contains(v.ToUpper) Then
-                        Throw New Exception("Duplicated description: " & v)
-                    Else
-                        If Not v.Substring(0, 1) = v.Substring(0, 1).ToUpper Then
-                            Throw New Exception("Description must start with upper case: " & v)
-                        End If
-                        allDescriptions.Add(v.ToUpper)
-                    End If
+                    If v.Length > SetName.DescriptionMaxLen Then lenErrors &= vbNewLine & v & " (max len is " & SetName.DescriptionMaxLen & ")"
+                    If allDescriptions.Contains(v.ToUpper) Then duplErrors &= vbNewLine & v
+                    If Not v.Substring(0, 1) = v.Substring(0, 1).ToUpper Then caseErrors &= vbNewLine & v
+                    allDescriptions.Add(v.ToUpper)
                 Next v
             Next k
+            Dim errorTxt As String = ""
+            If Not lenErrors = "" Then errorTxt &= vbNewLine & vbNewLine & "Too long text:" & lenErrors
+            If Not duplErrors = "" Then errorTxt &= vbNewLine & vbNewLine & "Duplicated text:" & duplErrors
+            If Not caseErrors = "" Then errorTxt &= vbNewLine & vbNewLine & "Must start with upper case:" & caseErrors
+            If Not errorTxt = "" Then Throw New Exception(errorTxt)
         End Sub
         Private Sub PrintValuesCount()
             If Not GenDefaultValues.writeToConsole Then Exit Sub
