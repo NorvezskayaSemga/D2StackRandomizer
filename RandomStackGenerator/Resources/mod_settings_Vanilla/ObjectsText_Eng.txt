@@ -18,9 +18,9 @@ g000LR0009_Dhagot_Ishangkhti_Aroglet_Sagorat_Murphet
 g000LR0010_Zaorish_Сагот_Intar_Talug_Fatesh
 g000LR0011_Zaorish_Сагот_Intar_Talug_Fatesh
 g000LR0012_Zaorish_Сагот_Intar_Talug_Fatesh
-g000LR0016_Lata'al_Ime'el_Rha'ane_Gindel_Si'imiel_Efrem' Ov_Dii' Wane
-g000LR0017_Lata'al_Ime'el_Rha'ane_Gindel_Si'imiel_Efrem' Ov_Dii' Wane
-g000LR0018_Lata'al_Ime'el_Rha'ane_Gindel_Si'imiel_Efrem' Ov_Dii' Wane
+g000LR0016_Lata'al_Ime'el_Rha'ane_Gindel_Si'imiel
+g000LR0017_Lata'al_Ime'el_Rha'ane_Gindel_Si'imiel
+g000LR0018_Lata'al_Ime'el_Rha'ane_Gindel_Si'imiel
 
 #столицы Humans Clans Legions Undead Neutrals Elvens
 G000FT0000HU0_Eridreyreem_Emberthal_Maitstarn_Sivellion_Icallion_Galissia_Nallidrim
@@ -115,6 +115,9 @@ G000SI0000MERH04_Tavern "Mustache in honey"
 G000SI0000MERH05_Bormont's trade house_Trade Guild presence
 G000SI0000MERH06_Market "At hot rocks"_Pogg's mobile market_Wandering merchant parking lot_Black market
 G000SI0000MERH07_One-eyed Torg's inn
+
+G000SI0000MERH03_Dii' Wane's miracles shop
+G000SI0000MERH04_Efrem' Ov's shop
 
 #наемники (названия такие, чтобы можно было их использовать безотносительно того, кого можно нанять)
 G000SI0000MERC00_Lammar's cantonment_Limfo's camp_Avy's bivouac

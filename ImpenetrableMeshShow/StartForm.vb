@@ -30,6 +30,7 @@ Friend Class StartForm
             For Each lang As GenDefaultValues.TextLanguage In System.Enum.GetValues(GetType(GenDefaultValues.TextLanguage))
                 Call TemplateForge.GetPermissibleParametersRange(lang)
             Next lang
+            'Call TemplateForge.GetPermissibleParametersRange(GenDefaultValues.TextLanguage.Eng)
             Dim param() As TemplateForge.Parameter = TemplateForge.GetPermissibleParametersRange(GenDefaultValues.TextLanguage.Rus)
         End If
 
