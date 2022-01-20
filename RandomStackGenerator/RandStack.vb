@@ -2732,7 +2732,7 @@ Public Class RandStack
         'Dim nloops As Integer = 0
         'Do While PossibleFighters.Count = 0 'And TExpStack < 1.1 * DynStackStats.ExpStackKilled
         For j As Integer = 0 To UBound(AllUnits) Step 1
-            If SelectPossibleFighter(skipfilter1, skipfilter2, j, DynStackStats, FreeMeleeSlots, _
+            If SelectPossibleFighter(GenSettings, skipfilter1, skipfilter2, j, DynStackStats, FreeMeleeSlots, _
                                      SelectedLeader, SelectedFighters, BaseStackSize, isMapLordRace) Then selector.Add(j)
         Next j
         '    TExpStack += 0.1 * DynStackStats.ExpStackKilled / DynStackStats.StackSize
@@ -2744,8 +2744,73 @@ Public Class RandStack
 
             Dim bar() As Double = SelectBar({DynStackStats.ExpBarAverage, CDbl(DynStackStats.ExpStackKilled) / CDbl(DynStackStats.StackSize)}, _
                                             selector, {ExpBar, ExpKilled}, Bias)
+
+            Dim mult(UBound(multiplierUnitDesiredStats)) As Double
+            For i As Integer = 0 To selector.Count - 1 Step 1
+                Dim k As Integer = selector.Item(i)
+                mult(k) = 1
+            Next i
+            If GenSettings.StackStats.MeleeCount = DynStackStats.MeleeCount Then
+                For i As Integer = 0 To selector.Count - 1 Step 1
+                    Dim k As Integer = selector.Item(i)
+                    If AllUnits(k).reach = GenDefaultValues.UnitAttackReach.melee Or Not AllUnits(k).small Then
+                        mult(k) *= 10
+                    End If
+                Next i
+            Else
+                Dim desiredRangeSlots As Double = GenSettings.StackStats.StackSize - GenSettings.StackStats.MeleeCount - GenSettings.StackStats.MaxGiants
+
+                Dim currentAddedMelee As Double = GenSettings.StackStats.MeleeCount - DynStackStats.MeleeCount
+                Dim currentAddedGiants As Double = GenSettings.StackStats.MaxGiants - DynStackStats.MaxGiants
+                Dim currentUsedSlots As Double = GenSettings.StackStats.StackSize - DynStackStats.StackSize
+                Dim currentAddedRangeSlots As Double = currentUsedSlots - currentAddedMelee - currentAddedGiants
+
+                If desiredRangeSlots > 0 And currentAddedRangeSlots > 0 Then
+                    Dim desiredRelationship As Double = GenSettings.StackStats.MeleeCount / desiredRangeSlots
+                    Dim currentRelationship As Double = currentAddedMelee / currentAddedRangeSlots
+                    If Not desiredRelationship = currentRelationship Then
+                        Dim d As Double = (1 + Math.Abs(desiredRelationship - currentRelationship)) ^ 3
+                        Dim sMeleeCount As Integer = 0
+                        Dim sRangeCount As Integer = 0
+                        If Not desiredRelationship = currentRelationship Then
+                            For i As Integer = 0 To selector.Count - 1 Step 1
+                                Dim k As Integer = selector.Item(i)
+                                If AllUnits(k).reach = GenDefaultValues.UnitAttackReach.melee Or Not AllUnits(k).small Then
+                                    sMeleeCount += 1
+                                Else
+                                    sRangeCount += 1
+                                End If
+                            Next i
+                        End If
+                        If sMeleeCount > 0 And sRangeCount > 0 Then
+                            If desiredRelationship > currentRelationship Then
+                                d *= (sMeleeCount + sRangeCount) / sMeleeCount
+                            ElseIf desiredRelationship < currentRelationship Then
+                                d *= (sMeleeCount + sRangeCount) / sRangeCount
+                            End If
+                        End If
+                        If desiredRelationship > currentRelationship Then
+                            For i As Integer = 0 To selector.Count - 1 Step 1
+                                Dim k As Integer = selector.Item(i)
+                                If AllUnits(k).reach = GenDefaultValues.UnitAttackReach.melee Or Not AllUnits(k).small Then
+                                    mult(k) *= d
+                                End If
+                            Next i
+                        ElseIf desiredRelationship < currentRelationship Then
+                            For i As Integer = 0 To selector.Count - 1 Step 1
+                                Dim k As Integer = selector.Item(i)
+                                If Not AllUnits(k).reach = GenDefaultValues.UnitAttackReach.melee And AllUnits(k).small Then
+                                    mult(k) *= d
+                                End If
+                            Next i
+                        End If
+                    End If
+                End If
+            End If
+
             Dim selectedID As Integer = selector.RandomSelection({ExpBar, ExpKilled}, _
-                                                                 bar, multiplierUnitDesiredStats, SigmaMultiplier(DynStackStats))
+                                                                 bar, multiplierUnitDesiredStats, _
+                                                                 SigmaMultiplier(DynStackStats), mult)
             If selectedID = -1 Then
                 Call ThrowStackCreationException("Possibly an endless loop in a random selection from an array of possible fighters", _
                                                  GenSettings, DynStackStats)
@@ -2754,10 +2819,11 @@ Public Class RandStack
             Call ChangeLimit(SelectedFighter.unit, DynStackStats, FreeMeleeSlots, LogID)
         Else
             SelectedFighter = Nothing
-        End If
-        Return SelectedFighter
+            End If
+            Return SelectedFighter
     End Function
-    Private Function SelectPossibleFighter(ByRef skipMaxGiantsFilter As Boolean, _
+    Private Function SelectPossibleFighter(ByRef GenSettings As AllDataStructues.CommonStackCreationSettings, _
+                                           ByRef skipMaxGiantsFilter As Boolean, _
                                            ByRef skipRangeFilter As Boolean, _
                                            ByRef fighterID As Integer, _
                                            ByRef DynStackStats As AllDataStructues.DesiredStats, _
@@ -2804,7 +2870,7 @@ Public Class RandStack
             If DynStackStats.MeleeCount = 0 Then Return False
             If FreeMeleeSlots = 0 Then Return False
         Else
-            If Not skipRangeFilter And DynStackStats.MeleeCount > 0 Then Return False
+            If Not skipRangeFilter And DynStackStats.MeleeCount = GenSettings.StackStats.MeleeCount Then Return False
         End If
         Return True
     End Function
@@ -3176,12 +3242,14 @@ Public Class RandomSelection
     ''' Если же оба массива не инициализированы, то у всех записей будет одинаковый стат. вес</summary>
     ''' <param name="Stats">Массивы параметров, по которым выбираем запись</param>
     ''' <param name="DesiredStats">Какое значение будет иметь наибольший стат. вес (по одному на каждый массив значений)</param>
-    ''' <param name="mult">Множитель "желаемого" значения, отражающий особенности выбираемого объекта (например, размер юнита или тип предмета).
+    ''' <param name="StatsMultiplier">Множитель "желаемого" значения, отражающий особенности выбираемого объекта (например, размер юнита или тип предмета).
     ''' Если не инициализирован, то считается что множитель для всех записей равен единице</param>
     ''' <param name="BaseSmearing">Множитель для Сигмы в распределении Гаусса. Сигма=Множитель*Желаемое_значение</param>
+    ''' <param name="WeightMultiplier">Дополнительный множитель для стат. веса</param>
     Public Function RandomSelection(ByRef Stats()() As Double, _
-                                    ByRef DesiredStats() As Double, ByRef mult() As Double, _
-                                    ByVal BaseSmearing As Double) As Integer
+                                    ByRef DesiredStats() As Double, ByRef StatsMultiplier() As Double, _
+                                    ByVal BaseSmearing As Double, _
+                                    Optional ByRef WeightMultiplier() As Double = Nothing) As Integer
         Dim noValue As Boolean = False
         If IsNothing(Stats) And IsNothing(DesiredStats) Then
             noValue = True
@@ -3199,7 +3267,7 @@ Public Class RandomSelection
                 Throw New Exception("RandomSelection: Количество массивов статов должно соответствовать количеству ""желаемых"" статов")
                 Return -1
             End If
-            If Not IsNothing(mult) AndAlso Not Stats(0).Length = mult.Length Then
+            If Not IsNothing(StatsMultiplier) AndAlso Not Stats(0).Length = StatsMultiplier.Length Then
                 Throw New Exception("RandomSelection: Если массив множителей инициализирован, то он должен иметь одинаковую длину с массивами статов")
                 Return -1
             End If
@@ -3226,8 +3294,8 @@ Public Class RandomSelection
                 If Contains(i) Then
                     Weight(i) = 1
                     If Not noValue Then
-                        If Not IsNothing(mult) Then
-                            m = mult(i)
+                        If Not IsNothing(StatsMultiplier) Then
+                            m = StatsMultiplier(i)
                         Else
                             m = 1
                         End If
@@ -3235,6 +3303,7 @@ Public Class RandomSelection
                             Weight(i) *= Common.Gauss(Stats(j)(i), m * DesiredStats(j), smearing)
                         Next j
                     End If
+                    If Not IsNothing(WeightMultiplier) Then Weight(i) *= WeightMultiplier(i)
                     WeightsSum += Weight(i) * Checked(i)
                 End If
             Next i
@@ -3246,8 +3315,8 @@ Public Class RandomSelection
                     Next j
                     For i As Integer = 0 To upperBound Step 1
                         If Contains(i) Then
-                            If Not IsNothing(mult) Then
-                                m = mult(i)
+                            If Not IsNothing(StatsMultiplier) Then
+                                m = StatsMultiplier(i)
                             Else
                                 m = 1
                             End If
@@ -3263,8 +3332,8 @@ Public Class RandomSelection
                     For i As Integer = 0 To upperBound Step 1
                         If Contains(i) Then
                             Weight(i) = 1
-                            If Not IsNothing(mult) Then
-                                m = mult(i)
+                            If Not IsNothing(StatsMultiplier) Then
+                                m = StatsMultiplier(i)
                             Else
                                 m = 1
                             End If
@@ -3278,6 +3347,7 @@ Public Class RandomSelection
                                 End If
                                 Weight(i) *= Common.Gauss(s, d, BaseSmearing)
                             Next j
+                            If Not IsNothing(WeightMultiplier) Then Weight(i) *= WeightMultiplier(i)
                             WeightsSum += Weight(i) * Checked(i)
                         End If
                     Next i

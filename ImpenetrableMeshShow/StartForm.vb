@@ -770,4 +770,54 @@ Class Tests
         '10779
     End Sub
 
+    Public Shared Sub StackRegeneration()
+        Dim rStack As RandStack = CreateRandStack()
+        Dim s As New AllDataStructues.Stack With {.items = New List(Of String)}
+        s.units = AllDataStructues.Stack.UnitInfo.CreateArray(New String() {"g000uu5103", "g000uu5002", "g000uu0009", _
+                                                                            "G000000000", "G000000000", "g000uu0007"}, _
+                                                              New Integer() {1, 1, 2, 0, 0, 2}, _
+                                                              Nothing, _
+                                                              rStack)
+        Dim stats As AllDataStructues.DesiredStats = rStack.StackStats(s, False)
+        Dim nMelee, nRange, m, r As Integer
+        For Each u As AllDataStructues.Stack.UnitInfo In s.units
+            If Not u.unit.unitID = GenDefaultValues.emptyItem Then
+                If u.unit.reach = GenDefaultValues.UnitAttackReach.melee Then
+                    nMelee += 1
+                Else
+                    nRange += 1
+                End If
+            End If
+        Next u
+        Dim nomelee As Integer = 0
+        Dim norange As Integer = 0
+        Dim attempts As Integer = 100000
+        For i As Integer = 1 To attempts Step 1
+            Dim g = rStack.Gen(New AllDataStructues.CommonStackCreationSettings With {.groundTile = True, _
+                                                                                      .StackStats = stats, _
+                                                                                      .pos = New Point(1, 1)})
+            m = 0
+            r = 0
+            For Each u As AllDataStructues.Stack.UnitInfo In g.units
+                If Not u.unit.unitID = GenDefaultValues.emptyItem Then
+                    If u.unit.reach = GenDefaultValues.UnitAttackReach.melee Then
+                        m += 1
+                    Else
+                        r += 1
+                    End If
+                End If
+            Next u
+            If m = 0 Then nomelee += 1
+            If r = 0 Then norange += 1
+        Next i
+
+        'old
+        'nomelee  0
+        'norange  1421
+
+        'new
+        'nomelee  0
+        'norange  816
+    End Sub
+
 End Class
