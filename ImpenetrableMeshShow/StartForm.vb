@@ -21,7 +21,7 @@ Friend Class StartForm
         'Call StackLocationsGen.PassageGuardPlacer.speedBanchmark()
         'Call ImpenetrableMeshGen.ActiveObjectsPlacer.speedBanchmark()
 
-        Call Tests.WaterCreation()
+        Call Tests.StackRegeneration()
 
         If GenDefaultValues.writeToConsole Then
             Dim tf As New TemplateForge(RandomStackGenerator.GenDefaultValues.TextLanguage.Rus)
@@ -817,7 +817,7 @@ Class Tests
 
         'new
         'nomelee  0
-        'norange  816
+        'norange  714
     End Sub
 
 End Class

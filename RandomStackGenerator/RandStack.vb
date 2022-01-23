@@ -2353,7 +2353,7 @@ Public Class RandStack
                 End If
             Next u
             If slotsInUse > comm.defValues.maxStackSize Then ThrowStackCreationException(
-                "Unexpected slots used: " & slotsInUse, GenSettings, DynStackStats(jobID))
+                 "Unexpected slots used: " & slotsInUse, GenSettings, DynStackStats(jobID))
             If Not GenSettings.StackStats.ExpStackKilled = 0 Then
                 DynStackStats(jobID).LootCost = CInt(CDbl(DynStackStats(jobID).LootCost) _
                                                      * (1 + CDbl(deltaExpKilled) / GenSettings.StackStats.ExpStackKilled))
@@ -2683,12 +2683,20 @@ Public Class RandStack
             End If
             averageExpKilled = 0
             For j As Integer = 0 To UBound(units(i)) Step 1
-                averageExpKilled += units(i)(j).unit.EXPkilled
+                If units(i)(j).unit.small Then
+                    averageExpKilled += units(i)(j).unit.EXPkilled
+                Else
+                    averageExpKilled += 0.5 * units(i)(j).unit.EXPkilled
+                End If
             Next j
             averageExpKilled /= units(i).Length
             expKilledDispersion = 0
             For j As Integer = 0 To UBound(units(i)) Step 1
-                expKilledDispersion += (units(i)(j).unit.EXPkilled - averageExpKilled) ^ 2
+                If units(i)(j).unit.small Then
+                    expKilledDispersion += (units(i)(j).unit.EXPkilled - averageExpKilled) ^ 2
+                Else
+                    expKilledDispersion += (0.5 * units(i)(j).unit.EXPkilled - averageExpKilled) ^ 2
+                End If
             Next j
             expKilledDispersion /= averageExpKilled ^ 2
             uniformityMultiplier = 1 + Math.Abs(settings.unitsStrengthUniformity * expKilledDispersion)
@@ -2765,45 +2773,41 @@ Public Class RandStack
                 Dim currentUsedSlots As Double = GenSettings.StackStats.StackSize - DynStackStats.StackSize
                 Dim currentAddedRangeSlots As Double = currentUsedSlots - currentAddedMelee - currentAddedGiants
 
-                If desiredRangeSlots > 0 And currentAddedRangeSlots > 0 Then
-                    Dim desiredRelationship As Double = GenSettings.StackStats.MeleeCount / desiredRangeSlots
-                    Dim currentRelationship As Double = currentAddedMelee / currentAddedRangeSlots
-                    If Not desiredRelationship = currentRelationship Then
-                        Dim d As Double = (1 + Math.Abs(desiredRelationship - currentRelationship)) ^ 3
-                        Dim sMeleeCount As Integer = 0
-                        Dim sRangeCount As Integer = 0
-                        If Not desiredRelationship = currentRelationship Then
-                            For i As Integer = 0 To selector.Count - 1 Step 1
-                                Dim k As Integer = selector.Item(i)
-                                If AllUnits(k).reach = GenDefaultValues.UnitAttackReach.melee Or Not AllUnits(k).small Then
-                                    sMeleeCount += 1
-                                Else
-                                    sRangeCount += 1
-                                End If
-                            Next i
+                Dim desiredRelationship As Double = (GenSettings.StackStats.MeleeCount + 1) / (desiredRangeSlots + 1)
+                Dim currentRelationship As Double = (currentAddedMelee + 1) / (currentAddedRangeSlots + 1)
+                If Not desiredRelationship = currentRelationship Then
+                    Dim d As Double = (1 + Math.Abs(desiredRelationship - currentRelationship)) ^ 3
+                    Dim sMeleeCount As Integer = 0
+                    Dim sRangeCount As Integer = 0
+                    For i As Integer = 0 To selector.Count - 1 Step 1
+                        Dim k As Integer = selector.Item(i)
+                        If AllUnits(k).reach = GenDefaultValues.UnitAttackReach.melee Or Not AllUnits(k).small Then
+                            sMeleeCount += 1
+                        Else
+                            sRangeCount += 1
                         End If
-                        If sMeleeCount > 0 And sRangeCount > 0 Then
-                            If desiredRelationship > currentRelationship Then
-                                d *= (sMeleeCount + sRangeCount) / sMeleeCount
-                            ElseIf desiredRelationship < currentRelationship Then
-                                d *= (sMeleeCount + sRangeCount) / sRangeCount
-                            End If
-                        End If
+                    Next i
+                    If sMeleeCount > 0 And sRangeCount > 0 Then
                         If desiredRelationship > currentRelationship Then
-                            For i As Integer = 0 To selector.Count - 1 Step 1
-                                Dim k As Integer = selector.Item(i)
-                                If AllUnits(k).reach = GenDefaultValues.UnitAttackReach.melee Or Not AllUnits(k).small Then
-                                    mult(k) *= d
-                                End If
-                            Next i
+                            d *= (sMeleeCount + sRangeCount) / sMeleeCount
                         ElseIf desiredRelationship < currentRelationship Then
-                            For i As Integer = 0 To selector.Count - 1 Step 1
-                                Dim k As Integer = selector.Item(i)
-                                If Not AllUnits(k).reach = GenDefaultValues.UnitAttackReach.melee And AllUnits(k).small Then
-                                    mult(k) *= d
-                                End If
-                            Next i
+                            d *= (sMeleeCount + sRangeCount) / sRangeCount
                         End If
+                    End If
+                    If desiredRelationship > currentRelationship Then
+                        For i As Integer = 0 To selector.Count - 1 Step 1
+                            Dim k As Integer = selector.Item(i)
+                            If AllUnits(k).reach = GenDefaultValues.UnitAttackReach.melee Or Not AllUnits(k).small Then
+                                mult(k) *= d
+                            End If
+                        Next i
+                    ElseIf desiredRelationship < currentRelationship Then
+                        For i As Integer = 0 To selector.Count - 1 Step 1
+                            Dim k As Integer = selector.Item(i)
+                            If Not AllUnits(k).reach = GenDefaultValues.UnitAttackReach.melee And AllUnits(k).small Then
+                                mult(k) *= d
+                            End If
+                        Next i
                     End If
                 End If
             End If
@@ -2819,8 +2823,8 @@ Public Class RandStack
             Call ChangeLimit(SelectedFighter.unit, DynStackStats, FreeMeleeSlots, LogID)
         Else
             SelectedFighter = Nothing
-            End If
-            Return SelectedFighter
+        End If
+        Return SelectedFighter
     End Function
     Private Function SelectPossibleFighter(ByRef GenSettings As AllDataStructues.CommonStackCreationSettings, _
                                            ByRef skipMaxGiantsFilter As Boolean, _
@@ -5924,7 +5928,7 @@ End Class
 Public Class GenDefaultValues
 
     Public Const DefaultMod As String = "MNS"
-    Public Const myVersion As String = "25.11.2021.18.09"
+    Public Const myVersion As String = "23.01.2022.18.21"
 
     Public Shared Function PrintVersion() As String
         Return "Semga's generator DLL version: " & myVersion
