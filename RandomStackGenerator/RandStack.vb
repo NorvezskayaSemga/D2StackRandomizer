@@ -2758,6 +2758,14 @@ Public Class RandStack
                 Dim k As Integer = selector.Item(i)
                 mult(k) = 1
             Next i
+            If DynStackStats.MeleeCount = 0 Then
+                For i As Integer = 0 To selector.Count - 1 Step 1
+                    Dim k As Integer = selector.Item(i)
+                    If AllUnits(k).reach = GenDefaultValues.UnitAttackReach.melee Then
+                        mult(k) *= 0.05
+                    End If
+                Next i
+            End If
             If GenSettings.StackStats.MeleeCount = DynStackStats.MeleeCount Then
                 For i As Integer = 0 To selector.Count - 1 Step 1
                     Dim k As Integer = selector.Item(i)
@@ -5417,21 +5425,21 @@ Public Class AllDataStructues
                 If e.type = ModifEffect.EffectType.Accuracy Then
                     Call MultiplicativeEffect(modif.accuracy, e.percent, 100)
                 ElseIf e.type = ModifEffect.EffectType.Armor Then
-                    Call AdditiveEffect(modif.armor, e.number)
+                    Call AdditiveEffect(modif.armor, e.number, 90)
                 ElseIf e.type = ModifEffect.EffectType.Damage Then
-                    Call MultiplicativeEffect(modif.damage, e.percent)
+                    Call MultiplicativeEffect(modif.damage, e.percent, 100000)
                 ElseIf e.type = ModifEffect.EffectType.HitPoints Then
                     If e.number = 1 Then
-                        Call MultiplicativeEffect(modif.hp, e.percent)
+                        Call MultiplicativeEffect(modif.hp, e.percent, 10000)
                     ElseIf e.number = 2 Then
-                        Call AdditiveEffect(modif.hp, e.percent)
+                        Call AdditiveEffect(modif.hp, e.percent, 10000)
                     Else
                         Throw New Exception("Unexpected NUMBER field in type " & e.type)
                     End If
                 ElseIf e.type = ModifEffect.EffectType.Initiative Then
                     Call MultiplicativeEffect(modif.initiative, e.percent, 150)
                 ElseIf e.type = ModifEffect.EffectType.Vampirism Then
-                    Call MultiplicativeEffect(modif.damage, CInt(0.5 * e.percent))
+                    Call MultiplicativeEffect(modif.damage, CInt(0.5 * e.percent), 10000)
                 End If
             Next e
         End Sub
