@@ -21,7 +21,8 @@ Friend Class StartForm
         'Call StackLocationsGen.PassageGuardPlacer.speedBanchmark()
         'Call ImpenetrableMeshGen.ActiveObjectsPlacer.speedBanchmark()
 
-        Call Tests.StackRegeneration()
+        Call Tests.LootRegenerator()
+        Call Tests.SingleItemRegenerator()
 
         If GenDefaultValues.writeToConsole Then
             Dim tf As New TemplateForge(RandomStackGenerator.GenDefaultValues.TextLanguage.Rus)
@@ -523,7 +524,7 @@ Class Tests
                                                                .AllSpellsList = TestDataRead.ReadTestSpells(), _
                                                                .AllModificatorsList = TestDataRead.ReadTestModificators()}
         rstackData.settings.modName = GenDefaultValues.DefaultMod
-        rstackData.mapData.capitalPos = {New Point(10, 10)}
+        rstackData.mapData.capitalPos = {New Point(1000, 1000)}
         Return New RandStack(rstackData)
     End Function
     Private Shared Function ItemsGenTest() As Integer
@@ -818,6 +819,119 @@ Class Tests
         'new
         'nomelee  0
         'norange  714
+    End Sub
+
+    Public Shared Sub LootRegenerator()
+        Dim rStack As RandStack = CreateRandStack()
+        Dim attempts As Integer = 10000
+        Dim items, result As New List(Of String)
+        Dim settings As New AllDataStructues.CommonLootCreationSettings With {.pos = New Point(0, 0)}
+        Dim nitems, m, resultGoldSum As Integer
+        Dim AllItemsList() As AllDataStructues.Item = TestDataRead.ReadTestItems(GenDefaultValues.DefaultMod)
+        Dim totalGoldIn, totalGoldOut, totalItemsIn, totalItemsOut As Integer
+        Dim minItemCostIn, maxItemCostIn, minItemCostOut, maxItemCostOut As Integer
+        Dim minItemCostInT, maxItemCostInT, minItemCostOutT, maxItemCostOutT As Integer
+        For i As Integer = 0 To attempts - 1 Step 1
+            items.Clear()
+            nitems = rStack.rndgen.RndInt(2, 20)
+            minItemCostIn = Integer.MaxValue
+            minItemCostOut = Integer.MaxValue
+            maxItemCostIn = Integer.MinValue
+            maxItemCostOut = Integer.MinValue
+            For n As Integer = 1 To nitems Step 1
+                m = -1
+                Do While m = -1 OrElse rStack.LootCost(AllItemsList(m)).Gold = 0 OrElse AllItemsList(m).type = GenDefaultValues.ItemTypes.special
+                    m = rStack.rndgen.RndInt(0, UBound(AllItemsList))
+                Loop
+                items.Add(AllItemsList(m).itemID)
+                minItemCostIn = Math.Min(minItemCostIn, rStack.LootCost(AllItemsList(m)).Gold)
+                maxItemCostIn = Math.Max(maxItemCostIn, rStack.LootCost(AllItemsList(m)).Gold)
+            Next n
+            settings.IGen = rStack.GetItemsGenSettings(items, False)
+            settings.GoldCost = rStack.LootCost(items).Gold
+            Dim goldIn As Integer = settings.GoldCost
+            result = rStack.ItemsGen(settings)
+            For Each r As String In result
+                minItemCostOut = Math.Min(minItemCostOut, rStack.LootCost(r).Gold)
+                maxItemCostOut = Math.Max(maxItemCostOut, rStack.LootCost(r).Gold)
+            Next r
+            resultGoldSum = AllDataStructues.Cost.Sum(rStack.LootCost(result))
+            'Console.WriteLine(String.Join(vbTab, New String() {goldIn, resultGoldSum, _
+            '                                      items.Count, result.Count, _
+            '                                      Math.Round(goldIn / items.Count, 1), _
+            '                                      Math.Round(resultGoldSum / result.Count, 1)}))
+            totalGoldIn += goldIn
+            totalGoldOut += resultGoldSum
+            totalItemsIn += items.Count
+            totalItemsOut += result.Count
+
+            minItemCostInT += minItemCostIn
+            minItemCostOutT += minItemCostOut
+            maxItemCostInT += maxItemCostIn
+            maxItemCostOutT += maxItemCostOut
+
+            Call rStack.ResetAddedItems()
+            Call rStack.ResetItemWeightMultiplier()
+        Next i
+        minItemCostInT /= attempts
+        minItemCostOutT /= attempts
+        maxItemCostInT /= attempts
+        maxItemCostOutT /= attempts
+
+        Console.WriteLine("--------------------")
+        Console.WriteLine(String.Join(vbTab, New String() {totalGoldIn, totalGoldOut, _
+                                              totalItemsIn, totalItemsOut, _
+                                              Math.Round(totalGoldIn / totalItemsIn, 1), _
+                                              Math.Round(totalGoldOut / totalItemsOut, 1), _
+                                              "|", minItemCostInT, minItemCostOutT, maxItemCostInT, maxItemCostOutT}))
+    End Sub
+
+    Public Shared Sub SingleItemRegenerator()
+        Dim rStack As RandStack = CreateRandStack()
+        Dim attempts As Integer = 10000
+        Dim items, result As String
+        Dim settings As New AllDataStructues.CommonLootCreationSettings With {.pos = New Point(0, 0)}
+        Dim m, resultGoldSum As Integer
+        Dim AllItemsList() As AllDataStructues.Item = TestDataRead.ReadTestItems(GenDefaultValues.DefaultMod)
+        Dim totalGoldIn, totalGoldOut As Integer
+
+        Dim dx As Integer = 300
+        Dim distribution(CInt(Math.Ceiling(10000 / dx)))() As Integer
+        For i As Integer = 0 To UBound(distribution) Step 1
+            distribution(i) = {0, 0}
+        Next i
+        For i As Integer = 0 To attempts - 1 Step 1
+            m = -1
+            Do While m = -1 OrElse rStack.LootCost(AllItemsList(m)).Gold = 0 OrElse AllItemsList(m).type = GenDefaultValues.ItemTypes.special
+                m = rStack.rndgen.RndInt(0, UBound(AllItemsList))
+            Loop
+            items = AllItemsList(m).itemID
+            settings.IGen = rStack.GetItemsGenSettings({items}.ToList, True)
+            settings.GoldCost = rStack.LootCost(items).Gold
+            Dim goldIn As Integer = settings.GoldCost
+
+            result = rStack.ThingGen(settings)
+            resultGoldSum = AllDataStructues.Cost.Sum(rStack.LootCost(result))
+
+            'Console.WriteLine(String.Join(vbTab, New String() {goldIn, resultGoldSum}))
+
+            totalGoldIn += goldIn
+            totalGoldOut += resultGoldSum
+
+            distribution(Math.Floor(goldIn / dx))(0) += 1
+            distribution(Math.Floor(resultGoldSum / dx))(1) += 1
+
+            Call rStack.ResetAddedItems()
+            Call rStack.ResetItemWeightMultiplier()
+        Next i
+        Console.WriteLine("--------------------")
+        Console.WriteLine(String.Join(vbTab, New String() {totalGoldIn, totalGoldOut, _
+                                              Math.Round(totalGoldIn / totalGoldOut, 3)}))
+        Dim d As String = "cost" & vbTab & "in" & vbTab & "out"
+        For i As Integer = 0 To UBound(distribution) Step 1
+            d &= vbNewLine & i * dx + dx / 2 & vbTab & distribution(i)(0) & vbTab & distribution(i)(1)
+        Next i
+
     End Sub
 
 End Class

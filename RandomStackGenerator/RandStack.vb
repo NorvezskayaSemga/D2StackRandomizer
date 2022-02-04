@@ -195,8 +195,8 @@ Public Class RandStack
 
     End Class
 
-    Private Const itemGenSigma As Double = 0.5
-    Private Const multiItemGenSigmaMultiplier As Double = 1.5
+    Private Const itemGenSigma As Double = 0.2
+    Private Const multiItemGenSigmaMultiplier As Double = 1.6
     Public ReadOnly maxUnitLevel As Integer
 
     Private UnitsArrayPos As New Dictionary(Of String, Integer)
@@ -802,6 +802,7 @@ Public Class RandStack
         Call LootGenPrepare(GenSettings, LogID, True)
 
         Dim maxCost(), selected As Integer
+        'Dim minCostBar, maxCostBar As Integer
         Dim weight(UBound(AllItems)) As Double
         Dim IDs As New RandomSelection(AllItems.Length, rndgen)
         Dim result As New List(Of String)
@@ -818,6 +819,7 @@ Public Class RandStack
         itemsFilter.presets(1).useCostBar = True
 
         Dim DynWeight As New ItemsWeigtMultipliers(Me, GenSettings, itemsFilter)
+        Dim settings() As AllDataStructues.ItemGenSettings = AllDataStructues.LootGenSettings.ToArray(GenSettings.IGen)
 
         Do While itemsFilter.CurrentMaxLootCost >= minItemGoldCost
             maxCost = GenItemMaxCost(itemsFilter.IGen, itemsFilter.CurrentMaxLootCost)
@@ -826,6 +828,28 @@ Public Class RandStack
                                  " Selected cost bar:" & itemsFilter.TypeCostBar(0) & "|" & itemsFilter.TypeCostBar(1) & "|" & itemsFilter.TypeCostBar(2) & _
                                  " max item cost:" & maxCost(0) & "|" & maxCost(1) & "|" & maxCost(2))
             itemsFilter.ForceDisableStrictTypesFilter = False
+
+            'minCostBar = Integer.MaxValue
+            'maxCostBar = Integer.MinValue
+            'For i As Integer = 0 To UBound(itemsFilter.TypeCostBar) Step 1
+            '    If Not settings(i).exclude Then
+            '        minCostBar = Math.Min(minCostBar, itemsFilter.TypeCostBar(i))
+            '        maxCostBar = Math.Max(minCostBar, itemsFilter.TypeCostBar(i))
+            '    End If
+            'Next i
+            'If minCostBar = Integer.MaxValue Then
+            '    minCostBar = 0
+            'Else
+            '    minCostBar = CInt(minCostBar * 0.8)
+            'End If
+            'If maxCostBar <= 0 Then
+            '    maxCostBar = maxCost.Max
+            'Else
+            '    maxCostBar = CInt(maxCostBar * 1.2)
+            'End If
+            'itemsFilter.strictMinCost = minCostBar
+            'itemsFilter.strictMaxCost = maxCostBar
+
             again = True
             Do While again
                 IDs.Clear()
@@ -851,7 +875,12 @@ Public Class RandStack
                     again = False
                 Else
                     If Not itemsFilter.ForceDisableStrictTypesFilter Then
+                        'If itemsFilter.strictMinCost < 0 And itemsFilter.strictMaxCost > 1.2 * GenSettings.GoldCost Then
                         itemsFilter.ForceDisableStrictTypesFilter = True
+                        'Else
+                        '    If itemsFilter.strictMinCost >= 0 Then itemsFilter.strictMinCost -= 200
+                        '    If itemsFilter.strictMaxCost <= 1.2 * GenSettings.GoldCost Then itemsFilter.strictMaxCost += 200
+                        'End If
                     Else
                         again = False
                     End If
@@ -952,7 +981,7 @@ Public Class RandStack
 
         itemsFilter.ForceDisableStrictTypesFilter = False
         itemsFilter.strictMinCost = CInt(Math.Max(Math.Min(comm.defValues.MinRuinsLootCostMultiplier, 1), 0) * GenSettings.GoldCost)
-        itemsFilter.strictMaxCost = GenSettings.GoldCost
+        itemsFilter.strictMaxCost = CInt(GenSettings.GoldCost * Math.Max(2 - Math.Min(comm.defValues.MinRuinsLootCostMultiplier, 1), 1))
 
         Dim DynWeight As New ItemsWeigtMultipliers(Me, GenSettings, itemsFilter)
 
@@ -965,35 +994,45 @@ Public Class RandStack
             Dim IDs As New RandomSelection(AllItems.Length, rndgen)
             Dim weight(UBound(AllItems)) As Double
             Dim again As Boolean = True
-            Do While again
-                Parallel.For(0, Environment.ProcessorCount, _
-                 Sub(proc As Integer)
-                     For i As Integer = proc To UBound(AllItems) Step Environment.ProcessorCount
-                         If itemsFilter.Filter(0, AllItems(i)) Then
-                             IDs.Add(i)
-                             weight(i) = Global_ItemsWeightMultiplier(i) * _
-                                         DynWeight.Nearby_SameTypeMultiplier(AllItems(i).type) * _
-                                         DynWeight.Nearby_SameItemMultiplier(i) * _
-                                         DynWeight.NearbyCapitalSameTypeItemsEffectOnWeight(i)
-                         End If
-                     Next i
-                 End Sub)
-                Call IDs.RefreshCount()
-                If IDs.Count > 0 Then
-                    again = False
-                Else
-                    If Not itemsFilter.ForceDisableStrictTypesFilter Then
-                        itemsFilter.ForceDisableStrictTypesFilter = True
-                    Else
+            Dim resumeOuterLoop As Boolean = True
+            Do While resumeOuterLoop
+                Do While again
+                    Parallel.For(0, Environment.ProcessorCount, _
+                     Sub(proc As Integer)
+                         For i As Integer = proc To UBound(AllItems) Step Environment.ProcessorCount
+                             If itemsFilter.Filter(0, AllItems(i)) Then
+                                 IDs.Add(i)
+                                 weight(i) = Global_ItemsWeightMultiplier(i) * _
+                                             DynWeight.Nearby_SameTypeMultiplier(AllItems(i).type) * _
+                                             DynWeight.Nearby_SameItemMultiplier(i) * _
+                                             DynWeight.NearbyCapitalSameTypeItemsEffectOnWeight(i)
+                             End If
+                         Next i
+                     End Sub)
+                    Call IDs.RefreshCount()
+                    If IDs.Count > 0 Then
                         again = False
+                    Else
+                        If Not itemsFilter.ForceDisableStrictTypesFilter Then
+                            itemsFilter.ForceDisableStrictTypesFilter = True
+                        Else
+                            again = False
+                        End If
+                    End If
+                Loop
+                If IDs.Count > 0 Then
+                    resumeOuterLoop = False
+                    Dim selected As Integer = IDs.RandomSelection(New Double()() {ItemCostSum}, _
+                        New Double() {itemsFilter.CurrentMaxLootCost}, weight, itemGenSigma)
+                    Call DynWeight.ItemAdded(result, selected, True, LogID)
+                Else
+                    If itemsFilter.strictMinCost > 50 Then
+                        itemsFilter.strictMinCost = CInt(itemsFilter.strictMinCost * 0.9)
+                    Else
+                        resumeOuterLoop = False
                     End If
                 End If
             Loop
-            If IDs.Count > 0 Then
-                Dim selected As Integer = IDs.RandomSelection(New Double()() {ItemCostSum}, _
-                    New Double() {itemsFilter.CurrentMaxLootCost}, weight, itemGenSigma)
-                Call DynWeight.ItemAdded(result, selected, True, LogID)
-            End If
         End If
 
         Call AddToLog(LogID, "----Single item creation ended----")
@@ -1077,7 +1116,8 @@ Public Class RandStack
                     max = Math.Max(minItemGoldCost, MaxCost(i) + upCost)
                     min = minItemGoldCost
                 End If
-                result(i) = CostBarGen(min, max)
+                'result(i) = CostBarGen(min, max)
+                result(i) = CostBarGen(rndgen.RndInt(min, max), CInt(0.5 * (max + MaxCost(i))))
             End If
         Next i
         Return result
