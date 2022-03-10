@@ -80,6 +80,7 @@
   <ItemGroup>
     <Compile Include="ArrayZoomTest.vb" />
     <Compile Include="CommonTest.vb" />
+    <Compile Include="LogTest.vb" />
     <Compile Include="My Project\AssemblyInfo.vb" />
     <Compile Include="ObjectsContentSetTest.vb" />
     <Compile Include="RandomSelectionTest.vb" />

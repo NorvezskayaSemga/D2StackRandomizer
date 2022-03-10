@@ -5976,7 +5976,7 @@ End Class
 Public Class GenDefaultValues
 
     Public Const DefaultMod As String = "MNS"
-    Public Const myVersion As String = "23.01.2022.18.21"
+    Public Const myVersion As String = "10.03.2022.22.59"
 
     Public Shared Function PrintVersion() As String
         Return "Semga's generator DLL version: " & myVersion
@@ -6999,21 +6999,60 @@ Public Class Log
     Private Function LogPrint(ByRef log As List(Of String), ByRef id As Integer) As String
         Return log.Item(id)
     End Function
-    Private Function LogPrint(ByRef log As List(Of String)) As String
-        Dim result As String = ""
-        Dim boofer As String = ""
+    Private Function LogPrint(ByVal log As List(Of String)) As String
         Dim len As Integer = log.Count - 1
-        If len = -1 Then Return result
-        result = LogPrint(log, 0)
-        For i As Integer = 1 To len Step 1
-            boofer &= vbNewLine & LogPrint(log, i)
-            If boofer.Length > 10000 Then
-                result &= boofer
-                boofer = ""
-            End If
+        Dim n As Integer = 5
+        Dim mLen(n) As Integer
+        For i As Integer = 0 To n Step 1
+            mLen(i) = CInt(10000 * Math.Pow(5, i))
         Next i
-        If Not boofer = "" Then result &= boofer
-        Return result
+        Dim boofer(Environment.ProcessorCount - 1)(), result(Environment.ProcessorCount - 1) As String
+        Dim s(UBound(result)), e(UBound(result)) As Integer
+        Dim d As Integer = CInt(log.Count / result.Length)
+        e(0) = d
+        For k As Integer = 1 To Environment.ProcessorCount - 1 Step 1
+            s(k) = e(k - 1) + 1
+            e(k) = Math.Min(s(k) + d, len)
+        Next k
+        If e(Environment.ProcessorCount - 1) < len Then e(Environment.ProcessorCount - 1) = len
+
+        Parallel.For(0, Environment.ProcessorCount,
+         Sub(k As Integer)
+             result(k) = ""
+             If e(k) >= s(k) Then
+                 ReDim boofer(k)(n)
+                 For i As Integer = 0 To n Step 1
+                     boofer(k)(i) = ""
+                 Next i
+                 For i As Integer = s(k) To e(k) Step 1
+                     If i > 0 Then  boofer(k)(0) &= vbNewLine
+                     boofer(k)(0) &= LogPrint(log, i)
+                     For j As Integer = 0 To n Step 1
+                         If boofer(k)(j).Length > mLen(j) Then
+                             If j < n Then
+                                 boofer(k)(j + 1) &= boofer(k)(j)
+                             Else
+                                 result(k) &= boofer(k)(j)
+                             End If
+                             boofer(k)(j) = ""
+                         Else
+                             Exit For
+                         End If
+                     Next j
+                 Next i
+                 For j As Integer = n To 0 Step -1
+                     If Not boofer(k)(j) = "" Then result(k) &= boofer(k)(j)
+                 Next j
+             End If
+         End Sub)
+        Dim r As String = ""
+        For k As Integer = 0 To Environment.ProcessorCount - 1 Step 1
+            If Not result(k) = "" Then
+                'If Not r = "" Then r &= newLine
+                r &= result(k)
+            End If
+        Next k
+        Return r
     End Function
 
     ''' <summary>Добавить запись в лог, если логирование включено</summary>
