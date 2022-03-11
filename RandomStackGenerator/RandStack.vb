@@ -6962,7 +6962,6 @@ Public Class Log
     Delegate Function printSelectionList(ByRef units() As AllDataStructues.Unit, ByRef possible As List(Of Integer)) As String
 
     Public Sub New(ByRef c As Common)
-        If IsNothing(c) Then Throw New Exception("В класс Log нужно передавать инициализированный класс Common")
         comm = c
     End Sub
 
@@ -7071,6 +7070,7 @@ Public Class Log
     ''' <param name="contString">Будут добавлены поля этой переменной</param>
     Public Sub Add(ByRef contString As AllDataStructues.DesiredStats)
         If Not Enabled Then Exit Sub
+        If IsNothing(comm) Then Throw New Exception("В класс Log нужно передавать инициализированный класс Common")
         Content.Add(AllDataStructues.DesiredStats.Print(contString, comm.defValues.RaceNumberToRaceChar))
     End Sub
     ''' <summary>Добавить запись в лог, если логирование включено</summary>
@@ -7172,6 +7172,7 @@ Public Class Log
     ''' <param name="contString">Будут добавлены поля этой переменной</param>
     Public Sub MAdd(ByVal LogID As Integer, ByVal contString As AllDataStructues.DesiredStats)
         If Not Enabled Then Exit Sub
+        If IsNothing(comm) Then Throw New Exception("В класс Log нужно передавать инициализированный класс Common")
         multiThreadLog(LogID).Add(AllDataStructues.DesiredStats.Print(contString, comm.defValues.RaceNumberToRaceChar))
     End Sub
     ''' <summary>Добавить запись в лог, если логирование включено</summary>
