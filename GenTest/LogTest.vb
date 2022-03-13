@@ -67,7 +67,7 @@ Public Class LogTest
         Dim log As New List(Of String)
 
         Dim ok As Boolean = True
-        Dim len() As Integer = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 100, 1000, 10000, 30000}
+        Dim len() As Integer = {-1, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 100, 1000, 10000, 30000}
         Dim time0, time1 As Integer
         Dim t(UBound(len)), txt1, txt2, line As String
         For i As Integer = 0 To UBound(len) Step 1

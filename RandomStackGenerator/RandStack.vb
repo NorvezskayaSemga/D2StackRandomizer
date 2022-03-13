@@ -5976,7 +5976,7 @@ End Class
 Public Class GenDefaultValues
 
     Public Const DefaultMod As String = "MNS"
-    Public Const myVersion As String = "10.03.2022.22.59"
+    Public Const myVersion As String = "14.03.2022.01.20"
 
     Public Shared Function PrintVersion() As String
         Return "Semga's generator DLL version: " & myVersion
@@ -7014,6 +7014,9 @@ Public Class Log
             e(k) = Math.Min(s(k) + d, len)
         Next k
         If e(Environment.ProcessorCount - 1) < len Then e(Environment.ProcessorCount - 1) = len
+        For k As Integer = 0 To Environment.ProcessorCount - 1 Step 1
+            If e(k) > len Then e(k) = len
+        Next k
 
         Parallel.For(0, Environment.ProcessorCount,
          Sub(k As Integer)
