@@ -199,6 +199,8 @@ Public Class RandStack
     Private Const multiItemGenSigmaMultiplier As Double = 1.6
     Public ReadOnly maxUnitLevel As Integer
 
+    Private Const DefaultExpKilledThresholdMultiplier As Double = 1.5
+
     Private UnitsArrayPos As New Dictionary(Of String, Integer)
     Friend AllUnits() As AllDataStructues.Unit
 
@@ -1675,13 +1677,18 @@ Public Class RandStack
                                           ByRef GenSettings As AllDataStructues.CommonStackCreationSettings, _
                                           ByRef DynStackStats As AllDataStructues.DesiredStats, _
                                           ByRef isMapLordRace() As Boolean, _
-                                          ByRef preservedSlotsCount As Integer) As Boolean
+                                          ByRef preservedSlotsCount As Integer, _
+                                          ByRef thresholdMultiplier As Double) As Boolean
         If Not comm.IsAppropriateLeader(AllUnits(leaderID)) Then Return False
 
         If AllUnits(leaderID).fromRaceBranch And isMapLordRace(AllUnits(leaderID).race) Then Return False
 
         If Not settings.ignoreUnitRace Then
             If Not DynStackStats.Race.Contains(AllUnits(leaderID).race) Then Return False
+        End If
+
+        If Not IsNothing(AllUnits(leaderID).isIncompatible) Then
+            If Not UnitExpKilledPartFilter(leaderID, GenSettings, thresholdMultiplier) Then Return False
         End If
 
         If Not AllUnits(leaderID).small And DynStackStats.MaxGiants = 0 Then Return False
@@ -2463,9 +2470,17 @@ Public Class RandStack
         Dim selector As New RandomSelection(AllUnits.Length, rndgen)
         Do While selector.Count < 3
             selector.Clear()
+
             For i As Integer = 0 To UBound(AllUnits) Step 1
-                If SelectPossibleLeader(i, Tolerance, GenSettings, DynStackStats, isMapLordRace, preservedSlots) Then selector.Add(i)
+                If SelectPossibleLeader(i, Tolerance, GenSettings, DynStackStats, isMapLordRace, _
+                                        preservedSlots, DefaultExpKilledThresholdMultiplier) Then selector.Add(i)
             Next i
+            'If selector.Count = 0 Then
+            '    For i As Integer = 0 To UBound(AllUnits) Step 1
+            '        If SelectPossibleLeader(i, Tolerance, GenSettings, DynStackStats, isMapLordRace, _
+            '                                preservedSlots, CDbl(GenSettings.StackStats.StackSize)) Then selector.Add(i)
+            '    Next i
+            'End If
             If Tolerance > 2 And selector.Count > 0 Then Exit Do
 
             'If Tolerance * DynStackStats.ExpBarAverage > maxExpBar And Tolerance * DynStackStats.ExpStackKilled > maxExpStrackKilled Then
@@ -2717,7 +2732,7 @@ Public Class RandStack
         For Each i As Integer In possible2
             Dim m As Double
             If Not IsNothing(leaderExpKilled) Then
-                m = leaderExpKilled(i) / leaderExpKilledMaxValue
+                m = (leaderExpKilled(i) / leaderExpKilledMaxValue) ^ 2
             Else
                 m = 1
             End If
@@ -2780,9 +2795,22 @@ Public Class RandStack
         'Dim nloops As Integer = 0
         'Do While PossibleFighters.Count = 0 'And TExpStack < 1.1 * DynStackStats.ExpStackKilled
         For j As Integer = 0 To UBound(AllUnits) Step 1
-            If SelectPossibleFighter(GenSettings, skipfilter1, skipfilter2, j, DynStackStats, FreeMeleeSlots, _
-                                     SelectedLeader, SelectedFighters, BaseStackSize, isMapLordRace) Then selector.Add(j)
+            If SelectPossibleFighter(GenSettings, skipfilter1, skipfilter2, _
+                                     j, DynStackStats, FreeMeleeSlots, _
+                                     SelectedLeader, SelectedFighters, _
+                                     BaseStackSize, isMapLordRace, _
+                                     DefaultExpKilledThresholdMultiplier) Then selector.Add(j)
         Next j
+        If selector.Count = 0 And skipfilter1 And skipfilter2 Then
+            For j As Integer = 0 To UBound(AllUnits) Step 1
+                If SelectPossibleFighter(GenSettings, skipfilter1, skipfilter2, _
+                                         j, DynStackStats, FreeMeleeSlots, _
+                                         SelectedLeader, SelectedFighters, _
+                                         BaseStackSize, isMapLordRace, _
+                                         CDbl(GenSettings.StackStats.StackSize)) Then selector.Add(j)
+            Next j
+        End If
+
         '    TExpStack += 0.1 * DynStackStats.ExpStackKilled / DynStackStats.StackSize
         '    nloops += 1
         '    If nloops > 10 Then Exit Do
@@ -2883,13 +2911,15 @@ Public Class RandStack
                                            ByRef SelectedLeader As AllDataStructues.Stack.UnitInfo, _
                                            ByRef SelectedFighters As List(Of AllDataStructues.Stack.UnitInfo), _
                                            ByRef BaseStackSize As Integer, _
-                                           ByRef isMapLordRace() As Boolean) As Boolean
+                                           ByRef isMapLordRace() As Boolean, _
+                                           ByRef thresholdMultiplier As Double) As Boolean
         If Not comm.IsAppropriateFighter(AllUnits(fighterID)) Then Return False
 
         If AllUnits(fighterID).fromRaceBranch And isMapLordRace(AllUnits(fighterID).race) Then Return False
 
         Dim inc() As Boolean = AllUnits(fighterID).isIncompatible
         If Not IsNothing(inc) Then
+            If Not UnitExpKilledPartFilter(fighterID, GenSettings, thresholdMultiplier) Then Return False
             If Not IsNothing(SelectedLeader) AndAlso inc(SelectedLeader.unit.unitIndex) Then Return False
             For Each u As AllDataStructues.Stack.UnitInfo In SelectedFighters
                 If inc(u.unit.unitIndex) Then Return False
@@ -2934,6 +2964,15 @@ Public Class RandStack
         Next id
         Return "Selection pool:" & vbNewLine & result
     End Function
+    Private Function UnitExpKilledPartFilter(ByRef id As Integer, _
+                                             ByRef GenSettings As AllDataStructues.CommonStackCreationSettings, _
+                                             ByRef thresholdMultiplier As Double) As Boolean
+        Dim maxExpKilled As Double = thresholdMultiplier * GenSettings.StackStats.ExpStackKilled / GenSettings.StackStats.StackSize
+        If Not AllUnits(id).small Then maxExpKilled *= 2
+        If AllUnits(id).EXPkilled > maxExpKilled Then Return False
+        Return True
+    End Function
+
 
     Private Function SetUnitPosition(ByRef i As Integer, ByRef units() As AllDataStructues.Stack.UnitInfo, _
                                      ByRef FRowSlots As Integer, ByRef SRowSlots As Integer, _
