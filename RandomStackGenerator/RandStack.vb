@@ -6015,7 +6015,7 @@ End Class
 Public Class GenDefaultValues
 
     Public Const DefaultMod As String = "MNS"
-    Public Const myVersion As String = "14.03.2022.01.20"
+    Public Const myVersion As String = "24.05.2022.16.47"
 
     Public Shared Function PrintVersion() As String
         Return "Semga's generator DLL version: " & myVersion
@@ -6879,11 +6879,10 @@ Public Class ResoucesReader
     Private Function ReadResources(ByRef name As String, ByRef defaultValue As String, ByVal modSpecific As Boolean) As String
         Dim path As String = Environment.CurrentDirectory & "\Resources\"
         If modSpecific Then
-            path &= My.Resources.modSettings_keyword & selectedMod & "\"
+            path = GetResourceFilePath(path, name, selectedMod, Nothing)
         Else
-            path &= "common_game_data\"
+            path &= "common_game_data\" & name & ".txt"
         End If
-        path &= name & ".txt"
         If IO.File.Exists(path) Then
             If Not IsNothing(myLog) Then
                 Try
@@ -6903,6 +6902,28 @@ Public Class ResoucesReader
             End If
             Return String.Join(vbNewLine, Common.RecursiveReadFile(defaultValue.Split(CChar(vbNewLine))))
         End If
+    End Function
+    Private Function GetResourceFilePath(ByRef basePath As String, ByRef fileName As String, _
+                                         ByRef modName As String, ByRef prevSource As Dictionary(Of String, String)) As String
+        Dim f As String = basePath & My.Resources.modSettings_keyword & modName & "\"
+        Dim p As String = f & fileName & ".txt"
+        If IO.File.Exists(p) Then Return p
+        Dim a As String = f & "_AbsentFilesSource.txt"
+        If Not IO.File.Exists(a) Then Return p
+        Dim nextMod As String = Common.SettingsFileSplit(IO.File.ReadAllText(a))(0)
+        If IsNothing(prevSource) Then prevSource = New Dictionary(Of String, String)
+        If prevSource.ContainsKey(modName.ToLower) Then
+            MsgBox("Infinite loop detected in _AbsentFilesSource links")
+            Dim list As String = ""
+            For Each k As String In prevSource.Keys
+                list &= prevSource.Item(k)
+                If modName.ToLower = k Then list &= " <----"
+                list &= vbNewLine
+            Next k
+            list &= modName & " <----"
+        End If
+        prevSource.Add(modName.ToLower, modName)
+        Return GetResourceFilePath(basePath, fileName, nextMod, prevSource)
     End Function
 
     'mod-specific

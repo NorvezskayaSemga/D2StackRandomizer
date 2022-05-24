@@ -119,46 +119,16 @@
     <Content Include="Resources\common_game_data\WaterBlocksCommon.txt">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>
-    <Content Include="Resources\mod_settings_SMNS\BigStackUnits.txt">
+    <Content Include="Resources\mod_settings_SMNS\_AbsentFilesSource.txt">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>
-    <Content Include="Resources\mod_settings_SMNS\Constants.txt">
+    <Content Include="Resources\mod_settings_MNS\ObjectsText_Eng.txt">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>
-    <Content Include="Resources\mod_settings_SMNS\ExcludeIDs.txt">
+    <Content Include="Resources\mod_settings_MNS\ObjectsText_Rus.txt">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>
-    <Content Include="Resources\mod_settings_SMNS\ExcludeIDs_ModLore.txt">
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-    </Content>
-    <Content Include="Resources\mod_settings_SMNS\LootItemChanceMultiplier.txt">
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-    </Content>
-    <Content Include="Resources\mod_settings_SMNS\MapObjectRace.txt">
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-    </Content>
-    <Content Include="Resources\mod_settings_SMNS\ObjectsText_Eng.txt">
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-    </Content>
-    <Content Include="Resources\mod_settings_SMNS\ObjectsText_Rus.txt">
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-    </Content>
-    <Content Include="Resources\mod_settings_SMNS\PlateauConstructor.txt">
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-    </Content>
-    <Content Include="Resources\mod_settings_SMNS\PreservedObjects.txt">
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-    </Content>
-    <Content Include="Resources\mod_settings_SMNS\Races.txt">
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-    </Content>
-    <Content Include="Resources\mod_settings_SMNS\RaceSublocations.txt">
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-    </Content>
-    <Content Include="Resources\mod_settings_SMNS\SingleUnits.txt">
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-    </Content>
-    <Content Include="Resources\mod_settings_SMNS\UnitRace.txt">
+    <Content Include="Resources\mod_settings_MNS\RaceSublocations.txt">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>
     <Content Include="Resources\mod_settings_Vanilla\BigStackUnits.txt">
@@ -170,10 +140,10 @@
     <Content Include="Resources\mod_settings_Vanilla\ExcludeIDs.txt">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>
-    <Content Include="Resources\mod_settings_Vanilla\LootItemChanceMultiplier.txt">
+    <Content Include="Resources\mod_settings_Vanilla\ExcludeIDs_ModLore.txt">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>
-    <Content Include="Resources\mod_settings_Vanilla\MapObjectRace.txt">
+    <Content Include="Resources\mod_settings_Vanilla\LootItemChanceMultiplier.txt">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>
     <Content Include="Resources\mod_settings_Vanilla\ObjectsText_Eng.txt">
@@ -194,19 +164,10 @@
     <Content Include="Resources\mod_settings_Vanilla\RaceSublocations.txt">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>
-    <Content Include="Resources\mod_settings_Vanilla\SingleUnits.txt">
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-    </Content>
     <Content Include="Resources\mod_settings_Vanilla\UnitRace.txt">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>
-    <Content Include="Resources\mod_settings_MNS\ObjectsText_Eng.txt">
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-    </Content>
-    <Content Include="Resources\mod_settings_MNS\ObjectsText_Rus.txt">
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-    </Content>
-    <Content Include="Resources\mod_settings_MNS\RaceSublocations.txt">
+    <Content Include="Resources\mod_settings_Vanilla\_AbsentFilesSource.txt">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>
     <Content Include="Resources\template_48x48_unsymm_simple.txt">
@@ -283,11 +244,6 @@
   </ItemGroup>
   <ItemGroup>
     <Content Include="Resources\mod_settings_MNS\SingleUnits.txt">
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-    </Content>
-  </ItemGroup>
-  <ItemGroup>
-    <Content Include="Resources\mod_settings_Vanilla\ExcludeIDs_ModLore.txt">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>
   </ItemGroup>
