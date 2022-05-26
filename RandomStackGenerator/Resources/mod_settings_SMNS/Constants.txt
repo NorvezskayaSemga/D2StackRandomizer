@@ -1,0 +1,16 @@
+#строка, начинающа€с€ с решетки, игнорируетс€
+#с помощью ReadFromFile 'пробел' 'путь к файлу' можно прочитать данные из другого файла.
+#файл, определ€ющий константы, используемые генератором
+#ѕараметр (без пробелов), значение (без пробелов), разделитель таб или пробел
+#слэш - перенос строки
+
+ReadFromFile .\Resources\mod_settings_MNS\Constants.txt
+
+Global_ItemType_ChanceMultiplier	talisman=0.02;/
+					stuff=0.05;/
+					scroll=0.05;/
+       					sphere=0.05;/
+					elixir=1;/
+       					healing_elixir=550#cost<350else0.5;/
+       					ressurection_elixir=200;/
+       					permanent_elixir=0.02
