@@ -2700,7 +2700,7 @@ Public Class RandStack
                                  ByRef units()() As AllDataStructues.Stack.UnitInfo) As Integer
         Dim possible1, possible2 As New RandomSelection(DynStackStats.Length, rndgen)
         Dim SizeTolerance As Integer = 0
-        Do While possible1.Count < 0.5 * DynStackStats.Length
+        Do While possible1.Count < 3
             possible1.Clear()
             SizeTolerance += 1
             For i As Integer = 0 To UBound(DynStackStats) Step 1
@@ -2730,6 +2730,7 @@ Public Class RandStack
 
         Dim weight(UBound(DynStackStats)), averageExpKilled, expKilledDispersion, uniformityMultiplier As Double
         For Each i As Integer In possible2
+            Dim sizeMultiplier As Double = (1 - DynStackStats(i).StackSize / Math.Max(GenSettings.StackStats.StackSize, 1)) ^ 2
             Dim m As Double
             If Not IsNothing(leaderExpKilled) Then
                 m = (leaderExpKilled(i) / leaderExpKilledMaxValue) ^ 2
@@ -2757,7 +2758,7 @@ Public Class RandStack
             uniformityMultiplier = 1 + Math.Abs(settings.unitsStrengthUniformity * expKilledDispersion)
             If settings.unitsStrengthUniformity > 0 Then uniformityMultiplier = 1 / uniformityMultiplier
             'weight(i) = m / (1 + Math.Abs(DynStackStats(i).ExpStackKilled)) 'old
-            weight(i) = m * uniformityMultiplier / (1 + (1 + Math.Abs(DynStackStats(i).ExpStackKilled)) / (1 + maxExpDelta)) 'new
+            weight(i) = m * sizeMultiplier * uniformityMultiplier / (1 + (1 + Math.Abs(DynStackStats(i).ExpStackKilled)) / (1 + maxExpDelta)) 'new
         Next i
         Dim selected As Integer = possible2.RandomSelection(weight)
         Return selected
