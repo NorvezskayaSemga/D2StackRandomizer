@@ -119,6 +119,54 @@
     <Content Include="Resources\common_game_data\WaterBlocksCommon.txt">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>
+    <Content Include="Resources\mod_settings_MNS\_AbsentFilesSource.txt">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
+    <Content Include="Resources\mod_settings_SMNS-1K\ExcludeIDs.txt">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
+    <Content Include="Resources\mod_settings_SMNS-1K\_AbsentFilesSource.txt">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
+    <Content Include="Resources\mod_settings_SMNS-2KC\ExcludeIDs.txt">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
+    <Content Include="Resources\mod_settings_SMNS-2KC\_AbsentFilesSource.txt">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
+    <Content Include="Resources\mod_settings_SMNS-3KCC\ExcludeIDs.txt">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
+    <Content Include="Resources\mod_settings_SMNS-3KCC\_AbsentFilesSource.txt">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
+    <Content Include="Resources\mod_settings_SMNS-4KCCT\ExcludeIDs.txt">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
+    <Content Include="Resources\mod_settings_SMNS-4KCCT\_AbsentFilesSource.txt">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
+    <Content Include="Resources\mod_settings_SMNS-5KCCT+\ExcludeIDs.txt">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
+    <Content Include="Resources\mod_settings_SMNS-5KCCT+\_AbsentFilesSource.txt">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
+    <Content Include="Resources\mod_settings_SMNS\BigStackUnits.txt">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
+    <Content Include="Resources\mod_settings_SMNS\Constants.txt">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
+    <Content Include="Resources\mod_settings_SMNS\ExcludeIDs.txt">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
+    <Content Include="Resources\mod_settings_SMNS\LootItemChanceMultiplier.txt">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
+    <Content Include="Resources\mod_settings_SMNS\PreservedObjects.txt">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
     <Content Include="Resources\mod_settings_SMNS\_AbsentFilesSource.txt">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>
