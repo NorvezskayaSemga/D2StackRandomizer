@@ -9772,7 +9772,7 @@ Public Class ImpenetrableObjects
     ''' <param name="ObjectsSize">Размеры всех объектов местности</param>
     ''' <param name="AddLoreUnitsToExcluded">Добавлять ли лорных юнитов в список исключенных</param>
     ''' <param name="spells">Все заклинания в игре</param>
-    Public Sub New(ByRef ObjectsSize() As GlobalMapDecoration, ByRef AddLoreUnitsToExcluded As Boolean, ByRef spells() As AllDataStructues.Spell, ByRef c As Common)
+    Public Sub New(ByRef ObjectsSize() As GlobalMapDecoration, ByVal AddLoreUnitsToExcluded As Boolean, ByRef spells() As AllDataStructues.Spell, ByRef c As Common)
         comm = c
         If AddLoreUnitsToExcluded Then Call comm.ReadExcludedLoreObjects()
         Call comm.ReadExcludedObjects()
