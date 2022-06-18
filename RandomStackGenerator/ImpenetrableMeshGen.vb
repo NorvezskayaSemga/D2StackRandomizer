@@ -5,6 +5,8 @@ Imports System.Threading.Tasks
 Public Class TemplateForge
 
     Private allParameters() As Parameter
+    Private parameterIndex As New Dictionary(Of String, Integer)
+
     Public blocks(-1) As OptionsStorage
     Public allowToAddNewLocatons As Boolean = True
 
@@ -24,6 +26,9 @@ Public Class TemplateForge
     Public Sub New(ByRef descriptionLanguage As GenDefaultValues.TextLanguage)
 
         allParameters = GetPermissibleParametersRange(descriptionLanguage)
+        For i As Integer = 0 To UBound(allParameters) Step 1
+            parameterIndex.Add(allParameters(i).name.ToUpper, i)
+        Next i
 
         Call AddToArray(AddMainBlock)
         Call AddToArray(AddCommonBlock)
@@ -691,6 +696,25 @@ Public Class TemplateForge
         Return res
     End Function
 
+
+    ''' <summary>
+    ''' Вернет количество типов параметров
+    ''' </summary>
+    Public Function GetParametersCount() As Integer
+        Return allParameters.Length
+    End Function
+    ''' <summary>
+    ''' Вернет описание параметра по номеру
+    ''' </summary>
+    Public Function GetParameterInfo(ByVal index As Integer) As Parameter
+        Return allParameters(index)
+    End Function
+    ''' <summary>
+    ''' Вернет описание параметра по имени. Нечувствительно к регистру
+    ''' </summary>
+    Public Function GetParameterInfo(ByVal name As String) As Parameter
+        Return GetParameterInfo(parameterIndex.Item(name.ToUpper))
+    End Function
 
     Public Class OptionsStorage
 
