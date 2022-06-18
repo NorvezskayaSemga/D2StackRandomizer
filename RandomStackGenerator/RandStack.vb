@@ -5910,7 +5910,7 @@ Public Class AllDataStructues
                                             getRuins(gameModel, comm)}
             Dim result As New Dictionary(Of String, Drawing.Size)
             For i As Integer = 0 To UBound(L) Step 1
-                For j As Integer = 0 To UBound(L(j)) Step 1
+                For j As Integer = 0 To UBound(L(i)) Step 1
                     result.Add(L(i)(j).ID, L(i)(j).Size)
                 Next j
             Next i
