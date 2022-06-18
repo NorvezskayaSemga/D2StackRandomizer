@@ -4,21 +4,9 @@ Public Class RandStack
 
     Public Class ConstructorInput
         ''' <summary>
-        ''' Dсе юниты в игре
+        ''' Ресурсы игры
         ''' </summary>
-        Public AllUnitsList() As AllDataStructues.Unit
-        ''' <summary>
-        ''' >Все предметы в игре
-        ''' </summary>
-        Public AllItemsList() As AllDataStructues.Item
-        ''' <summary>
-        ''' Все заклинания в игре
-        ''' </summary>
-        Public AllSpellsList() As AllDataStructues.Spell
-        ''' <summary>
-        ''' Все модификаторы в игре
-        ''' </summary>
-        Public AllModificatorsList() As AllDataStructues.Modificator
+        Public gameModel As NevendaarTools.GameModel
         ''' <summary>
         ''' Настройки генерации
         ''' </summary>
@@ -243,7 +231,7 @@ Public Class RandStack
         settings = data.settings
         mapData = data.mapData
 
-        If IsNothing(data.AllUnitsList) Or IsNothing(data.AllItemsList) Then Exit Sub
+        If IsNothing(data.gameModel) Then Exit Sub
 
         If settings.talismanChargesDefaultAmount < 1 Then Throw New Exception("Unexpected TalismanChargesDefaultAmount")
 
@@ -268,28 +256,11 @@ Public Class RandStack
         Call comm.ReadSoleUnits()
         Call comm.ReadBigStackUnits()
 
-        Dim PlayableSubraces As New List(Of Integer)
-        For Each item As String In Common.TxtSplit(comm.defValues.resReader.PlayableSubraces)
-            PlayableSubraces.Add(ValueConverter.StrToInt(item, "", ""))
-        Next item
-        Dim unitSubrace As Integer
-
-        maxUnitLevel = CInt(Math.Floor(UShort.MaxValue / data.AllUnitsList.Length))
-
-        ReDim AllUnits(UBound(data.AllUnitsList)), ExpBar(UBound(data.AllUnitsList)), _
-              ExpKilled(UBound(data.AllUnitsList)), multiplierUnitDesiredStats(UBound(data.AllUnitsList))
-        For i As Integer = 0 To UBound(data.AllUnitsList) Step 1
-            AllUnits(i) = AllDataStructues.Unit.Copy(data.AllUnitsList(i))
-            UnitsArrayPos.Add(AllUnits(i).unitID.ToUpper, i)
-            AllUnits(i).unitIndex = i
-
-            unitSubrace = AllUnits(i).race
-
-            If comm.customRace.ContainsKey(AllUnits(i).unitID) Then
-                AllUnits(i).race = comm.RaceIdentifierToSubrace(comm.customRace.Item(AllUnits(i).unitID))
-            Else
-                AllUnits(i).race = comm.RaceIdentifierToSubrace(AllUnits(i).race)
-            End If
+        AllUnits = AllDataStructues.Unit.getGameData(data.gameModel, comm)
+        maxUnitLevel = CInt(Math.Floor(UShort.MaxValue / data.gameModel.GetAllT(Of NevendaarTools.Gunit).Count))
+        ReDim ExpBar(UBound(AllUnits)), ExpKilled(UBound(AllUnits)), multiplierUnitDesiredStats(UBound(AllUnits))
+        For i As Integer = 0 To UBound(AllUnits) Step 1
+            UnitsArrayPos.Add(AllUnits(i).unitID.ToUpper, AllUnits(i).unitIndex)
             ExpBar(i) = AllUnits(i).EXPnext
             ExpKilled(i) = AllUnits(i).EXPkilled
             If AllUnits(i).small Then
@@ -297,16 +268,10 @@ Public Class RandStack
             Else
                 multiplierUnitDesiredStats(i) = comm.defValues.giantUnitsExpMultiplier
             End If
-
-            If PlayableSubraces.Contains(unitSubrace) Then
-                AllUnits(i).fromRaceBranch = True
-            Else
-                AllUnits(i).fromRaceBranch = False
-            End If
         Next i
 
-        ReDim AllItems(UBound(data.AllItemsList)), ItemCostSum(UBound(data.AllItemsList)), Global_ItemsWeightMultiplier(UBound(data.AllItemsList))
-
+        AllItems = AllDataStructues.Item.getGameData(data.gameModel, comm)
+        ReDim ItemCostSum(UBound(AllItems)), Global_ItemsWeightMultiplier(UBound(AllItems))
         Dim weight As New Dictionary(Of String, String)
         For Each s As String In comm.defValues.Global_ItemType_ChanceMultiplier.Split(CChar(";"))
             Dim i As Integer = s.IndexOf("=")
@@ -314,14 +279,13 @@ Public Class RandStack
         Next s
         minItemGoldCost = Integer.MaxValue
         For i As Integer = 0 To UBound(AllItems) Step 1
-            AllItems(i) = AllDataStructues.Item.Copy(data.AllItemsList(i))
             If AllItems(i).type = GenDefaultValues.ItemTypes.talisman Then
                 AllItems(i).itemCost *= data.settings.talismanChargesDefaultAmount
+                AllItems(i).itemCostSum = AllDataStructues.Cost.Sum(AllItems(i).itemCost)
             End If
             ItemsArrayPos.Add(AllItems(i).itemID.ToUpper, i)
+            ItemCostSum(i) = AllItems(i).itemCostSum
 
-            ItemCostSum(i) = AllDataStructues.Cost.Sum(LootCost(AllItems(i)))
-            AllItems(i).itemCostSum = ItemCostSum(i)
             Global_ItemsWeightMultiplier(i) = ItemTypeWeight(weight, comm.itemType.Item(AllItems(i).type), ItemCostSum(i))
             If comm.LootItemChanceMultiplier.ContainsKey(AllItems(i).itemID.ToUpper) Then
                 Global_ItemsWeightMultiplier(i) *= comm.LootItemChanceMultiplier.Item(AllItems(i).itemID.ToUpper)
@@ -330,18 +294,16 @@ Public Class RandStack
         Next i
         bak_multiplierItemsWeight = CType(Global_ItemsWeightMultiplier.Clone, Double())
 
-        ReDim AllSpells(UBound(data.AllSpellsList))
-        For i As Integer = 0 To UBound(data.AllSpellsList) Step 1
-            AllSpells(i) = AllDataStructues.Spell.Copy(data.AllSpellsList(i))
+        AllSpells = AllDataStructues.Spell.getGameData(data.gameModel, comm)
+        For i As Integer = 0 To UBound(AllSpells) Step 1
             SpellsArrayPos.Add(AllSpells(i).spellID.ToUpper, i)
         Next i
 
-        If Not IsNothing(data.AllModificatorsList) Then
-            For i As Integer = 0 To UBound(data.AllModificatorsList) Step 1
-                AllModificators.Add(data.AllModificatorsList(i).id.ToUpper, data.AllModificatorsList(i))
-            Next i
-        End If
-
+        Dim mods() As AllDataStructues.Modificator = AllDataStructues.Modificator.getGameData(data.gameModel, comm)
+        For i As Integer = 0 To UBound(mods) Step 1
+            AllModificators.Add(mods(i).id.ToUpper, mods(i))
+        Next i
+        
         'dynupgrlevel
         'варды
         Dim ws, wc As Integer
@@ -4848,7 +4810,7 @@ Public Class AllDataStructues
                     result(i).ASourceImmunity.Add(imm.immunity.value.id, imm.immunecat.value.id)
                 Next imm
                 For Each imm As NevendaarTools.GimmuC In gdata(i).immunCategory.value
-                    result(i).ASourceImmunity.Add(imm.immunity.value.id, imm.immunecat.value.id)
+                    result(i).AClassImmunity.Add(imm.immunity.value.id, imm.immunecat.value.id)
                 Next imm
 
                 'result(i).isIncompatible -- default
@@ -5466,11 +5428,11 @@ Public Class AllDataStructues
             ''' <summary>
             ''' Поле IMMUNECAT в GmodifL
             ''' </summary>
-            Public immunASourceCat As ImmunityCat
+            Public immunASourceCat As ImmunityCat = ImmunityCat.None
             ''' <summary>
             ''' Поле IMMUNECATC в GmodifL
             ''' </summary>
-            Public immunAClassCat As ImmunityCat
+            Public immunAClassCat As ImmunityCat = ImmunityCat.None
             ''' <summary>
             ''' Поле Move в GmodifL
             ''' </summary>
@@ -5502,15 +5464,16 @@ Public Class AllDataStructues
 
             Public Shared Function Copy(ByRef eff As NevendaarTools.GmodifL) As ModifEffect
                 If IsNothing(eff) Then Return New ModifEffect
-                Return New ModifEffect With {.type = CType(eff.type, EffectType), _
+                Dim r As New ModifEffect With {.type = CType(eff.type, EffectType), _
                                              .percent = eff.percent, _
                                              .number = eff.number, _
-                                             .ability = eff.number, _
-                                             .immunASource = eff.immunity.value.id, _
-                                             .immunASourceCat = CType(eff.immunecat.value.id, ImmunityCat), _
-                                             .immunAClass = eff.immunityc.value.id, _
-                                             .immunAClassCat = CType(eff.immunecatc.value.id, ImmunityCat), _
+                                             .ability = eff.ability, _
                                              .move = eff.move}
+                If Not IsNothing(eff.immunity.value) Then r.immunASource = eff.immunity.value.id
+                If Not IsNothing(eff.immunecat.value) Then r.immunASourceCat = CType(eff.immunecat.value.id, ImmunityCat)
+                If Not IsNothing(eff.immunityc.value) Then r.immunAClass = eff.immunityc.value.id
+                If Not IsNothing(eff.immunecatc.value) Then r.immunAClassCat = CType(eff.immunecatc.value.id, ImmunityCat)
+                Return r
             End Function
         End Class
 
@@ -5840,18 +5803,29 @@ Public Class AllDataStructues
 
     End Class
 
-    Public Class LandmarkDBFData
+    Public Class MapObjectInfo
         ''' <summary>GxxxMGxxxx</summary>
-        Dim ID As String
+        Public ID As String
         ''' <summary>Размеры объекта</summary>
-        Dim Size As Drawing.Size
+        Public Size As Drawing.Size
 
-        Public Shared Function getMountains(ByRef gameModel As NevendaarTools.GameModel, ByRef comm As Common) As LandmarkDBFData()
-            Dim gdata As List(Of NevendaarTools.GameResourceModel.Mountain) = gameModel._ResourceModel.mountains
-            Dim result(gdata.Count - 1) As LandmarkDBFData
+        Public Shared Function getLandmarks(ByRef gameModel As NevendaarTools.GameModel, ByRef comm As Common) As MapObjectInfo()
+            Dim gdata As List(Of NevendaarTools.GLmark) = gameModel.GetAllT(Of NevendaarTools.GLmark)()
+            Dim result(gdata.Count - 1) As MapObjectInfo
 
             For i As Integer = 0 To UBound(result) Step 1
-                result(i) = New LandmarkDBFData
+                result(i) = New MapObjectInfo
+                result(i).ID = gdata(i).lmark_id.ToUpper
+                result(i).Size = New Drawing.Size(gdata(i).cx, gdata(i).cy)
+            Next i
+            Return result
+        End Function
+        Public Shared Function getMountains(ByRef gameModel As NevendaarTools.GameModel, ByRef comm As Common) As MapObjectInfo()
+            Dim gdata As List(Of NevendaarTools.GameResourceModel.Mountain) = gameModel._ResourceModel.mountains
+            Dim result(gdata.Count - 1) As MapObjectInfo
+
+            For i As Integer = 0 To UBound(result) Step 1
+                result(i) = New MapObjectInfo
                 result(i).ID = gdata(i).name.ToUpper
                 result(i).Size = New Drawing.Size(gdata(i).size, gdata(i).size)
             Next i
@@ -5873,27 +5847,32 @@ Public Class AllDataStructues
             Return result
         End Function
 
-        Public Shared Function getMages(ByRef gameModel As NevendaarTools.GameModel, ByRef comm As Common) As LandmarkDBFData()
-            Return toVendorArray(gameModel._ResourceModel.mages, comm)
+        Public Shared Function getMages(ByRef gameModel As NevendaarTools.GameModel, ByRef comm As Common) As MapObjectInfo()
+            Dim s As Integer = (New DefMapObjects).ActiveObjects(DefMapObjects.Types.Mage).Size
+            Return toVendorArray(gameModel._ResourceModel.mages, s, comm)
         End Function
-        Public Shared Function getMerchants(ByRef gameModel As NevendaarTools.GameModel, ByRef comm As Common) As LandmarkDBFData()
-            Return toVendorArray(gameModel._ResourceModel.merhs, comm)
+        Public Shared Function getMerchants(ByRef gameModel As NevendaarTools.GameModel, ByRef comm As Common) As MapObjectInfo()
+            Dim s As Integer = (New DefMapObjects).ActiveObjects(DefMapObjects.Types.Vendor).Size
+            Return toVendorArray(gameModel._ResourceModel.merhs, s, comm)
         End Function
-        Public Shared Function getMercenaries(ByRef gameModel As NevendaarTools.GameModel, ByRef comm As Common) As LandmarkDBFData()
-            Return toVendorArray(gameModel._ResourceModel.mercs, comm)
+        Public Shared Function getMercenaries(ByRef gameModel As NevendaarTools.GameModel, ByRef comm As Common) As MapObjectInfo()
+            Dim s As Integer = (New DefMapObjects).ActiveObjects(DefMapObjects.Types.Mercenary).Size
+            Return toVendorArray(gameModel._ResourceModel.mercs, s, comm)
         End Function
-        Public Shared Function getTrainers(ByRef gameModel As NevendaarTools.GameModel, ByRef comm As Common) As LandmarkDBFData()
-            Return toVendorArray(gameModel._ResourceModel.trainers, comm)
+        Public Shared Function getTrainers(ByRef gameModel As NevendaarTools.GameModel, ByRef comm As Common) As MapObjectInfo()
+            Dim s As Integer = (New DefMapObjects).ActiveObjects(DefMapObjects.Types.Trainer).Size
+            Return toVendorArray(gameModel._ResourceModel.trainers, s, comm)
         End Function
-        Public Shared Function getRuins(ByRef gameModel As NevendaarTools.GameModel, ByRef comm As Common) As LandmarkDBFData()
-            Return toVendorArray(gameModel._ResourceModel.ruins, comm)
+        Public Shared Function getRuins(ByRef gameModel As NevendaarTools.GameModel, ByRef comm As Common) As MapObjectInfo()
+            Dim s As Integer = (New DefMapObjects).ActiveObjects(DefMapObjects.Types.Ruins).Size
+            Return toVendorArray(gameModel._ResourceModel.ruins, s, comm)
         End Function
-        Private Shared Function toVendorArray(ByRef vendors As List(Of String), ByRef comm As Common) As LandmarkDBFData()
-            Dim result(vendors.Count - 1) As LandmarkDBFData
+        Private Shared Function toVendorArray(ByRef vendors As List(Of String), ByRef objSize As Integer, ByRef comm As Common) As MapObjectInfo()
+            Dim result(vendors.Count - 1) As MapObjectInfo
             For i As Integer = 0 To UBound(result) Step 1
-                result(i) = New LandmarkDBFData
+                result(i) = New MapObjectInfo
                 result(i).ID = vendors(i).ToUpper
-                result(i).Size = New Drawing.Size(3, 3)
+                result(i).Size = New Drawing.Size(objSize, objSize)
             Next i
             Return result
         End Function
@@ -5902,12 +5881,13 @@ Public Class AllDataStructues
         ''' Вернет размер гор и торговцев
         ''' </summary>
         Public Shared Function getSizeDictionary(ByRef gameModel As NevendaarTools.GameModel, ByRef comm As Common) As Dictionary(Of String, Drawing.Size)
-            Dim L()() As LandmarkDBFData = {getMountains(gameModel, comm), _
-                                            getMages(gameModel, comm), _
-                                            getMerchants(gameModel, comm), _
-                                            getMercenaries(gameModel, comm), _
-                                            getTrainers(gameModel, comm), _
-                                            getRuins(gameModel, comm)}
+            Dim L()() As MapObjectInfo = {getLandmarks(gameModel, comm), _
+                                          getMountains(gameModel, comm), _
+                                          getMages(gameModel, comm), _
+                                          getMerchants(gameModel, comm), _
+                                          getMercenaries(gameModel, comm), _
+                                          getTrainers(gameModel, comm), _
+                                          getRuins(gameModel, comm)}
             Dim result As New Dictionary(Of String, Drawing.Size)
             For i As Integer = 0 To UBound(L) Step 1
                 For j As Integer = 0 To UBound(L(i)) Step 1
@@ -5919,18 +5899,19 @@ Public Class AllDataStructues
         ''' <summary>
         ''' Вернет горы и торговцев
         ''' </summary>
-        Public Shared Function getObjects(ByRef gameModel As NevendaarTools.GameModel, ByRef comm As Common) As LandmarkDBFData()
-            Dim L()() As LandmarkDBFData = {getMountains(gameModel, comm), _
-                                            getMages(gameModel, comm), _
-                                            getMerchants(gameModel, comm), _
-                                            getMercenaries(gameModel, comm), _
-                                            getTrainers(gameModel, comm), _
-                                            getRuins(gameModel, comm)}
+        Public Shared Function getObjects(ByRef gameModel As NevendaarTools.GameModel, ByRef comm As Common) As MapObjectInfo()
+            Dim L()() As MapObjectInfo = {getLandmarks(gameModel, comm), _
+                                          getMountains(gameModel, comm), _
+                                          getMages(gameModel, comm), _
+                                          getMerchants(gameModel, comm), _
+                                          getMercenaries(gameModel, comm), _
+                                          getTrainers(gameModel, comm), _
+                                          getRuins(gameModel, comm)}
             Dim n As Integer = 0
             For i As Integer = 0 To UBound(L) Step 1
                 n += L(i).Length
             Next i
-            Dim result(n - 1) As LandmarkDBFData
+            Dim result(n - 1) As MapObjectInfo
             n = 0
             For i As Integer = 0 To UBound(L) Step 1
                 For j As Integer = 0 To UBound(L(i)) Step 1

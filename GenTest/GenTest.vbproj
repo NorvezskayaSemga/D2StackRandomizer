@@ -60,6 +60,9 @@
     <Reference Include="System.Windows.Forms" />
     <Reference Include="System.Xml" />
     <Reference Include="System.Xml.Linq" />
+    <Reference Include="VilgeforcTools">
+      <HintPath>..\..\VilgeforcTools\VilgeforcTools\bin\Debug\VilgeforcTools.dll</HintPath>
+    </Reference>
   </ItemGroup>
   <ItemGroup>
     <Import Include="System" />

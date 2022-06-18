@@ -1,11 +1,11 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <PropertyGroup>
-    <ProjectView>ProjectFiles</ProjectView>
+    <ProjectView>ShowAllFiles</ProjectView>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'Debug|AnyCPU'">
     <StartAction>Program</StartAction>
-    <StartProgram>F:\Visual Studio\D2StackRandomizer\RandomStackGenerator\bin\Debug\D2MapEdit.exe</StartProgram>
-    <StartWorkingDirectory>F:\Visual Studio\D2StackRandomizer\RandomStackGenerator\bin\Debug\</StartWorkingDirectory>
+    <StartProgram>F:\Visual Studio\SharpGenSample\SharpGenSample\bin\x64\Debug\D2MapEditor.exe</StartProgram>
+    <StartWorkingDirectory>F:\Visual Studio\SharpGenSample\SharpGenSample\bin\x64\Debug\</StartWorkingDirectory>
   </PropertyGroup>
 </Project>

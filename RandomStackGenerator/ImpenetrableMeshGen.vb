@@ -881,6 +881,19 @@ Public Class DefMapObjects
     Public Const mineWhite As String = "G000CR0000WH"
     Public Const mineRed As String = "G000CR0000RD"
     Public Const mineBlue As String = "G000CR0000YE"
+
+    Public ActiveObjects() As AttendedObject
+    Public Sub New()
+        ActiveObjects = New AttendedObject() {Nothing, _
+                                              New AttendedObject(5, DefMapObjects.Types.Capital), _
+                                              New AttendedObject(4, DefMapObjects.Types.City), _
+                                              New AttendedObject(3, DefMapObjects.Types.Vendor, True), _
+                                              New AttendedObject(3, DefMapObjects.Types.Mercenary, True), _
+                                              New AttendedObject(3, DefMapObjects.Types.Mage, True), _
+                                              New AttendedObject(3, DefMapObjects.Types.Trainer, True), _
+                                              New AttendedObject(3, DefMapObjects.Types.Ruins), _
+                                              New AttendedObject(1, DefMapObjects.Types.Mine)}
+    End Sub
 End Class
 
 Public Class ImpenetrableMeshGen
@@ -1216,16 +1229,7 @@ Public Class ImpenetrableMeshGen
         comm = c
         stackLocGen = New StackLocationsGen(comm, Me)
         minLocationRadiusAtAll = c.defValues.minLocationRadiusAtAll
-
-        ActiveObjects = New AttendedObject() {Nothing, _
-                                              New AttendedObject(5, DefMapObjects.Types.Capital), _
-                                              New AttendedObject(4, DefMapObjects.Types.City), _
-                                              New AttendedObject(3, DefMapObjects.Types.Vendor, True), _
-                                              New AttendedObject(3, DefMapObjects.Types.Mercenary, True), _
-                                              New AttendedObject(3, DefMapObjects.Types.Mage, True), _
-                                              New AttendedObject(3, DefMapObjects.Types.Trainer, True), _
-                                              New AttendedObject(3, DefMapObjects.Types.Ruins), _
-                                              New AttendedObject(1, DefMapObjects.Types.Mine)}
+        ActiveObjects = (New DefMapObjects).ActiveObjects
     End Sub
 
     Public Function ActiveObjectsSet(ByRef settMap As Map.SettingsMap, ByRef symmId As Integer) As Map.Cell()(,)
@@ -2902,7 +2906,7 @@ clearandexit:
 
             Dim locSize As Integer = 29
 
-            Dim actObj() As AttendedObject = (New ImpenetrableMeshGen(New Common(GenDefaultValues.DefaultMod))).ActiveObjects
+            Dim actObj() As AttendedObject = (New DefMapObjects).ActiveObjects
             Dim center As New Point(CInt(locSize / 2), CInt(locSize / 2))
             Dim free(locSize, locSize) As Boolean
             For y As Integer = 0 To locSize Step 1
@@ -5599,22 +5603,23 @@ Public Class shortMapFormat
     ''' <param name="objContent">Полностью инициализированный класс</param>
     ''' <param name="fullSymmetry">Если карта симметрична, сделать отряды и награды абсолютно симметричными (пока не используется)</param>
     ''' <param name="usePlayableRaceUnitsInNeutralStacks">Если True, то в нейтральных отрядах будут использованы юниты из веток развития</param>
-    ''' <param name="treesAmont">Количество деревьев для земли каждой расы. ID рас в Races.txt, последний столбец</param>
     Public Shared Function MapConversion(ByRef m As Map, _
                                          ByRef settGen As ImpenetrableMeshGen.GenSettings, _
-                                         ByRef ObjectsSize() As ImpenetrableObjects.GlobalMapDecoration, _
+                                         ByRef gameModel As NevendaarTools.GameModel, _
                                          ByRef objContent As ObjectsContentSet, _
                                          ByRef fullSymmetry As Boolean, _
                                          ByRef usePlayableRaceUnitsInNeutralStacks As Boolean, _
-                                         ByRef treesAmont() As Integer, _
                                          ByRef lang As GenDefaultValues.TextLanguage) As shortMapFormat
 
         Call objContent.randStack.ResetAddedItems()
         Call objContent.randStack.ResetItemWeightMultiplier()
 
-        Dim attObjects() As AttendedObject = (New ImpenetrableMeshGen(m.comm)).ActiveObjects
+        Dim attObjects() As AttendedObject = (New DefMapObjects).ActiveObjects
         Dim sName As New SetName(lang, m.comm.defValues.selectedMod)
         Call sName.ResetNames(True, -1)
+
+        Dim treesAmount() As Integer = AllDataStructues.MapObjectInfo.getTreesAmount(gameModel, m.comm)
+        Dim objectsSise As Dictionary(Of String, Size) = AllDataStructues.MapObjectInfo.getSizeDictionary(gameModel, m.comm)
 
         Dim raceMana As Dictionary(Of Integer, AllDataStructues.Cost()) = ImpenetrableObjects.RacesManaUsing(objContent.randStack.comm, objContent.randStack.AllSpells)
         Dim raceT1mana As New Dictionary(Of Integer, AllDataStructues.Cost)
@@ -5721,11 +5726,11 @@ Public Class shortMapFormat
                     Dim max As Integer
                     If objContent.randStack.comm.defValues.IsNeutralRace(res.landscape(x, y).owner) Then
                         For Each r As String In objContent.randStack.comm.defValues.neutralRaces
-                            max = treesAmont(objContent.randStack.comm.RaceIdentifierToSubrace(r)) - 1
+                            max = treesAmount(objContent.randStack.comm.RaceIdentifierToSubrace(r)) - 1
                             If max > -1 Then Exit For
                         Next r
                     Else
-                        max = treesAmont(objContent.randStack.comm.RaceIdentifierToSubrace(res.landscape(x, y).owner)) - 1
+                        max = treesAmount(objContent.randStack.comm.RaceIdentifierToSubrace(res.landscape(x, y).owner)) - 1
                     End If
                     res.landscape(x, y).treeID = objContent.randStack.rndgen.RndInt(0, max)
                 ElseIf m.board(x, y).surface.isRoad Then
@@ -5815,11 +5820,7 @@ Public Class shortMapFormat
                 ElseIf m.board(x, y).mapObject.objectID = DefMapObjects.Types.Mine Then
                     'do nothing
                 ElseIf m.board(x, y).mapObject.objectID = DefMapObjects.Types.None Then
-                    If name.ToUpper.StartsWith(GenDefaultValues.wObjKeyMountain.ToUpper) Then
-                        Call AddObject(res.mountains, x, y, name, ImpenetrableObjects.GlobalMapDecoration.MountainSize(name))
-                    Else
-                        Call AddObject(res.landmarks, x, y, name, ImpenetrableObjects.GlobalMapDecoration.GetObjectSize(ObjectsSize, name))
-                    End If
+                    Call AddObject(res.mountains, x, y, name, objectsSise.Item(name).Width)
                 Else
                     Throw New Exception("shortMapFormat.MapConversion: unknown object type")
                 End If
@@ -5864,7 +5865,7 @@ Public Class shortMapFormat
                         size = attObjects(m.board(x, y).mapObject.objectID).Size
                     ElseIf name.ToUpper.StartsWith(GenDefaultValues.wObjKeyMountain.ToUpper) Then
                         owner = objContent.randStack.comm.defValues.RaceNumberToRaceChar(objContent.randStack.comm.RaceIdentifierToSubrace("Neutral"))
-                        size = ImpenetrableObjects.GlobalMapDecoration.MountainSize(name).Width
+                        size = objectsSise.Item(name).Width
                     End If
                     If Not owner = "" Then
                         For x1 As Integer = 0 To size - 1 Step 1
@@ -6980,7 +6981,7 @@ Public Class Map
 
     ''' <summary>Вернет True, если все нормально, иначе стоит перегенерировать</summary>
     Public Function TestMap() As String
-        Dim imp As New ImpenetrableMeshGen(comm)
+        Dim mapActiveObjects() As AttendedObject = (New DefMapObjects).ActiveObjects
         If Not complited.LoationsCreation_Done Then
             Throw New Exception("Сначала нужно выполнить ImpenetrableMeshGen.SymmGen или ImpenetrableMeshGen.UnsymmGen")
         End If
@@ -7007,7 +7008,7 @@ Public Class Map
                     ElseIf (board(x, y).mapObject.objectID = DefMapObjects.Types.City Or _
                             board(x, y).mapObject.objectID = DefMapObjects.Types.Ruins) And board(x, y).groupID < 1 Then
                         Return "Warning: group for internal guard for object is zero"
-                    ElseIf board(x, y).mapObject.objectID > DefMapObjects.Types.None AndAlso imp.ActiveObjects(board(x, y).mapObject.objectID).hasExternalGuard Then
+                    ElseIf board(x, y).mapObject.objectID > DefMapObjects.Types.None AndAlso mapActiveObjects(board(x, y).mapObject.objectID).hasExternalGuard Then
                         Return "Warning: object with external guard has internal one"
                     End If
                 End If
@@ -7044,7 +7045,7 @@ Public Class Map
     Public Sub PrintObjectsPositions(ByRef log As Log, ByRef ObjectsSize As Dictionary(Of String, Size))
         If Not log.IsEnabled Then Exit Sub
 
-        Dim imp As New ImpenetrableMeshGen(comm)
+        Dim mapActiveObjects() As AttendedObject = (New DefMapObjects).ActiveObjects
 
         Dim objList() As String = New String() {"None", "Capital", "City", "Vendor", "Mercenary", _
                                                 "Mage", "Trainer", "Ruins", "Mine"}
@@ -7072,10 +7073,10 @@ Public Class Map
                                 y2 = y1
                             End If
                         Else
-                            x1 = x - imp.ActiveObjects(i).dxy
-                            y1 = y - imp.ActiveObjects(i).dxy
-                            x2 = x + imp.ActiveObjects(i).dxy + imp.ActiveObjects(i).Size - 1
-                            y2 = y + imp.ActiveObjects(i).dxy + imp.ActiveObjects(i).Size - 1
+                            x1 = x - mapActiveObjects(i).dxy
+                            y1 = y - mapActiveObjects(i).dxy
+                            x2 = x + mapActiveObjects(i).dxy + mapActiveObjects(i).Size - 1
+                            y2 = y + mapActiveObjects(i).dxy + mapActiveObjects(i).Size - 1
                         End If
                         log.Add(basic & PrintPos(x1, y1, x2, y2))
                     End If
@@ -7125,13 +7126,13 @@ Public Class Map
     End Sub
 
     Public Function MapConversion(ByRef settGen As ImpenetrableMeshGen.GenSettings,
-                                  ByRef ObjectsSize() As ImpenetrableObjects.GlobalMapDecoration, _
+                                  ByRef gameModel As NevendaarTools.GameModel, _
                                   ByRef objContent As ObjectsContentSet, _
                                   ByRef fullSymmetry As Boolean, _
                                   ByRef usePlayableRaceUnitsInNeutralStacks As Boolean, _
                                   ByRef treesAmont() As Integer, _
                                   ByRef lang As GenDefaultValues.TextLanguage) As shortMapFormat
-        Return shortMapFormat.MapConversion(Me, settGen, ObjectsSize, objContent, fullSymmetry, usePlayableRaceUnitsInNeutralStacks, treesAmont, lang)
+        Return shortMapFormat.MapConversion(Me, settGen, gameModel, objContent, fullSymmetry, usePlayableRaceUnitsInNeutralStacks, lang)
     End Function
 
 End Class
@@ -9692,6 +9693,53 @@ Public Class ImpenetrableObjects
         Protected Friend border As Point
         ''' <summary>Является ли водопадом</summary>
         Protected Friend isWaterfall As Boolean
+
+        Public Shared Function Make(ByRef k As AllDataStructues.MapObjectInfo, ByRef comm As Common) As PlateauObject
+            Dim g As New PlateauObject
+            Dim t() As String = comm.PlateauConstruction.Item(k.ID.ToUpper).ToUpper.Replace(vbTab, " ").Split(CChar(" "))
+            Dim dx As Integer = 3 - g.xSize
+            Dim dy As Integer = 3 - g.ySize
+            For i As Integer = 0 To UBound(t) Step 1
+                If t(i) = "W" Then
+                    g.isWaterfall = True
+                ElseIf t(i) = "U" Or t(i) = "D" Or t(i) = "L" Or t(i) = "R" Then
+                    Dim p1 As Point = Nothing
+                    Dim p2 As Point = Nothing
+                    If IsNothing(g.connectors) Then
+                        ReDim g.connectors(0)
+                    Else
+                        ReDim Preserve g.connectors(g.connectors.Length)
+                    End If
+                    If t(i) = "U" Then
+                        p1 = New Point(1, -1)
+                        p2 = New Point(1, 0)
+                    ElseIf t(i) = "D" Then
+                        p1 = New Point(1, 2 - dy)
+                        p2 = New Point(1, 3 - dy)
+                    ElseIf t(i) = "L" Then
+                        p1 = New Point(-1, 1)
+                        p2 = New Point(0, 1)
+                    ElseIf t(i) = "R" Then
+                        p1 = New Point(2 - dx, 1)
+                        p2 = New Point(3 - dx, 1)
+                    End If
+                    g.connectors(UBound(g.connectors)) = New Point() {p1, p2}
+                ElseIf t(i) = "UB" Or t(i) = "DB" Or t(i) = "LB" Or t(i) = "RB" Then
+                    Dim p1 As Point = Nothing
+                    If t(i) = "UB" Then
+                        p1 = New Point(1, 0)
+                    ElseIf t(i) = "DB" Then
+                        p1 = New Point(1, 2 - dy)
+                    ElseIf t(i) = "LB" Then
+                        p1 = New Point(0, 1)
+                    ElseIf t(i) = "RB" Then
+                        p1 = New Point(2 - dx, 1)
+                    End If
+                    g.border = p1
+                End If
+            Next i
+            Return g
+        End Function
     End Class
 
     Private symm As New SymmetryOperations
@@ -9744,47 +9792,21 @@ Public Class ImpenetrableObjects
         Dim n As Integer
     End Structure
 
-    Public Structure GlobalMapDecoration
-        ''' <summary>GxxxMGxxxx</summary>
-        Dim ID As String
-        ''' <summary>Размеры объекта</summary>
-        Dim Size As Size
-
-        ''' <summary>Вернет размер горы</summary>
-        ''' <param name="mountainID">MOMNExxyy</param>
-        Public Shared Function MountainSize(ByRef mountainID As String) As Size
-            Dim s As Integer = CInt(mountainID.Substring(GenDefaultValues.wObjKeyMountain.Length, 2))
-            Return New Size(s, s)
-        End Function
-
-        Public Shared Function GetObjectSize(ByRef allLandmarks() As GlobalMapDecoration, ByRef landmarkID As String) As Size
-            If landmarkID.ToUpper.StartsWith(GenDefaultValues.wObjKeyMountain.ToUpper) Then
-                Return MountainSize(landmarkID)
-            Else
-                Dim id As String = landmarkID.ToUpper
-                For i As Integer = 0 To UBound(allLandmarks) Step 1
-                    If allLandmarks(i).ID.ToUpper = id Then Return New Size(allLandmarks(i).Size.Width, allLandmarks(i).Size.Height)
-                Next i
-            End If
-        End Function
-    End Structure
-
-    ''' <param name="ObjectsSize">Размеры всех объектов местности</param>
     ''' <param name="AddLoreUnitsToExcluded">Добавлять ли лорных юнитов в список исключенных</param>
-    ''' <param name="spells">Все заклинания в игре</param>
-    Public Sub New(ByRef ObjectsSize() As GlobalMapDecoration, ByVal AddLoreUnitsToExcluded As Boolean, ByRef spells() As AllDataStructues.Spell, ByRef c As Common)
+    Public Sub New(ByRef gameModel As NevendaarTools.GameModel, ByVal AddLoreUnitsToExcluded As Boolean, ByRef c As Common)
         comm = c
         If AddLoreUnitsToExcluded Then Call comm.ReadExcludedLoreObjects()
         Call comm.ReadExcludedObjects()
         Call comm.ReadCustomBuildingRace()
         Call comm.ReadPlateauConstructionDescription()
 
-        raceSpells = spells
+        raceSpells = AllDataStructues.Spell.getGameData(gameModel, c)
 
         Dim objType() As String = New String() {My.Resources.objKeyMage, My.Resources.objKeyMercenaries, My.Resources.objKeyMerchant, _
                                                 My.Resources.objKeyMountain, My.Resources.objKeyRuin, My.Resources.objKeyTrainer, ""}
+        Dim ObjectsSize() As AllDataStructues.MapObjectInfo = AllDataStructues.MapObjectInfo.getObjects(gameModel, comm)
         Dim objList(UBound(objType))() As MapObject
-        For Each k As GlobalMapDecoration In ObjectsSize
+        For Each k As AllDataStructues.MapObjectInfo In ObjectsSize
             If Not comm.excludedObjects.Contains(k.ID.ToUpper) AndAlso comm.objectRace.ContainsKey(k.ID.ToUpper) Then
                 If comm.objectRace.Item(k.ID.ToUpper).race.Count > 0 _
                 And (comm.objectRace.Item(k.ID.ToUpper).ground Or comm.objectRace.Item(k.ID.ToUpper).water) Then
@@ -9796,65 +9818,12 @@ Public Class ImpenetrableObjects
                                                              .race = comm.objectRace.Item(k.ID.ToUpper).race, _
                                                              .name = k.ID.ToUpper}
                     If comm.PlateauConstruction.ContainsKey(k.ID.ToUpper) Then
-                        Dim isWaterfall As Boolean = False
-                        Dim connectors()() As Point = Nothing
-                        Dim boundary As Point = Nothing
-                        Dim t() As String = comm.PlateauConstruction.Item(k.ID.ToUpper).ToUpper.Replace(vbTab, " ").Split(CChar(" "))
-                        Dim dx As Integer = 3 - g.xSize
-                        Dim dy As Integer = 3 - g.ySize
-                        For i As Integer = 0 To UBound(t) Step 1
-                            If t(i) = "W" Then
-                                isWaterfall = True
-                            ElseIf t(i) = "U" Or t(i) = "D" Or t(i) = "L" Or t(i) = "R" Then
-                                Dim p1 As Point = Nothing
-                                Dim p2 As Point = Nothing
-                                If IsNothing(connectors) Then
-                                    ReDim connectors(0)
-                                Else
-                                    ReDim Preserve connectors(connectors.Length)
-                                End If
-                                If t(i) = "U" Then
-                                    p1 = New Point(1, -1)
-                                    p2 = New Point(1, 0)
-                                ElseIf t(i) = "D" Then
-                                    p1 = New Point(1, 2 - dy)
-                                    p2 = New Point(1, 3 - dy)
-                                ElseIf t(i) = "L" Then
-                                    p1 = New Point(-1, 1)
-                                    p2 = New Point(0, 1)
-                                ElseIf t(i) = "R" Then
-                                    p1 = New Point(2 - dx, 1)
-                                    p2 = New Point(3 - dx, 1)
-                                End If
-                                connectors(UBound(connectors)) = New Point() {p1, p2}
-                            ElseIf t(i) = "UB" Or t(i) = "DB" Or t(i) = "LB" Or t(i) = "RB" Then
-                                Dim p1 As Point = Nothing
-                                If t(i) = "UB" Then
-                                    p1 = New Point(1, 0)
-                                ElseIf t(i) = "DB" Then
-                                    p1 = New Point(1, 2 - dy)
-                                ElseIf t(i) = "LB" Then
-                                    p1 = New Point(0, 1)
-                                ElseIf t(i) = "RB" Then
-                                    p1 = New Point(2 - dx, 1)
-                                End If
-                                boundary = p1
-                            End If
-                        Next i
                         If IsNothing(plateau) Then
                             ReDim plateau(0)
                         Else
                             ReDim Preserve plateau(plateau.Length)
                         End If
-                        plateau(UBound(plateau)) = New PlateauObject With {.xSize = g.xSize, _
-                                                                           .ySize = g.ySize, _
-                                                                           .ground = g.ground, _
-                                                                           .water = g.water, _
-                                                                           .race = g.race, _
-                                                                           .name = g.name, _
-                                                                           .isWaterfall = isWaterfall, _
-                                                                           .connectors = connectors, _
-                                                                           .border = boundary}
+                        plateau(UBound(plateau)) = PlateauObject.Make(k, comm)
                         maxPlateauSize = Math.Max(maxPlateauSize, Math.Max(g.xSize, g.ySize))
                     Else
                         For i As Integer = 0 To UBound(objType) Step 1
@@ -11522,16 +11491,16 @@ Public Class ObjectsContentSet
                          If add Then selection.Add(u)
                      Next u
                  End Sub)
-                Call selection.RefreshCount()
-                'If selection.Count = 0 Then Throw New Exception("Не могу выбрать предмет в качестве товара. Тип: " & v)
-                Dim selected As Integer = SelectListItem(selection, randStack.Global_ItemsWeightMultiplier)
-                If selected > -1 Then res.Add(randStack.AllItems(selected).itemID)
-                If log.IsEnabled Then txt &= ItemMsgToLog(selected, dCost, False)
+            Call selection.RefreshCount()
+            'If selection.Count = 0 Then Throw New Exception("Не могу выбрать предмет в качестве товара. Тип: " & v)
+            Dim selected As Integer = SelectListItem(selection, randStack.Global_ItemsWeightMultiplier)
+            If selected > -1 Then res.Add(randStack.AllItems(selected).itemID)
+            If log.IsEnabled Then txt &= ItemMsgToLog(selected, dCost, False)
             ElseIf v.Contains("#") Then
-                Dim s() As String = v.Split(CChar("#"))
-                Dim type As Integer
-                If IsNumeric(s(0)) Then
-                    type = CInt(s(0))
+            Dim s() As String = v.Split(CChar("#"))
+            Dim type As Integer
+            If IsNumeric(s(0)) Then
+            type = CInt(s(0))
                 Else
                     type = randStack.comm.itemTypeID.Item(s(0).ToUpper)
                 End If

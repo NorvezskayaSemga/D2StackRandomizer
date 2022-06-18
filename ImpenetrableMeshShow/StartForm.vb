@@ -5,7 +5,6 @@ Friend Class StartForm
     Dim zoom As New ArrayZoom
     Dim draw As New ColorSelector
     Dim comm As New Common(GenDefaultValues.DefaultMod)
-    Dim ObjectsSize As New Dictionary(Of String, Size)
 
     Private Sub GenMany_click() Handles GenManyButton.Click
         Dim startTime As Integer = Environment.TickCount
@@ -21,8 +20,8 @@ Friend Class StartForm
         'Call StackLocationsGen.PassageGuardPlacer.speedBanchmark()
         'Call ImpenetrableMeshGen.ActiveObjectsPlacer.speedBanchmark()
 
-        Call Tests.LootRegenerator()
-        Call Tests.SingleItemRegenerator()
+        'Call Tests.LootRegenerator()
+        'Call Tests.SingleItemRegenerator()
 
         If GenDefaultValues.writeToConsole Then
             Dim tf As New TemplateForge(RandomStackGenerator.GenDefaultValues.TextLanguage.Rus)
@@ -35,8 +34,6 @@ Friend Class StartForm
             Dim param() As TemplateForge.Parameter = TemplateForge.GetPermissibleParametersRange(GenDefaultValues.TextLanguage.Rus)
         End If
 
-        Dim treesAmount() As Integer = {0, 20, 20, 20, 20, 20, 0, 0, 0, 0, 0, 0, 0, 0, 20}
-
         Dim rstack As New RandStack(TestDataRead.DefaultGenData)
         Dim objCont As New ObjectsContentSet(rstack)
 
@@ -47,9 +44,10 @@ Friend Class StartForm
         'Call rstack.GenFingters(ds, dds, 3, -1, True, 6, True, New List(Of Integer), 0, 0.5, -1)
 
         comm.excludedObjects = rstack.comm.excludedObjects
-        Dim objSizeArray() As ImpenetrableObjects.GlobalMapDecoration = ReadObjSize()
+        Dim gm As New NevendaarTools.GameModel
+        gm.Load(".\Resources", True)
 
-        Dim objplace As New ImpenetrableObjects(objSizeArray, False, TestDataRead.ReadTestSpells, comm)
+        Dim objplace As New ImpenetrableObjects(gm, False, comm)
 
         Dim grid As Map
         Dim genTimeLimit As Integer = 10000
@@ -95,8 +93,8 @@ Friend Class StartForm
         grid = New MapGenWrapper(objplace).CommonGen(gsettings, genTimeLimit, GenDefaultValues.DefaultMod)
 
         If Not IsNothing(grid.board) Then
-            Call ShowResult(grid)
-            Call shortMapFormat.MapConversion(grid, gsettings, objSizeArray, objCont, True, True, treesAmount, GenDefaultValues.TextLanguage.Rus)
+            Call ShowResult(grid, gm)
+            Call shortMapFormat.MapConversion(grid, gsettings, gm, objCont, True, True, GenDefaultValues.TextLanguage.Rus)
         End If
         Dim endTime As Integer = Environment.TickCount
         Console.WriteLine(endTime - startTime & " ms")
@@ -104,7 +102,8 @@ Friend Class StartForm
         If GenDefaultValues.writeToConsole Then Console.WriteLine(grid.log.PrintAll)
         If GenDefaultValues.writeToLog Then LogTextBox.Text = grid.log.PrintAll
     End Sub
-    Public Sub ShowResult(ByRef grid As Map)
+    Public Sub ShowResult(ByRef grid As Map, ByRef gm As NevendaarTools.GameModel)
+        Dim ObjectsSize As Dictionary(Of String, Size) = AllDataStructues.MapObjectInfo.getSizeDictionary(gm, comm)
         Dim t(grid.xSize, grid.ySize) As Integer
         For x As Integer = 0 To grid.xSize Step 1
             For y As Integer = 0 To grid.ySize Step 1
@@ -180,190 +179,21 @@ Friend Class StartForm
         PictureBox1.Image = img
     End Sub
 
-    Private Function ReadObjSize() As ImpenetrableObjects.GlobalMapDecoration()
-        Dim t() As String = ValueConverter.TxtSplit(My.Resources.TestObjectSize)
-        Dim result(UBound(t) - 1) As ImpenetrableObjects.GlobalMapDecoration
-        ObjectsSize.Clear()
-        For i As Integer = 1 To UBound(t) Step 1
-            Dim r() As String = t(i).Split(CChar(" "))
-            ObjectsSize.Add(r(0).ToUpper, New Size(CInt(r(1)), CInt(r(2))))
-            result(i - 1) = New ImpenetrableObjects.GlobalMapDecoration With {.ID = r(0).ToUpper, .Size = New Size(CInt(r(1)), CInt(r(2)))}
-        Next i
-        Return result
-    End Function
+    'Private Function ReadObjSize() As ImpenetrableObjects.GlobalMapDecoration()
+    '    Dim t() As String = ValueConverter.TxtSplit(My.Resources.TestObjectSize)
+    '    Dim result(UBound(t) - 1) As ImpenetrableObjects.GlobalMapDecoration
+    '    ObjectsSize.Clear()
+    '    For i As Integer = 1 To UBound(t) Step 1
+    '        Dim r() As String = t(i).Split(CChar(" "))
+    '        ObjectsSize.Add(r(0).ToUpper, New Size(CInt(r(1)), CInt(r(2))))
+    '        result(i - 1) = New ImpenetrableObjects.GlobalMapDecoration With {.ID = r(0).ToUpper, .Size = New Size(CInt(r(1)), CInt(r(2)))}
+    '    Next i
+    '    Return result
+    'End Function
 
 End Class
 
 Public Class TestDataRead
-
-    Public Shared Function ReadTestSpells() As AllDataStructues.Spell()
-        Dim spells()() As String = TXTSplit(My.Resources.TestSpells, 5)
-        Dim rspells()() As String = TXTSplit(My.Resources.TestSpellsRace, 3)
-
-        Dim spellsHeader As Dictionary(Of String, Integer) = MakeHeader(spells(0))
-
-        Dim res(UBound(spells) - 1) As AllDataStructues.Spell
-        For i As Integer = 1 To UBound(spells) Step 1
-            Dim s() As String = spells(i)
-            res(i - 1) = New AllDataStructues.Spell With { _
-                    .area = GetField(spellsHeader, "AREA", s), _
-                    .castCost = AllDataStructues.Cost.Read(GetField(spellsHeader, "CASTING_C", s)), _
-                    .category = GetField(spellsHeader, "CATEGORY", s), _
-                    .level = GetField(spellsHeader, "LEVEL", s), _
-                    .spellID = GetField(spellsHeader, "SPELL_ID", s).ToUpper, _
-                    .name = GetField(spellsHeader, "SPELL_ID", s) & "_test"}
-        Next i
-        For i As Integer = 1 To UBound(rspells) Step 1
-            Dim s() As String = rspells(i)
-            For j As Integer = 0 To UBound(res) Step 1
-                If res(j).spellID.ToUpper = s(1).ToUpper Then
-                    res(j).researchCost.Add(s(0).ToUpper, AllDataStructues.Cost.Read(s(2)))
-                    Exit For
-                End If
-            Next j
-        Next i
-        Return res
-    End Function
-
-    Public Shared Function ReadTestUnits(ByVal modName As String) As AllDataStructues.Unit()
-        Dim units()() As String = TXTSplit(My.Resources.TestUnitsTable, 38)
-        Dim attacks()() As String = TXTSplit(My.Resources.TestAttacksTable, 19)
-        Dim gimmu()() As String = TXTSplit(My.Resources.TestGImmuTable, 3)
-        Dim gimmuc()() As String = TXTSplit(My.Resources.TestGImmuCTable, 3)
-        Dim dynupgr()() As String = TXTSplit(My.Resources.TestDynUpgr, 16)
-
-        Dim unitsHeader As Dictionary(Of String, Integer) = MakeHeader(units(0))
-        Dim attacksHeader As Dictionary(Of String, Integer) = MakeHeader(attacks(0))
-        Dim gimmuHeader As Dictionary(Of String, Integer) = MakeHeader(gimmu(0))
-        Dim gimmucHeader As Dictionary(Of String, Integer) = MakeHeader(gimmuc(0))
-        Dim dynupgrHeader As Dictionary(Of String, Integer) = MakeHeader(dynupgr(0))
-
-        Dim UnitsList(UBound(units) - 1) As AllDataStructues.Unit
-        For i As Integer = 1 To UBound(units) Step 1
-            Dim unit() As String = units(i)
-            UnitsList(i - 1) = New AllDataStructues.Unit
-            UnitsList(i - 1).unitID = GetField(unitsHeader, "UNIT_ID", unit)
-            UnitsList(i - 1).name = UnitsList(i - 1).unitID & "_test"
-            UnitsList(i - 1).level = GetField(unitsHeader, "LEVEL", unit)
-            UnitsList(i - 1).race = GetField(unitsHeader, "SUBRACE", unit)
-            UnitsList(i - 1).unitBranch = GetField(unitsHeader, "BRANCH", unit)
-            UnitsList(i - 1).small = GetField(unitsHeader, "SIZE_SMALL", unit)
-            UnitsList(i - 1).EXPkilled = GetField(unitsHeader, "XP_KILLED", unit)
-            UnitsList(i - 1).EXPnext = GetField(unitsHeader, "XP_NEXT", unit)
-            UnitsList(i - 1).dynUpgradeLevel = GetField(unitsHeader, "DYN_UPG_LV", unit)
-            UnitsList(i - 1).leadership = GetField(unitsHeader, "LEADERSHIP", unit)
-            UnitsList(i - 1).waterOnly = GetField(unitsHeader, "WATER_ONLY", unit)
-            UnitsList(i - 1).unitCost = AllDataStructues.Cost.Read(GetField(unitsHeader, "ENROLL_C", unit))
-            UnitsList(i - 1).hp = GetField(unitsHeader, "HIT_POINT", unit)
-            UnitsList(i - 1).armor = GetField(unitsHeader, "ARMOR", unit)
-
-            Dim attackID As String = GetField(unitsHeader, "ATTACK_ID", unit)
-            For j As Integer = 1 To UBound(attacks) Step 1
-                Dim attack() As String = attacks(j)
-                If attackID.ToUpper = GetField(attacksHeader, "ATT_ID", attack).ToUpper Then
-                    UnitsList(i - 1).reach = GetField(attacksHeader, "REACH", attack)
-                    UnitsList(i - 1).initiative = GetField(attacksHeader, "INITIATIVE", attack)
-                    UnitsList(i - 1).accuracy = GetField(attacksHeader, "POWER", attack)
-                    UnitsList(i - 1).damage = GetField(attacksHeader, "QTY_DAM", attack)
-                    UnitsList(i - 1).heal = GetField(attacksHeader, "QTY_HEAL", attack)
-                    If UnitsList(i - 1).initiative = 0 Then
-                        i = i
-                    End If
-                    Exit For
-                End If
-                If j = UBound(attacks) Then Throw New Exception
-            Next j
-            UnitsList(i - 1).ASourceImmunity = ReadImmunity(UnitsList(i - 1).unitID, gimmuHeader, gimmu)
-            UnitsList(i - 1).AClassImmunity = ReadImmunity(UnitsList(i - 1).unitID, gimmucHeader, gimmuc)
-            UnitsList(i - 1).dynUpgrade1 = ReadDynUpgr(GetField(unitsHeader, "DYN_UPG1", unit), dynupgrHeader, dynupgr)
-            UnitsList(i - 1).dynUpgrade2 = ReadDynUpgr(GetField(unitsHeader, "DYN_UPG2", unit), dynupgrHeader, dynupgr)
-        Next i
-        Return UnitsList
-    End Function
-    Private Shared Function ReadImmunity(ByRef unitID As String, _
-                                         ByRef header As Dictionary(Of String, Integer), _
-                                         ByRef data()() As String) As Dictionary(Of Integer, Integer)
-        Dim r As New Dictionary(Of Integer, Integer)
-        For j As Integer = 1 To UBound(data) Step 1
-            Dim immu() As String = data(j)
-            If unitID.ToUpper = GetField(header, "UNIT_ID", immu).ToUpper Then
-                r.Add(GetField(header, "IMMUNITY", immu), _
-                               GetField(header, "IMMUNECAT", immu))
-            End If
-        Next j
-        Return r
-    End Function
-    Private Shared Function ReadDynUpgr(ByRef dynUpgrID As String, _
-                                        ByRef header As Dictionary(Of String, Integer), _
-                                        ByRef data()() As String) As AllDataStructues.DynUpgrade
-        Dim r As New AllDataStructues.DynUpgrade
-        For j As Integer = 1 To UBound(data) Step 1
-            Dim upgr() As String = data(j)
-            If dynUpgrID.ToUpper = GetField(header, "UPGRADE_ID", upgr).ToUpper Then
-                r.accuracy = GetField(header, "POWER", upgr)
-                r.armor = GetField(header, "ARMOR", upgr)
-                r.damage = GetField(header, "DAMAGE", upgr)
-                r.EXPkilled = GetField(header, "XP_KILLED", upgr)
-                r.EXPnext = GetField(header, "XP_NEXT", upgr)
-                r.heal = GetField(header, "HEAL", upgr)
-                r.hp = GetField(header, "HIT_POINT", upgr)
-                r.initiative = GetField(header, "INITIATIVE", upgr)
-                r.unitCost = AllDataStructues.Cost.Read(GetField(header, "ENROLL_C", upgr))
-                Exit For
-            End If
-            If j = UBound(data) Then Throw New Exception
-        Next j
-        Return r
-    End Function
-
-    Public Shared Function ReadTestItems(ByVal modName As String) As AllDataStructues.Item()
-        Dim items()() As String = TXTSplit(My.Resources.TestItemsTable, 3)
-
-        Dim itemsHeader As Dictionary(Of String, Integer) = MakeHeader(items(0))
-
-        Dim ItemsList(UBound(items) - 1) As AllDataStructues.Item
-        For i As Integer = 1 To UBound(items) Step 1
-            Dim r() As String = items(i)
-            ItemsList(i - 1) = New AllDataStructues.Item
-            ItemsList(i - 1).type = GetField(itemsHeader, "ITEM_CAT", r)
-            ItemsList(i - 1).itemID = GetField(itemsHeader, "ITEM_ID", r)
-            ItemsList(i - 1).name = ItemsList(i - 1).itemID & "_test"
-            ItemsList(i - 1).itemCost = AllDataStructues.Cost.Read(GetField(itemsHeader, "VALUE", r))
-        Next i
-        Return ItemsList
-    End Function
-
-    Public Shared Function ReadTestModificators() As AllDataStructues.Modificator()
-        Dim gmodif()() As String = TXTSplit(My.Resources.TestGModif, 2)
-        Dim gmodifL()() As String = TXTSplit(My.Resources.TestGModifL, 11)
-
-        Dim gmodifHeader As Dictionary(Of String, Integer) = MakeHeader(gmodif(0))
-        Dim gmodiflHeader As Dictionary(Of String, Integer) = MakeHeader(gmodifL(0))
-
-        Dim result(UBound(gmodif) - 1) As AllDataStructues.Modificator
-        For i As Integer = 1 To UBound(gmodif) Step 1
-            result(i - 1) = New AllDataStructues.Modificator With { _
-                                .id = GetField(gmodifHeader, "MODIF_ID", gmodif(i)), _
-                                .source = GetField(gmodifHeader, "SOURCE", gmodif(i))}
-            For j As Integer = 1 To UBound(gmodifL) Step 1
-                Dim s() As String = gmodifL(j)
-                If result(i - 1).id.ToUpper = GetField(gmodiflHeader, "BELONGS_TO", s).ToUpper Then
-                    result(i - 1).effect.Add(New AllDataStructues.Modificator.ModifEffect With { _
-                                                .type = GetField(gmodiflHeader, "TYPE", s), _
-                                                .percent = GetField(gmodiflHeader, "PERCENT", s), _
-                                                .number = GetField(gmodiflHeader, "NUMBER", s), _
-                                                .ability = GetField(gmodiflHeader, "ABILITY", s), _
-                                                .immunASource = GetField(gmodiflHeader, "IMMUNITY", s), _
-                                                .immunASourceCat = GetField(gmodiflHeader, "IMMUNECAT", s), _
-                                                .move = GetField(gmodiflHeader, "MOVE", s), _
-                                                .immunAClass = GetField(gmodiflHeader, "IMMUNITYC", s), _
-                                                .immunAClassCat = GetField(gmodiflHeader, "IMMUNECATC", s)})
-                End If
-            Next j
-            If result(i - 1).effect.Count = 0 Then Throw New Exception
-        Next i
-        Return result
-    End Function
 
     Private Shared Function TXTSplit(ByRef content As String, ByVal expectedLen As Integer) As String()()
         Dim s() As String = ValueConverter.TxtSplit(content)
@@ -376,29 +206,12 @@ Public Class TestDataRead
         Next i
         Return r
     End Function
-    Private Shared Function MakeHeader(ByRef header() As String) As Dictionary(Of String, Integer)
-        Dim r As New Dictionary(Of String, Integer)
-        For i As Integer = 0 To UBound(header) Step 1
-            r.Add(header(i), i)
-        Next i
-        Return r
-    End Function
-    Private Shared Function GetField(ByRef header As Dictionary(Of String, Integer), _
-                                     ByRef name As String, _
-                                     ByRef data() As String) As String
-        If header.ContainsKey(name) Then
-            Return Data(header.Item(name))
-        Else
-            Throw New Exception("Unexpected field name: " & name)
-        End If
-    End Function
 
     Public Shared Function DefaultGenData() As RandStack.ConstructorInput
+        Dim gm As New NevendaarTools.GameModel
+        gm.Load(".\Resources", True)
         Dim r As New RandStack.ConstructorInput
-        r.AllUnitsList = ReadTestUnits(GenDefaultValues.DefaultMod)
-        r.AllItemsList = ReadTestItems(GenDefaultValues.DefaultMod)
-        r.AllSpellsList = ReadTestSpells()
-        r.AllModificatorsList = ReadTestModificators()
+        r.gameModel = gm
         r.settings.modName = GenDefaultValues.DefaultMod
         Return r
     End Function
@@ -519,10 +332,9 @@ Class Tests
         Throw New Exception("")
     End Sub
     Private Shared Function CreateRandStack() As RandStack
-        Dim rstackData As New RandStack.ConstructorInput With {.AllUnitsList = TestDataRead.ReadTestUnits(GenDefaultValues.DefaultMod), _
-                                                               .AllItemsList = TestDataRead.ReadTestItems(GenDefaultValues.DefaultMod), _
-                                                               .AllSpellsList = TestDataRead.ReadTestSpells(), _
-                                                               .AllModificatorsList = TestDataRead.ReadTestModificators()}
+        Dim gm As New NevendaarTools.GameModel
+        gm.Load("./Resources", True)
+        Dim rstackData As New RandStack.ConstructorInput With {.gameModel = gm}
         rstackData.settings.modName = GenDefaultValues.DefaultMod
         rstackData.mapData.capitalPos = {New Point(1000, 1000)}
         Return New RandStack(rstackData)
@@ -823,11 +635,13 @@ Class Tests
 
     Public Shared Sub LootRegenerator()
         Dim rStack As RandStack = CreateRandStack()
+        Dim gm As New NevendaarTools.GameModel
+        gm.Load(".\Resources", True)
+        Dim AllItemsList() As AllDataStructues.Item = AllDataStructues.Item.getGameData(gm, rStack.comm)
         Dim attempts As Integer = 10000
         Dim items, result As New List(Of String)
         Dim settings As New AllDataStructues.CommonLootCreationSettings With {.pos = New Point(0, 0)}
         Dim nitems, m, resultGoldSum As Integer
-        Dim AllItemsList() As AllDataStructues.Item = TestDataRead.ReadTestItems(GenDefaultValues.DefaultMod)
         Dim totalGoldIn, totalGoldOut, totalItemsIn, totalItemsOut As Integer
         Dim minItemCostIn, maxItemCostIn, minItemCostOut, maxItemCostOut As Integer
         Dim minItemCostInT, maxItemCostInT, minItemCostOutT, maxItemCostOutT As Integer
@@ -888,11 +702,13 @@ Class Tests
 
     Public Shared Sub SingleItemRegenerator()
         Dim rStack As RandStack = CreateRandStack()
+        Dim gm As New NevendaarTools.GameModel
+        gm.Load(".\Resources", True)
+        Dim AllItemsList() As AllDataStructues.Item = AllDataStructues.Item.getGameData(gm, rStack.comm)
         Dim attempts As Integer = 10000
         Dim items, result As String
         Dim settings As New AllDataStructues.CommonLootCreationSettings With {.pos = New Point(0, 0)}
         Dim m, resultGoldSum As Integer
-        Dim AllItemsList() As AllDataStructues.Item = TestDataRead.ReadTestItems(GenDefaultValues.DefaultMod)
         Dim totalGoldIn, totalGoldOut As Integer
 
         Dim dx As Integer = 300

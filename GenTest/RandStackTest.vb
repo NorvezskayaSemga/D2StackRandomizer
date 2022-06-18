@@ -58,30 +58,60 @@ Public Class RandStackTest
 
     Friend Function CreateRandStack_Accessor() As RandStack_Accessor
         Call PrepareToTest()
-        Dim rstackData As New RandStack.ConstructorInput With {.AllUnitsList = UnitsList, _
-                                                               .AllItemsList = ItemsList, _
-                                                               .AllSpellsList = AllSpells, _
-                                                               .AllModificatorsList = AllModificators}
+        Dim rstackData As New RandStack.ConstructorInput
+        Dim gm As New NevendaarTools.GameModel
+        gm.Load(".\Resources", True)
+        rstackData.gameModel = gm
         rstackData.settings.modName = GenDefaultValues.DefaultMod
         rstackData.mapData.capitalPos = {New Point(10, 10)}
         Return New RandStack_Accessor(rstackData)
     End Function
     Friend Function CreateRandStack() As RandStack
         Call PrepareToTest()
-        Dim rstackData As New RandStack.ConstructorInput With {.AllUnitsList = UnitsList, _
-                                                               .AllItemsList = ItemsList, _
-                                                               .AllSpellsList = AllSpells, _
-                                                               .AllModificatorsList = AllModificators}
+        Dim rstackData As New RandStack.ConstructorInput
+        Dim gm As New NevendaarTools.GameModel
+        gm.Load(".\Resources", True)
+        rstackData.gameModel = gm
         rstackData.settings.modName = GenDefaultValues.DefaultMod
         rstackData.mapData.capitalPos = {New Point(10, 10)}
         Return New RandStack(rstackData)
     End Function
     Friend Sub PrepareToTest()
         Call CopyResources()
-        If IsNothing(UnitsList) Then Call ReadTestUnits()
-        If IsNothing(ItemsList) Then Call ReadTestItems()
-        If IsNothing(AllSpells) Then Call ReadTestSpells()
-        If IsNothing(AllModificators) Then Call ReadTestModificators()
+        Dim gm As NevendaarTools.GameModel = Nothing
+        Dim c As Common = Nothing
+        If IsNothing(UnitsList) Then
+            If IsNothing(gm) Then
+                gm = New NevendaarTools.GameModel
+                gm.Load(".\Resources", True)
+                c = New Common(GenDefaultValues.DefaultMod)
+            End If
+            UnitsList = AllDataStructues.Unit.getGameData(gm, c)
+        End If
+        If IsNothing(ItemsList) Then
+            If IsNothing(gm) Then
+                gm = New NevendaarTools.GameModel
+                gm.Load(".\Resources", True)
+                c = New Common(GenDefaultValues.DefaultMod)
+            End If
+            ItemsList = AllDataStructues.Item.getGameData(gm, c)
+        End If
+        If IsNothing(AllSpells) Then
+            If IsNothing(gm) Then
+                gm = New NevendaarTools.GameModel
+                gm.Load(".\Resources", True)
+                c = New Common(GenDefaultValues.DefaultMod)
+            End If
+            AllSpells = AllDataStructues.Spell.getGameData(gm, c)
+        End If
+        If IsNothing(AllModificators) Then
+            If IsNothing(gm) Then
+                gm = New NevendaarTools.GameModel
+                gm.Load(".\Resources", True)
+                c = New Common(GenDefaultValues.DefaultMod)
+            End If
+            AllModificators = AllDataStructues.Modificator.getGameData(gm, c)
+        End If
     End Sub
     Public Shared Sub CopyResources()
         If Not IO.Directory.Exists("Resources") Then
@@ -89,9 +119,13 @@ Public Class RandStackTest
             For i As Integer = 1 To 3 Step 1
                 projectDir = IO.Path.GetDirectoryName(projectDir)
             Next i
-            Dim source As String = IO.Path.Combine(projectDir, "RandomStackGenerator\Resources")
-            Dim destination As String = IO.Path.Combine(Environment.CurrentDirectory, "Resources")
-            Call RecursiveCopy(New IO.DirectoryInfo(source), New IO.DirectoryInfo(destination))
+            Dim source1 As String = IO.Path.Combine(projectDir, "RandomStackGenerator\Resources")
+            Dim destination1 As String = IO.Path.Combine(Environment.CurrentDirectory, "Resources")
+            Call RecursiveCopy(New IO.DirectoryInfo(source1), New IO.DirectoryInfo(destination1))
+
+            Dim source2 As String = IO.Path.Combine(projectDir, "ImpenetrableMeshShow\Resources")
+            Dim destination2 As String = IO.Path.Combine(Environment.CurrentDirectory, "Resources")
+            Call RecursiveCopy(New IO.DirectoryInfo(source2), New IO.DirectoryInfo(destination2))
         End If
     End Sub
     Public Shared Sub RecursiveCopy(source As IO.DirectoryInfo, target As IO.DirectoryInfo)
@@ -109,19 +143,6 @@ Public Class RandStackTest
     Friend ItemsList() As AllDataStructues.Item = Nothing
     Friend AllSpells() As AllDataStructues.Spell = Nothing
     Friend AllModificators() As AllDataStructues.Modificator = Nothing
-
-    Friend Sub ReadTestUnits()
-        UnitsList = ImpenetrableMeshShow.TestDataRead.ReadTestUnits(GenDefaultValues.DefaultMod)
-    End Sub
-    Friend Sub ReadTestItems()
-        ItemsList = ImpenetrableMeshShow.TestDataRead.ReadTestItems(GenDefaultValues.DefaultMod)
-    End Sub
-    Friend Sub ReadTestSpells()
-        AllSpells = ImpenetrableMeshShow.TestDataRead.ReadTestSpells
-    End Sub
-    Friend Sub ReadTestModificators()
-        AllModificators = ImpenetrableMeshShow.TestDataRead.ReadTestModificators
-    End Sub
 
     Private Function TestGenSettings(ByRef d As AllDataStructues.DesiredStats, Optional ByVal GroundTile As Boolean = True) As AllDataStructues.CommonStackCreationSettings
         Return New AllDataStructues.CommonStackCreationSettings _
