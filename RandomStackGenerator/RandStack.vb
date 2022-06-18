@@ -4791,6 +4791,72 @@ Public Class AllDataStructues
             End If
         End Function
 
+        Public Shared Function getGameData(ByRef gameModel As NevendaarTools.GameModel, ByRef comm As Common) As Unit()
+            Dim gdata As List(Of NevendaarTools.Gunit) = gameModel.GetAllT(Of NevendaarTools.Gunit)()
+            Dim result(gdata.Count - 1) As Unit
+
+            Dim PlayableSubraces As New List(Of Integer)
+            For Each item As String In Common.TxtSplit(comm.defValues.resReader.PlayableSubraces)
+                PlayableSubraces.Add(ValueConverter.StrToInt(item, "", ""))
+            Next item
+
+            For i As Integer = 0 To UBound(result) Step 1
+                result(i) = New Unit
+                result(i).accuracy = gdata(i).attack_id.value.power
+                result(i).armor = gdata(i).armor
+                result(i).damage = gdata(i).attack_id.value.qty_dam
+                If Not IsNothing(gdata(i).attack2_id.value) Then
+                    result(i).damage += gdata(i).attack2_id.value.qty_dam
+                End If
+                result(i).dynUpgrade1 = DynUpgrade.Copy(gdata(i).dyn_upg1.value)
+                result(i).dynUpgrade2 = DynUpgrade.Copy(gdata(i).dyn_upg2.value)
+                result(i).dynUpgradeLevel = gdata(i).dyn_upg_lv
+
+                result(i).EXPkilled = gdata(i).xp_killed
+                result(i).EXPnext = gdata(i).xp_next
+
+                result(i).unitID = gdata(i).unit_id.ToUpper
+                If comm.customRace.ContainsKey(result(i).unitID) Then
+                    result(i).race = comm.RaceIdentifierToSubrace(comm.customRace.Item(result(i).unitID))
+                Else
+                    result(i).race = comm.RaceIdentifierToSubrace(gdata(i).subrace.value.id)
+                End If
+                result(i).fromRaceBranch = PlayableSubraces.Contains(gdata(i).subrace.value.id)
+                result(i).heal = gdata(i).attack_id.value.qty_heal
+                If Not IsNothing(gdata(i).attack2_id.value) Then
+                    result(i).heal += gdata(i).attack2_id.value.qty_heal
+                End If               
+                result(i).hp = gdata(i).hit_point
+                result(i).initiative = gdata(i).attack_id.value.initiative
+                result(i).leadership = gdata(i).leadership
+                result(i).level = gdata(i).level
+                result(i).name = gdata(i).name_txt.value.text
+                result(i).reach = gdata(i).attack_id.value.reach.value.id
+                result(i).small = gdata(i).size_small
+                If gdata(i).unit_cat.value.id = GenDefaultValues.UnitClass.capitalGuard Then
+                    result(i).unitBranch = gdata(i).unit_cat.value.id
+                Else
+                    result(i).unitBranch = gdata(i).branch.value.id
+                End If
+                result(i).unitCost = Cost.Read(gdata(i).enroll_c)
+
+                result(i).unitIndex = i
+
+                result(i).waterOnly = gdata(i).water_only
+
+                For Each imm As NevendaarTools.Gimmu In gdata(i).immun.value
+                    result(i).ASourceImmunity.Add(imm.immunity.value.id, imm.immunecat.value.id)
+                Next imm
+                For Each imm As NevendaarTools.GimmuC In gdata(i).immunCategory.value
+                    result(i).ASourceImmunity.Add(imm.immunity.value.id, imm.immunecat.value.id)
+                Next imm
+
+                'result(i).isIncompatible -- default
+                'result(i).useState -- default
+            Next i
+            Return result
+        End Function
+
     End Class
 
     Public Class DynUpgrade
@@ -4805,6 +4871,18 @@ Public Class AllDataStructues
                                         .damage = v.damage, _
                                         .heal = v.heal, _
                                         .accuracy = v.accuracy, _
+                                        .initiative = v.initiative}
+        End Function
+        Public Shared Shadows Function Copy(ByVal v As NevendaarTools.GDynUpgr) As DynUpgrade
+            If IsNothing(v) Then Return New DynUpgrade
+            Return New DynUpgrade With {.EXPkilled = v.xp_killed, _
+                                        .EXPnext = v.xp_next, _
+                                        .unitCost = Cost.Read(v.enroll_c), _
+                                        .hp = v.hit_point, _
+                                        .armor = v.armor, _
+                                        .damage = v.damage, _
+                                        .heal = v.heal, _
+                                        .accuracy = v.power, _
                                         .initiative = v.initiative}
         End Function
     End Class
@@ -5037,6 +5115,24 @@ Public Class AllDataStructues
                                   .itemCostSum = v.itemCostSum, _
                                   .useState = v.useState}
         End Function
+
+        Public Shared Function getGameData(ByRef gameModel As NevendaarTools.GameModel, ByRef comm As Common) As Item()
+            Dim gdata As List(Of NevendaarTools.GItem) = gameModel.GetAllT(Of NevendaarTools.GItem)()
+            Dim result(gdata.Count - 1) As Item
+
+            For i As Integer = 0 To UBound(result) Step 1
+                result(i) = New Item
+                result(i).itemCost = Cost.Read(gdata(i).value)
+                result(i).itemID = gdata(i).item_id.ToUpper
+                result(i).name = gdata(i).name_txt.value.text
+                result(i).type = CType(gdata(i).item_cat, GenDefaultValues.ItemTypes)
+
+                result(i).itemCostSum = AllDataStructues.Cost.Sum(comm.ItemTypeCostModify(result(i)))
+                'result(i).useState -- default
+            Next i
+            Return result
+        End Function
+
     End Class
 
     Public Class Spell
@@ -5071,6 +5167,29 @@ Public Class AllDataStructues
                                    .researchCost = r, _
                                    .useState = v.useState}
         End Function
+
+        Public Shared Function getGameData(ByRef gameModel As NevendaarTools.GameModel, ByRef comm As Common) As Spell()
+            Dim gdata As List(Of NevendaarTools.Gspell) = gameModel.GetAllT(Of NevendaarTools.Gspell)()
+            Dim result(gdata.Count - 1) As Spell
+
+            For i As Integer = 0 To UBound(result) Step 1
+                result(i) = New Spell
+
+                result(i).spellID = gdata(i).spell_id.ToUpper()
+                result(i).area = gdata(i).area
+                result(i).castCost = AllDataStructues.Cost.Read(gdata(i).casting_c)
+                result(i).category = gdata(i).category
+                result(i).level = gdata(i).level
+                result(i).name = gdata(i).name_txt.value.text
+                For Each c As NevendaarTools.GspellR In gdata(i).researchCost.value
+                    result(i).researchCost.Add(c.lord_id.ToUpper(), AllDataStructues.Cost.Read(c.research))
+                Next c
+                
+                'result(i).useState -- default
+            Next i
+            Return result
+        End Function
+
     End Class
 
     Public Class LootGenSettings
@@ -5312,6 +5431,10 @@ Public Class AllDataStructues
             ''' L_ATTACK
             ''' </summary>
             Offence = 3
+            ''' <summary>
+            ''' L_CUSTOM
+            ''' </summary>
+            LuaScript = 4
         End Enum
 
         Public Class ModifEffect
@@ -5376,6 +5499,19 @@ Public Class AllDataStructues
                 Resistance = 2
                 Immunity = 3
             End Enum
+
+            Public Shared Function Copy(ByRef eff As NevendaarTools.GmodifL) As ModifEffect
+                If IsNothing(eff) Then Return New ModifEffect
+                Return New ModifEffect With {.type = CType(eff.type, EffectType), _
+                                             .percent = eff.percent, _
+                                             .number = eff.number, _
+                                             .ability = eff.number, _
+                                             .immunASource = eff.immunity.value.id, _
+                                             .immunASourceCat = CType(eff.immunecat.value.id, ImmunityCat), _
+                                             .immunAClass = eff.immunityc.value.id, _
+                                             .immunAClassCat = CType(eff.immunecatc.value.id, ImmunityCat), _
+                                             .move = eff.move}
+            End Function
         End Class
 
         Public Shared Function TotalLeadershipChange(ByRef modificators As List(Of String), _
@@ -5683,6 +5819,103 @@ Public Class AllDataStructues
             If Cap > -1 Then v = Math.Min(v, Cap)
             currentValue = v
         End Sub
+
+        Public Shared Function getGameData(ByRef gameModel As NevendaarTools.GameModel, ByRef comm As Common) As Modificator()
+            Dim gdata As List(Of NevendaarTools.Gmodif) = gameModel.GetAllT(Of NevendaarTools.Gmodif)()
+            Dim result(gdata.Count - 1) As Modificator
+
+            For i As Integer = 0 To UBound(result) Step 1
+                result(i) = New Modificator
+
+                For Each e As NevendaarTools.GmodifL In gdata(i).effects.value
+                    result(i).effect.Add(ModifEffect.Copy(e))
+                Next e
+                result(i).id = gdata(i).modif_id.ToUpper
+
+                result(i).source = CType(gdata(i).source, Type)
+
+            Next i
+            Return result
+        End Function
+
+    End Class
+
+    Public Class LandmarkDBFData
+        ''' <summary>GxxxMGxxxx</summary>
+        Dim ID As String
+        ''' <summary>Размеры объекта</summary>
+        Dim Size As Drawing.Size
+
+        Public Shared Function getMountains(ByRef gameModel As NevendaarTools.GameModel, ByRef comm As Common) As LandmarkDBFData()
+            Dim gdata As List(Of NevendaarTools.GameResourceModel.Mountain) = gameModel._ResourceModel.mountains
+            Dim result(gdata.Count - 1) As LandmarkDBFData
+
+            For i As Integer = 0 To UBound(result) Step 1
+                result(i) = New LandmarkDBFData
+                result(i).ID = gdata(i).name.ToUpper
+                result(i).Size = New Drawing.Size(gdata(i).size, gdata(i).size)
+            Next i
+            Return result
+        End Function
+        ''' <summary>
+        ''' Количество деревьев для земли каждой расы. ID рас в Races.txt, последний столбец
+        ''' </summary>
+        Public Shared Function getTreesAmount(ByRef gameModel As NevendaarTools.GameModel, ByRef comm As Common) As Integer()
+            Dim gdata As Dictionary(Of Integer, Integer) = gameModel._ResourceModel.trees
+            Dim maxRId As Integer = -1
+            For Each i As Integer In gdata.Keys
+                maxRId = Math.Max(maxRId, i)
+            Next i
+            Dim result(maxRId) As Integer
+            For Each i As Integer In gdata.Keys
+                result(i) = gdata.Item(i)
+            Next i
+            Return result
+        End Function
+
+        Public Shared Function getMages(ByRef gameModel As NevendaarTools.GameModel, ByRef comm As Common) As LandmarkDBFData()
+            Return toVendorArray(gameModel._ResourceModel.mages, comm)
+        End Function
+        Public Shared Function getMerchants(ByRef gameModel As NevendaarTools.GameModel, ByRef comm As Common) As LandmarkDBFData()
+            Return toVendorArray(gameModel._ResourceModel.merhs, comm)
+        End Function
+        Public Shared Function getMercenaries(ByRef gameModel As NevendaarTools.GameModel, ByRef comm As Common) As LandmarkDBFData()
+            Return toVendorArray(gameModel._ResourceModel.mercs, comm)
+        End Function
+        Public Shared Function getTrainers(ByRef gameModel As NevendaarTools.GameModel, ByRef comm As Common) As LandmarkDBFData()
+            Return toVendorArray(gameModel._ResourceModel.trainers, comm)
+        End Function
+        Public Shared Function getRuins(ByRef gameModel As NevendaarTools.GameModel, ByRef comm As Common) As LandmarkDBFData()
+            Return toVendorArray(gameModel._ResourceModel.ruins, comm)
+        End Function
+        Private Shared Function toVendorArray(ByRef vendors As List(Of String), ByRef comm As Common) As LandmarkDBFData()
+            Dim result(vendors.Count - 1) As LandmarkDBFData
+            For i As Integer = 0 To UBound(result) Step 1
+                result(i) = New LandmarkDBFData
+                result(i).ID = vendors(i).ToUpper
+                result(i).Size = New Drawing.Size(3, 3)
+            Next i
+            Return result
+        End Function
+
+        ''' <summary>
+        ''' Вернет размер гор и торговцев
+        ''' </summary>
+        Public Shared Function getSizeDictionary(ByRef gameModel As NevendaarTools.GameModel, ByRef comm As Common) As Dictionary(Of String, Drawing.Size)
+            Dim L()() As LandmarkDBFData = {getMountains(gameModel, comm), _
+                                            getMages(gameModel, comm), _
+                                            getMerchants(gameModel, comm), _
+                                            getMercenaries(gameModel, comm), _
+                                            getTrainers(gameModel, comm), _
+                                            getRuins(gameModel, comm)}
+            Dim result As New Dictionary(Of String, Drawing.Size)
+            For i As Integer = 0 To UBound(L) Step 1
+                For j As Integer = 0 To UBound(L(j)) Step 1
+                    result.Add(L(i)(j).ID, L(i)(j).Size)
+                Next j
+            Next i
+            Return result
+        End Function
 
     End Class
 
@@ -7088,7 +7321,7 @@ Public Class Log
                      boofer(k)(i) = ""
                  Next i
                  For i As Integer = s(k) To e(k) Step 1
-                     If i > 0 Then  boofer(k)(0) &= vbNewLine
+                     If i > 0 Then boofer(k)(0) &= vbNewLine
                      boofer(k)(0) &= LogPrint(log, i)
                      For j As Integer = 0 To n Step 1
                          If boofer(k)(j).Length > mLen(j) Then
