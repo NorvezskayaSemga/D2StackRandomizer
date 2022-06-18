@@ -5916,6 +5916,30 @@ Public Class AllDataStructues
             Next i
             Return result
         End Function
+        ''' <summary>
+        ''' Вернет горы и торговцев
+        ''' </summary>
+        Public Shared Function getObjects(ByRef gameModel As NevendaarTools.GameModel, ByRef comm As Common) As LandmarkDBFData()
+            Dim L()() As LandmarkDBFData = {getMountains(gameModel, comm), _
+                                            getMages(gameModel, comm), _
+                                            getMerchants(gameModel, comm), _
+                                            getMercenaries(gameModel, comm), _
+                                            getTrainers(gameModel, comm), _
+                                            getRuins(gameModel, comm)}
+            Dim n As Integer = 0
+            For i As Integer = 0 To UBound(L) Step 1
+                n += L(i).Length
+            Next i
+            Dim result(n - 1) As LandmarkDBFData
+            n = 0
+            For i As Integer = 0 To UBound(L) Step 1
+                For j As Integer = 0 To UBound(L(i)) Step 1
+                    result(n) = L(i)(j)
+                    n += 1
+                Next j
+            Next i
+            Return result
+        End Function
 
     End Class
 
