@@ -5844,7 +5844,11 @@ Public Class shortMapFormat
                 ElseIf m.board(x, y).mapObject.objectID = DefMapObjects.Types.Mine Then
                     'do nothing
                 ElseIf m.board(x, y).mapObject.objectID = DefMapObjects.Types.None Then
-                    Call AddObject(res.mountains, x, y, name, objectsSise.Item(name).Width)
+                    If name.ToUpper.StartsWith(My.Resources.objKeyMountain) Then
+                        Call AddObject(res.mountains, x, y, name, objectsSise.Item(name).Width)
+                    Else
+                        Call AddObject(res.landmarks, x, y, name, objectsSise.Item(name).Width)
+                    End If
                 Else
                     Throw New Exception("shortMapFormat.MapConversion: unknown object type")
                 End If
