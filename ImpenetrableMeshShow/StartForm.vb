@@ -88,6 +88,8 @@ Friend Class StartForm
         'gsettings.common_settMap.WaterAmount = 0
         'gsettings.common_settMap.ForestAmount = 0
         '###
+        gsettings.common_settMap.xSize = 50
+        gsettings.common_settMap.ySize = 50
 
         Dim startTime As Integer = Environment.TickCount
         grid = New MapGenWrapper(objplace).CommonGen(gsettings, genTimeLimit, GenDefaultValues.DefaultMod)

@@ -6275,7 +6275,7 @@ End Class
 Public Class GenDefaultValues
 
     Public Const DefaultMod As String = "MNS"
-    Public Const myVersion As String = "24.05.2022.16.47"
+    Public Const myVersion As String = "16.07.2022.01.21"
 
     Public Shared Function PrintVersion() As String
         Return "Semga's generator DLL version: " & myVersion
@@ -6367,7 +6367,7 @@ Public Class GenDefaultValues
             Dim fields() As String = ClassFieldsHandler.GetFieldsNamesList(Me, {"myLog", "linked_Races", "RaceNumberToRaceChar", "playableRaces", "neutralRaces", _
                                                                                 "generatorRaceToGameRace", "generatorRaceToCapitalID", "capitalToGeneratorRace", _
                                                                                 "gameRaceToGeneratorRace", "selectedMod", "maxItemTypeID", "maxStackSize", _
-                                                                                "resReader", "randomPlayableRaceID", "maxRaceIndex"})
+                                                                                "resReader", "randomPlayableRaceID", "maxRaceIndex", "defaultMapSize"})
 
             For Each f As String In fields
                 If sendLinkedRaces.Contains(f.ToUpper) Then
@@ -6718,6 +6718,7 @@ Public Class GenDefaultValues
     Public ReadOnly CapitalLocationBasicItems As String()
 
     'map
+    Public ReadOnly defaultMapSize() As Integer = {48, 72, 96, 120, 144}
     Public ReadOnly minLocationRadiusAtAll As Double
     Public ReadOnly smallLocationRadius As Double
     Public ReadOnly LocRacesBlocks As String()

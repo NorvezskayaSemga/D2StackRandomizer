@@ -3215,6 +3215,20 @@ clearandexit:
             Next j
             Return True
         End Function
+        Friend Shared Function MayPlaceObject(ByRef freeCell(,) As Boolean, _
+                                              ByRef x As Integer, ByRef y As Integer, _
+                                              ByRef xSize As Integer, ByRef ySize As Integer) As Boolean
+            If Not freeCell(x, y) Then Return False
+            Dim b As New Location.Borders With {.minX = x, .maxX = x + xSize - 1, _
+                                                .minY = y, .maxY = y + ySize - 1}
+            If b.minX < 0 Or b.minY < 0 Or b.maxX > UBound(freeCell, 1) Or b.maxY > UBound(freeCell, 2) Then Return False
+            For j As Integer = b.minY To b.maxY Step 1
+                For i As Integer = b.minX To b.maxX Step 1
+                    If Not freeCell(i, j) Then Return False
+                Next i
+            Next j
+            Return True
+        End Function
         Friend Shared Sub PlaceObject(ByRef m As Map, ByRef id As DefMapObjects.Types, _
                                       ByRef x As Integer, ByRef y As Integer, _
                                       ByRef GroupID As Integer, ByRef placedCities As Integer, _
@@ -5418,6 +5432,11 @@ Public Class shortMapFormat
 
     Public Const ApplyStrictTypesFilter As Boolean = True
 
+    ''' <summary>Размер играбельной части карты, какой пришел из настроек</summary>
+    Public mapSize As Size
+    ''' <summary>Размер карты, поодогнанный под один из ожидаемых игрой</summary>
+    Public totalMapSize As Size
+
     ''' <summary>Состояние тайлов</summary>
     Public landscape(-1, -1) As TileState
     ''' <summary>Объекты местности</summary>
@@ -5664,6 +5683,7 @@ Public Class shortMapFormat
         Dim startItems() As AllDataStructues.Item = GenStartItems(objContent)
 
         Dim res As New shortMapFormat
+        res.mapSize = New Size(m.xSize + 1, m.ySize + 1)
         ReDim res.landscape(UBound(m.board, 1), UBound(m.board, 2))
 
         Dim name As String
@@ -5916,8 +5936,71 @@ Public Class shortMapFormat
         Next i
         m.log.Add(sName.log.PrintAll)
         m.log.Add("Total stacks count: " & stackArray.Length & vbNewLine)
+
+        Dim newSize As Integer = -1
+        For i As Integer = 0 To UBound(m.comm.defValues.defaultMapSize) Step 1
+            If Math.Max(res.mapSize.Width, res.mapSize.Height) <= m.comm.defValues.defaultMapSize(i) Then
+                newSize = m.comm.defValues.defaultMapSize(i)
+                Exit For
+            End If
+        Next i
+        If newSize = -1 Then Throw New Exception("Too big map size: " & res.mapSize.Width & "x" & res.mapSize.Height)
+        res.totalMapSize = New Size(newSize, newSize)
+        If Not res.mapSize.Width = newSize Or Not res.mapSize.Height = newSize Then
+            Dim dx As Integer = newSize - res.mapSize.Width
+            Dim dy As Integer = newSize - res.mapSize.Height
+            Call MoveObject(CType(res.landmarks, simpleObject()), dx, dy)
+            Call MoveObject(CType(res.mountains, simpleObject()), dx, dy)
+            Call MoveObject(CType(res.capitals, simpleObject()), dx, dy)
+            Call MoveObject(CType(res.mines, simpleObject()), dx, dy)
+            Call MoveObject(CType(res.merchantsItems, simpleObject()), dx, dy)
+            Call MoveObject(CType(res.merchantsSpells, simpleObject()), dx, dy)
+            Call MoveObject(CType(res.merchantsUnits, simpleObject()), dx, dy)
+            Call MoveObject(CType(res.trainers, simpleObject()), dx, dy)
+            Call MoveObject(CType(res.ruins, simpleObject()), dx, dy)
+            Call MoveObject(CType(res.cities, simpleObject()), dx, dy)
+            Call MoveObject(res.stacks, dx, dy)
+
+            Dim placeMountain(newSize - 1, newSize - 1) As Boolean
+            Dim newLandscape(newSize - 1, newSize - 1) As TileState
+            For y As Integer = 0 To UBound(newLandscape, 2) Step 1
+                For x As Integer = 0 To UBound(newLandscape, 1) Step 1
+                    newLandscape(x, y).owner = objContent.randStack.comm.defValues.RaceNumberToRaceChar(objContent.randStack.comm.RaceIdentifierToSubrace("Neutral"))
+                    newLandscape(x, y).treeID = -1
+                    newLandscape(x, y).ground = TileState.GroundType.Plain
+                    placeMountain(x, y) = True
+                Next x
+            Next y
+            For y As Integer = 0 To m.ySize Step 1
+                For x As Integer = 0 To m.xSize Step 1
+                    newLandscape(x + dx, y + dy) = res.landscape(x, y)
+                    placeMountain(x + dx, y + dy) = False
+                Next x
+            Next y
+            res.landscape = newLandscape
+            Dim imp As New ImpenetrableObjects(gameModel, False, objContent.randStack.comm)
+            Dim mountainsFiller() As simpleObject = imp.FillByMountains(placeMountain, objContent.randStack.comm.RaceIdentifierToSubrace("Neutral"))
+            Dim a As Integer = res.mountains.Length
+            ReDim Preserve res.mountains(res.mountains.Length + UBound(mountainsFiller))
+            For i As Integer = 0 To UBound(mountainsFiller) Step 1
+                res.mountains(a) = mountainsFiller(i)
+                a += 1
+            Next i
+        End If
         Return res
     End Function
+    Private Shared Sub MoveObject(ByRef obj() As simpleObject, ByRef dx As Integer, ByRef dy As Integer)
+        For i As Integer = 0 To UBound(obj) Step 1
+            obj(i).pos.X += dx
+            obj(i).pos.Y += dy
+        Next i
+    End Sub
+    Private Shared Sub MoveObject(ByRef obj() As StackObject, ByRef dx As Integer, ByRef dy As Integer)
+        For i As Integer = 0 To UBound(obj) Step 1
+            obj(i).pos.X += dx
+            obj(i).pos.Y += dy
+        Next i
+    End Sub
 
     Private Shared Sub AddObject(ByRef AddTo() As simpleObject, ByRef x As Integer, ByRef y As Integer, ByRef name As String, _
                                  ByRef size As Size)
@@ -11031,6 +11114,52 @@ Public Class ImpenetrableObjects
         Dim selected As Integer = IDs.RandomSelection(weight)
         m.board(x, y).mapObject.objectName = mountains(selected).name
     End Sub
+
+    Public Function FillByMountains(ByRef fill(,) As Boolean, raceID As Integer) As shortMapFormat.simpleObject()
+        Dim points As New Dictionary(Of String, Point)
+        For y As Integer = 0 To UBound(fill, 2) Step 1
+            For x As Integer = 0 To UBound(fill, 1) Step 1
+                If fill(x, y) Then points.Add(x & "_" & y, New Point(x, y))
+            Next x
+        Next y
+        Dim m(UBound(mountains)) As MapObject
+        Dim n As Integer = -1
+        For i As Integer = 0 To UBound(mountains) Step 1
+            If mountains(i).race.Contains(raceID) Then
+                n += 1
+                m(n) = mountains(i)
+            End If
+        Next i
+        ReDim Preserve m(n)
+        Dim possibleIndex As New List(Of Integer)
+        Dim result(-1) As shortMapFormat.simpleObject
+        Do While points.Count > 0
+            Dim k As String = points.Keys(comm.rndgen.RndInt(0, points.Count - 1))
+            Dim p As Point = points.Item(k)
+            possibleIndex.Clear()
+            For i As Integer = 0 To UBound(m) Step 1
+                If ImpenetrableMeshGen.ActiveObjectsPlacer.MayPlaceObject(fill, p.X, p.Y, m(i).xSize, m(i).ySize) Then
+                    possibleIndex.Add(i)
+                End If
+            Next i
+            If possibleIndex.Count = 0 Then
+                MsgBox("Cannot find appropriate mountain")
+                Throw New Exception("Cannot find appropriate mountain")
+            End If
+            Dim r As Integer = possibleIndex.Item(comm.rndgen.RndItemIndex(possibleIndex))
+            ReDim Preserve result(result.Length)
+            result(UBound(result)) = New shortMapFormat.simpleObject With {.pos = New Point(p.X, p.Y), _
+                                                                           .size = New Size(m(r).xSize, m(r).ySize), _
+                                                                           .id = m(r).name}
+            For y As Integer = p.Y To p.Y + m(r).ySize - 1 Step 1
+                For x As Integer = p.X To p.X + m(r).xSize - 1 Step 1
+                    points.Remove(x & "_" & y)
+                    fill(x, y) = False
+                Next x
+            Next y
+        Loop
+        Return result
+    End Function
 #End Region
 #Region "Place other objects: houses, towers, obelisks, breaches etc."
     Private Sub PlaceOtherObjects(ByRef m As Map, ByRef free(,) As Boolean)
