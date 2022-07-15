@@ -3730,6 +3730,27 @@ Public Class Common
         Next item
         Call log.Add(result)
 
+        result = vbNewLine & "----Preserved objects list----"
+        For Each item As String In preservedItems
+            name = ""
+            If name = "" Then
+                Dim f As AllDataStructues.Unit = rStack.FindUnitStats(item)
+                If Not IsNothing(f) Then name = f.name
+            End If
+            If name = "" Then
+                Dim f As AllDataStructues.Item = rStack.FindItemStats(item)
+                If Not IsNothing(f) Then name = f.name
+            End If
+            If name = "" Then
+                Dim f As AllDataStructues.Spell = rStack.FindSpellStats(item)
+                If Not IsNothing(f) Then name = f.name
+            End If
+            If name = "" AndAlso rStack.comm.itemType.ContainsValue(item.ToUpper) Then name = "item type"
+            If name = "" Then name = "I don't know what is that"
+            result &= vbNewLine & item & " - " & name
+        Next item
+        Call log.Add(result)
+
         result = vbNewLine & "----Custom units races list----"
         For Each item As String In customRace.Keys
             name = ""
