@@ -47,6 +47,9 @@ Friend Class StartForm
         Dim gm As New NevendaarTools.GameModel
         gm.Load(".\Resources", True)
 
+        'Call CheckModifiersUse(gm)
+        'Call CheckAttacksUse(gm)
+
         Dim objplace As New ImpenetrableObjects(gm, False, comm)
 
         Dim grid As Map
@@ -192,6 +195,110 @@ Friend Class StartForm
     '    Next i
     '    Return result
     'End Function
+
+    Private Sub CheckModifiersUse(ByRef gameModel As NevendaarTools.GameModel)
+        Dim items As List(Of NevendaarTools.GItem) = gameModel.GetAllT(Of NevendaarTools.GItem)()
+        Dim spells As List(Of NevendaarTools.Gspell) = gameModel.GetAllT(Of NevendaarTools.Gspell)()
+        Dim attacks As List(Of NevendaarTools.Gattack) = gameModel.GetAllT(Of NevendaarTools.Gattack)()
+        Dim lupgr As List(Of NevendaarTools.GleaUpg) = gameModel.GetAllT(Of NevendaarTools.GleaUpg)()
+
+        Dim imods, smods, amods, umods As New List(Of String)
+        For Each i As NevendaarTools.Gspell In spells
+            If Not IsNothing(i.modif_id.key) AndAlso Not i.modif_id.key.ToLower = "g000000000" Then
+                If smods.Contains(i.modif_id.key.ToLower) Then
+                    Console.WriteLine("spells " & i.modif_id.key.ToLower & " " & i.name_txt.value.text)
+                Else
+                    smods.Add(i.modif_id.key.ToLower)
+                End If
+            End If
+        Next i
+        For Each i As NevendaarTools.GItem In items
+            If Not IsNothing(i.mod_equip.key) AndAlso Not i.mod_equip.key.ToLower = "g000000000" Then
+                If imods.Contains(i.mod_equip.key.ToLower) Then
+                    Console.WriteLine("equip " & i.mod_equip.key.ToLower & " " & i.name_txt.value.text)
+                Else
+                    imods.Add(i.mod_equip.key.ToLower)
+                End If
+            End If
+            If Not IsNothing(i.mod_potion.key) AndAlso Not i.mod_potion.key.ToLower = "g000000000" Then
+                If imods.Contains(i.mod_potion.key.ToLower) Then
+                    Console.WriteLine("potions " & i.mod_potion.key.ToLower & " " & i.name_txt.value.text)
+                Else
+                    imods.Add(i.mod_potion.key.ToLower)
+                End If
+            End If
+        Next i
+        For Each i As NevendaarTools.Gattack In attacks
+            For Each w As NevendaarTools.StringLink(Of NevendaarTools.GmodifL) In {i.ward1, i.ward2, i.ward3, i.ward4}
+                If Not IsNothing(w.key) AndAlso Not w.key.ToLower = "g000000000" Then
+                    If amods.Contains(w.key.ToLower) Then
+                        Console.WriteLine("attacks " & w.key.ToLower & " " & i.name_txt.value.text)
+                    Else
+                        amods.Add(w.key.ToLower)
+                    End If
+                End If
+            Next w
+        Next i
+        For Each i As NevendaarTools.GleaUpg In lupgr
+            If Not IsNothing(i.modif_id) Then
+                If Not umods.Contains(i.modif_id.ToLower) Then
+                    umods.Add(i.modif_id.ToLower)
+                End If
+            End If
+        Next i
+
+        Dim L() As List(Of String) = {umods, imods, amods, smods}
+        For i As Integer = 0 To UBound(L) - 1
+            For j As Integer = i + 1 To UBound(L)
+                For Each t As String In L(i)
+                    If L(j).Contains(t) Then
+                        Throw New Exception
+                    End If
+                Next
+            Next
+        Next
+
+    End Sub
+    Private Sub CheckAttacksUse(ByRef gameModel As NevendaarTools.GameModel)
+        Dim items As List(Of NevendaarTools.GItem) = gameModel.GetAllT(Of NevendaarTools.GItem)()
+        Dim units As List(Of NevendaarTools.Gunit) = gameModel.GetAllT(Of NevendaarTools.Gunit)()
+
+        Dim iatt, uatt As New List(Of String)
+        For Each i As NevendaarTools.GItem In items
+            If Not IsNothing(i.attack_id.key) AndAlso Not i.attack_id.key.ToLower = "g000000000" Then
+                If iatt.Contains(i.attack_id.key.ToLower) Then
+                    Console.WriteLine("att items " & i.attack_id.key.ToLower)
+                Else
+                    iatt.Add(i.attack_id.key.ToLower)
+                End If
+            End If
+        Next i
+        For Each i As NevendaarTools.Gunit In units
+            If i.unit_cat.key = 0 Then
+                For Each a As NevendaarTools.StringLink(Of NevendaarTools.Gattack) In {i.attack_id, i.attack2_id}
+                    If Not IsNothing(a.key) AndAlso Not a.key.ToLower = "g000000000" Then
+                        If uatt.Contains(a.key.ToLower) Then
+                            Console.WriteLine("att units " & a.key.ToLower & " " & a.value.name_txt.value.text & " " & i.name_txt.value.text)
+                        Else
+                            uatt.Add(a.key.ToLower)
+                        End If
+                    End If
+                Next
+            End If
+        Next i
+
+        Dim L() As List(Of String) = {iatt, uatt}
+        For i As Integer = 0 To UBound(L) - 1
+            For j As Integer = i + 1 To UBound(L)
+                For Each t As String In L(i)
+                    If L(j).Contains(t) Then
+                        Throw New Exception
+                    End If
+                Next
+            Next
+        Next
+
+    End Sub
 
 End Class
 
