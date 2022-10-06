@@ -7259,13 +7259,13 @@ Public Class ResoucesReader
     End Function
 
     'shared data
-    Protected Friend Shared Function sLords() As String
+    Public Shared Function sLords() As String
         Return My.Resources.Lords
     End Function
-    Protected Friend Shared Function sRaces() As String
+    Public Shared Function sRaces() As String
         Return My.Resources.Races
     End Function
-    Protected Friend Shared Function sCapitals() As String
+    Public Shared Function sCapitals() As String
         Return My.Resources.Capitals
     End Function
 End Class
