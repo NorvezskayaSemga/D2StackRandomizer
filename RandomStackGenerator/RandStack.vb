@@ -87,6 +87,11 @@ Public Class RandStack
             ''' </summary>
             Public unitsStrengthUniformity As Double
 
+            ''' <summary>
+            ''' С таким шансом юнит с дальней атакой будет помещен вперед, если в первом ряду есть место. От 0 до 100.
+            ''' </summary>
+            Public chanceToPlaceBacklineUnitToFrontline As Double
+
             Public Sub New()
                 neutralOrderWeight.Add(AllDataStructues.Stack.StackOrder.OrderType.Stand, 1)
                 neutralOrderWeight.Add(AllDataStructues.Stack.StackOrder.OrderType.Normal, 0)
@@ -2634,6 +2639,33 @@ Public Class RandStack
         For i As Integer = 0 To UBound(result.units) Step 1
             If IsNothing(result.units(i)) Then result.units(i) = AllDataStructues.Stack.UnitInfo.CreateEmpty
         Next i
+
+        If settings.chanceToPlaceBacklineUnitToFrontline > 0 Then
+            Dim frontlineEmptySlots As New RandomSelection(comm.defValues.firstrow.Length, rndgen)
+            Dim t As Integer
+            For i As Integer = 0 To UBound(result.units) Step 1
+                If result.units(i).unit.unitID = GenDefaultValues.emptyItem AndAlso comm.defValues.firstrow.Contains(i) Then
+                    t = GenDefaultValues.BusyTransfer(i, True)
+                    If result.units(t).unit.unitID = GenDefaultValues.emptyItem OrElse result.units(t).unit.small Then
+                        frontlineEmptySlots.Add(i)
+                    End If
+                End If
+            Next i
+            If frontlineEmptySlots.Count > 0 Then
+                For i As Integer = 0 To UBound(result.units) Step 1
+                    If Not result.units(i).unit.unitID = GenDefaultValues.emptyItem And result.units(i).unit.small And comm.defValues.secondrow.Contains(i) Then
+                        If rndgen.RndInt(0, 99) < settings.chanceToPlaceBacklineUnitToFrontline Then
+                            Dim selected As Integer = frontlineEmptySlots.RandomSelection()
+                            frontlineEmptySlots.Remove(selected)
+                            result.units(selected) = AllDataStructues.Stack.UnitInfo.Copy(result.units(i))
+                            result.units(i) = AllDataStructues.Stack.UnitInfo.CreateEmpty
+                            If result.leaderPos = i Then result.leaderPos = selected
+                            If frontlineEmptySlots.Count = 0 Then Exit For
+                        End If
+                    End If
+                Next i
+            End If
+        End If
         Return result
     End Function
     'Private Function GenPositions(ByRef SelectedUnits() As AllDataStructues.Unit, ByRef NoLeader As Boolean) As AllDataStructues.Stack
@@ -2988,7 +3020,7 @@ Public Class RandStack
                         Call SetUnitPos(result, comm.defValues.firstrow(k), units(i))
                         FRowSlots -= 1
                         If Not units(i).unit.small Then
-                            result.units(comm.defValues.busytransfer(comm.defValues.firstrow(k))) = AllDataStructues.Stack.UnitInfo.CreateEmpty
+                            result.units(GenDefaultValues.BusyTransfer(comm.defValues.firstrow(k), True)) = AllDataStructues.Stack.UnitInfo.CreateEmpty
                             SRowSlots -= 1
                         End If
                         If i = 0 Then result.leaderPos = comm.defValues.firstrow(k)
@@ -6755,10 +6787,33 @@ Public Class GenDefaultValues
     Public Const writeToLog As Boolean = True
 
     'stack info
-    Friend busytransfer() As Integer = New Integer() {1, -1, 3, -1, 5, -1}
     Friend firstrow() As Integer = New Integer() {0, 2, 4}
     Friend secondrow() As Integer = New Integer() {1, 3, 5}
     Friend ReadOnly maxStackSize As Integer = firstrow.Length + secondrow.Length
+
+    Friend Shared Function BusyTransfer(ByVal usedSlot As Integer, ByVal expectedAsFrontline As Boolean) As Integer
+        If expectedAsFrontline Then
+            If usedSlot = 0 Then
+                Return 1
+            ElseIf usedSlot = 2 Then
+                Return 3
+            ElseIf usedSlot = 4 Then
+                Return 5
+            Else
+                Throw New Exception("Unexpected slot")
+            End If
+        Else
+            If usedSlot = 1 Then
+                Return 0
+            ElseIf usedSlot = 3 Then
+                Return 2
+            ElseIf usedSlot = 5 Then
+                Return 4
+            Else
+                Throw New Exception("Unexpected slot")
+            End If
+        End If
+    End Function
 
     'common
     Public ReadOnly defaultSigma As Double
