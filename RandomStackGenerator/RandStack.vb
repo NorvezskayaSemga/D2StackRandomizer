@@ -2309,7 +2309,7 @@ Public Class RandStack
     Private Function GenStackMultithread(ByVal GenSettings As AllDataStructues.CommonStackCreationSettings,
                                          ByVal BakDynStackStats As AllDataStructues.DesiredStats) As AllDataStructues.Stack
 
-        Dim units(11)() As AllDataStructues.Stack.UnitInfo
+        Dim units(23)() As AllDataStructues.Stack.UnitInfo
         Dim DynStackStats(UBound(units)) As AllDataStructues.DesiredStats
         Call log.MRedim(units.Length)
         Dim leaderExpKilled() As Integer = Nothing
@@ -2752,6 +2752,30 @@ Public Class RandStack
                             "Position: " & p & vbNewLine & _
                             "StackStats:" & vbNewLine & AllDataStructues.DesiredStats.Print(GenSettings.StackStats, comm.defValues.RaceNumberToRaceChar) & vbNewLine & _
                             "DynStackStats:" & vbNewLine & AllDataStructues.DesiredStats.Print(DynStackStats, comm.defValues.RaceNumberToRaceChar))
+    End Sub
+    Private Sub ChangeLeader(ByRef units() As AllDataStructues.Stack.UnitInfo)
+        Dim selector As New RandomSelection(units.Length, rndgen)
+        Dim negotiate(UBound(units)) As Double
+        Dim leader As Integer = -1
+        Dim leaderHasFighterForm As Boolean = False
+        For i As Integer = 0 To UBound(units) Step 1
+            If comm.IsAppropriateLeader(units(i).unit) Then
+                selector.Add(i)
+                negotiate(i) = units(i).unit.negotiate
+                leader = i
+                If units(i).unit.analogue_i > -1 AndAlso comm.IsAppropriateFighter(AllUnits(units(i).unit.analogue_i)) Then
+                    leaderHasFighterForm = True
+                End If
+            ElseIf units(i).unit.analogue_i > -1 AndAlso comm.IsAppropriateLeader(AllUnits(units(i).unit.analogue_i)) Then
+                selector.Add(i)
+                negotiate(i) = AllUnits(units(i).unit.analogue_i).negotiate
+            End If
+        Next i
+        If leader < 0 Or Not leaderHasFighterForm Then Exit Sub
+        Dim selected As Integer = selector.RandomSelection(negotiate)
+        If selected = leader Then Exit Sub
+        units(leader).unit = AllUnits(units(selected).unit.analogue_i)
+        units(selected).unit = AllUnits(units(leader).unit.analogue_i)
     End Sub
 
     Private Function SelectFighters(ByRef skipfilter1 As Boolean, ByRef skipfilter2 As Boolean, _
@@ -4684,6 +4708,11 @@ Public Class AllDataStructues
         Public _table_unitCat As Integer
         ''' <summary>Поле в таблице как оно есть</summary>
         Public _table_Branch As Integer
+        ''' <summary>Номер юнита-аналога</summary>
+        Public analogue_i As Integer = -1
+
+        ''' <summary>Сопротивление ворам</summary>
+        Public negotiate As Integer = -1
 
         ''' <summary>
         ''' Защита или иммунитет к источнику атаки.
@@ -4728,7 +4757,9 @@ Public Class AllDataStructues
                                   .isIncompatible = v.isIncompatible, _
                                   .unitIndex = v.unitIndex, _
                                   ._table_unitCat = v._table_unitCat, _
-                                  ._table_Branch = v._table_Branch}
+                                  ._table_Branch = v._table_Branch, _
+                                  .analogue_i = v.analogue_i, _
+                                  .negotiate = v.negotiate}
         End Function
 
         ''' <summary>Вернет прибавку к опыту за убийство юнита при получении им оверлевелов</summary>
@@ -4870,6 +4901,15 @@ Public Class AllDataStructues
 
                 result(i)._table_Branch = gdata(i).branch.value.id
                 result(i)._table_unitCat = gdata(i).unit_cat.value.id
+
+                result(i).negotiate = gdata(i).negotiate
+
+                For j As Integer = 0 To UBound(result) Step 1
+                    If gdata(i).name_txt.value.text = gdata(j).name_txt.value.text AndAlso gdata(i).desc_txt.value.text = gdata(j).desc_txt.value.text Then
+                        result(i).analogue_i = j
+                        Exit For
+                    End If
+                Next j
 
                 'result(i).isIncompatible -- default
                 'result(i).useState -- default
