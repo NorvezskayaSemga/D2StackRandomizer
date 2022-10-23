@@ -210,6 +210,10 @@ Public Class RandStack
     Private bak_multiplierItemsWeight() As Double
 
     ''' <summary>
+    ''' Ресурсы игры
+    ''' </summary>
+    Public gameModel As NevendaarTools.GameModel
+    ''' <summary>
     ''' Настройки генерации
     ''' </summary>
     Public settings As ConstructorInput.SettingsInfo
@@ -217,6 +221,10 @@ Public Class RandStack
     ''' Информация о карте
     ''' </summary>
     Public mapData As ConstructorInput.MapInfo
+    ''' <summary>
+    ''' Кастомная информация о моде
+    ''' </summary>
+    Public modData As ConstructorInput.CustomModSettings
 
     Friend Global_ItemsWeightMultiplier() As Double
     Private Global_AddedItems As New Dictionary(Of Integer, Dictionary(Of Integer, List(Of AllDataStructues.Item)))
@@ -228,8 +236,10 @@ Public Class RandStack
         comm = New Common(data.settings.modName) With {.onExcludedListChanged = AddressOf ResetExclusions}
         rndgen = comm.rndgen
         log = New Log(comm)
+        gameModel = data.gameModel
         settings = data.settings
         mapData = data.mapData
+        modData = data.modData
 
         If IsNothing(data.gameModel) Then Exit Sub
 
@@ -3666,6 +3676,15 @@ Public Class Common
         Return False
     End Function
     Protected Friend Function IsExcluded(ByRef unit As AllDataStructues.Unit) As Boolean
+        If unit._table_unitCat = 8 AndAlso unit._table_Branch = 5 Then
+            Return True
+        ElseIf unit._table_unitCat = 5 AndAlso unit._table_Branch = 7 Then
+            Return True
+        ElseIf unit._table_unitCat = 4 AndAlso unit._table_Branch = 7 Then
+            Return True
+        ElseIf unit._table_unitCat = 1 AndAlso unit._table_Branch = 6 Then
+            Return True
+        End If
         Return excludedObjects.Contains(unit.unitID.ToUpper)
     End Function
     Protected Friend Function IsExcluded(ByRef spell As AllDataStructues.Spell) As Boolean
@@ -4661,6 +4680,11 @@ Public Class AllDataStructues
         ''' <summary>True - юнит находится в ветке развития играбельной расы</summary>
         Friend fromRaceBranch As Boolean
 
+        ''' <summary>Поле в таблице как оно есть</summary>
+        Public _table_unitCat As Integer
+        ''' <summary>Поле в таблице как оно есть</summary>
+        Public _table_Branch As Integer
+
         ''' <summary>
         ''' Защита или иммунитет к источнику атаки.
         ''' Ключ - источник атаки, значение - тип сопротивления.
@@ -4702,7 +4726,9 @@ Public Class AllDataStructues
                                   .ASourceImmunity = CopyDictionaty(v.ASourceImmunity), _
                                   .AClassImmunity = CopyDictionaty(v.AClassImmunity), _
                                   .isIncompatible = v.isIncompatible, _
-                                  .unitIndex = v.unitIndex}
+                                  .unitIndex = v.unitIndex, _
+                                  ._table_unitCat = v._table_unitCat, _
+                                  ._table_Branch = v._table_Branch}
         End Function
 
         ''' <summary>Вернет прибавку к опыту за убийство юнита при получении им оверлевелов</summary>
@@ -4841,6 +4867,9 @@ Public Class AllDataStructues
                 For Each imm As NevendaarTools.GimmuC In gdata(i).immunCategory.value
                     result(i).AClassImmunity.Add(imm.immunity.value.id, imm.immunecat.value.id)
                 Next imm
+
+                result(i)._table_Branch = gdata(i).branch.value.id
+                result(i)._table_unitCat = gdata(i).unit_cat.value.id
 
                 'result(i).isIncompatible -- default
                 'result(i).useState -- default
