@@ -4814,7 +4814,15 @@ Public Class AllDataStructues
                 result(i).leadership = gdata(i).leadership
                 result(i).level = gdata(i).level
                 result(i).name = gdata(i).name_txt.value.text
-                result(i).reach = gdata(i).attack_id.value.reach.value.id
+                If gdata(i).attack_id.value.reach.value.melee Then
+                    result(i).reach = GenDefaultValues.UnitAttackReach.melee
+                Else
+                    If gdata(i).attack_id.value.reach.value.max_targts = 1 Then
+                        result(i).reach = GenDefaultValues.UnitAttackReach.archer
+                    Else
+                        result(i).reach = GenDefaultValues.UnitAttackReach.mage
+                    End If
+                End If
                 result(i).small = gdata(i).size_small
                 If gdata(i).unit_cat.value.id = GenDefaultValues.UnitClass.capitalGuard Then
                     result(i).unitBranch = gdata(i).unit_cat.value.id
