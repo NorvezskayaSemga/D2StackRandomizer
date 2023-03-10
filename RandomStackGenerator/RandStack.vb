@@ -2641,7 +2641,7 @@ Public Class RandStack
         Next i
 
         If settings.chanceToPlaceBacklineUnitToFrontline > 0 Then
-            Dim frontlineEmptySlots As New RandomSelection(comm.defValues.firstrow.Length, rndgen)
+            Dim frontlineEmptySlots As New RandomSelection(comm.defValues.maxStackSize, rndgen)
             Dim t As Integer
             For i As Integer = 0 To UBound(result.units) Step 1
                 If result.units(i).unit.unitID = GenDefaultValues.emptyItem AndAlso comm.defValues.firstrow.Contains(i) Then
