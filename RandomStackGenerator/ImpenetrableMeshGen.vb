@@ -5658,7 +5658,7 @@ Public Class shortMapFormat
         Call objContent.randStack.ResetItemWeightMultiplier()
 
         Dim attObjects() As AttendedObject = (New DefMapObjects).ActiveObjects
-        Dim sName As New SetName(lang, m.comm.defValues.selectedMod)
+        Dim sName As New SetName(lang, m.comm.defValues.selectedMod, gameModel)
         Call sName.ResetNames(True, -1)
 
         Dim treesAmount() As Integer = AllDataStructues.MapObjectInfo.getTreesAmount(gameModel, m.comm)

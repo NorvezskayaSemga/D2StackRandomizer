@@ -7062,13 +7062,13 @@ Public Class GenDefaultValues
                                            SetName.MerchantNameMaxLen, _
                                            SetName.MerchantNameMaxLen}
 
-        Public Sub New(ByRef lang As GenDefaultValues.TextLanguage, ByRef g As GenDefaultValues)
+        Public Sub New(ByRef lang As GenDefaultValues.TextLanguage, ByRef g As GenDefaultValues, ByRef gm As NevendaarTools.GameModel)
             genDefValues = g
             ReDim Preserve key(UBound(key) + objectsWithDescriptions.Length)
             For i As Integer = 0 To UBound(objectsWithDescriptions) Step 1
                 key(UBound(key) - UBound(objectsWithDescriptions) + i) = objectsWithDescriptions(i)
             Next i
-            Call ReadFields(lang)
+            Call ReadFields(lang, gm)
             Call PrintValuesCount()
         End Sub
 
@@ -7147,7 +7147,7 @@ Public Class GenDefaultValues
             Return GetArray(Trainers, ID)
         End Function
 
-        Private Sub ReadFields(ByRef lang As GenDefaultValues.TextLanguage)
+        Private Sub ReadFields(ByRef lang As GenDefaultValues.TextLanguage, ByRef gameModel As NevendaarTools.GameModel)
             Dim d() As Dictionary(Of String, TxTList) = ToArray()
             For i As Integer = 0 To UBound(d) Step 1
                 If IsNothing(d(i)) Then
@@ -7179,10 +7179,11 @@ Public Class GenDefaultValues
             Next i
 
             Dim allNames, allDescriptions As New List(Of String)
-            Dim lenErrors, duplErrors, caseErrors As String
+            Dim lenErrors, duplErrors, caseErrors, namesErrors As String
             lenErrors = ""
             duplErrors = ""
             caseErrors = ""
+            namesErrors = ""
             For i As Integer = 0 To UBound(d) Step 1
                 For Each k As String In d(i).Keys
                     For Each v As String In d(i).Item(k).ToArray
@@ -7201,10 +7202,24 @@ Public Class GenDefaultValues
                     allDescriptions.Add(v.ToUpper)
                 Next v
             Next k
+            If Not IsNothing(gameModel) Then
+                Dim names() As Dictionary(Of String, TxTList) = {Ruins, Mages, Vendors, Mercenaries, Trainers}
+                Dim objects() As List(Of String) = {gameModel._ResourceModel.ruins, gameModel._ResourceModel.mages, gameModel._ResourceModel.merhs, gameModel._ResourceModel.mercs, gameModel._ResourceModel.trainers}
+                Dim objType() As String = {"Ruin", "Mage", "Vendor", "Mercenary", "Trainer"}
+                For i As Integer = 0 To UBound(objType) Step 1
+                    For Each name As String In objects(i)
+                        If Not names(i).ContainsKey(name.ToUpper) Then
+                            namesErrors &= vbNewLine & objType(i) & " - " & name.ToUpper
+                        End If
+                    Next name
+                Next i
+            End If
+
             Dim errorTxt As String = ""
             If Not lenErrors = "" Then errorTxt &= vbNewLine & vbNewLine & "Too long text:" & lenErrors
             If Not duplErrors = "" Then errorTxt &= vbNewLine & vbNewLine & "Duplicated text:" & duplErrors
             If Not caseErrors = "" Then errorTxt &= vbNewLine & vbNewLine & "Must start with upper case:" & caseErrors
+            If Not namesErrors = "" Then errorTxt &= vbNewLine & vbNewLine & "Can not find names for:" & namesErrors
             If Not errorTxt = "" Then Throw New Exception(errorTxt)
         End Sub
         Private Sub PrintValuesCount()

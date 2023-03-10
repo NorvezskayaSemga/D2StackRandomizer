@@ -46,10 +46,13 @@
 
 #Region "Constructor"
     Public Sub New(ByVal lang As GenDefaultValues.TextLanguage, ByVal modName As String)
+        Call Me.New(lang, modName, Nothing)
+    End Sub
+    Public Sub New(ByVal lang As GenDefaultValues.TextLanguage, ByVal modName As String, ByRef gm As NevendaarTools.GameModel)
         comm = New Common(modName)
         log = New Log(comm)
 
-        customObjectsNames = New GenDefaultValues.MapObjectsText(lang, comm.defValues)
+        customObjectsNames = New GenDefaultValues.MapObjectsText(lang, comm.defValues, gm)
 
         Call log.Enable()
         Call AddToLog(-1, "-----Names creator initialization started-----")
