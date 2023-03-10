@@ -241,8 +241,8 @@ Friend Class StartForm
         Next i
         For Each i As NevendaarTools.GleaUpg In lupgr
             If Not IsNothing(i.modif_id) Then
-                If Not umods.Contains(i.modif_id.ToLower) Then
-                    umods.Add(i.modif_id.ToLower)
+                If Not umods.Contains(i.modif_id.ToString.ToLower) Then
+                    umods.Add(i.modif_id.ToString.ToLower)
                 End If
             End If
         Next i

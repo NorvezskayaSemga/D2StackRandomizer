@@ -457,7 +457,7 @@
         Next w
         For w As Integer = 0 To UBound(users) Step 1
             If Not w = NoneNameId AndAlso Not commonIDs.Contains(w) Then
-                weight(NoneNameId) -= users(w).weight * NoneWeightMultiplier()
+                weight(NoneNameId) = Math.Max(weight(NoneNameId) - users(w).weight * NoneWeightMultiplier(), 0)
             End If
         Next w
         For w As Integer = 0 To UBound(users) Step 1
