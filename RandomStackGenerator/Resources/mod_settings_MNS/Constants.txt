@@ -42,12 +42,12 @@ LootCostDispersion			1.25
 #ћножитель шанса по€влени€ каждого типа предметов, не завис€щий от того, какие предметы уже есть на карте
 #есть условие по цене.
 #Ќапример elixir=0.75#cost>400else1.25 значит, что дл€ обычных эликсиров стоимостью больше 400 множитель равен 0.75, дл€ тех, что дешевле 401 - 1.25
-Global_ItemType_ChanceMultiplier   talisman=0.1#cost>1500else1;/
+Global_ItemType_ChanceMultiplier   talisman=0.15#cost>1500else2;/
                                    scroll=0.15;/
                                    sphere=0.5;/
-                                   stuff=0.25;/
-                                   healing_elixir=15#cost>100else1;/
-                                   ressurection_elixir=10;/
+                                   stuff=0.2;/
+                                   healing_elixir=45#cost>100else2;/
+                                   ressurection_elixir=20;/
                                    permanent_elixir=0.6;/
                                    elixir=0.75#cost>400else1.25
 
