@@ -4031,7 +4031,7 @@ Public Class Common
         Call ReadFile(ReadMode.LootItemValue, s)
     End Sub
     ''' <summary>Читает список предметов, которым нужно изменить ценность</summary>
-    ''' <param name="LootItemValue">Список юнитов, предметов, которым нужно изменить ценность.
+    ''' <param name="LootItemValueList">Список юнитов, предметов, которым нужно изменить ценность.
     ''' Допускается передача неинициализитрованного списка.
     ''' Не воспринимает ключевые слова</param>
     Protected Friend Sub ReadLootItemValue(ByRef LootItemValueList As List(Of String))
