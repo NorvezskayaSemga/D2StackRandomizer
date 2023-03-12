@@ -270,6 +270,7 @@ Public Class RandStack
         Call comm.ReadCustomUnitRace()
         Call comm.ReadSoleUnits()
         Call comm.ReadBigStackUnits()
+        Call comm.ReadLootItemValue()
 
         AllUnits = AllDataStructues.Unit.getGameData(data.gameModel, comm)
         maxUnitLevel = CInt(Math.Floor(UShort.MaxValue / data.gameModel.GetAllT(Of NevendaarTools.Gunit).Count))
@@ -285,7 +286,7 @@ Public Class RandStack
             End If
         Next i
 
-        AllItems = AllDataStructues.Item.getGameData(data.gameModel, comm)
+        AllItems = AllDataStructues.Item.getGameData(data.gameModel, comm, data.settings.talismanChargesDefaultAmount)
         ReDim ItemCostSum(UBound(AllItems)), Global_ItemsWeightMultiplier(UBound(AllItems))
         Dim weight As New Dictionary(Of String, String)
         For Each s As String In comm.defValues.Global_ItemType_ChanceMultiplier.Split(CChar(";"))
@@ -294,10 +295,6 @@ Public Class RandStack
         Next s
         minItemGoldCost = Integer.MaxValue
         For i As Integer = 0 To UBound(AllItems) Step 1
-            If AllItems(i).type = GenDefaultValues.ItemTypes.talisman Then
-                AllItems(i).itemCost *= data.settings.talismanChargesDefaultAmount
-                AllItems(i).itemCostSum = AllDataStructues.Cost.Sum(AllItems(i).itemCost)
-            End If
             ItemsArrayPos.Add(AllItems(i).itemID.ToUpper, i)
             ItemCostSum(i) = AllItems(i).itemCostSum
 
@@ -318,7 +315,7 @@ Public Class RandStack
         For i As Integer = 0 To UBound(mods) Step 1
             AllModificators.Add(mods(i).id.ToUpper, mods(i))
         Next i
-        
+
         'dynupgrlevel
         'варды
         Dim ws, wc As Integer
@@ -3607,6 +3604,8 @@ Public Class Common
     Public SoleUnits As New Dictionary(Of String, List(Of String))
     ''' <summary>Ключ - ID юнита, значение - минимальный размер стэка для юнита</summary>
     Public BigStackUnits As New Dictionary(Of String, Integer)
+    ''' <summary>Ключ - ID предмета, значение - строка или с множителем или с новой ценой</summary>
+    Public LootItemValue As New Dictionary(Of String, String)
     ''' <summary>Ключ - ID типа предмета, значение - тип предмета</summary>
     Public itemType As New Dictionary(Of Integer, String)
     ''' <summary>Ключ - тип предмета, значение - ID типа предмета</summary>
@@ -3955,6 +3954,7 @@ Public Class Common
         SoleUnits = 6
         BigStackUnits = 7
         ReadPreservedObjects = 8
+        LootItemValue = 9
     End Enum
     ''' <summary>Читает список юнитов, предметов и заклинаний, которые не должен использовать генератор</summary>
     Protected Friend Sub ReadExcludedObjects()
@@ -4025,6 +4025,19 @@ Public Class Common
     Protected Friend Sub ReadBigStackUnits(ByRef BigStackUnitsList As List(Of String))
         Call ReadFile(ReadMode.BigStackUnits, BigStackUnitsList)
     End Sub
+    ''' <summary>Читает список предметов, которым нужно изменить ценность</summary>
+    Protected Friend Sub ReadLootItemValue()
+        Dim s() As String = SettingsFileSplit(defValues.resReader.LootItemValue)
+        Call ReadFile(ReadMode.LootItemValue, s)
+    End Sub
+    ''' <summary>Читает список предметов, которым нужно изменить ценность</summary>
+    ''' <param name="LootItemValue">Список юнитов, предметов, которым нужно изменить ценность.
+    ''' Допускается передача неинициализитрованного списка.
+    ''' Не воспринимает ключевые слова</param>
+    Protected Friend Sub ReadLootItemValue(ByRef LootItemValueList As List(Of String))
+        Call ReadFile(ReadMode.LootItemValue, LootItemValueList)
+    End Sub
+
     ''' <summary>Читает список, определяющий принадлежность непроходимых объектов</summary>
     Protected Friend Sub ReadCustomBuildingRace()
         Dim s() As String = SettingsFileSplit(defValues.resReader.MapObjectRace)
@@ -4122,6 +4135,9 @@ Public Class Common
                 End If
             ElseIf mode = ReadMode.ReadPreservedObjects Then
                 If Not preservedItems.Contains(srow(0).ToUpper) Then preservedItems.Add(srow(0).ToUpper)
+            ElseIf mode = ReadMode.LootItemValue Then
+                If LootItemValue.ContainsKey(srow(0).ToUpper) Then LootItemValue.Remove(srow(0).ToUpper)
+                LootItemValue.Add(srow(0).ToUpper, srow(1))
             Else
                 Throw New Exception("Invalid read mode: " & mode.ToString)
             End If
@@ -4219,6 +4235,24 @@ Public Class Common
         Else
             Return item.itemCost / defValues.NonJewelItemsCostDevider
         End If
+    End Function
+    Friend Function ItemCustomCost(ByRef item As AllDataStructues.Item) As AllDataStructues.Cost
+        Dim result As AllDataStructues.Cost = item.itemCost
+        If LootItemValue.ContainsKey(item.itemID.ToUpper) Then
+            Dim customCost = LootItemValue.Item(item.itemID.ToUpper)
+            If IsNumeric(customCost) Then
+                result *= CDbl(customCost)
+            Else
+                result = AllDataStructues.Cost.Read(customCost)
+            End If
+        End If
+        If LootItemValue.ContainsKey(itemType.Item(item.type).ToUpper()) Then
+            Dim multiplier = LootItemValue.Item(itemType.Item(item.type).ToUpper())
+            If IsNumeric(multiplier) Then
+                result *= CDbl(multiplier)
+            End If
+        End If
+        Return result
     End Function
 
 End Class
@@ -4897,7 +4931,7 @@ Public Class AllDataStructues
                 result(i).heal = gdata(i).attack_id.value.qty_heal
                 If Not IsNothing(gdata(i).attack2_id.value) Then
                     result(i).heal += gdata(i).attack2_id.value.qty_heal
-                End If               
+                End If
                 result(i).hp = gdata(i).hit_point
                 result(i).initiative = gdata(i).attack_id.value.initiative
                 result(i).leadership = gdata(i).leadership
@@ -5208,7 +5242,7 @@ Public Class AllDataStructues
                                   .useState = v.useState}
         End Function
 
-        Public Shared Function getGameData(ByRef gameModel As NevendaarTools.GameModel, ByRef comm As Common) As Item()
+        Public Shared Function getGameData(ByRef gameModel As NevendaarTools.GameModel, ByRef comm As Common, Optional ByVal TalismanDefaultChargeAmount As Integer = 5) As Item()
             Dim gdata As List(Of NevendaarTools.GItem) = gameModel.GetAllT(Of NevendaarTools.GItem)()
             Dim result(gdata.Count - 1) As Item
 
@@ -5218,6 +5252,11 @@ Public Class AllDataStructues
                 result(i).itemID = gdata(i).item_id.ToUpper
                 result(i).name = gdata(i).name_txt.value.text
                 result(i).type = CType(gdata(i).item_cat, GenDefaultValues.ItemTypes)
+
+                result(i).itemCost = comm.ItemCustomCost(result(i))
+                If result(i).type = GenDefaultValues.ItemTypes.talisman Then
+                    result(i).itemCost *= TalismanDefaultChargeAmount
+                End If
 
                 result(i).itemCostSum = AllDataStructues.Cost.Sum(comm.ItemTypeCostModify(result(i)))
                 'result(i).useState -- default
@@ -5276,7 +5315,7 @@ Public Class AllDataStructues
                 For Each c As NevendaarTools.GspellR In gdata(i).researchCost.value
                     result(i).researchCost.Add(c.lord_id.ToUpper(), AllDataStructues.Cost.Read(c.research))
                 Next c
-                
+
                 'result(i).useState -- default
             Next i
             Return result
@@ -7381,6 +7420,9 @@ Public Class ResoucesReader
     End Function
     Public Function UnitRace() As String
         Return ReadResources("UnitRace", "", True)
+    End Function
+    Public Function LootItemValue() As String
+        Return ReadResources("LootItemValue", "", True)
     End Function
     'common
     Public Function Capitals() As String
