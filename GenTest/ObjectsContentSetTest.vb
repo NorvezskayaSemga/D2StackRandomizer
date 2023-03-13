@@ -223,19 +223,19 @@ Public Class ObjectsContentSetTest
         For Each unit As AllDataStructues.Unit In rStack.AllUnits
             input.Add(unit.unitID)
         Next unit
-        Dim s As List(Of String) = target.GetMercenariesListSettings(-1, input)
+        Dim s As List(Of String) = target.GetMercenariesListSettings(ObjectsContentSet.UnitsMerchantMod.RandomAtEachLine, input)
         Call target.MakeMercenariesList(New AllDataStructues.DesiredStats With {.shopContent = s, .IGen = igen}, log)
         input.Clear()
         For Each item As AllDataStructues.Item In rStack.AllItems
             input.Add(item.itemID)
         Next item
-        s = target.GetMerchantListSettings(-1, input)
+        s = target.GetMerchantListSettings(ObjectsContentSet.ItemsMerchantMod.RandomAtEachLine, input)
         Call target.MakeMerchantItemsList(New AllDataStructues.DesiredStats With {.shopContent = s, .IGen = igen}, Nothing, log)
         input.Clear()
         For Each spell As AllDataStructues.Spell In rndtest.AllSpells
             input.Add(spell.spellID)
         Next spell
-        s = target.GetSpellsListSettings(-1, input)
+        s = target.GetSpellsListSettings(ObjectsContentSet.SpellsMerchantMod.RandomAtEachLine, input)
         Call target.MakeSpellsList(New AllDataStructues.DesiredStats With {.shopContent = s, .IGen = igen}, mana, log)
         log.Disable()
 
