@@ -4905,6 +4905,9 @@ Public Class AllDataStructues
             For Each item As String In Common.TxtSplit(comm.defValues.resReader.PlayableSubraces)
                 PlayableSubraces.Add(ValueConverter.StrToInt(item, "", ""))
             Next item
+            Dim dynUpgrError As String = ""
+            Dim dynUpgrIdlist As New List(Of String)
+            Dim printDynUpgrWrongStats As Boolean = False
 
             For i As Integer = 0 To UBound(result) Step 1
                 result(i) = New Unit
@@ -4977,9 +4980,43 @@ Public Class AllDataStructues
                     End If
                 Next j
 
+                If printDynUpgrWrongStats Then
+                    If result(i).unitBranch = GenDefaultValues.UnitClass.leader Then
+                        If gdata(i).dyn_upg1.value.negotiate = 0 Then
+                            dynUpgrError &= vbNewLine & "neg 1" & vbTab & gdata(i).unit_id & vbTab & gdata(i).dyn_upg1.key
+                            dynUpgrIdlist.Add(gdata(i).dyn_upg1.key)
+                        End If
+                        If gdata(i).dyn_upg2.value.negotiate <> 0 Then
+                            dynUpgrError &= vbNewLine & "neg 2" & vbTab & gdata(i).unit_id & vbTab & gdata(i).dyn_upg2.key
+                            dynUpgrIdlist.Add(gdata(i).dyn_upg2.key)
+                        End If
+                        If gdata(i).dyn_upg1.value.move = 0 Then
+                            dynUpgrError &= vbNewLine & "move 1" & vbTab & gdata(i).unit_id & vbTab & gdata(i).dyn_upg1.key
+                            dynUpgrIdlist.Add(gdata(i).dyn_upg1.key)
+                        End If
+                        If gdata(i).dyn_upg2.value.move <> 0 Then
+                            dynUpgrError &= vbNewLine & "move 2" & vbTab & gdata(i).unit_id & vbTab & gdata(i).dyn_upg2.key
+                            dynUpgrIdlist.Add(gdata(i).dyn_upg2.key)
+                        End If
+                        If gdata(i).dyn_upg2.value.xp_next <> 0 Then
+                            dynUpgrError &= vbNewLine & "xpnext 2" & vbTab & gdata(i).unit_id & vbTab & gdata(i).dyn_upg2.key
+                            dynUpgrIdlist.Add(gdata(i).dyn_upg2.key)
+                        End If
+                    End If
+                End If
+
                 'result(i).isIncompatible -- default
                 'result(i).useState -- default
             Next i
+
+            If printDynUpgrWrongStats Then
+                Dim dynUpgrFilter As String = ""
+                For Each jj As String In dynUpgrIdlist
+                    If Not dynUpgrFilter = "" Then dynUpgrFilter &= " or "
+                    dynUpgrFilter &= "UPGRADE_ID=""" & jj & """"
+                Next
+            End If
+
             Return result
         End Function
 
