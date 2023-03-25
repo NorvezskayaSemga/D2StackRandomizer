@@ -1652,7 +1652,8 @@ Public Class RandStack
                                           ByRef DynStackStats As AllDataStructues.DesiredStats, _
                                           ByRef isMapLordRace() As Boolean, _
                                           ByRef preservedSlotsCount As Integer, _
-                                          ByRef thresholdMultiplier As Double) As Boolean
+                                          ByRef thresholdMultiplier As Double, _
+                                          ByRef skipBigStackUnitsFilter As Boolean) As Boolean
         If Not comm.IsAppropriateLeader(AllUnits(leaderID)) Then Return False
 
         If AllUnits(leaderID).fromRaceBranch And isMapLordRace(AllUnits(leaderID).race) Then Return False
@@ -1672,8 +1673,10 @@ Public Class RandStack
             If AllUnits(leaderID).waterOnly And GenSettings.groundTile Then Return False
         End If
 
-        If comm.BigStackUnits.ContainsKey(AllUnits(leaderID).unitID) _
-        AndAlso DynStackStats.StackSize < comm.BigStackUnits.Item(AllUnits(leaderID).unitID) Then Return False
+        If Not skipBigStackUnitsFilter Then
+            If comm.BigStackUnits.ContainsKey(AllUnits(leaderID).unitID) _
+            AndAlso DynStackStats.StackSize < comm.BigStackUnits.Item(AllUnits(leaderID).unitID) Then Return False
+        End If
 
         If AllUnits(leaderID).small Then
             If preservedSlotsCount + 1 > comm.defValues.maxStackSize Then Return False
@@ -2308,6 +2311,7 @@ Public Class RandStack
 
     End Class
 
+#Const parallelStackGen = True
     Private Function GenStackMultithread(ByVal GenSettings As AllDataStructues.CommonStackCreationSettings,
                                          ByVal BakDynStackStats As AllDataStructues.DesiredStats) As AllDataStructues.Stack
 
@@ -2324,8 +2328,12 @@ Public Class RandStack
 
         If Not GenSettings.noLeader Then ReDim leaderExpKilled(UBound(units))
 
+#If parallelStackGen Then
         Parallel.For(0, units.Length,
         Sub(jobID As Integer)
+#Else
+        For jobID = 0 To UBound(units) Step 1
+#End If
             'For jobID As Integer = 0 To UBound(units) Step 1
             log.MAdd(jobID, "--------Attempt " & jobID + 1 & " started--------")
             Dim FreeMeleeSlots As Integer = 3
@@ -2383,8 +2391,11 @@ Public Class RandStack
             If Not GenSettings.noLeader Then leaderExpKilled(jobID) = SelectedLeader.unit.EXPkilled
 
             log.MAdd(jobID, "--------Attempt " & jobID + 1 & " ended--------")
-            'Next jobID
+#If parallelStackGen Then
         End Sub)
+#Else
+        Next jobID
+#End If
 
         Call log.Add(log.MPrintAll())
         Call log.MRedim(0)
@@ -2440,14 +2451,17 @@ Public Class RandStack
 
         'создаем список лидеров, которых вообще можем использовать
         Dim preservedSlots As Integer = GenSettings.StackStats.PreservedSlots
-        Dim Tolerance As Double = 0.02 * (DynStackStats.StackSize - 1)
         Dim selector As New RandomSelection(AllUnits.Length, rndgen)
+        Dim initialTolerance As Double = 0.02 * (DynStackStats.StackSize - 1)
+        Dim Tolerance As Double = initialTolerance
+        Dim skipBigStackUnitsFilter As Boolean = False
         Do While selector.Count < 3
             selector.Clear()
 
             For i As Integer = 0 To UBound(AllUnits) Step 1
                 If SelectPossibleLeader(i, Tolerance, GenSettings, DynStackStats, isMapLordRace, _
-                                        preservedSlots, DefaultExpKilledThresholdMultiplier) Then selector.Add(i)
+                                        preservedSlots, DefaultExpKilledThresholdMultiplier, _
+                                        skipBigStackUnitsFilter) Then selector.Add(i)
             Next i
             'If selector.Count = 0 Then
             '    For i As Integer = 0 To UBound(AllUnits) Step 1
@@ -2464,8 +2478,14 @@ Public Class RandStack
                     Tolerance = 0.02 * (DynStackStats.StackSize - 1)
                 Else
                     If selector.Count > 0 Then Exit Do
-                    Call ThrowStackCreationException("Something is wrong with the choice of possible stack leaders", _
-                                                     GenSettings, DynStackStats)
+                    If Not skipBigStackUnitsFilter Then
+                        skipBigStackUnitsFilter = True
+                        Tolerance = initialTolerance
+                        Continue Do
+                    Else
+                        Call ThrowStackCreationException("Something is wrong with the choice of possible stack leaders", _
+                                                         GenSettings, DynStackStats)
+                    End If
                 End If
             End If
             Tolerance += 0.2
