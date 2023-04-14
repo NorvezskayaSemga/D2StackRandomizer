@@ -46,8 +46,8 @@ Global_ItemType_ChanceMultiplier   talisman=0.15#cost>1500else2;/
                                    scroll=0.15;/
                                    sphere=0.5;/
                                    stuff=0.2;/
-                                   healing_elixir=45#cost>100else2;/
-                                   ressurection_elixir=20;/
+                                   healing_elixir=55#cost>100else2.5;/
+                                   ressurection_elixir=22;/
                                    permanent_elixir=0.6;/
                                    elixir=0.75#cost>400else1.25
 
