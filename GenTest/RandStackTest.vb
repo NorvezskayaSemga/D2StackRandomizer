@@ -1055,4 +1055,49 @@ Public Class RandStackTest
 
         If Not ok Then Assert.Inconclusive("Verify the correctness of this test method.")
     End Sub
+
+    '''<summary>
+    '''A test for JewelryConversion
+    '''</summary>
+    <TestMethod(), _
+     DeploymentItem("RandomStackGenerator.dll")> _
+    Public Sub JewelryConversionTest()
+        Dim target As RandStack = CreateRandStack()
+
+        Dim ok As Boolean = True
+
+        Dim items As New List(Of String)
+        Dim n, expectedCost, actualCost, amount1, amount2 As Integer
+        Dim maxAmount() As Integer = {1, 2, 5, 10}
+        Dim t0 As Integer = Environment.TickCount
+        For Each m As Integer In maxAmount
+            For i As Integer = 1 To 10000 Step 1
+                items.Clear()
+                expectedCost = 0
+                actualCost = 0
+                For j As Integer = 0 To UBound(target.GoldJewelry) Step 1
+                    n = target.rndgen.RndInt(0, m)
+                    If n > 0 Then
+                        For k As Integer = 1 To n Step 1
+                            items.Add(target.GoldJewelry(j).itemID)
+                        Next k
+                        expectedCost += n * target.GoldJewelry(j).itemCost.Gold
+                    End If
+                Next j
+                amount1 = items.Count
+                Call target.JewelryConversion(items)
+                amount2 = items.Count
+                For Each item As String In items
+                    actualCost += target.GoldJewelry(target.GoldJewelryIndex.Item(item)).itemCost.Gold
+                Next item
+                If actualCost <> expectedCost Or amount2 > amount1 Then
+                    ok = False
+                    Exit For
+                End If
+            Next i
+            If Not ok Then Exit For
+        Next m
+        Dim t1 As Integer = Environment.TickCount - t0
+        If Not ok Then Assert.Inconclusive("Verify the correctness of this test method.")
+    End Sub
 End Class
