@@ -93,7 +93,7 @@ Public Class RandStack
             Public chanceToPlaceBacklineUnitToFrontline As Double
 
             ''' <summary>
-            ''' В инвентарь отрядов будет добавлено количество драгоценностей, соответствующее опыту за убийство отряда, умноженному на это число. От 0 до 1000000000.
+            ''' В инвентарь отрядов будет добавлено количество драгоценностей, соответствующее опыту за убийство отряда, умноженному на это число. От 0 до 100.
             ''' </summary>
             Public AddedToStackJewelryMultiplier As Double
 
@@ -239,6 +239,9 @@ Public Class RandStack
     Friend Global_ItemsWeightMultiplier() As Double
     Private Global_AddedItems As New Dictionary(Of Integer, Dictionary(Of Integer, List(Of AllDataStructues.Item)))
 
+    Public GoldJewelry() As AllDataStructues.Item
+    Public GoldJewelryIndex As New Dictionary(Of String, Integer)
+
     ''' <summary>Сюда генератор пишет лог</summary>
     Public log As Log
 
@@ -320,6 +323,26 @@ Public Class RandStack
         For i As Integer = 0 To UBound(mods) Step 1
             AllModificators.Add(mods(i).id.ToUpper, mods(i))
         Next i
+
+        ReDim GoldJewelry(UBound(AllItems))
+        Dim jewelryCost(UBound(AllItems)) As Integer
+        GoldJewelryIndex.Clear()
+        Dim jewelryAmount As Integer = 0
+        For i As Integer = 0 To UBound(AllItems) Step 1
+            If AllItems(i).type = GenDefaultValues.ItemTypes.jewel AndAlso AllItems(i).itemCost.Gold = AllDataStructues.Cost.Sum(AllItems(i).itemCost) Then
+                AllItems(i).isGoldJewelry = True
+                GoldJewelry(jewelryAmount) = AllItems(i)
+                jewelryCost(jewelryAmount) = AllItems(i).itemCost.Gold
+                jewelryAmount += 1
+            End If
+        Next i
+        If jewelryAmount > 0 Then
+            ReDim Preserve GoldJewelry(jewelryAmount - 1), jewelryCost(jewelryAmount - 1)
+            Array.Sort(jewelryCost, GoldJewelry)
+            For i As Integer = 0 To UBound(GoldJewelry) Step 1
+                GoldJewelryIndex.Add(GoldJewelry(i).itemID.ToUpper, i)
+            Next i
+        End If
 
         'dynupgrlevel
         'варды
@@ -1034,8 +1057,22 @@ Public Class RandStack
         Return ThingGen(gs, LogID)
     End Function
 
-    Public Function JewelryGen(ByVal cost As AllDataStructues.Cost) As String()
-        Return New String() {}
+    ''' <summary>Генерирует драгоценности, стоящие только золото на заданную сумму. Остаток золота после генерации дает шанс добавления дополнительной драгоценности минимальной цены</summary>
+    ''' <param name="cost">Цена в золоте</param>
+    Public Function JewelryGen(ByVal cost As Integer) As List(Of String)
+        Dim result As New List(Of String)
+        If GoldJewelry.Length = 0 Then Return result
+        Dim gold As Integer = CInt(cost * comm.defValues.itemsSellRatio)
+        For i As Integer = UBound(GoldJewelry) To 0 Step -1
+            Do While gold >= GoldJewelry(i).itemCost.Gold
+                result.Add(GoldJewelry(i).itemID)
+                gold -= GoldJewelry(i).itemCost.Gold
+            Loop
+        Next i
+        If gold > 0 AndAlso rndgen.RndInt(0, GoldJewelry(0).itemCost.Gold) < gold Then
+            result.Add(GoldJewelry(0).itemID)
+        End If
+        Return result
     End Function
 
     Private Function GenItemSetDynIGen(ByRef IGen As AllDataStructues.LootGenSettings, ByRef GoldCost As Integer) As AllDataStructues.LootGenSettings
@@ -1610,12 +1647,12 @@ Public Class RandStack
                                       .pos = GenSettings.pos})
 
         If settings.AddedToStackJewelryMultiplier > 0 Then
-            Dim jewerlyCost As New AllDataStructues.Cost
+            Dim jewelryCost As Integer
             For i As Integer = 0 To UBound(result.units) Step 1
-                jewerlyCost.Gold += result.units(i).unit.EXPkilled
+                jewelryCost += result.units(i).unit.EXPkilled
             Next i
-            jewerlyCost.Gold = CInt(jewerlyCost.Gold * settings.AddedToStackJewelryMultiplier)
-            result.items.AddRange(JewelryGen(New AllDataStructues.Cost))
+            jewelryCost = CInt(jewelryCost * settings.AddedToStackJewelryMultiplier)
+            result.items.AddRange(JewelryGen(jewelryCost))
         End If
 
         Call log.Add("----Stack creation ended----")
@@ -5307,6 +5344,10 @@ Public Class AllDataStructues
         Friend itemCostSum As Double
         ''' <summary>Можно ли использовать предмет. 0 - неизвестно, -1 - нет, 1 - да</summary>
         Friend useState As GenDefaultValues.ExclusionState = GenDefaultValues.ExclusionState.unknown
+        ''' <summary>
+        ''' Является ли предмет драгоценностью, продаваемой только за золото
+        ''' </summary>
+        Friend isGoldJewelry As Boolean
 
         Public Shared Function Copy(ByVal v As Item) As Item
             Return New Item With {.name = v.name, _
@@ -6962,6 +7003,7 @@ Public Class GenDefaultValues
     Public ReadOnly MinRuinsLootCostMultiplier As Double
     Public ReadOnly CapitalLocationRadius As Double
     Public ReadOnly CapitalLocationBasicItems As String()
+    Public ReadOnly itemsSellRatio As Double
 
     'map
     Public ReadOnly defaultMapSize() As Integer = {48, 72, 96, 120, 144}
