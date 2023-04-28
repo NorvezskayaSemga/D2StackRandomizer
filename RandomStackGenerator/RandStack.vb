@@ -92,6 +92,11 @@ Public Class RandStack
             ''' </summary>
             Public chanceToPlaceBacklineUnitToFrontline As Double
 
+            ''' <summary>
+            ''' В инвентарь отрядов будет добавлено количество драгоценностей, соответствующее опыту за убийство отряда, умноженному на это число. От 0 до 1000000000.
+            ''' </summary>
+            Public AddedToStackJewelryMultiplier As Double
+
             Public Sub New()
                 neutralOrderWeight.Add(AllDataStructues.Stack.StackOrder.OrderType.Stand, 1)
                 neutralOrderWeight.Add(AllDataStructues.Stack.StackOrder.OrderType.Normal, 0)
@@ -1029,6 +1034,10 @@ Public Class RandStack
         Return ThingGen(gs, LogID)
     End Function
 
+    Public Function JewelryGen(ByVal cost As AllDataStructues.Cost) As String()
+        Return New String() {}
+    End Function
+
     Private Function GenItemSetDynIGen(ByRef IGen As AllDataStructues.LootGenSettings, ByRef GoldCost As Integer) As AllDataStructues.LootGenSettings
         Dim settings() As AllDataStructues.ItemGenSettings = AllDataStructues.LootGenSettings.ToArray(IGen)
         Dim weightsSum As Double
@@ -1599,6 +1608,15 @@ Public Class RandStack
                                       .IGen = DynStackStats.IGen, _
                                       .TypeCostRestriction = Nothing, _
                                       .pos = GenSettings.pos})
+
+        If settings.AddedToStackJewelryMultiplier > 0 Then
+            Dim jewerlyCost As New AllDataStructues.Cost
+            For i As Integer = 0 To UBound(result.units) Step 1
+                jewerlyCost.Gold += result.units(i).unit.EXPkilled
+            Next i
+            jewerlyCost.Gold = CInt(jewerlyCost.Gold * settings.AddedToStackJewelryMultiplier)
+            result.items.AddRange(JewelryGen(New AllDataStructues.Cost))
+        End If
 
         Call log.Add("----Stack creation ended----")
 

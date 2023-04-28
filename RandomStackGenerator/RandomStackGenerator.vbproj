@@ -129,39 +129,12 @@
     <Content Include="Resources\mod_settings_MNS\_AbsentFilesSource.txt">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>
-    <Content Include="Resources\mod_settings_SMNS-1K\ExcludeIDs.txt">
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-    </Content>
-    <Content Include="Resources\mod_settings_SMNS-1K\_AbsentFilesSource.txt">
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-    </Content>
-    <Content Include="Resources\mod_settings_SMNS-2KC\ExcludeIDs.txt">
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-    </Content>
-    <Content Include="Resources\mod_settings_SMNS-2KC\_AbsentFilesSource.txt">
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-    </Content>
-    <Content Include="Resources\mod_settings_SMNS-3KCC\ExcludeIDs.txt">
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-    </Content>
-    <Content Include="Resources\mod_settings_SMNS-3KCC\_AbsentFilesSource.txt">
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-    </Content>
-    <Content Include="Resources\mod_settings_SMNS-4KCCT\ExcludeIDs.txt">
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-    </Content>
-    <Content Include="Resources\mod_settings_SMNS-4KCCT\_AbsentFilesSource.txt">
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-    </Content>
-    <Content Include="Resources\mod_settings_SMNS-5KCCT+\ExcludeIDs.txt">
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-    </Content>
-    <Content Include="Resources\mod_settings_SMNS-5KCCT+\_AbsentFilesSource.txt">
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-    </Content>
-    <Content Include="Resources\mod_settings_SMNS\BigStackUnits.txt">
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-    </Content>
+    <Content Include="Resources\mod_settings_SMNS-1EXC\ExcludeIDs.txt" />
+    <Content Include="Resources\mod_settings_SMNS-1EXC\_AbsentFilesSource.txt" />
+    <Content Include="Resources\mod_settings_SMNS-2EXC\ExcludeIDs.txt" />
+    <Content Include="Resources\mod_settings_SMNS-2EXC\_AbsentFilesSource.txt" />
+    <Content Include="Resources\mod_settings_SMNS-3EXC\ExcludeIDs.txt" />
+    <Content Include="Resources\mod_settings_SMNS-3EXC\_AbsentFilesSource.txt" />
     <Content Include="Resources\mod_settings_SMNS\Constants.txt">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>
