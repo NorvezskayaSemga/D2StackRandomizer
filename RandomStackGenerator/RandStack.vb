@@ -896,6 +896,10 @@ Public Class RandStack
             Call DynWeight.ItemAdded(result, selected, True, LogID)
         Loop
 
+        If result.Count > 0 Then
+            Call JewelryConversion(result)
+        End If
+
         If Not IsNothing(GenSettings.IGen.PreserveItems) AndAlso GenSettings.IGen.PreserveItems.Count > 0 Then
             For Each item As String In GenSettings.IGen.PreserveItems
                 selected = ItemsArrayPos.Item(item.ToUpper)
@@ -1074,6 +1078,169 @@ Public Class RandStack
         End If
         Return result
     End Function
+    ''' <summary>Постарается объединить дешевые драгоценности в более дорогие</summary>
+    ''' <param name="items">Список предметов. Не только драгоценностей</param>
+    Public Sub JewelryConversion(ByRef items As List(Of String))
+        Dim nonJewelryList As New List(Of String)
+        Dim jewelryAmount(UBound(GoldJewelry)) As Integer
+        Dim n As Integer
+        For Each item As String In items
+            If AllItems(ItemsArrayPos.Item(item.ToUpper)).isGoldJewelry Then
+                n += 1
+                jewelryAmount(GoldJewelryIndex.Item(item.ToUpper)) += 1
+            Else
+                nonJewelryList.Add(item)
+            End If
+        Next item
+        If n > 1 Then
+            items = nonJewelryList
+            Dim previousAmount As Integer = -1
+            Dim currentAmount As Integer = n
+
+            Do While Not previousAmount = currentAmount
+                previousAmount = currentAmount
+
+                ' стак каждой драгоценности объединяем в более дорогие
+                For k As Integer = 0 To UBound(jewelryAmount) - 1 Step 1
+                    If jewelryAmount(k) > 1 Then
+                        For q As Integer = k + 1 To UBound(jewelryAmount) Step 1
+                            If jewelryAmount(q) > 0 Then
+                                Call JewelryConversion(jewelryAmount, k, q)
+                            End If
+                        Next q
+                        If jewelryAmount(k) > 1 Then
+                            For q As Integer = UBound(jewelryAmount) To k + 1 Step -1
+                                If jewelryAmount(q) = 0 Then
+                                    Call JewelryConversion(jewelryAmount, k, q)
+                                End If
+                            Next q
+                        End If
+                    End If
+                Next k
+                
+                ' пробуем объединить пары драгоценностей
+                For k1 As Integer = 0 To UBound(jewelryAmount) - 2 Step 1
+                    If jewelryAmount(k1) > 0 Then
+                        For k2 As Integer = k1 + 1 To UBound(jewelryAmount) - 1 Step 1
+                            If jewelryAmount(k2) > 0 Then
+                                For t As Integer = k2 + 1 To UBound(jewelryAmount) Step 1
+                                    Call JewelryConversion(jewelryAmount, k1, k2, t)
+                                Next t
+                            End If
+                        Next k2
+                    End If
+                Next k1
+
+                ' пробуем объединить тройки драгоценностей
+                For k1 As Integer = 0 To UBound(jewelryAmount) - 3 Step 1
+                    If jewelryAmount(k1) > 0 Then
+                        For k2 As Integer = k1 + 1 To UBound(jewelryAmount) - 2 Step 1
+                            If jewelryAmount(k2) > 0 Then
+                                For k3 As Integer = k2 + 1 To UBound(jewelryAmount) - 1 Step 1
+                                    If jewelryAmount(k3) > 0 Then
+                                        For t As Integer = k3 + 1 To UBound(jewelryAmount) Step 1
+                                            Call JewelryConversion(jewelryAmount, k1, k2, k3, t)
+                                        Next t
+                                    End If
+                                Next k3
+                            End If
+                        Next k2
+                    End If
+                Next k1
+
+                currentAmount = 0
+                For k As Integer = 0 To UBound(jewelryAmount) Step 1
+                    currentAmount += jewelryAmount(k)
+                Next k
+            Loop
+
+            ' добавляем новые драгоценности
+            For k As Integer = 0 To UBound(jewelryAmount) Step 1
+                If jewelryAmount(k) > 0 Then
+                    For q As Integer = 1 To jewelryAmount(k) Step 1
+                        items.Add(GoldJewelry(k).itemID.ToUpper)
+                    Next q
+                End If
+            Next k
+        End If
+    End Sub
+    Private Sub JewelryConversion(ByRef jewelryAmount() As Integer, ByVal fromIndex As Integer, ByVal toIndex As Integer)
+        Dim g As Integer
+        For f As Integer = jewelryAmount(fromIndex) To 2 Step -1
+            g = f * GoldJewelry(fromIndex).itemCost.Gold
+            If (g Mod GoldJewelry(toIndex).itemCost.Gold) = 0 Then
+                For t As Integer = 1 To jewelryAmount(fromIndex) Step 1
+                    If g = t * GoldJewelry(toIndex).itemCost.Gold Then
+                        jewelryAmount(fromIndex) -= f
+                        jewelryAmount(toIndex) += t
+                        Exit Sub
+                    End If
+                Next t
+            End If
+        Next f
+    End Sub
+    Private Sub JewelryConversion(ByRef jewelryAmount() As Integer, ByVal fromIndex1 As Integer, ByVal fromIndex2 As Integer, ByVal toIndex As Integer)
+        Dim maxT As Integer = jewelryAmount(fromIndex1) + jewelryAmount(fromIndex2)
+        Dim a(jewelryAmount(fromIndex1) * jewelryAmount(fromIndex2) - 1)() As Integer
+        Dim g(UBound(a)), g1, g2 As Integer
+        Dim n As Integer = -1
+        For f1 As Integer = 1 To jewelryAmount(fromIndex1) Step 1
+            g1 = f1 * GoldJewelry(fromIndex1).itemCost.Gold
+            For f2 As Integer = 1 To jewelryAmount(fromIndex2) Step 1
+                g2 = f2 * GoldJewelry(fromIndex2).itemCost.Gold
+
+                n += 1
+                g(n) = g1 + g2
+                a(n) = {f1, f2}
+            Next f2
+        Next f1
+        Array.Sort(g, a)
+        For i As Integer = UBound(a) To 0 Step -1
+            If (g(i) Mod GoldJewelry(toIndex).itemCost.Gold) = 0 Then
+                For t As Integer = 1 To maxT Step 1
+                    If g(i) = t * GoldJewelry(toIndex).itemCost.Gold Then
+                        jewelryAmount(fromIndex1) -= a(i)(0)
+                        jewelryAmount(fromIndex2) -= a(i)(1)
+                        jewelryAmount(toIndex) += t
+                        Exit Sub
+                    End If
+                Next t
+            End If
+        Next i
+    End Sub
+    Private Sub JewelryConversion(ByRef jewelryAmount() As Integer, ByVal fromIndex1 As Integer, ByVal fromIndex2 As Integer, ByVal fromIndex3 As Integer, ByVal toIndex As Integer)
+        Dim maxT As Integer = jewelryAmount(fromIndex1) + jewelryAmount(fromIndex2) + jewelryAmount(fromIndex3)
+        Dim a(jewelryAmount(fromIndex1) * jewelryAmount(fromIndex2) * jewelryAmount(fromIndex3) - 1)() As Integer
+        Dim g(UBound(a)), g1, g2, g3 As Integer
+        Dim n As Integer = -1
+        For f1 As Integer = 1 To jewelryAmount(fromIndex1) Step 1
+            g1 = f1 * GoldJewelry(fromIndex1).itemCost.Gold
+            For f2 As Integer = 1 To jewelryAmount(fromIndex2) Step 1
+                g2 = f2 * GoldJewelry(fromIndex2).itemCost.Gold
+                For f3 As Integer = 1 To jewelryAmount(fromIndex3) Step 1
+                    g3 = f3 * GoldJewelry(fromIndex3).itemCost.Gold
+
+                    n += 1
+                    g(n) = g1 + g2 + g3
+                    a(n) = {f1, f2, f3}
+                Next f3
+            Next f2
+        Next f1
+        Array.Sort(g, a)
+        For i As Integer = UBound(a) To 0 Step -1
+            If (g(i) Mod GoldJewelry(toIndex).itemCost.Gold) = 0 Then
+                For t As Integer = 1 To maxT Step 1
+                    If g(i) = t * GoldJewelry(toIndex).itemCost.Gold Then
+                        jewelryAmount(fromIndex1) -= a(i)(0)
+                        jewelryAmount(fromIndex2) -= a(i)(1)
+                        jewelryAmount(fromIndex3) -= a(i)(2)
+                        jewelryAmount(toIndex) += t
+                        Exit Sub
+                    End If
+                Next t
+            End If
+        Next i
+    End Sub
 
     Private Function GenItemSetDynIGen(ByRef IGen As AllDataStructues.LootGenSettings, ByRef GoldCost As Integer) As AllDataStructues.LootGenSettings
         Dim settings() As AllDataStructues.ItemGenSettings = AllDataStructues.LootGenSettings.ToArray(IGen)
