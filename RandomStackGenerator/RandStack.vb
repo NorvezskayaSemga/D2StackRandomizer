@@ -1063,19 +1063,26 @@ Public Class RandStack
 
     ''' <summary>Генерирует драгоценности, стоящие только золото на заданную сумму. Остаток золота после генерации дает шанс добавления дополнительной драгоценности минимальной цены</summary>
     ''' <param name="cost">Цена в золоте</param>
-    Public Function JewelryGen(ByVal cost As Integer) As List(Of String)
+    ''' <param name="LogID">Номер задачи. От 0 до Size-1. Если меньше 0, запись будет сделана в общий лог</param>
+    Public Function JewelryGen(ByVal cost As Integer, _
+                               Optional ByVal LogID As Integer = -1) As List(Of String)
+        Call AddToLog(LogID, "----Jewelry creation started----")
         Dim result As New List(Of String)
-        If GoldJewelry.Length = 0 Then Return result
-        Dim gold As Integer = CInt(cost * comm.defValues.itemsSellRatio)
-        For i As Integer = UBound(GoldJewelry) To 0 Step -1
-            Do While gold >= GoldJewelry(i).itemCost.Gold
-                result.Add(GoldJewelry(i).itemID)
-                gold -= GoldJewelry(i).itemCost.Gold
-            Loop
-        Next i
-        If gold > 0 AndAlso rndgen.RndInt(0, GoldJewelry(0).itemCost.Gold) < gold Then
-            result.Add(GoldJewelry(0).itemID)
+        If GoldJewelry.Length > 0 Then
+            Dim gold As Integer = CInt(cost * comm.defValues.itemsSellRatio)
+            For i As Integer = UBound(GoldJewelry) To 0 Step -1
+                Do While gold >= GoldJewelry(i).itemCost.Gold
+                    result.Add(GoldJewelry(i).itemID)
+                    gold -= GoldJewelry(i).itemCost.Gold
+                    Call AddToLog(LogID, "Add item " & GoldJewelry(i).name & " cost: " & GoldJewelry(i).itemCost.Gold)
+                Loop
+            Next i
+            If gold > 0 AndAlso rndgen.RndInt(0, GoldJewelry(0).itemCost.Gold) < gold Then
+                result.Add(GoldJewelry(0).itemID)
+                Call AddToLog(LogID, "Add item " & GoldJewelry(0).name & " cost: " & GoldJewelry(0).itemCost.Gold)
+            End If
         End If
+        Call AddToLog(LogID, "----Jewelry creation ended----")
         Return result
     End Function
     ''' <summary>Постарается объединить дешевые драгоценности в более дорогие</summary>
