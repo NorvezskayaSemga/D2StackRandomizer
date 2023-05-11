@@ -11961,7 +11961,7 @@ Public Class ObjectsContentSet
             Else
                 canBeMass = "F"
             End If
-            res.Add(level & spellRace & canBeMass)
+            res.Add(SpellsMerchantMod.LevelAndRaceAndMass & "#" & level & "#" & spellRace & "#" & canBeMass)
         Next i
         Return res
     End Function
