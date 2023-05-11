@@ -266,3 +266,13 @@ CapitalLocationBasicItems              nonattack_artifact=1#100;/
                                        sphere=2#10;/
                                        talisman=1#100;/
                                        special=0#1
+
+#При добавлении зелья лечения в инвентарь отряда опыт за его убийство будет умножен на это число.
+#Полученое значение будет наиболее вероятной ценой добавленного зелья
+AddHealPotionToStackMultiplier     0.5
+
+#В отряды с опытом за убийство ниже этого значения зелье лечения не добавится
+AddHealPotionToStackThreshold      50
+
+#В отряды с опытом за убийство ниже этого значения зелье воскрешения не добавится
+AddRevivePotionToStackThreshold    100

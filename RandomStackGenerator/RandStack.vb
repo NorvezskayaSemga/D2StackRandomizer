@@ -96,6 +96,17 @@ Public Class RandStack
             ''' В инвентарь отрядов будет добавлено количество драгоценностей, соответствующее опыту за убийство отряда, умноженному на это число. От 0 до 100.
             ''' </summary>
             Public AddedToStackJewelryMultiplier As Double
+            ''' <summary>
+            ''' С заданным шансом в инвентарь отряда будет добавлено зелье лечения. От 0 до 100.
+            ''' Для более сильных отрядов выше шанс помещения более дорогих зелий (в Constants есть множитель).
+            ''' В Constants есть порог опыта за убийство отряда, ниже которого зелье гарантированно не будет добавлено.
+            ''' </summary>
+            Public AddHealPotionToStackChance As Double
+            ''' <summary>
+            ''' С заданным шансом в инвентарь отряда будет добавлено зелье воскрешения. От 0 до 100.
+            ''' В Constants есть порог опыта за убийство отряда, ниже которого зелье гарантированно не будет добавлено.
+            ''' </summary>
+            Public AddRevivePotionToStackChance As Double
 
             Public Sub New()
                 neutralOrderWeight.Add(AllDataStructues.Stack.StackOrder.OrderType.Stand, 1)
@@ -241,6 +252,8 @@ Public Class RandStack
 
     Public GoldJewelry() As AllDataStructues.Item
     Public GoldJewelryIndex As New Dictionary(Of String, Integer)
+    Public HealPotionsSelector As RandomSelection
+    Public RevivePotionsSelector As RandomSelection
 
     ''' <summary>Сюда генератор пишет лог</summary>
     Public log As Log
@@ -343,6 +356,15 @@ Public Class RandStack
                 GoldJewelryIndex.Add(GoldJewelry(i).itemID.ToUpper, i)
             Next i
         End If
+        HealPotionsSelector = New RandomSelection(AllItems.Length, rndgen)
+        RevivePotionsSelector = New RandomSelection(AllItems.Length, rndgen)
+        For i As Integer = 0 To UBound(AllItems) Step 1
+            If AllItems(i).type = GenDefaultValues.ItemTypes.healing_elixir Then
+                HealPotionsSelector.Add(i)
+            ElseIf AllItems(i).type = GenDefaultValues.ItemTypes.ressurection_elixir Then
+                RevivePotionsSelector.Add(i)
+            End If
+        Next i
 
         'dynupgrlevel
         'варды
@@ -926,6 +948,41 @@ Public Class RandStack
         s.GoldCost = CInt(s.GoldCost * lcm)
         Return ItemsGen(s, LogID)
     End Function
+
+    ''' <summary>Генерирует набор предметов. В принципе может вернуть пустой список</summary>
+    ''' <param name="itemsSelector">Пул возможных предметов (внутри функции они еще будут фильтроваться списком исключений)</param>
+    ''' <param name="amount">Сколько создать</param>
+    ''' <param name="LogID">Номер задачи. От 0 до Size-1. Если меньше 0, запись будет сделана в общий лог</param>
+    Private Function ItemsGen(ByRef itemsSelector As RandomSelection, ByVal bar As Double, ByVal amount As Integer, _
+                              Optional ByVal LogID As Integer = -1) As List(Of String)
+        Call AddToLog(LogID, "Cost bar: " & bar & " amount: " & amount)
+        Dim result As New List(Of String)
+        Dim w(itemsSelector.upperBound), wSum As Double
+        Dim sigma As Double = 100 / (bar + 0.1)
+        For i As Integer = 0 To UBound(w) Step 1
+            If itemsSelector.Contains(i) AndAlso comm.IsAppropriateItem(AllItems(i)) Then
+                w(i) = Common.Gauss(AllItems(i).itemCostSum, bar, sigma)
+                wSum += w(i)
+            End If
+        Next i
+        If wSum = 0 Then
+            For i As Integer = 0 To UBound(w) Step 1
+                If itemsSelector.Contains(i) AndAlso comm.IsAppropriateItem(AllItems(i)) Then
+                    w(i) = 1
+                    wSum += w(i)
+                End If
+            Next i
+        End If
+        If wSum > 0 Then
+            Dim selected As Integer
+            For i As Integer = 1 To amount Step 1
+                selected = itemsSelector.RandomSelection(w)
+                result.Add(AllItems(selected).itemID)
+                Call AddToLog(LogID, "Add item " & AllItems(selected).name & " cost: " & AllItems(selected).itemCostSum)
+            Next i
+        End If
+        Return result
+    End Function
     Private Function CostBarGen(ByRef minBar As Integer, ByRef maxBar As Integer) As Integer
         'Return CInt(rndgen.RndDblFast(CDbl(minBar), CDbl(maxBar), serialExecution))
         Dim R As Double = rndgen.RndDbl(0, 1)
@@ -1248,6 +1305,29 @@ Public Class RandStack
             End If
         Next i
     End Sub
+
+    ''' <summary>Генерирует зелья лечения</summary>
+    ''' <param name="cost">Наиболее вероятная цена</param>
+    ''' <param name="amount">Сколько создать</param>
+    ''' <param name="LogID">Номер задачи. От 0 до Size-1. Если меньше 0, запись будет сделана в общий лог</param>
+    Public Function HealPotionsGen(ByVal cost As Double, ByVal amount As Integer, _
+                                   Optional ByVal LogID As Integer = -1) As List(Of String)
+        Call AddToLog(LogID, "----Heal potions creation started----")
+        Dim result As List(Of String) = ItemsGen(HealPotionsSelector, cost, amount, LogID)
+        Call AddToLog(LogID, "----Heal potions creation ended----")
+        Return result
+    End Function
+    ''' <summary>Генерирует зелья воскрешения</summary>
+    ''' <param name="cost">Наиболее вероятная цена</param>
+    ''' <param name="amount">Сколько создать</param>
+    ''' <param name="LogID">Номер задачи. От 0 до Size-1. Если меньше 0, запись будет сделана в общий лог</param>
+    Public Function RevivePotionsGen(ByVal cost As Double, ByVal amount As Integer, _
+                                     Optional ByVal LogID As Integer = -1) As List(Of String)
+        Call AddToLog(LogID, "----Revive potions creation started----")
+        Dim result As List(Of String) = ItemsGen(RevivePotionsSelector, cost, amount, LogID)
+        Call AddToLog(LogID, "----Revive potions creation ended----")
+        Return result
+    End Function
 
     Private Function GenItemSetDynIGen(ByRef IGen As AllDataStructues.LootGenSettings, ByRef GoldCost As Integer) As AllDataStructues.LootGenSettings
         Dim settings() As AllDataStructues.ItemGenSettings = AllDataStructues.LootGenSettings.ToArray(IGen)
@@ -1820,13 +1900,23 @@ Public Class RandStack
                                       .TypeCostRestriction = Nothing, _
                                       .pos = GenSettings.pos})
 
+        Dim expResultStackKilled As Integer = 0
+        For i As Integer = 0 To UBound(result.units) Step 1
+            expResultStackKilled += result.units(i).unit.EXPkilled
+        Next i
+
         If settings.AddedToStackJewelryMultiplier > 0 Then
-            Dim jewelryCost As Integer
-            For i As Integer = 0 To UBound(result.units) Step 1
-                jewelryCost += result.units(i).unit.EXPkilled
-            Next i
-            jewelryCost = CInt(jewelryCost * settings.AddedToStackJewelryMultiplier)
-            result.items.AddRange(JewelryGen(jewelryCost))
+            result.items.AddRange(JewelryGen(CInt(expResultStackKilled * settings.AddedToStackJewelryMultiplier)))
+        End If
+        If settings.AddRevivePotionToStackChance > 0 And expResultStackKilled >= comm.defValues.AddRevivePotionToStackThreshold Then
+            If settings.AddRevivePotionToStackChance >= 100 OrElse rndgen.RndDbl(0, 100) < settings.AddRevivePotionToStackChance Then
+                result.items.AddRange(RevivePotionsGen(expResultStackKilled, 1))
+            End If
+        End If
+        If settings.AddHealPotionToStackChance > 0 And expResultStackKilled >= comm.defValues.AddHealPotionToStackThreshold Then
+            If settings.AddHealPotionToStackChance >= 100 OrElse rndgen.RndDbl(0, 100) < settings.AddHealPotionToStackChance Then
+                result.items.AddRange(HealPotionsGen(expResultStackKilled * comm.defValues.AddHealPotionToStackMultiplier, 1))
+            End If
         End If
 
         Call log.Add("----Stack creation ended----")
@@ -7178,6 +7268,9 @@ Public Class GenDefaultValues
     Public ReadOnly CapitalLocationRadius As Double
     Public ReadOnly CapitalLocationBasicItems As String()
     Public ReadOnly itemsSellRatio As Double
+    Public ReadOnly AddHealPotionToStackMultiplier As Double
+    Public ReadOnly AddHealPotionToStackThreshold As Double
+    Public ReadOnly AddRevivePotionToStackThreshold As Double
 
     'map
     Public ReadOnly defaultMapSize() As Integer = {48, 72, 96, 120, 144}
