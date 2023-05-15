@@ -10,7 +10,7 @@ Public Class TemplateForge
     Public blocks(-1) As OptionsStorage
     Public allowToAddNewLocatons As Boolean = True
 
-    ''' <summary>Нжно ли обновить список блоков</summary>
+    ''' <summary>Нужно ли обновить список блоков</summary>
     Public reloadMe As Boolean
 
     Private Const isNonhideble As String = "Nonhideable"
@@ -11868,10 +11868,15 @@ Public Class ObjectsContentSet
 #Region "Spells merchant"
 
     Public Enum SpellsMerchantMod
+        ''' <summary>Может быть использовано в GetSpellsListSettings</summary>
         RandomAtEachLine = -1
+        ''' <summary>Поместить заклинание с заданным id</summary>
         ID = 1
+        ''' <summary>Поместить заклинание с заданным уровнем, расой и "глобальностью"</summary>
         LevelAndRaceAndMass = 2
+        ''' <summary>Поместить заклинание с заданным типом</summary>
         Type = 3
+        ''' <summary>Поместить заклинание с заданным типом, уровнем, расой и "глобальностью"</summary>
         TypeAndLevelAndRaceAndMass = 4
     End Enum
 
@@ -11969,10 +11974,15 @@ Public Class ObjectsContentSet
 #Region "Items merchant"
 
     Public Enum ItemsMerchantMod
+        ''' <summary>Может быть использовано в GetItemsListSettings</summary>
         RandomAtEachLine = -1
+        ''' <summary>Поместить предмет с заданным id</summary>
         ID = 1
+        ''' <summary>Поместить предмет с заданной суммой цены в золоте и мане</summary>
         Cost = 2
+        ''' <summary>Поместить предмет с заданным типом</summary>
         Type = 3
+        ''' <summary>Поместить предмет с заданным типом и суммой цены в золоте и мане</summary>
         TypeAndCost = 4
     End Enum
 
@@ -12087,12 +12097,19 @@ Public Class ObjectsContentSet
 #Region "Units merchant"
 
     Public Enum UnitsMerchantMod
+        ''' <summary>Может быть использовано в GetMercenariesListSettings</summary>
         RandomAtEachLine = -1
+        ''' <summary>Поместить юнита с заданным id</summary>
         ID = 1
+        ''' <summary>Поместить юнита с заданной планкой опыта</summary>
         ExpNext = 2
+        ''' <summary>Поместить юнита с заданной расой</summary>
         Race = 3
+        ''' <summary>Поместить юнита с заданной расой и планкой опыта</summary>
         RaceAndExpNext = 4
+        ''' <summary>Поместить юнита с заданным опытом за убийство</summary>
         ExpKilled = 5
+        ''' <summary>Поместить юнита с заданной расой и опытом за убийство</summary>
         RaceAndExpKilled = 6
     End Enum
 

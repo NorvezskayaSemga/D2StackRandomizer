@@ -4675,14 +4675,13 @@ Public Class AllDataStructues
         Dim preservedUnits As List(Of Stack.UnitInfo)
 
         ''' <summary>Не nothing только для торговцев предметами и магией, а также лагеря наемников.
-        ''' Список идентификаторов содержимого лавки с предметами/заклинаниями/наемниками, 
-        ''' либо параметра генерации (цена, тип или тип#цена для предмета, уровень для заклинания и 
-        ''' планка опыта на 1 занимаемый слот для существа).
-        ''' Типы предметов можно посмотреть в Items.txt или Common.itemType
+        ''' Список параметров генерации содержимого (режим генерации и через # параметры).
+        ''' Типы предметов можно посмотреть в GenDefaultValues.ItemTypes
+        ''' Режимы генерации можно посмотреть в ObjectsContentSet.ItemsMerchantMod, ObjectsContentSet.SpellsMerchantMod и ObjectsContentSet.UnitsMerchantMod
         ''' Примеры:
-        ''' Наемник - g000uu0001 200 700
-        ''' Волшебник - g000ss0005 g000ss0006 1RT 2CF (T - может быть глобальным, F - не может. H,L,C,U,E - раса, R - случайная раса)
-        ''' Торговец - g000ig0002 1200 750 attack_artifact sphere#300 6#400
+        ''' Наемник - 1#g000uu0001 2#200 5#700 3#L (H,L,C,U,E - раса) 6#L#250
+        ''' Волшебник - 1#g000ss0005 2#1RT 2#2CF 3#2 (T - может быть глобальным, F - не может. H,L,C,U,E - раса, R - случайная раса)
+        ''' Торговец - 1#g000ig0002 2#1200 3#attack_artifact 4#sphere#300 4#6#400
         ''' </summary>
         Dim shopContent As List(Of String)
 
@@ -5758,7 +5757,7 @@ Public Class AllDataStructues
                 If typesAmountAdded(item.type) >= typesAmount(item.type) Then Return False
                 Return True
             End Function
-            ''' <summary>Вызываем, когда предмет добвавлен</summary>
+            ''' <summary>Вызываем, когда предмет добавлен</summary>
             ''' <param name="item">Предмет</param>
             Public Sub Added(ByRef item As Item)
                 If Not IsNothing(typesAmountAdded) Then typesAmountAdded(item.type) += 1
@@ -5839,7 +5838,7 @@ Public Class AllDataStructues
             If IsNothing(typesFilter) Then Return True
             Return typesFilter.Filter(item)
         End Function
-        ''' <summary>Вызываем, когда предмет добвавлен</summary>
+        ''' <summary>Вызываем, когда предмет добавлен</summary>
         ''' <param name="item">Предмет</param>
         Public Sub Added(ByRef item As Item)
             If IsNothing(typesFilter) Then Exit Sub
