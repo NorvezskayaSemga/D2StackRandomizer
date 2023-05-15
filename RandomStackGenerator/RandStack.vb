@@ -952,7 +952,6 @@ Public Class RandStack
         s.GoldCost = CInt(s.GoldCost * lcm)
         Return ItemsGen(s, LogID)
     End Function
-
     ''' <summary>Генерирует набор предметов. В принципе может вернуть пустой список</summary>
     ''' <param name="itemsSelector">Пул возможных предметов (внутри функции они еще будут фильтроваться списком исключений)</param>
     ''' <param name="amount">Сколько создать</param>
@@ -962,7 +961,7 @@ Public Class RandStack
         Call AddToLog(LogID, "Cost bar: " & bar & " amount: " & amount)
         Dim result As New List(Of String)
         Dim w(itemsSelector.upperBound), wSum As Double
-        Dim sigma As Double = 100 / (bar + 0.1)
+        Dim sigma As Double = 100 / (bar + 1) + 0.01 + 5 / (bar ^ 0.4)
         For i As Integer = 0 To UBound(w) Step 1
             If itemsSelector.Contains(i) AndAlso comm.IsAppropriateItem(AllItems(i)) Then
                 w(i) = Common.Gauss(AllItems(i).itemCostSum, bar, sigma)
@@ -1185,7 +1184,7 @@ Public Class RandStack
                         End If
                     End If
                 Next k
-                
+
                 ' пробуем объединить пары драгоценностей
                 For k1 As Integer = 0 To UBound(jewelryAmount) - 2 Step 1
                     If jewelryAmount(k1) > 0 Then
