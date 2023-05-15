@@ -1129,17 +1129,39 @@ Public Class RandStack
         Call AddToLog(LogID, "----Jewelry creation started----")
         Dim result As New List(Of String)
         If GoldJewelry.Length > 0 Then
-            Dim gold As Integer = CInt(cost * comm.defValues.itemsSellRatio)
-            For i As Integer = UBound(GoldJewelry) To 0 Step -1
-                Do While gold >= GoldJewelry(i).itemCost.Gold
-                    result.Add(GoldJewelry(i).itemID)
-                    gold -= GoldJewelry(i).itemCost.Gold
-                    Call AddToLog(LogID, "Add item " & GoldJewelry(i).name & " cost: " & GoldJewelry(i).itemCost.Gold)
-                Loop
+            Dim mostCheapJewelryId As Integer = -1
+            For i As Integer = 0 To UBound(GoldJewelry) Step 1
+                If comm.IsAppropriateItem(GoldJewelry(i)) Then
+                    mostCheapJewelryId = i
+                    Exit For
+                End If
             Next i
-            If gold > 0 AndAlso rndgen.RndInt(0, GoldJewelry(0).itemCost.Gold) < gold Then
-                result.Add(GoldJewelry(0).itemID)
-                Call AddToLog(LogID, "Add item " & GoldJewelry(0).name & " cost: " & GoldJewelry(0).itemCost.Gold)
+            If mostCheapJewelryId > -1 Then
+                Dim gold As Integer = CInt(cost * comm.defValues.itemsSellRatio)
+                Dim useRnd As Boolean = True
+                For i As Integer = UBound(GoldJewelry) To 0 Step -1
+                    If comm.IsAppropriateItem(GoldJewelry(i)) Then
+                        Do While gold >= GoldJewelry(i).itemCost.Gold
+                            result.Add(GoldJewelry(i).itemID)
+                            gold -= GoldJewelry(i).itemCost.Gold
+                            Call AddToLog(LogID, "Add item " & GoldJewelry(i).name & " cost: " & GoldJewelry(i).itemCost.Gold)
+                        Loop
+                        If useRnd And i > mostCheapJewelryId AndAlso gold + GoldJewelry(mostCheapJewelryId).itemCost.Gold > GoldJewelry(i).itemCost.Gold Then
+                            If rndgen.RndInt(0, GoldJewelry(mostCheapJewelryId).itemCost.Gold) < GoldJewelry(i).itemCost.Gold - gold Then
+                                result.Add(GoldJewelry(i).itemID)
+                                Call AddToLog(LogID, "Add item " & GoldJewelry(i).name & " cost: " & GoldJewelry(i).itemCost.Gold)
+                                gold = 0
+                            End If
+                            useRnd = False
+                        End If
+                    End If
+                Next i
+                If gold > 0 And useRnd Then
+                    If rndgen.RndInt(0, GoldJewelry(mostCheapJewelryId).itemCost.Gold) < gold Then
+                        result.Add(GoldJewelry(mostCheapJewelryId).itemID)
+                        Call AddToLog(LogID, "Add item " & GoldJewelry(mostCheapJewelryId).name & " cost: " & GoldJewelry(mostCheapJewelryId).itemCost.Gold)
+                    End If
+                End If
             End If
         End If
         Call AddToLog(LogID, "----Jewelry creation ended----")
