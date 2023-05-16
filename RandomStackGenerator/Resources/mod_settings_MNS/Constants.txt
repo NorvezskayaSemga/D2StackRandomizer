@@ -279,12 +279,12 @@ AddRevivePotionToStackThreshold    100
 
 
 # В инвентарь отрядов будет добавлено количество драгоценностей, соответствующее опыту за убийство отряда, умноженному на это число. От 0 до 100.
-AddedToStackJewelryMultiplier_Test    0.2
+AddedToStackJewelryMultiplier_Test    0.225
 
 # С заданным шансом в инвентарь отряда будет добавлено зелье лечения. От 0 до 100.
 # Для более сильных отрядов выше шанс помещения более дорогих зелий (в Constants есть множитель).
-AddHealPotionToStackChance_Test       65
+AddHealPotionToStackChance_Test       60.0
 
 # С заданным шансом в инвентарь отряда будет добавлено зелье воскрешения. От 0 до 100.
-AddRevivePotionToStackChance_Test     25
+AddRevivePotionToStackChance_Test     22.5
 
