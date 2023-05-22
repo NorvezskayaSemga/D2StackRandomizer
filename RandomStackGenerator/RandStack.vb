@@ -383,10 +383,6 @@ Public Class RandStack
 
         Call ResetExclusions()
         Call ResetSoleUnits()
-
-        settings.AddHealPotionToStackChance = comm.defValues.AddHealPotionToStackChance_Test
-        settings.AddRevivePotionToStackChance = comm.defValues.AddRevivePotionToStackChance_Test
-        settings.AddedToStackJewelryMultiplier = comm.defValues.AddedToStackJewelryMultiplier_Test
     End Sub
     Private Function ItemTypeWeight(ByRef wList As Dictionary(Of String, String), ByRef itemType As String, ByRef cost As Double) As Double
         If Not wList.ContainsKey(itemType) Then Return 1
@@ -6826,10 +6822,6 @@ Public Class ValueConverter
 End Class
 
 Public Class GenDefaultValues
-
-    Public ReadOnly AddedToStackJewelryMultiplier_Test As Double
-    Public ReadOnly AddHealPotionToStackChance_Test As Double
-    Public ReadOnly AddRevivePotionToStackChance_Test As Double
 
     Public Const DefaultMod As String = "MNS"
     Public Const myVersion As String = "16.07.2022.01.21"
