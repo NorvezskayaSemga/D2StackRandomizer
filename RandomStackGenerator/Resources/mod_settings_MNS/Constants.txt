@@ -70,11 +70,11 @@ Local_AddedItemType_ChanceMultiplier nonattack_artifact=0.65;/
                                      healing_elixir=0.85;/
                                      ressurection_elixir=0.9;/
                                      permanent_elixir=0.6;/
-                                     scroll=0.8;/
-                                     stuff=0.35;/
+                                     scroll=0.75;/
+                                     stuff=0.15;/
                                      jewel=0.95;/
                                      sphere=0.85;/
-                                     talisman=0.25;/
+                                     talisman=0.1;/
                                      special=1
 
 #Для каждого предмета при привышении порога количества таких же предметов (SameItemsAmountRestriction)
@@ -276,15 +276,3 @@ AddHealPotionToStackThreshold      50
 
 #В отряды с опытом за убийство ниже этого значения зелье воскрешения не добавится
 AddRevivePotionToStackThreshold    100
-
-
-# В инвентарь отрядов будет добавлено количество драгоценностей, соответствующее опыту за убийство отряда, умноженному на это число. От 0 до 100.
-AddedToStackJewelryMultiplier_Test    0.2
-
-# С заданным шансом в инвентарь отряда будет добавлено зелье лечения. От 0 до 100.
-# Для более сильных отрядов выше шанс помещения более дорогих зелий (в Constants есть множитель).
-AddHealPotionToStackChance_Test       65
-
-# С заданным шансом в инвентарь отряда будет добавлено зелье воскрешения. От 0 до 100.
-AddRevivePotionToStackChance_Test     25
-

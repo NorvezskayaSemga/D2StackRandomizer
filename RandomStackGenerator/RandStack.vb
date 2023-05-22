@@ -383,10 +383,6 @@ Public Class RandStack
 
         Call ResetExclusions()
         Call ResetSoleUnits()
-
-        settings.AddHealPotionToStackChance = comm.defValues.AddHealPotionToStackChance_Test
-        settings.AddRevivePotionToStackChance = comm.defValues.AddRevivePotionToStackChance_Test
-        settings.AddedToStackJewelryMultiplier = comm.defValues.AddedToStackJewelryMultiplier_Test
     End Sub
     Private Function ItemTypeWeight(ByRef wList As Dictionary(Of String, String), ByRef itemType As String, ByRef cost As Double) As Double
         If Not wList.ContainsKey(itemType) Then Return 1
@@ -952,7 +948,6 @@ Public Class RandStack
         s.GoldCost = CInt(s.GoldCost * lcm)
         Return ItemsGen(s, LogID)
     End Function
-
     ''' <summary>Генерирует набор предметов. В принципе может вернуть пустой список</summary>
     ''' <param name="itemsSelector">Пул возможных предметов (внутри функции они еще будут фильтроваться списком исключений)</param>
     ''' <param name="amount">Сколько создать</param>
@@ -962,7 +957,7 @@ Public Class RandStack
         Call AddToLog(LogID, "Cost bar: " & bar & " amount: " & amount)
         Dim result As New List(Of String)
         Dim w(itemsSelector.upperBound), wSum As Double
-        Dim sigma As Double = 100 / (bar + 0.1)
+        Dim sigma As Double = 100 / (bar + 1) + 0.01 + 5 / (bar ^ 0.4)
         For i As Integer = 0 To UBound(w) Step 1
             If itemsSelector.Contains(i) AndAlso comm.IsAppropriateItem(AllItems(i)) Then
                 w(i) = Common.Gauss(AllItems(i).itemCostSum, bar, sigma)
@@ -1130,17 +1125,39 @@ Public Class RandStack
         Call AddToLog(LogID, "----Jewelry creation started----")
         Dim result As New List(Of String)
         If GoldJewelry.Length > 0 Then
-            Dim gold As Integer = CInt(cost * comm.defValues.itemsSellRatio)
-            For i As Integer = UBound(GoldJewelry) To 0 Step -1
-                Do While gold >= GoldJewelry(i).itemCost.Gold
-                    result.Add(GoldJewelry(i).itemID)
-                    gold -= GoldJewelry(i).itemCost.Gold
-                    Call AddToLog(LogID, "Add item " & GoldJewelry(i).name & " cost: " & GoldJewelry(i).itemCost.Gold)
-                Loop
+            Dim mostCheapJewelryId As Integer = -1
+            For i As Integer = 0 To UBound(GoldJewelry) Step 1
+                If comm.IsAppropriateItem(GoldJewelry(i)) Then
+                    mostCheapJewelryId = i
+                    Exit For
+                End If
             Next i
-            If gold > 0 AndAlso rndgen.RndInt(0, GoldJewelry(0).itemCost.Gold) < gold Then
-                result.Add(GoldJewelry(0).itemID)
-                Call AddToLog(LogID, "Add item " & GoldJewelry(0).name & " cost: " & GoldJewelry(0).itemCost.Gold)
+            If mostCheapJewelryId > -1 Then
+                Dim gold As Integer = CInt(cost * comm.defValues.itemsSellRatio)
+                Dim useRnd As Boolean = True
+                For i As Integer = UBound(GoldJewelry) To 0 Step -1
+                    If comm.IsAppropriateItem(GoldJewelry(i)) Then
+                        Do While gold >= GoldJewelry(i).itemCost.Gold
+                            result.Add(GoldJewelry(i).itemID)
+                            gold -= GoldJewelry(i).itemCost.Gold
+                            Call AddToLog(LogID, "Add item " & GoldJewelry(i).name & " cost: " & GoldJewelry(i).itemCost.Gold)
+                        Loop
+                        If useRnd And i > mostCheapJewelryId AndAlso gold + GoldJewelry(mostCheapJewelryId).itemCost.Gold > GoldJewelry(i).itemCost.Gold Then
+                            If rndgen.RndInt(0, GoldJewelry(mostCheapJewelryId).itemCost.Gold) < GoldJewelry(i).itemCost.Gold - gold Then
+                                result.Add(GoldJewelry(i).itemID)
+                                Call AddToLog(LogID, "Add item " & GoldJewelry(i).name & " cost: " & GoldJewelry(i).itemCost.Gold)
+                                gold = 0
+                            End If
+                            useRnd = False
+                        End If
+                    End If
+                Next i
+                If gold > 0 And useRnd Then
+                    If rndgen.RndInt(0, GoldJewelry(mostCheapJewelryId).itemCost.Gold) < gold Then
+                        result.Add(GoldJewelry(mostCheapJewelryId).itemID)
+                        Call AddToLog(LogID, "Add item " & GoldJewelry(mostCheapJewelryId).name & " cost: " & GoldJewelry(mostCheapJewelryId).itemCost.Gold)
+                    End If
+                End If
             End If
         End If
         Call AddToLog(LogID, "----Jewelry creation ended----")
@@ -1185,7 +1202,7 @@ Public Class RandStack
                         End If
                     End If
                 Next k
-                
+
                 ' пробуем объединить пары драгоценностей
                 For k1 As Integer = 0 To UBound(jewelryAmount) - 2 Step 1
                     If jewelryAmount(k1) > 0 Then
@@ -6804,10 +6821,6 @@ Public Class ValueConverter
 End Class
 
 Public Class GenDefaultValues
-
-    Public ReadOnly AddedToStackJewelryMultiplier_Test As Double
-    Public ReadOnly AddHealPotionToStackChance_Test As Double
-    Public ReadOnly AddRevivePotionToStackChance_Test As Double
 
     Public Const DefaultMod As String = "MNS"
     Public Const myVersion As String = "16.07.2022.01.21"
