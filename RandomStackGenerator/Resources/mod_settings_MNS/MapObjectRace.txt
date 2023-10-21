@@ -98,12 +98,16 @@ g000mg0078	G	L				%building% %natural%
 
 g000mg0083	G	H				%building% %religious%
 g000mg0084	G	H				%building% %religious%
-g000mg0085	G	L N S			%marshes%
-g000mg0086	G	L N S			%natural%
-g000mg0087	G	L N S			%building%
-g000mg0088	G	L N S			%building% %marshes%
-g000mg0089	G	L N S			%building% %marshes%
-g000mg0090	G	L N S			%natural%
+
+# скелеты на колу
+g000mg0085	G	L      			%marshes%
+g000mg0086	G	L      			%natural%
+g000mg0087	G	  U    			%building%
+g000mg0088	G	  U    			%building% %marshes%
+g000mg0089	G	    N  			%building% %marshes%
+g000mg0090	G	    N  			%natural%
+# ---------------
+
 g000mg0091	G	H N				%building%
 g000mg0092	G	H N				%building%
 g000mg0093	G	H N				%building%
@@ -165,6 +169,8 @@ g000mg0148	G	E				%building%
 g000mg0149	G	H				%natural% %building%
 g000mg0150	G	N				%natural% %building%
 g000mg0151	G	N				%natural% %building%
+g000mg0186	G	H L   U E N S	%natural%
+g000mg0187	G	H L   U E N S	%natural%
 g000mg8001	G	L				%natural%
 g000mg8002	G	H C E			%natural%
 g000mg8003	G	L				%natural%
@@ -174,7 +180,11 @@ g000mg8006	G	E				%building%
 g000mg8007	G	E				%building%
 g000mg8008	G	E				%building%
 g000mg8009	G	E				%building%
+
+# скелеты на колу
 g000mg8010	G	L N S			%natural% %marshes%
+# ---------------
+
 g000mg8011	G	E				%building%
 g000mg8012	G	E				%building%
 g000mg8013	G	E				%building%
@@ -309,8 +319,8 @@ g000mg8144	G	U N S			%natural% %building%
 g000mg8145	G	U N S			%natural% %building%
 g000mg8146	G	U N S			%natural%
 g000mg8147	G	U				%building%
-g000mg8148	G	H U				%graveyard%
-g000mg8149	G	H U				%graveyard%
+g000mg8148	G	H U	N			%graveyard%
+g000mg8149	G	H U	N			%graveyard%
 g000mg8150	G	U				%undelfbuilding%
 g000mg8151	G	U				%undelfbuilding%
 g000mg8152	G	U				%undelfbuilding%
@@ -340,6 +350,104 @@ g000mg8175	G	C				%natural% %building% %religious%
 g000mg8176	G	C				%natural% %building% %religious%
 g000mg8177	G	H				%empbuilding%
 
+#плато
+#G000MG8178	G	H L C U E N S
+#G000MG8179	G	H L C U E N S
+#G000MG8180	G	H L C U E N S
+#G000MG8181	G	H L C U E N S
+#G000MG8182	G	H L C U E N S
+
+g000mg8183	G	U				%building%
+g000mg8184	G	L C E N S		%natural% %building% %religious%
+g000mg8185	G	L C E N S		%natural% %building% %religious%
+g000mg8186	W	L C E N S		%natural% %building% %religious%
+g000mg8187	W	L C E N S		%natural% %building% %religious%
+
+g000mg8188	G	H N				%natural% %building%
+g000mg8189	G	H N				%natural% %building%
+g000mg8190	G	H N	S			%natural% %building%
+g000mg8191	G	H N	S			%natural% %building%
+
+# скелеты на колу
+g000mg8192	G	       S  		%building% %marshes%
+g000mg8193	G	       S		%natural%
+# ---------------
+
+g000mg8194	G	C				%building%
+g000mg8195	G	C				%building%
+g000mg8196	G	C				%building%
+g000mg8197	G	C				%building%
+g000mg8198	G	C				%building%
+g000mg8199	G	C				%building%
+g000mg8200	G	C				%building%
+g000mg8201	G	C				%building%
+
+g000mg8202	G W	N S				%marshes%
+g000mg8203	G	H N S			%natural% %building%
+g000mg8204	G	H				%empbuilding%
+g000mg8205	G	H				%empbuilding%
+g000mg8206	G	L C E N S		%natural% %building% %religious%
+g000mg8207	G	L C E N S		%natural% %building% %religious%
+g000mg8208	G	N S				%natural% %building%
+g000mg8209	G	N S				%natural% %building%
+g000mg8210	G	L				%building%
+g000mg8211	G	L				%building%
+g000mg8212	G	N				%natural%
+g000mg8213	G	N				%natural%
+g000mg8214	G	N S				%natural%
+g000mg8215	G	H C N S			%natural%
+g000mg8216	G	N S				%religious%
+g000mg8217	G	E				%natural%
+g000mg8218	G	E				%natural%
+g000mg8219	G	H L E N			%natural% %building% %religious%
+g000mg8220	G	U				%building%
+g000mg8221	G	H N				%building%
+g000mg8222	G	H				%empbuilding%
+g000mg8223	G	C				%building%
+g000mg8224	G	C				%building%
+g000mg8225	G	U				%building%
+g000mg8226	G	E				%building%
+g000mg8227	G	E				%building%
+g000mg8228	G	E				%building%
+g000mg8229	G	H				%empbuilding%
+g000mg8230	G W U				%building%
+g000mg8231	G	L				%building%
+g000mg8232	G	L				%building%
+g000mg8233	G	L				%building%
+g000mg8234	G	L				%building%
+g000mg8235	G	L				%building%
+g000mg8236	G	C				%building%
+
+g000mg8250	G	U N S			%natural%
+g000mg8251	G	U N S			%natural%
+g000mg8252	G	U N S			%natural%
+
+g000mg8257	G	N S				%religious%
+g000mg8258	G	C E N S			%religious%
+
+g003mg0001	G	C N				%natural%
+g003mg0002	G	U N S			%natural% %building%
+g003mg0003	G	U N S			%natural% %building%
+g003mg0004	G	U N S			%natural% %building%
+g003mg0005	G	U N S			%natural% %building%
+g003mg0006	G	H C U N S		%natural% %building%
+g003mg0007	G	U N S			%natural% %building%
+g003mg0008	G	H N S			%building%
+g003mg0015	G	N S				%natural%
+g003mg0016	G	L				%building%
+g003mg0017	G	H C L U N S		%building%
+g003mg0018	G	U S				%natural% %building%
+g003mg0020	G	L				%natural%
+g003mg0021	G	L				%natural%
+
+g003mg0023	W	H C L U E N S	%natural%
+g003mg0024	W	H C L U E N S	%natural%
+g003mg0025	W	H C L U E N S	%natural%
+g003mg0026	W	H C L U E N S	%natural%
+g003mg0027	W	H C L U E N S	%natural%
+g003mg0028	W	H C L U E N S	%natural%
+g003mg0029	W	H C L U E N S	%natural%
+
 #руины
 G000RU0000000	G	H   C U   N S
 G000RU0000001	G	H L   U
@@ -364,12 +472,19 @@ G000RU0000019	W	H L C U E N S
 G000RU0000020	G	H     U E N S
 G000RU0000021	G	        E
 G000RU0000022	G	      U
+G000RU0000023	G	    C
+G000RU0000024	W	H L C U E N S
+G000RU0000025	G	    C     N
+G000RU0000026	G	H   C U E N S
+G000RU0000027	G	H L C U E N S
 
 #башня мага
 G000SI0000MAGE00	G	H       E N S
 G000SI0000MAGE01	G	H L C U   N S
 G000SI0000MAGE02	G	H L C U   N
 G000SI0000MAGE03	G	  L       N
+G000SI0000MAGE04	W	H L C U E N S
+G000SI0000MAGE05	G	H         N S
 
 #торговец
 G000SI0000MERH00	G	H L C U E N S
@@ -380,6 +495,10 @@ G000SI0000MERH04	G	H       E N S
 G000SI0000MERH05	G	H
 G000SI0000MERH06	G	H       E N
 G000SI0000MERH07	G	H   C   E
+G000SI0000MERH08	W	H L C U E N S
+G000SI0000MERH09	W	H L C U E N S
+G000SI0000MERH10	G       C
+G000SI0000MERH11	G       C
 
 #наемники
 G000SI0000MERC00	G	H       E N S
@@ -387,12 +506,15 @@ G000SI0000MERC01	G	H       E N S
 G000SI0000MERC02	G	H L C U
 G000SI0000MERC03	G	H L C U   N
 G000SI0000MERC04	G	H L C U
+G000SI0000MERC05	W	H L C U E N S
+G000SI0000MERC06	G	H       E N S
 
 #тренер
 G000SI0000TRAI00	G	H       E N S
 G000SI0000TRAI01	G	H       E N
 G000SI0000TRAI02	G	H       E N
 G000SI0000TRAI03	G	H L C U
+G000SI0000TRAI04	W	H L C U E N S
 
 #горы
 MOMNE0100	G	L C U
@@ -419,6 +541,13 @@ MOMNE0119	G	H E N S
 MOMNE0120	G	H E N S
 MOMNE0121	G	H E N S
 
+MOMNE0122	G	L C U
+MOMNE0123	G	L C U
+MOMNE0124	G	L C U
+
+MOMNE0125	G	H E N S
+MOMNE0126	G	H E N S
+
 MOMNE0200	G	L C U
 MOMNE0201	G	L C U
 MOMNE0202	G	L C U
@@ -441,6 +570,13 @@ MOMNE0217	G	H E N S
 MOMNE0218	G	H E N S
 MOMNE0219	G	H E N S
 
+MOMNE0220	G	L C U
+MOMNE0221	G	L C U
+MOMNE0222	G	L C U
+MOMNE0223	G	L C U
+
+MOMNE0224	G	H E N S
+
 MOMNE0300	G	L C U
 MOMNE0301	G	L C U
 MOMNE0302	G	L C U
@@ -461,6 +597,17 @@ MOMNE0315	G	H E N S
 MOMNE0316	G	H E N S
 MOMNE0317	G	H E N S
 
+MOMNE0318	G	C
+MOMNE0319	G	C
+MOMNE0320	G	C
+
+MOMNE0321	G	L C U
+MOMNE0322	G	L C U
+MOMNE0323	G	L C U
+
+MOMNE0324	G	H E N S
+MOMNE0325	G	H E N S
+
 MOMNE0500	G	L C U
 MOMNE0501	G	L C U
 MOMNE0502	G	L C U
@@ -475,3 +622,19 @@ MOMNE0509	G	H E N S
 MOMNE0510	G	H E N S
 MOMNE0511	G	H E N S
 MOMNE0512	G	H E N S
+MOMNE0513	G	H E N S
+MOMNE0514	G	H E N S
+MOMNE0515	G	H E N S
+
+MOMNE0516	G	C
+MOMNE0517	G	C
+MOMNE0518	G	C
+MOMNE0519	G	C
+MOMNE0520	G	C
+
+MOMNE0521	G	L C U
+MOMNE0522	G	L C U
+MOMNE0523	G	L C U
+
+MOMNE0524	G	H E N S
+MOMNE0525	G	H E N S
