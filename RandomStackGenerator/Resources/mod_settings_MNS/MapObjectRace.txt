@@ -70,7 +70,7 @@ g000mg0050	G	C				%building% %religious%
 g000mg0052	G	L				%building% %natural%
 g000mg0053	G	L				%building% %natural%
 g000mg0054	G	L				%natural%
-g000mg0055	G	H L C U E N S	%building%
+g000mg0055	G	H L   U   N  	%building%
 
 #плато
 #g000mg0056	G	H L C U E N S
