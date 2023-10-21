@@ -1,6 +1,7 @@
 ﻿Imports System.Threading.Tasks
 
 Public Class RandStack
+    'Dim _SettingsConverter As New SettingsConverter
 
     Public Class ConstructorInput
         ''' <summary>
@@ -271,27 +272,7 @@ Public Class RandStack
 
         If settings.talismanChargesDefaultAmount < 1 Then Throw New Exception("Unexpected TalismanChargesDefaultAmount")
 
-        If settings.excludeLoreUnits Then Call comm.ReadExcludedLoreObjects()
-        If settings.preserveLoreUnits Then Call comm.ReadLoreUnitsToPreservedObjects()
-        If IsNothing(data.modData.ExcludedObjects) Then
-            Call comm.ReadExcludedObjects()
-        Else
-            Call comm.ReadExcludedObjects(data.modData.ExcludedObjects)
-        End If
-        If IsNothing(data.modData.PreservedItems) Then
-            Call comm.ReadPreservedObjects()
-        Else
-            Call comm.ReadPreservedObjects(data.modData.PreservedItems)
-        End If
-        If IsNothing(data.modData.LootItemChanceMultiplier) Then
-            Call comm.ReadLootItemChanceMultiplier()
-        Else
-            Call comm.ReadLootItemChanceMultiplier(ConstructorInput.CustomModSettings.ToList(data.modData.LootItemChanceMultiplier))
-        End If
-        Call comm.ReadCustomUnitRace()
-        Call comm.ReadSoleUnits()
-        Call comm.ReadBigStackUnits()
-        Call comm.ReadLootItemValue()
+        Call ReadModSettings(data, comm)
 
         AllUnits = AllDataStructues.Unit.getGameData(data.gameModel, comm)
         maxUnitLevel = CInt(Math.Floor(UShort.MaxValue / data.gameModel.GetAllT(Of NevendaarTools.Gunit).Count))
@@ -423,6 +404,29 @@ Public Class RandStack
         End If
         Return w1
     End Function
+    Protected Friend Shared Sub ReadModSettings(ByRef data As ConstructorInput, ByRef c As Common)
+        If data.settings.excludeLoreUnits Then Call c.ReadExcludedLoreObjects()
+        If data.settings.preserveLoreUnits Then Call c.ReadLoreUnitsToPreservedObjects()
+        If IsNothing(data.modData.ExcludedObjects) Then
+            Call c.ReadExcludedObjects()
+        Else
+            Call c.ReadExcludedObjects(data.modData.ExcludedObjects)
+        End If
+        If IsNothing(data.modData.PreservedItems) Then
+            Call c.ReadPreservedObjects()
+        Else
+            Call c.ReadPreservedObjects(data.modData.PreservedItems)
+        End If
+        If IsNothing(data.modData.LootItemChanceMultiplier) Then
+            Call c.ReadLootItemChanceMultiplier()
+        Else
+            Call c.ReadLootItemChanceMultiplier(ConstructorInput.CustomModSettings.ToList(data.modData.LootItemChanceMultiplier))
+        End If
+        Call c.ReadCustomUnitRace()
+        Call c.ReadSoleUnits()
+        Call c.ReadBigStackUnits()
+        Call c.ReadLootItemValue()
+    End Sub
     ''' <summary>Установит множители шанса появления предметов на значения по умолчанию</summary>
     Public Sub ResetItemWeightMultiplier()
         Global_ItemsWeightMultiplier = CType(bak_multiplierItemsWeight.Clone, Double())
@@ -672,7 +676,7 @@ Public Class RandStack
     ''' до перегенерации в награде были предметы, не входящие в список PreservedItems.txt</param>
     Public Function GetItemsGenSettings(ByRef items As List(Of String), ByVal isSettingsForRuins As Boolean) As AllDataStructues.LootGenSettings
         If IsNothing(items) Then Return New AllDataStructues.LootGenSettings(settings.applyStrictTypesFilter)
-        Dim result As New AllDataStructues.LootGenSettings(settings.ApplyStrictTypesFilter) With { _
+        Dim result As New AllDataStructues.LootGenSettings(settings.applyStrictTypesFilter) With { _
             .ConsumableItems = New AllDataStructues.ItemGenSettings With {.exclude = True}, _
             .NonconsumableItems = New AllDataStructues.ItemGenSettings With {.exclude = True}, _
             .JewelItems = New AllDataStructues.ItemGenSettings With {.exclude = True}}
@@ -5117,7 +5121,7 @@ Public Class AllDataStructues
         ''' <summary>True, если может находиться только на воде</summary>
         Public waterOnly As Boolean
         ''' <summary>Класс юнита</summary>
-        Public unitBranch As Integer
+        Public unitBranch As GenDefaultValues.UnitClass
         ''' <summary>Уровень, до которого статы растут согласно dynUpgr1</summary>
         Public dynUpgradeLevel As Integer
         ''' <summary>Рост статов до dynUpgradeLevel</summary>
@@ -5310,9 +5314,9 @@ Public Class AllDataStructues
                 End If
                 result(i).small = gdata(i).size_small
                 If gdata(i).unit_cat.value.id = GenDefaultValues.UnitClass.capitalGuard Then
-                    result(i).unitBranch = gdata(i).unit_cat.value.id
+                    result(i).unitBranch = CType(gdata(i).unit_cat.value.id, GenDefaultValues.UnitClass)
                 Else
-                    result(i).unitBranch = gdata(i).branch.value.id
+                    result(i).unitBranch = CType(gdata(i).branch.value.id, GenDefaultValues.UnitClass)
                 End If
                 result(i).unitCost = Cost.Read(gdata(i).enroll_c)
 
@@ -8320,3 +8324,171 @@ Public Class ClassFieldsHandler
     End Function
 End Class
 
+Class SettingsConverter
+
+    Private ReadOnly gamepath As String = "D:\Disciples II_\Disciples II"
+    Private ReadOnly outputfile As String = gamepath & "\Scripts\generatorSettings_gen.lua"
+
+    Public Sub New()
+        Dim data As New RandStack.ConstructorInput
+        data.settings = New RandStack.ConstructorInput.SettingsInfo With {.modName = GenDefaultValues.DefaultMod}
+        data.gameModel = New NevendaarTools.GameModel
+        data.gameModel.Load(gamepath, True)
+
+        Dim comm As Common = New Common(data.settings.modName)
+        Call RandStack.ReadModSettings(data, comm)
+        Dim imp As New ImpenetrableObjects(data.gameModel, False, comm)
+
+        Dim result As New Log(comm)
+        result.Enable()
+        result.Add("--[[ Settings for Disciples 2 random scenario generator ]]--")
+        result.Add("")
+        result.Add("settings = {")
+
+        Call ForbiddenUnits(result, comm, data)
+        result.Add("")
+        Call ForbiddenItems(result, comm, data)
+        result.Add("")
+        Call ForbiddenSpells(result, comm, data)
+        result.Add("")
+        Call Landmarks(result, comm, data, imp)
+        result.Add("")
+        Call ObjectsToAttend(result, data, imp)
+        result.Add("")
+
+        result.Add("}")
+        Dim generatorSettings As String = result.PrintAll()
+        IO.File.WriteAllText(outputfile, generatorSettings)
+    End Sub
+
+    Private Sub ForbiddenUnits(log As Log, comm As Common, data As RandStack.ConstructorInput)
+        Dim AllUnits() As AllDataStructues.Unit = AllDataStructues.Unit.getGameData(data.gameModel, comm)
+        Dim r As String
+        log.Add(vbTab & "forbiddenUnits = {")
+        For Each v As AllDataStructues.Unit In AllUnits
+            If comm.IsExcluded(v) Then
+                r = vbTab & vbTab & "'" & v.unitID.ToLower & "', -- " & v.name
+                If v.unitBranch = GenDefaultValues.UnitClass.leader Then
+                    r &= " [лидер]"
+                ElseIf v.unitBranch = GenDefaultValues.UnitClass.summon Then
+                    r &= " [призываемый]"
+                ElseIf v.unitBranch = GenDefaultValues.UnitClass.thief Then
+                    r &= " [вор]"
+                End If
+                log.Add(r)
+            End If
+        Next v
+        log.Add(vbTab & "},")
+    End Sub
+    Private Sub ForbiddenItems(log As Log, comm As Common, data As RandStack.ConstructorInput)
+        Dim AllItems() As AllDataStructues.Item = AllDataStructues.Item.getGameData(data.gameModel, comm, data.settings.talismanChargesDefaultAmount)
+        log.Add(vbTab & "forbiddenItems = {")
+        For Each v As AllDataStructues.Item In AllItems
+            If comm.IsExcluded(v) Then
+                log.Add(vbTab & vbTab & "'" & v.itemID.ToLower & "', -- " & v.name & " [" & v.type.ToString & "] (" & data.gameModel.GetObjectT(Of NevendaarTools.GItem)(v.itemID).desc_txt.value.text & ")")
+            End If
+        Next v
+        log.Add(vbTab & "},")
+    End Sub
+    Private Sub ForbiddenSpells(log As Log, comm As Common, data As RandStack.ConstructorInput)
+        Dim AllSpells() As AllDataStructues.Spell = AllDataStructues.Spell.getGameData(data.gameModel, comm)
+        log.Add(vbTab & "forbiddenSpells = {")
+        For Each v As AllDataStructues.Spell In AllSpells
+            If comm.IsExcluded(v) Then
+                log.Add(vbTab & vbTab & "'" & v.spellID.ToLower & "', -- " & v.name & " [" & v.level & "] (" & data.gameModel.GetObjectT(Of NevendaarTools.Gspell)(v.spellID).desc_txt.value.text & ")")
+            End If
+        Next v
+        log.Add(vbTab & "},")
+    End Sub
+
+    Private Sub Landmarks(log As Log, comm As Common, data As RandStack.ConstructorInput, imp As ImpenetrableObjects)
+        Dim objects() As ImpenetrableObjects.Landmark = imp.objects
+        Dim mountains As List(Of String) = Landmarks_mountains(log, data, False)
+        log.Add(vbTab & "landmarks = {")
+        Call Landmarks_race(log, comm, data, objects, mountains, "human", "H")
+        log.Add("")
+        Call Landmarks_race(log, comm, data, objects, mountains, "dwarf", "H")
+        log.Add("")
+        Call Landmarks_race(log, comm, data, objects, mountains, "undead", "H")
+        log.Add("")
+        Call Landmarks_race(log, comm, data, objects, mountains, "heretic", "H")
+        log.Add("")
+        Call Landmarks_race(log, comm, data, objects, mountains, "elf", "H")
+        log.Add("")
+        Call Landmarks_race(log, comm, data, objects, mountains, "neutral", "H")
+        log.Add("")
+        Call Landmarks_mountains(log, data, True)
+        log.Add(vbTab & "},")
+    End Sub
+    Private Sub Landmarks_race(log As Log, comm As Common, data As RandStack.ConstructorInput, objects() As ImpenetrableObjects.Landmark, exclude As List(Of String), blockName As String, raceID As String)
+        log.Add(vbTab & vbTab & blockName & " = {")
+        Dim raceIndex As Integer = comm.RaceIdentifierToSubrace(raceID)
+        Dim lmark As NevendaarTools.GLmark
+        For Each obj As ImpenetrableObjects.Landmark In objects
+            If obj.ground AndAlso obj.race.Contains(raceIndex) AndAlso Not exclude.Contains(obj.name.ToLower) Then
+                lmark = data.gameModel.GetObjectT(Of NevendaarTools.GLmark)(obj.name)
+                log.Add(vbTab & vbTab & vbTab & "'" & obj.name.ToLower & "', -- " & lmark.name_txt.value.text & " [" & lmark.cx & "x" & lmark.cy & "]")
+            End If
+        Next obj
+        log.Add(vbTab & vbTab & "},")
+    End Sub
+    Private Function Landmarks_mountains(log As Log, data As RandStack.ConstructorInput, writeToLog As Boolean) As List(Of String)
+        Dim added As New List(Of String)
+        If writeToLog Then log.Add(vbTab & vbTab & "mountain = {")
+        Dim addRanges000() As String = {"8259 8259", "138 144", "8004 8004"}
+        'addRanges000.Concat({"8109 8121", "8167 8171"})
+
+        Dim addRanges003() As String = {"17 17"}
+        Dim lists()() As String = {addRanges000, addRanges003}
+        Dim prefix() As String = {"000", "003"}
+        Dim k1, k2 As Integer
+        Dim id As String
+        Dim lmark As NevendaarTools.GLmark
+        For i As Integer = 0 To UBound(lists) Step 1
+            For Each r As String In lists(i)
+                k1 = CInt(r.Split(CChar(" "))(0))
+                k2 = CInt(r.Split(CChar(" "))(1))
+                For k As Integer = k1 To k2 Step 1
+                    id = ("g" & prefix(i) & "mg" & k.ToString("0000")).ToLower
+                    If writeToLog Then
+                        lmark = data.gameModel.GetObjectT(Of NevendaarTools.GLmark)(id)
+                        log.Add(vbTab & vbTab & vbTab & "'" & id & "', -- " & lmark.name_txt.value.text & " [" & lmark.cx & "x" & lmark.cy & "]")
+                    Else
+                        added.Add(id)
+                    End If
+                Next k
+            Next r
+        Next i
+        If writeToLog Then log.Add(vbTab & vbTab & "},")
+        Return added
+    End Function
+
+    Private Sub ObjectsToAttend(log As Log, data As RandStack.ConstructorInput, imp As ImpenetrableObjects)
+        Dim lists()() As ImpenetrableObjects.MapObject = {imp.ruins, imp.merchants, imp.mages, imp.mercenaries, imp.trainers}
+        Dim blockName() As String = {"ruins", "merchants", "mages", "mercenaries", "trainers"}
+        Dim block2Name() As String = {"land", "water"}
+        Dim block2() As List(Of String) = {New List(Of String), New List(Of String)}
+        For i As Integer = 0 To UBound(lists) Step 1
+            For j As Integer = 0 To UBound(block2) Step 1
+                block2(j).Clear()
+            Next j
+            For Each v As ImpenetrableObjects.MapObject In lists(i)
+                If v.ground Then block2(0).Add(v.name)
+                If v.water Then block2(1).Add(v.name)
+            Next v
+            log.Add(vbTab & blockName(i) & " = {")
+
+            For j As Integer = 0 To UBound(block2) Step 1
+                If block2(j).Count > 0 Then
+                    log.Add(vbTab & vbTab & block2Name(j) & " = {")
+                    For Each v As String In block2(j)
+                        log.Add(vbTab & vbTab & vbTab & "'" & v.ToLower & "',")
+                    Next v
+                    log.Add(vbTab & vbTab & "},")
+                End If
+            Next j
+            log.Add(vbTab & "},")
+        Next i
+    End Sub
+
+End Class

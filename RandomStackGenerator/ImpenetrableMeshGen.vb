@@ -9855,8 +9855,8 @@ Public Class ImpenetrableObjects
 
     Private symm As New SymmetryOperations
     Private comm As Common
-    Private objects As Landmark()
-    Private mountains, ruins, mages, merchants, mercenaries, trainers As MapObject()
+    Friend objects As Landmark()
+    Friend mountains, ruins, mages, merchants, mercenaries, trainers As MapObject()
     Private plateau() As PlateauObject
     Private maxPlateauSize As Integer
     Private maxChainLen As Integer = 7
