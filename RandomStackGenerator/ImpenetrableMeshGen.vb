@@ -5158,7 +5158,8 @@ Public Class Location
         Dim dy As Integer = Y - pos.Y
         Dim d1 As Double = dx * cos + dy * sin
         Dim d2 As Double = -dx * sin + dy * cos
-        Return Math.Exp(-((dx * invSigmaA) ^ 2) - ((dy * invSigmaB) ^ 2))
+        Return Math.Exp(-((dx * invSigmaA) ^ 2) - ((dy * invSigmaB) ^ 2)) _
+             + 0.25 / ((1 + Math.Abs(dx * invSigmaA)) * (1 + Math.Abs(dy * invSigmaB))) ^ 0.75
     End Function
     Friend Function pWeight(ByRef P As Point) As Double
         Return pWeight(P.X, P.Y)
