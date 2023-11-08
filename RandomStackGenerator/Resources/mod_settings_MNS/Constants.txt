@@ -46,7 +46,7 @@ LootCostDispersion			1.25
 #есть условие по цене.
 #Например elixir=0.75#cost>400else1.25 значит, что для обычных эликсиров стоимостью больше 400 множитель равен 0.75, для тех, что дешевле 401 - 1.25
 Global_ItemType_ChanceMultiplier   talisman=0.15#cost>1500else2;/
-                                   scroll=0.15;/
+                                   scroll=0.03#cost>150else0.15;/
                                    sphere=0.5;/
                                    stuff=0.2;/
                                    healing_elixir=55#cost>100else2.5;/
@@ -90,7 +90,7 @@ Local_SameItem_ChanceMultiplier nonattack_artifact=0.01;/
                                 healing_elixir=0.95;/
                                 ressurection_elixir=1.0;/
                                 permanent_elixir=0.75;/
-                                scroll=0.5;/
+                                scroll=0.25;/
                                 stuff=0.05;/
                                 jewel=0.95;/
                                 sphere=0.85;/
