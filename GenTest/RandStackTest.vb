@@ -1100,4 +1100,41 @@ Public Class RandStackTest
         Dim t1 As Integer = Environment.TickCount - t0
         If Not ok Then Assert.Inconclusive("Verify the correctness of this test method.")
     End Sub
+
+    '''<summary>
+    '''A test for CostBarGen
+    '''</summary>
+    <TestMethod(), _
+     DeploymentItem("RandomStackGenerator.dll")> _
+    Public Sub CostBarGenTest()
+        Dim target As RandStack_Accessor = CreateRandStack_Accessor()
+
+        Dim ok As Boolean = True
+
+        Dim minBar As Integer = 100
+        Dim maxBar As Integer = 1000
+        Dim bar As Integer
+        Dim dx As Integer = 10
+        Dim x(CInt((maxBar - minBar) / dx) - 1) As Integer
+        Dim y(UBound(x)) As Integer
+        For i As Integer = 0 To UBound(x) Step 1
+            x(i) = minBar + i * dx
+        Next i
+        For k As Integer = 1 To 100 Step 1
+            bar = target.CostBarGen(minBar, maxBar)
+            For i As Integer = UBound(x) To 0 Step -1
+                If bar >= x(i) Then
+                    y(i) += 1
+                    Exit For
+                End If
+            Next i
+        Next k
+        Dim s As String = "x" & vbTab & "counts"
+
+        For i As Integer = 0 To UBound(x) Step 1
+            s &= vbNewLine & x(i) + dx / 2 & vbTab & y(i)
+        Next i
+
+        If Not ok Then Assert.Inconclusive("Verify the correctness of this test method.")
+    End Sub
 End Class

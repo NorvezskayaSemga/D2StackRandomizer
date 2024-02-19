@@ -989,9 +989,9 @@ Public Class RandStack
     Private Function CostBarGen(ByRef minBar As Integer, ByRef maxBar As Integer) As Integer
         'Return CInt(rndgen.RndDblFast(CDbl(minBar), CDbl(maxBar), serialExecution))
         Dim R As Double = rndgen.RndDbl(0, 1)
-        Dim G As Double = 3
-        Dim D As Double = 0.15
-        Dim S As Double = 5
+        Dim G As Double = 7
+        Dim D As Double = 0.05
+        Dim S As Double = 10
         Dim E As Double = 1 / (1 + Math.Exp(S * D))
         Dim V As Double = (1 - G * E) / (1 - E)
         Dim m As Double = V + (G - V) / (1 + Math.Exp(S * (D - R)))
