@@ -12139,12 +12139,14 @@ Public Class ObjectsContentSet
                     If randStack.comm.IsPreserved(unit) Then
                         output.Add(UnitsMerchantMod.ID & "#" & item.ToUpper)
                     Else
-                        Dim expNext As Integer = unit.EXPnext
-                        Dim expKilled As Integer = unit.EXPkilled
+                        Dim multiplier As Double = randStack.settings.mercenariesStrengthMultiplier
                         If Not unit.small Then
-                            expNext = CInt(expNext * 0.5)
-                            expKilled = CInt(expKilled * 0.5)
+                            multiplier = 0.5
                         End If
+
+                        Dim expNext As Integer = CInt(unit.EXPnext * multiplier)
+                        Dim expKilled As Integer = CInt(unit.EXPkilled * multiplier)
+
                         Dim race As String = randStack.comm.defValues.RaceNumberToRaceChar(unit.race)
                         If mode = UnitsMerchantMod.ExpNext Then
                             output.Add(mode & "#" & expNext.ToString)

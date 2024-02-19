@@ -109,6 +109,11 @@ Public Class RandStack
             ''' </summary>
             Public AddRevivePotionToStackChance As Double
 
+            ''' <summary>
+            ''' Множитель для планки опыта/опыта за убийство при перегенерации лагеря наемников
+            ''' </summary>
+            Public mercenariesStrengthMultiplier As Double = 1
+
             Public Sub New()
                 neutralOrderWeight.Add(AllDataStructues.Stack.StackOrder.OrderType.Stand, 1)
                 neutralOrderWeight.Add(AllDataStructues.Stack.StackOrder.OrderType.Normal, 0)
