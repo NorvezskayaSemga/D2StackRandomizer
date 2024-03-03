@@ -224,6 +224,8 @@ Public Class RandStack
         Private _cost() As Integer
         Private _idToIndex As New Dictionary(Of String, Integer)
         Public valueType As ResourceType
+        Public mostCheapIndex As Integer = -1
+        Public costMultiplier As Double
 
         Public Enum ResourceType
             Gold = 1
@@ -234,26 +236,39 @@ Public Class RandStack
             Green = 6
         End Enum
 
-        Public Sub New(ByRef _AllItems() As AllDataStructues.Item, ByRef _valueType As ResourceType)
+        Public Sub New(ByRef _AllItems() As AllDataStructues.Item, ByRef _valueType As ResourceType, ByRef rndstack As RandStack)
             valueType = _valueType
             ReDim _items(UBound(_AllItems)), _cost(UBound(_AllItems))
 
             Dim jewelryAmount As Integer = 0
             For i As Integer = 0 To UBound(_AllItems) Step 1
-                If _AllItems(i).type = GenDefaultValues.ItemTypes.jewel And GetCost(_AllItems(i)) = AllDataStructues.Cost.Sum(_AllItems(i).itemCost) Then
+                If rndstack.comm.IsExcluded(_AllItems(i)) = False And _AllItems(i).type = GenDefaultValues.ItemTypes.jewel And GetCost(_AllItems(i)) = AllDataStructues.Cost.Sum(_AllItems(i).itemCost) Then
                     _AllItems(i).pureValueType = _valueType
                     _items(jewelryAmount) = _AllItems(i)
                     _cost(jewelryAmount) = GetCost(_AllItems(i))
                     jewelryAmount += 1
                 End If
             Next i
+            ReDim Preserve _items(jewelryAmount - 1), _cost(jewelryAmount - 1)
             If jewelryAmount > 0 Then
-                ReDim Preserve _items(jewelryAmount - 1), _cost(jewelryAmount - 1)
                 Array.Sort(_cost, _items)
                 For i As Integer = 0 To UBound(_items) Step 1
                     _idToIndex.Add(_items(i).itemID.ToUpper, i)
                 Next i
             End If
+
+            For i As Integer = 0 To UBound(_cost) Step 1
+                If mostCheapIndex < 0 OrElse _cost(i) < _cost(mostCheapIndex) Then
+                    mostCheapIndex = i
+                End If
+            Next i
+
+            If valueType = RandStack.JewelryArray.ResourceType.Gold Then
+                costMultiplier = 1
+            Else
+                costMultiplier = rndstack.settings.AddedToStackJewelryGoldToManaMultiplier
+            End If
+            costMultiplier *= rndstack.comm.defValues.itemsSellRatio
         End Sub
 
         Private Function GetCost(ByRef i As AllDataStructues.Item) As Integer
@@ -280,7 +295,9 @@ Public Class RandStack
             Return _cost(index)
         End Function
         Public Function Index(ByRef id As String) As Integer
-            Return _idToIndex.Item(id.ToUpper)
+            Dim key As String = id.ToUpper
+            If Not _idToIndex.ContainsKey(key) Then Return -1
+            Return _idToIndex.Item(key)
         End Function
         Public Function UpperBound() As Integer
             Return UBound(_items)
@@ -406,7 +423,7 @@ Public Class RandStack
         Dim resourceTypes() As JewelryArray.ResourceType = [Enum].GetValues(GetType(JewelryArray.ResourceType)).Cast(Of JewelryArray.ResourceType)().ToArray()
         PureCostJewelry.Clear()
         For i As Integer = 0 To UBound(resourceTypes) Step 1
-            PureCostJewelry.Add(resourceTypes(i), New JewelryArray(AllItems, resourceTypes(i)))
+            PureCostJewelry.Add(resourceTypes(i), New JewelryArray(AllItems, resourceTypes(i), Me))
         Next i
 
         HealPotionsSelector = New RandomSelection(AllItems.Length, rndgen)
@@ -1193,20 +1210,27 @@ Public Class RandStack
         Return ThingGen(gs, LogID)
     End Function
 
+    Public Class JewelryGenResult
+        Public items As New List(Of String)
+        Public usedCost As Integer
+        Public unusedCost As Integer
+        Public mainType As JewelryArray.ResourceType
+    End Class
     ''' <summary>Генерирует драгоценности, стоящие только золото на заданную сумму. Остаток золота после генерации дает шанс добавления дополнительной драгоценности минимальной цены</summary>
     ''' <param name="cost">Цена в золоте</param>
     ''' <param name="LogID">Номер задачи. От 0 до Size-1. Если меньше 0, запись будет сделана в общий лог</param>
     Public Function JewelryGen(ByVal cost As Integer, _
-                               Optional ByVal LogID As Integer = -1) As List(Of String)
+                               Optional ByVal LogID As Integer = -1) As JewelryGenResult
         Call AddToLog(LogID, "----Jewelry creation started----")
-
+        Dim jewelryTypeWeight() As Double = Nothing
+        Dim selector As RandomSelection = Nothing
         Dim selectedJewelryType As JewelryArray.ResourceType
         If settings.AddedToStackJewelryGoldToManaChance > 0 Then
             Dim jewelryKeys() As JewelryArray.ResourceType = PureCostJewelry.Keys.ToArray
-            Dim jewelryTypeWeight(jewelryKeys.Max) As Double
-            Dim s As New RandomSelection(jewelryTypeWeight.Length, rndgen)
+            ReDim jewelryTypeWeight(jewelryKeys.Max)
+            selector = New RandomSelection(jewelryTypeWeight.Length, rndgen)
             For i As Integer = 0 To UBound(jewelryKeys) Step 1
-                s.Add(jewelryKeys(i))
+                selector.Add(jewelryKeys(i))
             Next i
             jewelryTypeWeight(JewelryArray.ResourceType.Black) = mapData.minesAmount.Black
             jewelryTypeWeight(JewelryArray.ResourceType.Blue) = mapData.minesAmount.Blue
@@ -1246,60 +1270,97 @@ Public Class RandStack
                     Next i
                     jewelryTypeWeight(JewelryArray.ResourceType.Gold) = manaSum * (1 / gtmc - 1) - manaSum * manaMulti
                 End If
-                selectedJewelryType = CType(s.RandomSelection(jewelryTypeWeight), JewelryArray.ResourceType)
+                selectedJewelryType = CType(selector.RandomSelection(jewelryTypeWeight), JewelryArray.ResourceType)
             Else
+                jewelryTypeWeight = Nothing
+                selector = Nothing
                 selectedJewelryType = JewelryArray.ResourceType.Gold
             End If
         Else
             selectedJewelryType = JewelryArray.ResourceType.Gold
         End If
         Dim jData As JewelryArray = PureCostJewelry.Item(selectedJewelryType)
-        Dim result As New List(Of String)
-        If jData.Length > 0 Then
-            Dim mostCheapJewelryId As Integer = -1
-            For i As Integer = 0 To jData.UpperBound Step 1
-                If comm.IsAppropriateItem(jData.Item(i)) Then
-                    mostCheapJewelryId = i
-                    Exit For
+        Dim result As New JewelryGenResult
+        If IsNothing(selector) Then
+            result = JewelryGen(cost, jData, True, LogID)
+        Else
+            Dim costAmount(UBound(jewelryTypeWeight)) As Integer
+            costAmount(selectedJewelryType) = cost
+            Dim distributionStep As Double = Math.Max(100, 0.1 * cost)
+            Dim r As Integer
+            Dim addToType As JewelryArray.ResourceType
+            Dim g As JewelryGenResult
+            For i As Integer = 1 To 10 Step 1
+                r = Math.Min(costAmount(selectedJewelryType), CInt(distributionStep * rndgen.RndDbl(0.75, 1.25)))
+                addToType = CType(selector.RandomSelection(jewelryTypeWeight), JewelryArray.ResourceType)
+                If (costAmount(selectedJewelryType) - r) * jData.costMultiplier >= jData.Cost(jData.mostCheapIndex) Then
+                    costAmount(addToType) += r
+                    costAmount(selectedJewelryType) -= r
                 End If
             Next i
-            If mostCheapJewelryId > -1 Then
-                Dim goldMulti As Double
-                If selectedJewelryType = JewelryArray.ResourceType.Gold Then
-                    goldMulti = 1
-                Else
-                    goldMulti = settings.AddedToStackJewelryGoldToManaMultiplier
+            For i As Integer = 0 To UBound(costAmount) Step 1
+                If costAmount(i) > 0 And CType(i, JewelryArray.ResourceType) <> selectedJewelryType Then
+                    g = JewelryGen(costAmount(i), PureCostJewelry.Item(CType(i, JewelryArray.ResourceType)), False, LogID)
+                    costAmount(selectedJewelryType) += g.unusedCost
+                    result.items.AddRange(g.items)
+                    result.usedCost += g.usedCost
                 End If
-                Dim gold As Integer = CInt(cost * comm.defValues.itemsSellRatio * goldMulti)
-                Dim useRnd As Boolean = True
-                For i As Integer = jData.UpperBound To 0 Step -1
-                    If comm.IsAppropriateItem(jData.Item(i)) Then
-                        Do While gold >= jData.Cost(i)
-                            result.Add(jData.Item(i).itemID)
-                            gold -= jData.Cost(i)
-                            Call AddToLog(LogID, "Add item " & jData.Item(i).name & " cost: " & jData.Cost(i))
-                        Loop
-                        If useRnd And i > mostCheapJewelryId AndAlso gold + jData.Cost(mostCheapJewelryId) > jData.Cost(i) Then
-                            If rndgen.RndInt(0, jData.Cost(mostCheapJewelryId)) < jData.Cost(i) - gold Then
-                                result.Add(jData.Item(i).itemID)
-                                Call AddToLog(LogID, "Add item " & jData.Item(i).name & " cost: " & jData.Cost(i))
-                                gold = 0
-                            End If
-                            useRnd = False
-                        End If
-                    End If
-                Next i
-                If gold > 0 And useRnd Then
-                    If rndgen.RndInt(0, jData.Cost(mostCheapJewelryId)) < gold Then
-                        result.Add(jData.Item(mostCheapJewelryId).itemID)
-                        Call AddToLog(LogID, "Add item " & jData.Item(mostCheapJewelryId).name & " cost: " & jData.Cost(mostCheapJewelryId))
-                    End If
-                End If
-            End If
+            Next i
+            g = JewelryGen(costAmount(selectedJewelryType), jData, True, LogID)
+            result.items.AddRange(g.items)
+            result.usedCost += g.usedCost
+            result.unusedCost = g.unusedCost
         End If
+        result.mainType = selectedJewelryType
         Call AddToLog(LogID, "----Jewelry creation ended----")
         Return result
     End Function
+    ''' <summary>Генерирует драгоценности, стоящие только золото на заданную сумму. Остаток золота после генерации дает шанс добавления дополнительной драгоценности минимальной цены</summary>
+    ''' <param name="cost">Цена в золоте</param>
+    ''' <param name="jData">Набор драгоценностей, из которых должна быть набрана заданная стоимость</param>
+    ''' <param name="rndEnabled">Позволить с некоторым шансом использовать драгоценности на большую цену, чем указано в cost</param>
+    ''' <param name="LogID">Номер задачи. От 0 до Size-1. Если меньше 0, запись будет сделана в общий лог</param>
+    Public Function JewelryGen(ByVal cost As Integer, _
+                               ByVal jData As JewelryArray, _
+                               ByVal rndEnabled As Boolean, _
+                               Optional ByVal LogID As Integer = -1) As JewelryGenResult
+        Dim result As New JewelryGenResult With {.unusedCost = cost}
+        result.mainType = jData.valueType
+        If jData.Length = 0 Then Return result
+        If jData.mostCheapIndex > -1 Then
+            Dim gold As Integer = CInt(cost * jData.costMultiplier)
+            If gold = 0 Then Return result
+            Dim useRnd As Boolean = rndEnabled
+            For i As Integer = jData.UpperBound To 0 Step -1
+                If Not comm.IsExcluded(jData.Item(i)) Then
+                    Do While gold >= jData.Cost(i)
+                        result.items.Add(jData.Item(i).itemID)
+                        gold -= jData.Cost(i)
+                        Call AddToLog(LogID, "Add item " & jData.Item(i).name & " cost: " & jData.Cost(i))
+                    Loop
+                    If useRnd And i > jData.mostCheapIndex AndAlso gold + jData.Cost(jData.mostCheapIndex) > jData.Cost(i) Then
+                        If rndgen.RndInt(0, jData.Cost(jData.mostCheapIndex)) < jData.Cost(i) - gold Then
+                            result.items.Add(jData.Item(i).itemID)
+                            Call AddToLog(LogID, "Add item " & jData.Item(i).name & " cost: " & jData.Cost(i))
+                            gold = 0
+                        End If
+                        useRnd = False
+                    End If
+                End If
+            Next i
+            If gold > 0 And useRnd Then
+                If rndgen.RndInt(0, jData.Cost(jData.mostCheapIndex)) < gold Then
+                    result.items.Add(jData.Item(jData.mostCheapIndex).itemID)
+                    Call AddToLog(LogID, "Add item " & jData.Item(jData.mostCheapIndex).name & " cost: " & jData.Cost(jData.mostCheapIndex))
+                    gold = 0
+                End If
+            End If
+            result.unusedCost = Math.Min(cost, CInt(gold / jData.costMultiplier))
+            result.usedCost = cost - result.unusedCost
+        End If
+        Return result
+    End Function
+
     ''' <summary>Постарается объединить дешевые драгоценности в более дорогие</summary>
     ''' <param name="items">Список предметов. Не только драгоценностей</param>
     Public Sub JewelryConversion(ByRef items As List(Of String))
@@ -1398,10 +1459,10 @@ Public Class RandStack
     Private Sub JewelryConversion(ByRef jData As JewelryArray, ByRef jewelryAmount() As Integer, ByVal fromIndex As Integer, ByVal toIndex As Integer)
         Dim g As Integer
         For f As Integer = jewelryAmount(fromIndex) To 2 Step -1
-            g = f * jData.cost(fromIndex)
-            If (g Mod jData.cost(toIndex)) = 0 Then
+            g = f * jData.Cost(fromIndex)
+            If (g Mod jData.Cost(toIndex)) = 0 Then
                 For t As Integer = 1 To jewelryAmount(fromIndex) Step 1
-                    If g = t * jData.cost(toIndex) Then
+                    If g = t * jData.Cost(toIndex) Then
                         jewelryAmount(fromIndex) -= f
                         jewelryAmount(toIndex) += t
                         Exit Sub
@@ -1416,9 +1477,9 @@ Public Class RandStack
         Dim g(UBound(a)), g1, g2 As Integer
         Dim n As Integer = -1
         For f1 As Integer = 1 To jewelryAmount(fromIndex1) Step 1
-            g1 = f1 * jData.cost(fromIndex1)
+            g1 = f1 * jData.Cost(fromIndex1)
             For f2 As Integer = 1 To jewelryAmount(fromIndex2) Step 1
-                g2 = f2 * jData.cost(fromIndex2)
+                g2 = f2 * jData.Cost(fromIndex2)
 
                 n += 1
                 g(n) = g1 + g2
@@ -1427,9 +1488,9 @@ Public Class RandStack
         Next f1
         Array.Sort(g, a)
         For i As Integer = UBound(a) To 0 Step -1
-            If (g(i) Mod jData.cost(toIndex)) = 0 Then
+            If (g(i) Mod jData.Cost(toIndex)) = 0 Then
                 For t As Integer = 1 To maxT Step 1
-                    If g(i) = t * jData.cost(toIndex) Then
+                    If g(i) = t * jData.Cost(toIndex) Then
                         jewelryAmount(fromIndex1) -= a(i)(0)
                         jewelryAmount(fromIndex2) -= a(i)(1)
                         jewelryAmount(toIndex) += t
@@ -1445,11 +1506,11 @@ Public Class RandStack
         Dim g(UBound(a)), g1, g2, g3 As Integer
         Dim n As Integer = -1
         For f1 As Integer = 1 To jewelryAmount(fromIndex1) Step 1
-            g1 = f1 * jData.cost(fromIndex1)
+            g1 = f1 * jData.Cost(fromIndex1)
             For f2 As Integer = 1 To jewelryAmount(fromIndex2) Step 1
-                g2 = f2 * jData.cost(fromIndex2)
+                g2 = f2 * jData.Cost(fromIndex2)
                 For f3 As Integer = 1 To jewelryAmount(fromIndex3) Step 1
-                    g3 = f3 * jData.cost(fromIndex3)
+                    g3 = f3 * jData.Cost(fromIndex3)
 
                     n += 1
                     g(n) = g1 + g2 + g3
@@ -1459,9 +1520,9 @@ Public Class RandStack
         Next f1
         Array.Sort(g, a)
         For i As Integer = UBound(a) To 0 Step -1
-            If (g(i) Mod jData.cost(toIndex)) = 0 Then
+            If (g(i) Mod jData.Cost(toIndex)) = 0 Then
                 For t As Integer = 1 To maxT Step 1
-                    If g(i) = t * jData.cost(toIndex) Then
+                    If g(i) = t * jData.Cost(toIndex) Then
                         jewelryAmount(fromIndex1) -= a(i)(0)
                         jewelryAmount(fromIndex2) -= a(i)(1)
                         jewelryAmount(fromIndex3) -= a(i)(2)
@@ -2073,7 +2134,7 @@ Public Class RandStack
         Next i
 
         If settings.AddedToStackJewelryMultiplier > 0 Then
-            result.items.AddRange(JewelryGen(CInt(expResultStackKilled * settings.AddedToStackJewelryMultiplier)))
+            result.items.AddRange(JewelryGen(CInt(expResultStackKilled * settings.AddedToStackJewelryMultiplier)).items)
         End If
         If settings.AddRevivePotionToStackChance > 0 And expResultStackKilled >= comm.defValues.AddRevivePotionToStackThreshold Then
             If settings.AddRevivePotionToStackChance >= 100 OrElse rndgen.RndDbl(0, 100) < settings.AddRevivePotionToStackChance Then

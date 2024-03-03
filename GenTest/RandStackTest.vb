@@ -1147,4 +1147,43 @@ Public Class RandStackTest
 
         If Not ok Then Assert.Inconclusive("Verify the correctness of this test method.")
     End Sub
+
+    '''<summary>
+    '''A test for JewelryGen
+    '''</summary>
+    <TestMethod()> _
+    Public Sub JewelryGenTest()
+        Dim target As RandStack_Accessor = CreateRandStack_Accessor()
+
+        Dim ok As Boolean = True
+
+        Dim r As RandStack.JewelryGenResult
+        Dim i, c, m As Integer
+        For Each chance As Integer In {0, 50, 100}
+            target.settings.AddedToStackJewelryGoldToManaChance = chance
+            For cost As Integer = 10 To 2000 Step 10
+                r = target.JewelryGen(cost)
+                c = 0
+                For Each item As String In r.items
+                    For Each j As RandStack.JewelryArray.ResourceType In target.PureCostJewelry.Keys
+                        i = target.PureCostJewelry.Item(j).Index(item)
+                        If i > -1 Then
+                            c += target.PureCostJewelry.Item(j).Cost(i) / target.PureCostJewelry.Item(j).costMultiplier
+                            Exit For
+                        End If
+                    Next j
+                Next item
+                m = target.PureCostJewelry(r.mainType).Cost(target.PureCostJewelry(r.mainType).mostCheapIndex)
+                If m < (cost - c) * target.PureCostJewelry(r.mainType).costMultiplier Then
+                    ok = False
+                    Exit For
+                End If
+            Next cost
+            If Not ok Then
+                Exit For
+            End If
+        Next chance
+
+        If Not ok Then Assert.Inconclusive("Verify the correctness of this test method.")
+    End Sub
 End Class
