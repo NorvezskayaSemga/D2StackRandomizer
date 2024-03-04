@@ -1285,19 +1285,20 @@ Public Class RandStack
             result = JewelryGen(cost, jData, True, LogID)
         Else
             Dim costAmount(UBound(jewelryTypeWeight)) As Integer
-            costAmount(selectedJewelryType) = cost
-            Dim distributionStep As Double = Math.Max(100, 0.1 * cost)
+            Dim costToDistribute As Integer = cost
+            Dim distributionStep As Double = Math.Max(50, 0.1 * cost)
             Dim r As Integer
             Dim addToType As JewelryArray.ResourceType
             Dim g As JewelryGenResult
             For i As Integer = 1 To 10 Step 1
-                r = Math.Min(costAmount(selectedJewelryType), CInt(distributionStep * rndgen.RndDbl(0.75, 1.25)))
-                addToType = CType(selector.RandomSelection(jewelryTypeWeight), JewelryArray.ResourceType)
-                If (costAmount(selectedJewelryType) - r) * jData.costMultiplier >= jData.Cost(jData.mostCheapIndex) Then
+                r = Math.Min(costToDistribute, CInt(distributionStep * rndgen.RndDbl(0.75, 1.25)))
+                If (costAmount(selectedJewelryType) + costToDistribute - r) * jData.costMultiplier >= jData.Cost(jData.mostCheapIndex) Then
+                    addToType = CType(selector.RandomSelection(jewelryTypeWeight), JewelryArray.ResourceType)
                     costAmount(addToType) += r
-                    costAmount(selectedJewelryType) -= r
+                    costToDistribute -= r
                 End If
             Next i
+            costAmount(selectedJewelryType) += costToDistribute
             For i As Integer = 0 To UBound(costAmount) Step 1
                 If costAmount(i) > 0 And CType(i, JewelryArray.ResourceType) <> selectedJewelryType Then
                     g = JewelryGen(costAmount(i), PureCostJewelry.Item(CType(i, JewelryArray.ResourceType)), False, LogID)
