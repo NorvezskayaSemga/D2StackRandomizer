@@ -2757,7 +2757,7 @@ Public Class RandStack
                         Dim r As Integer = RandStack.rndgen.RndInt(0, notPreservedUnit.Length + preservedUnit.Length - 1)
                         Dim unitPos As Integer
                         If r > UBound(notPreservedUnit) Then
-                            unitPos = preservedUnit(r - UBound(notPreservedUnit))
+                            unitPos = preservedUnit(r - notPreservedUnit.Length)
                         Else
                             unitPos = notPreservedUnit(r)
                         End If
