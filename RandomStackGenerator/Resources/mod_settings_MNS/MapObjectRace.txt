@@ -425,6 +425,18 @@ g000mg8252	G	U N S			%natural%
 g000mg8257	G	N S				%religious%
 g000mg8258	G	C E N S			%religious%
 
+G000MG8260	W	H E N S			%natural% %building% %religious% %marshes%
+G000MG8261	W	H E N S			%natural% %building% %religious% %marshes%
+
+G000MG8262	G	H L E N			%natural% %building%
+G000MG8263	G	C    			%natural% %building%
+
+G000MG8264	G	H L   			%graveyard%
+G000MG8265	G	U N   			%graveyard%
+G000MG8266	G	H S   			%graveyard%
+G000MG8267	G	L U N  			%graveyard%
+G000MG8268	G	U N  			%graveyard%
+
 g003mg0001	G	C N				%natural%
 g003mg0002	G	U N S			%natural% %building%
 g003mg0003	G	U N S			%natural% %building%
@@ -485,6 +497,7 @@ G000SI0000MAGE02	G	H L C U   N
 G000SI0000MAGE03	G	  L       N
 G000SI0000MAGE04	W	H L C U E N S
 G000SI0000MAGE05	G	H         N S
+G000SI0000MAGE06	G	H       E N S
 
 #торговец
 G000SI0000MERH00	G	H L C U E N S
@@ -515,6 +528,13 @@ G000SI0000TRAI01	G	H       E N
 G000SI0000TRAI02	G	H       E N
 G000SI0000TRAI03	G	H L C U
 G000SI0000TRAI04	W	H L C U E N S
+
+#рынок
+G000SI0000RMKT00	G	H   C U E N S
+G000SI0000RMKT01	G	H L C U   N  
+G000SI0000RMKT02	G	H L C U   N  
+G000SI0000RMKT03	G	  L C U E N S
+G000SI0000RMKT04	G	H       E N  
 
 #горы
 MOMNE0100	G	L C U

@@ -451,6 +451,8 @@ Public Class RandStack
         If ws = 0 Then MsgBox("See no units attack source wards")
         If wc = 0 Then MsgBox("See no units attack class wards")
 
+        Dim ggg As New SettingsConverter
+
         Call ResetExclusions()
         Call ResetSoleUnits()
     End Sub
@@ -8539,6 +8541,11 @@ Class SettingsConverter
         data.gameModel = New NevendaarTools.GameModel
         data.gameModel.Load(gamepath, True)
 
+        'костыль
+        For i As Integer = 0 To 9 Step 1
+            data.gameModel._ResourceModel.merhs.Add("G000SI0000RMKT0" & i)
+        Next i
+
         Dim comm As Common = New Common(data.settings.modName)
         Call RandStack.ReadModSettings(data, comm)
         Dim imp As New ImpenetrableObjects(data.gameModel, False, comm)
@@ -8548,6 +8555,14 @@ Class SettingsConverter
         result.Add("--[[ Settings for Disciples 2 random scenario generator ]]--")
         result.Add("")
         result.Add("settings = {")
+        result.Add("")
+        result.Add(vbTab & "iterations = 10000,")
+        result.Add(vbTab & "maxTemplateCustomParameters = 5,")
+        result.Add(vbTab & "enableParameterForest = false,")
+        result.Add(vbTab & "enableParameterRoads = false,")
+        result.Add(vbTab & "enableParameterGold = false,")
+        result.Add(vbTab & "enableParameterMana = false,")
+        result.Add("")
 
         Call ForbiddenUnits(result, comm, data)
         result.Add("")
@@ -8668,8 +8683,8 @@ Class SettingsConverter
     End Function
 
     Private Sub ObjectsToAttend(log As Log, data As RandStack.ConstructorInput, imp As ImpenetrableObjects)
-        Dim lists()() As ImpenetrableObjects.MapObject = {imp.ruins, imp.merchants, imp.mages, imp.mercenaries, imp.trainers}
-        Dim blockName() As String = {"ruins", "merchants", "mages", "mercenaries", "trainers"}
+        Dim lists()() As ImpenetrableObjects.MapObject = {imp.ruins, imp.merchants, imp.mages, imp.mercenaries, imp.trainers, imp.markets}
+        Dim blockName() As String = {"ruins", "merchants", "mages", "mercenaries", "trainers", "resourceMarkets"}
         Dim block2Name() As String = {"land", "water"}
         Dim block2() As List(Of String) = {New List(Of String), New List(Of String)}
         For i As Integer = 0 To UBound(lists) Step 1

@@ -406,8 +406,9 @@ Namespace My.Resources
         '''#ID объекта, в остальных столбцах возможные названия
         '''#разделитель - _
         '''
-        '''#лорды Humans Clans Legions Undead Elvens (имена доллжны походить как девочкам, так и мальчикам. За исключением Кланов)
-        '''g000LR0001_Алексис_Лотай_Келли_Мо [rest of string was truncated]&quot;;.
+        '''ReadFromFile .\Resources\mod_settings_Vanilla\ObjectsText_Eng.txt
+        '''
+        '''#руины (названия такие, чтобы можно было их использовать безотносительно того, кто си [rest of string was truncated]&quot;;.
         '''</summary>
         Friend ReadOnly Property ObjectsText_Eng() As String
             Get
@@ -439,6 +440,15 @@ Namespace My.Resources
         Friend ReadOnly Property objKeyMage() As String
             Get
                 Return ResourceManager.GetString("objKeyMage", resourceCulture)
+            End Get
+        End Property
+        
+        '''<summary>
+        '''  Looks up a localized string similar to G000SI0000RMKT.
+        '''</summary>
+        Friend ReadOnly Property objKeyMarket() As String
+            Get
+                Return ResourceManager.GetString("objKeyMarket", resourceCulture)
             End Get
         End Property
         

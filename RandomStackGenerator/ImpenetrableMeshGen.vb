@@ -9857,7 +9857,7 @@ Public Class ImpenetrableObjects
     Private symm As New SymmetryOperations
     Private comm As Common
     Friend objects As Landmark()
-    Friend mountains, ruins, mages, merchants, mercenaries, trainers As MapObject()
+    Friend mountains, ruins, mages, merchants, mercenaries, trainers, markets As MapObject()
     Private plateau() As PlateauObject
     Private maxPlateauSize As Integer
     Private maxChainLen As Integer = 7
@@ -9915,7 +9915,8 @@ Public Class ImpenetrableObjects
         raceSpells = AllDataStructues.Spell.getGameData(gameModel, c)
 
         Dim objType() As String = New String() {My.Resources.objKeyMage, My.Resources.objKeyMercenaries, My.Resources.objKeyMerchant, _
-                                                My.Resources.objKeyMountain, My.Resources.objKeyRuin, My.Resources.objKeyTrainer, ""}
+                                                My.Resources.objKeyMountain, My.Resources.objKeyRuin, My.Resources.objKeyTrainer,
+                                                My.Resources.objKeyMarket, ""}
         Dim ObjectsSize() As AllDataStructues.MapObjectInfo = AllDataStructues.MapObjectInfo.getObjects(gameModel, comm)
         Dim objList(UBound(objType))() As MapObject
         For Each k As AllDataStructues.MapObjectInfo In ObjectsSize
@@ -9976,6 +9977,7 @@ Public Class ImpenetrableObjects
         ruins = objList(4)
         trainers = objList(5)
         'objects = objList(6)
+        markets = objList(6)
 
         Dim races() As String = Common.TxtSplit(comm.defValues.resReader.Races)
         For Each s As String In races
