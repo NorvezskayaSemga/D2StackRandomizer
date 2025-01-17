@@ -8532,10 +8532,25 @@ End Class
 
 Class SettingsConverter
 
-    Private ReadOnly gamepath As String = "D:\Disciples II_\Disciples II"
-    Private ReadOnly outputfile As String = gamepath & "\Scripts\generatorSettings_gen.lua"
+    Private ReadOnly gamepath As String
+    Private ReadOnly outputfile As String
+
+    Private exclude As New List(Of String)
 
     Public Sub New()
+        gamepath = "D:\Disciples II_\Disciples II"
+        If Not IO.Directory.Exists(gamepath) Then
+            gamepath = "E:\Disciples II\Disciples II"
+        End If
+        If Not IO.Directory.Exists(gamepath) Then
+            Exit Sub
+        End If
+        outputfile = gamepath & "\Scripts\generatorSettings_gen.lua"
+
+        exclude.AddRange("G000SI0000MERH10 G000SI0000MERH11".ToLower.Split(CChar(" ")))
+        exclude.AddRange("G000RU0000018 G000RU0000023".ToLower.Split(CChar(" ")))
+        exclude.AddRange("MOMNE0318 MOMNE0319 MOMNE0320 MOMNE0516 MOMNE0517 MOMNE0518 MOMNE0519 MOMNE0520".ToLower.Split(CChar(" ")))
+
         Dim data As New RandStack.ConstructorInput
         data.settings = New RandStack.ConstructorInput.SettingsInfo With {.modName = GenDefaultValues.DefaultMod}
         data.gameModel = New NevendaarTools.GameModel
@@ -8644,9 +8659,11 @@ Class SettingsConverter
         Dim raceIndex As Integer = comm.RaceIdentifierToSubrace(raceID)
         Dim lmark As NevendaarTools.GLmark
         For Each obj As ImpenetrableObjects.Landmark In objects
-            If obj.ground AndAlso obj.race.Contains(raceIndex) AndAlso Not exclude.Contains(obj.name.ToLower) Then
-                lmark = data.gameModel.GetObjectT(Of NevendaarTools.GLmark)(obj.name)
-                log.Add(vbTab & vbTab & vbTab & "'" & obj.name.ToLower & "', -- " & lmark.name_txt.value.text & " [" & lmark.cx & "x" & lmark.cy & "]")
+            If Not exclude.Contains(obj.name.ToLower) Then
+                If obj.ground AndAlso obj.race.Contains(raceIndex) AndAlso Not exclude.Contains(obj.name.ToLower) Then
+                    lmark = data.gameModel.GetObjectT(Of NevendaarTools.GLmark)(obj.name)
+                    log.Add(vbTab & vbTab & vbTab & "'" & obj.name.ToLower & "', -- " & lmark.name_txt.value.text & " [" & lmark.cx & "x" & lmark.cy & "]")
+                End If
             End If
         Next obj
         log.Add(vbTab & vbTab & "},")
@@ -8669,11 +8686,13 @@ Class SettingsConverter
                 k2 = CInt(r.Split(CChar(" "))(1))
                 For k As Integer = k1 To k2 Step 1
                     id = ("g" & prefix(i) & "mg" & k.ToString("0000")).ToLower
-                    If writeToLog Then
-                        lmark = data.gameModel.GetObjectT(Of NevendaarTools.GLmark)(id)
-                        log.Add(vbTab & vbTab & vbTab & "'" & id & "', -- " & lmark.name_txt.value.text & " [" & lmark.cx & "x" & lmark.cy & "]")
-                    Else
-                        added.Add(id)
+                    If Not exclude.Contains(id.ToLower) Then
+                        If writeToLog Then
+                            lmark = data.gameModel.GetObjectT(Of NevendaarTools.GLmark)(id)
+                            log.Add(vbTab & vbTab & vbTab & "'" & id & "', -- " & lmark.name_txt.value.text & " [" & lmark.cx & "x" & lmark.cy & "]")
+                        Else
+                            added.Add(id)
+                        End If
                     End If
                 Next k
             Next r
@@ -8701,7 +8720,9 @@ Class SettingsConverter
                 If block2(j).Count > 0 Then
                     log.Add(vbTab & vbTab & block2Name(j) & " = {")
                     For Each v As String In block2(j)
-                        log.Add(vbTab & vbTab & vbTab & "'" & v.ToLower & "',")
+                        If Not exclude.Contains(v.ToLower) Then
+                            log.Add(vbTab & vbTab & vbTab & "'" & v.ToLower & "',")
+                        End If
                     Next v
                     log.Add(vbTab & vbTab & "},")
                 End If
