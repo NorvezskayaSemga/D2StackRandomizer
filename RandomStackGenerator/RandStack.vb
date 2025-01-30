@@ -8598,9 +8598,19 @@ Class SettingsConverter
     Private Sub ForbiddenUnits(log As Log, comm As Common, data As RandStack.ConstructorInput)
         Dim AllUnits() As AllDataStructues.Unit = AllDataStructues.Unit.getGameData(data.gameModel, comm)
         Dim r As String
+        Dim e As Boolean
         log.Add(vbTab & "forbiddenUnits = {")
         For Each v As AllDataStructues.Unit In AllUnits
-            If comm.IsExcluded(v) Then
+            e = comm.IsExcluded(v)
+
+            If e = False AndAlso (v.waterOnly _
+            And (v.unitBranch = GenDefaultValues.UnitClass.leader _
+                 Or v.unitBranch = GenDefaultValues.UnitClass.summon _
+                 Or v.unitBranch = GenDefaultValues.UnitClass.thief)) Then
+                e = True
+            End If
+
+            If e Then
                 r = vbTab & vbTab & "'" & v.unitID.ToLower & "', -- " & v.name
                 If v.unitBranch = GenDefaultValues.UnitClass.leader Then
                     r &= " [лидер]"
