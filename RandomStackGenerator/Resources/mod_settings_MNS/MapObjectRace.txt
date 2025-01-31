@@ -437,6 +437,9 @@ G000MG8266	G	H S   			%graveyard%
 G000MG8267	G	L U N  			%graveyard%
 G000MG8268	G	U N  			%graveyard%
 
+G000MG8276	G	H   U N S		%religious% %marshes%
+G000MG8277	G	  L U N S		%religious% %marshes%
+
 g003mg0001	G	C N				%natural%
 g003mg0002	G	U N S			%natural% %building%
 g003mg0003	G	U N S			%natural% %building%
